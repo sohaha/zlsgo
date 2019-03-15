@@ -1,0 +1,26 @@
+language: go
+
+go:
+  - 1.x
+  - 1.12.x
+
+before_install:
+
+sudo: false
+
+env:
+  - GO111MODULE=on
+
+notifications:
+  email:
+    recipients:
+      - soseek@vip.qq.com
+    on_success: always
+
+install:
+
+script:
+  - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

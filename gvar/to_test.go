@@ -1,7 +1,8 @@
-package gvar_test
+package gvar
 
 import (
 	"testing"
+
 	. "github.com/sohaha/zlsgo/gtest"
 )
 
@@ -74,6 +75,10 @@ func TestTo(t *testing.T) {
 	Equal(t, i64, ToInt64(ui64))
 	Equal(t, i64, ToInt64(f3))
 	Equal(t, i64, ToInt64(f6))
+	// 无法转换直接换成0
+	Equal(t, ToInt64(0), ToInt64(jj))
+	Equal(t, i64, ToInt64("0x7b"))
+	Equal(t, i64, ToInt64("0173"))
 	Equal(t, ToInt64(1), ToInt64(b))
 	Equal(t, ToInt64(0), ToInt64(false))
 
@@ -100,6 +105,10 @@ func TestTo(t *testing.T) {
 	Equal(t, ui64, ToUint64(ui64))
 	Equal(t, ui64, ToUint64(f3))
 	Equal(t, ui64, ToUint64(f6))
+	// 无法转换直接换成0
+	Equal(t, ToUint64(0), ToUint64(jj))
+	Equal(t, ui64, ToUint64("0x7b"))
+	Equal(t, ui64, ToUint64("0173"))
 	Equal(t, ToUint64(1), ToUint64(b))
 	Equal(t, ToUint64(0), ToUint64(false))
 

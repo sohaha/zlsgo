@@ -120,8 +120,8 @@ func ToInt64(i interface{}) int64 {
 		return int64(value)
 	case int32:
 		return int64(value)
-	case int64:
-		return value
+	// case int64:
+	// 	return value
 	case uint:
 		return int64(value)
 	case uint8:
