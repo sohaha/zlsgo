@@ -1,4 +1,4 @@
-English | [简体中文](./README.ZH.md)
+[English](./README.md) | 简体中文
 
 [![Build Status](https://www.travis-ci.org/sohaha/zlsgo.svg?branch=master)](https://www.travis-ci.org/sohaha/zlsgo)
 [![GoDoc](https://godoc.org/github.com/sohaha/zlsgo?status.svg)](https://godoc.org/github.com/sohaha/zlsgo)
