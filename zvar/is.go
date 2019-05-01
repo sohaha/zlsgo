@@ -1,4 +1,4 @@
-package gvar
+package zvar
 
 // IsInterface 是否interface{}
 func IsInterface(v interface{}) bool {

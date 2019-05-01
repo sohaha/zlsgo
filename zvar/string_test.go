@@ -1,8 +1,9 @@
-package gvar
+package zvar_test
 
 import (
+	. "github.com/sohaha/zlsgo/ztest"
+	. "github.com/sohaha/zlsgo/zvar"
 	"testing"
-	. "github.com/sohaha/zlsgo/gtest"
 )
 
 func TestString(t *testing.T) {

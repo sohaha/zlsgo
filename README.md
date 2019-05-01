@@ -25,13 +25,13 @@ $ go get github.com/sohaha/zlsgo
 package main
 
 import(
-  "github.com/sohaha/zlsgo/gvar"
+  "github.com/sohaha/zlsgo/zvar"
   "fmt
   )
 
 func main()  {
   name := "hi"
-  fmt.Println("This is a string",gvar.IsString(name))
+  fmt.Println("This is a string",zvar.IsString(name))
 }
 ```
 

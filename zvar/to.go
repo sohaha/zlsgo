@@ -1,4 +1,4 @@
-package gvar
+package zvar
 
 import (
 	"encoding/json"

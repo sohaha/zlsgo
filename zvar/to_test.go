@@ -1,9 +1,10 @@
-package gvar
+package zvar_test
 
 import (
 	"testing"
 
-	. "github.com/sohaha/zlsgo/gtest"
+	. "github.com/sohaha/zlsgo/ztest"
+	. "github.com/sohaha/zlsgo/zvar"
 )
 
 type st interface {
