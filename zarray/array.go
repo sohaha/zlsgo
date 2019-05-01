@@ -1,4 +1,4 @@
-// Package garray 数组操作
+// Package zarray 数组操作
 package zarray
 
 import (

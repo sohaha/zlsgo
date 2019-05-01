@@ -9,10 +9,8 @@ import (
 
 func TestArray(t *testing.T) {
 	var err error
-
-	array := garray.New(20)
-
-	array = garray.New()
+	array := zarray.New(20)
+	array = zarray.New()
 	Equal(t, true, array.IsEmpty())
 	for i := 0; i < 10; i++ {
 		if err := array.Add(i, i+1); err != nil {
@@ -21,12 +19,10 @@ func TestArray(t *testing.T) {
 		}
 	}
 	err = array.Add(99, "无效")
-
 	Equal(t, true, err != nil)
 	_, err = array.Get(99)
 	Equal(t, true, err != nil)
 	err = array.Set(99, "无效")
-
 	Equal(t, true, err != nil)
 	array.Unshift("第一")
 	array.Push("最后")
@@ -41,16 +37,23 @@ func TestArray(t *testing.T) {
 	array.Set(0, "one")
 	one := []string{"one"}
 	shift, _ := array.Shift()
+	oneArr, _ := zarray.Copy(shift)
+	_ = array.Raw()
+	_, copyErr := zarray.Copy("shift")
+	Equal(t, true, copyErr != nil)
 	Equal(t, one[0], shift.([]interface{})[0])
+	copyValue, _ := oneArr.Get(0)
+	Equal(t, one[0], copyValue)
 	array.Remove(99)
 	array.RemoveValue("最后")
 	pop, _ := array.Pop()
 	Equal(t, 10, pop.([]interface{})[0])
 	Equal(t, 9, array.Length())
 	for i := 0; i < 9; i++ {
-		array.Remove(i)
+		array.Remove(i, 2)
 	}
-	Equal(t, 4, array.Length())
+	array.Format()
+	Equal(t, 3, array.Length())
 	array.Clear()
 	Equal(t, 0, array.Length())
 }
