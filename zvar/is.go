@@ -1,3 +1,4 @@
+// Package zvar 变量`操作
 package zvar
 
 // IsInterface 是否interface{}

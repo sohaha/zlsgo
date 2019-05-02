@@ -113,9 +113,12 @@ func (array *Array) Add(index int, value interface{}) (err error) {
 }
 
 // Get 获取对应 index 位置的元素
-func (array *Array) Get(index int) (value interface{}, err error) {
+func (array *Array) Get(index int, defaultValue ...interface{}) (value interface{}, err error) {
 	if r, _ := array.checkIndex(index); r {
 		err = errors.New("get failed. Illegal index")
+		if dValue, dErr := GetInterface(defaultValue, 0, nil); dErr == nil {
+			value = dValue
+		}
 		return
 	}
 
@@ -223,5 +226,21 @@ func (array *Array) Format() (format string) {
 		}
 	}
 	format += "]"
+	return
+}
+
+// GetInterface  获取 []interface{} 对应 index 位置的元素
+func GetInterface(arr []interface{}, index int, defaultValue ...interface{}) (value interface{}, err error) {
+	arrLen := len(arr)
+	if arrLen > 0 && index < arrLen {
+		value = arr[index]
+	} else {
+		err = errors.New("getInterface failed. Illegal index")
+		var dValue interface{}
+		if len(defaultValue) > 0 {
+			dValue = defaultValue[0]
+		}
+		value = dValue
+	}
 	return
 }

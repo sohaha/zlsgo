@@ -56,4 +56,6 @@ func TestArray(t *testing.T) {
 	Equal(t, 3, array.Length())
 	array.Clear()
 	Equal(t, 0, array.Length())
+	v, _ := array.Get(1991, "成功")
+	Equal(t, "成功", v)
 }
