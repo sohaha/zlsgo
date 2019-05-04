@@ -21,11 +21,11 @@ func New(capacity ...int) (array *Array) {
 		}
 	} else {
 		array = &Array{
-			data: make([]interface{}, 5),
+			data: make([]interface{}, 10),
 			size: 0,
 		}
 	}
-
+	
 	return
 }
 
@@ -36,12 +36,12 @@ func Copy(arr interface{}) (array *Array, err error) {
 	if ok {
 		l := len(data)
 		for i := 0; i < l; i++ {
-			_ = array.Push(data[i])
+			array.Push(data[i])
 		}
 	} else {
 		err = errors.New("type of error")
 	}
-
+	
 	return
 }
 
@@ -51,7 +51,7 @@ func (array *Array) checkIndex(index int) (bool, int) {
 	if index < 0 || index >= size {
 		return true, size
 	}
-
+	
 	return false, size
 }
 
@@ -86,8 +86,10 @@ func (array *Array) Unshift(value interface{}) error {
 }
 
 // Push 向数组尾插入元素
-func (array *Array) Push(value interface{}) error {
-	return array.Add(array.size, value)
+func (array *Array) Push(values ...interface{}) {
+	for i := 0; i < len(values); i++ {
+		array.Add(array.size, values[i])
+	}
 }
 
 // Add 在 index 位置，插入元素
@@ -96,17 +98,17 @@ func (array *Array) Add(index int, value interface{}) (err error) {
 		err = errors.New("sdd failed. Require index >= 0 and index <= size")
 		return
 	}
-
+	
 	// 如果当前元素个数等于数组容量，则将数组扩容为原来的2倍
 	capLen := array.CapLength()
 	if array.size == capLen {
 		array.resize(capLen * 2)
 	}
-
+	
 	for i := array.size - 1; i >= index; i-- {
 		array.data[i+1] = array.data[i]
 	}
-
+	
 	array.data[index] = value
 	array.size++
 	return
@@ -121,7 +123,7 @@ func (array *Array) Get(index int, defaultValue ...interface{}) (value interface
 		}
 		return
 	}
-
+	
 	value = array.data[index]
 	return
 }
@@ -132,19 +134,19 @@ func (array *Array) Set(index int, value interface{}) (err error) {
 		err = errors.New("set failed. Illegal index")
 		return
 	}
-
+	
 	array.data[index] = value
 	return
 }
 
-// Includes 查找数组中是否有元素
-func (array *Array) Includes(value interface{}) bool {
+// Contains 查找数组中是否有元素
+func (array *Array) Contains(value interface{}) bool {
 	for i := 0; i < array.size; i++ {
 		if array.data[i] == value {
 			return true
 		}
 	}
-
+	
 	return false
 }
 
@@ -155,7 +157,7 @@ func (array *Array) IndexOf(value interface{}) int {
 			return i
 		}
 	}
-
+	
 	return -1
 }
 
@@ -176,7 +178,7 @@ func (array *Array) Remove(index int, l ...int) (value []interface{}, err error)
 		array.data[i-removeL] = array.data[i]
 		array.data[i] = nil
 	}
-
+	
 	array.size = size - removeL
 	capLen := array.CapLength()
 	if array.size == capLen/4 && capLen/2 != 0 {
@@ -212,7 +214,7 @@ func (array *Array) Clear() {
 
 // Raw 原始数组
 func (array *Array) Raw() []interface{} {
-	return array.data
+	return array.data[:array.size]
 }
 
 // Format 输出数列
