@@ -25,7 +25,7 @@ func New(capacity ...int) (array *Array) {
 			size: 0,
 		}
 	}
-	
+
 	return
 }
 
@@ -41,7 +41,7 @@ func Copy(arr interface{}) (array *Array, err error) {
 	} else {
 		err = errors.New("type of error")
 	}
-	
+
 	return
 }
 
@@ -51,7 +51,7 @@ func (array *Array) checkIndex(index int) (bool, int) {
 	if index < 0 || index >= size {
 		return true, size
 	}
-	
+
 	return false, size
 }
 
@@ -98,17 +98,17 @@ func (array *Array) Add(index int, value interface{}) (err error) {
 		err = errors.New("sdd failed. Require index >= 0 and index <= size")
 		return
 	}
-	
+
 	// 如果当前元素个数等于数组容量，则将数组扩容为原来的2倍
 	capLen := array.CapLength()
 	if array.size == capLen {
 		array.resize(capLen * 2)
 	}
-	
+
 	for i := array.size - 1; i >= index; i-- {
 		array.data[i+1] = array.data[i]
 	}
-	
+
 	array.data[index] = value
 	array.size++
 	return
@@ -123,7 +123,7 @@ func (array *Array) Get(index int, defaultValue ...interface{}) (value interface
 		}
 		return
 	}
-	
+
 	value = array.data[index]
 	return
 }
@@ -134,7 +134,7 @@ func (array *Array) Set(index int, value interface{}) (err error) {
 		err = errors.New("set failed. Illegal index")
 		return
 	}
-	
+
 	array.data[index] = value
 	return
 }
@@ -146,18 +146,18 @@ func (array *Array) Contains(value interface{}) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
-// IndexOf 通过索引查找数组，索引范围[0,n-1]（未找到，返回 -1）
-func (array *Array) IndexOf(value interface{}) int {
+// Index 通过索引查找数组，索引范围[0,n-1]（未找到，返回 -1）
+func (array *Array) Index(value interface{}) int {
 	for i := 0; i < array.size; i++ {
 		if array.data[i] == value {
 			return i
 		}
 	}
-	
+
 	return -1
 }
 
@@ -178,7 +178,7 @@ func (array *Array) Remove(index int, l ...int) (value []interface{}, err error)
 		array.data[i-removeL] = array.data[i]
 		array.data[i] = nil
 	}
-	
+
 	array.size = size - removeL
 	capLen := array.CapLength()
 	if array.size == capLen/4 && capLen/2 != 0 {
@@ -199,7 +199,7 @@ func (array *Array) Pop() (interface{}, error) {
 
 // RemoveValue 从数组中删除指定元素
 func (array *Array) RemoveValue(value interface{}) (e interface{}, err error) {
-	index := array.IndexOf(value)
+	index := array.Index(value)
 	if index != -1 {
 		e, err = array.Remove(index)
 	}
