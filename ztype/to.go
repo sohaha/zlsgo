@@ -1,6 +1,15 @@
-package zvar
+/*
+ * @Author: seekwe
+ * @Date:   2019-05-09 12:44:23
+ * @Last Modified by:   seekwe
+ * @Last Modified time: 2019-05-25 13:03:30
+ */
+
+// Package ztype provides Variable Type Related Operations
+package ztype
 
 import (
+	//"encoding/json"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -10,15 +19,18 @@ type appString interface {
 	String() string
 }
 
-// ToByte 变量转[]byte
+// ToByte to []byte
 func ToByte(i interface{}) []byte {
 	return []byte(ToString(i))
 }
 
-// ToString 变量转字符串
+// ToString to String
 func ToString(i interface{}) string {
 	if i == nil {
 		return ""
+	}
+	if f, ok := i.(appString); ok {
+		return f.String()
 	}
 	switch value := i.(type) {
 	case int:
@@ -60,7 +72,7 @@ func ToString(i interface{}) string {
 	}
 }
 
-// ToBool 变量转布尔值
+// ToBool to Bool
 func ToBool(i interface{}) bool {
 	if v, ok := i.(bool); ok {
 		return v
@@ -71,7 +83,7 @@ func ToBool(i interface{}) bool {
 	return false
 }
 
-// ToInt 变量转int
+// ToInt to int
 func ToInt(i interface{}) int {
 	if v, ok := i.(int); ok {
 		return v
@@ -79,7 +91,7 @@ func ToInt(i interface{}) int {
 	return int(ToInt64(i))
 }
 
-// ToInt8 变量转int8
+// ToInt8 to int8
 func ToInt8(i interface{}) int8 {
 	if v, ok := i.(int8); ok {
 		return v
@@ -87,7 +99,7 @@ func ToInt8(i interface{}) int8 {
 	return int8(ToInt64(i))
 }
 
-// ToInt16 变量转int16
+// ToInt16 to int16
 func ToInt16(i interface{}) int16 {
 	if v, ok := i.(int16); ok {
 		return v
@@ -95,7 +107,7 @@ func ToInt16(i interface{}) int16 {
 	return int16(ToInt64(i))
 }
 
-// ToInt32 变量转int32
+// ToInt32 to int32
 func ToInt32(i interface{}) int32 {
 	if v, ok := i.(int32); ok {
 		return v
@@ -103,7 +115,7 @@ func ToInt32(i interface{}) int32 {
 	return int32(ToInt64(i))
 }
 
-// ToInt64 变量转int64
+// ToInt64 to int64
 func ToInt64(i interface{}) int64 {
 	if i == nil {
 		return 0
@@ -120,8 +132,6 @@ func ToInt64(i interface{}) int64 {
 		return int64(value)
 	case int32:
 		return int64(value)
-	// case int64:
-	// 	return value
 	case uint:
 		return int64(value)
 	case uint8:
@@ -160,7 +170,7 @@ func ToInt64(i interface{}) int64 {
 	}
 }
 
-// ToUint 变量转uint
+// ToUint to uint
 func ToUint(i interface{}) uint {
 	if v, ok := i.(uint); ok {
 		return v
@@ -168,7 +178,7 @@ func ToUint(i interface{}) uint {
 	return uint(ToUint64(i))
 }
 
-// ToUint8 变量转uint8
+// ToUint8 to uint8
 func ToUint8(i interface{}) uint8 {
 	if v, ok := i.(uint8); ok {
 		return v
@@ -176,7 +186,7 @@ func ToUint8(i interface{}) uint8 {
 	return uint8(ToUint64(i))
 }
 
-// ToUint16 变量转uint16
+// ToUint16 to uint16
 func ToUint16(i interface{}) uint16 {
 	if v, ok := i.(uint16); ok {
 		return v
@@ -184,7 +194,7 @@ func ToUint16(i interface{}) uint16 {
 	return uint16(ToUint64(i))
 }
 
-// ToUint32 变量转uint32
+// ToUint32 to uint32
 func ToUint32(i interface{}) uint32 {
 	if v, ok := i.(uint32); ok {
 		return v
@@ -192,7 +202,7 @@ func ToUint32(i interface{}) uint32 {
 	return uint32(ToUint64(i))
 }
 
-// ToUint64 变量转uint64
+// ToUint64 to uint64
 func ToUint64(i interface{}) uint64 {
 	if i == nil {
 		return 0
@@ -246,7 +256,7 @@ func ToUint64(i interface{}) uint64 {
 	}
 }
 
-// ToFloat32 变量转float32
+// ToFloat32 to float32
 func ToFloat32(i interface{}) float32 {
 	if i == nil {
 		return 0
@@ -258,7 +268,7 @@ func ToFloat32(i interface{}) float32 {
 	return float32(v)
 }
 
-// ToFloat64 变量转float64
+// ToFloat64 to float64
 func ToFloat64(i interface{}) float64 {
 	if i == nil {
 		return 0

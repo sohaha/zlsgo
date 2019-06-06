@@ -1,14 +1,16 @@
-package zvar_test
+package ztype
 
 import (
-	. "github.com/sohaha/zlsgo/ztest"
-	. "github.com/sohaha/zlsgo/zvar"
 	"testing"
+
+	zls "github.com/sohaha/zlsgo"
 )
 
 func TestMap(t *testing.T) {
+
+	T := zls.NewTest(t)
 	m := make(map[interface{}]interface{})
 	m["T"] = "test"
 	tMapKeyExists := MapKeyExists("T", m)
-	Equal(t, true, tMapKeyExists)
+	T.Equal(true, tMapKeyExists)
 }

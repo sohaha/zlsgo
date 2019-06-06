@@ -7,4 +7,4 @@ See http://docs.73zls.com/
 gvar(Variable correlation) https://godoc.org/github.com/sohaha/zlsgo/gvar
 
 */
-package zls
+package zlsgo

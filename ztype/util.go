@@ -1,26 +1,17 @@
-package zvar
+/*
+ * @Author: seekwe
+ * @Date:   2019-05-09 12:44:23
+ * @Last Modified by:   seekwe
+ * @Last Modified time: 2019-05-25 12:50:47
+ */
+
+package ztype
 
 import (
-	"os"
 	"reflect"
 )
 
-// PathExists 路径是否存在
-// 1存在并且是一个目录路径，2存在并且是一个文件路径，0不存在
-func PathExists(path string) (int, error) {
-	f, err := os.Stat(path)
-	if err == nil {
-		isFile := 2
-		if f.IsDir() == true {
-			isFile = 1
-		}
-		return isFile, nil
-	}
-
-	return 0, err
-}
-
-// GetType 获取变量类型
+// GetType Get variable type
 func GetType(s interface{}) string {
 	var varType string
 	switch s.(type) {
@@ -56,16 +47,15 @@ func GetType(s interface{}) string {
 		varType = "[]byte"
 	default:
 		v := reflect.ValueOf(s)
-		if v.Kind() == reflect.Ptr {
-			v = v.Elem()
-		}
-		if v.Kind() == reflect.Struct {
-			varType = "struct"
-		} else if v.Kind() == reflect.Invalid {
-			varType = "interface{}"
-		} else {
-			varType = v.Type().String()
-		}
+		varType = v.Type().String()
 	}
 	return varType
+}
+
+func reflectPtr(v interface{}) reflect.Value {
+	r := reflect.ValueOf(v)
+	if r.Kind() == reflect.Ptr {
+		r = r.Elem()
+	}
+	return r
 }

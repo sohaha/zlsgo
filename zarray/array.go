@@ -92,7 +92,7 @@ func (array *Array) Push(values ...interface{}) {
 	}
 }
 
-// Add 在 index 位置，插入元素
+// Set 在 index 位置，插入元素
 func (array *Array) Add(index int, value interface{}) (err error) {
 	if index < 0 || index > array.size {
 		err = errors.New("sdd failed. Require index >= 0 and index <= size")

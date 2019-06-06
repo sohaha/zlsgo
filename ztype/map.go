@@ -1,6 +1,6 @@
-package zvar
+package ztype
 
-// MapKeyExists 字典下标是否存在
+// MapKeyExists Whether the dictionary key exists
 func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	_, ok := m[key]
 	return ok
