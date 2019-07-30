@@ -1,0 +1,81 @@
+# services:
+#     - mongo:<版本>
+#     - redis:<版本号>
+
+variables:
+  PNAME: $CI_PROJECT_NAMESPACE.$CI_PROJECT_NAME # 不支持中文
+
+stages:
+  - install
+  - build
+  - test
+  - sonar
+
+cache:
+  # key: "$CI_BUILD_REF_NAME"
+  untracked: true
+  paths:
+    - node_modules/
+    - vendor/
+
+before_script:
+
+after_script:
+
+
+test_go:
+  stage: test
+  image: golang:latest
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go clean -testcache
+    - go test -race $(go list ./... | grep -v /vendor/)
+  only:
+    - master
+    - dev
+
+# test_php:
+#   stage: test
+#   image: kevinyan001/git-runner:php7.1-node10
+#   script:
+#     - composer install
+#   #         - ./vendor/bin/codecept run --steps
+#   except:
+#     - dev
+#   only:
+#     - master
+
+
+# test_node:
+#     stage: test
+#     image: kevinyan001/git-runner:php7.1-node10
+#     script:
+#         - npm i
+#         - node -v
+#     except:
+#         - dev
+#     only:
+#         - master
+
+
+sonar:
+  stage: sonar
+  when: on_success
+  image: newtmitch/sonar-scanner:alpine
+  script:
+    - cd $CI_PROJECT_DIR
+    - sonar-scanner
+      -Dsonar.host.url=http://192.168.3.135:9000
+      -Dsonar.projectKey=$PNAME
+      -Dsonar.projectName=$PNAME
+      -Dsonar.sources=.
+      -Dsonar.projectBaseDir=.
+      -Dsonar.exclusions=**/node_modules/**/*,**/vendor/**/*
+  cache:
+    paths:
+      - /root/.sonar/cache/
+  only:
+    - master
+    - dev
+  retry: 2

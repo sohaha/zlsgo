@@ -8,8 +8,11 @@
 package znet
 
 import (
+	"fmt"
+	"github.com/sohaha/zlsgo/zstring"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -18,85 +21,108 @@ import (
 
 var (
 	defrouter, errorFormat, expected string
+	host                             = "127.0.0.1"
 )
 
 func init() {
 	defrouter = "hi"
-	expected = "hello world"
+	expected = "Hello World "
 	errorFormat = "handler returned unexpected body: got %v want %v"
 }
 
 var (
-	r   *Engine
-	one sync.Once
+	one    sync.Once
+	engine *Engine
 )
 
 func newServer() *Engine {
 	one.Do(func() {
-		r = New()
+		engine = New("Web-test")
+		engine.SetMode(DebugMode)
 	})
-	return r
+	return engine
 }
+
+func newRequest(r *Engine, method string, url string, path string, handler ...HandlerFunc) *httptest.ResponseRecorder {
+	method = strings.ToUpper(method)
+	if len(handler) > 0 {
+		firstHandler := handler[0]
+		handlers := handler[1:]
+		if path == "" {
+			path = url
+		}
+		switch method {
+		case "GET":
+			r.GET(path, firstHandler, handlers...)
+		case "POST":
+			r.POST(path, firstHandler, handlers...)
+		}
+	}
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(method, url, nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestWeb(t *testing.T) {
 	T := zlsgo.NewTest(t)
-	mux := newServer()
-	mux.GET("/", func(c *Context) {
-		c.String(200, "200")
+	r := newServer()
+	w := newRequest(r, "GET", "/", "/", func(c *Context) {
+		c.String(200, expected)
 	})
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/", nil)
-	mux.ServeHTTP(w, req)
+
 	T.Equal(200, w.Code)
-	T.Equal(w.Body.String() != "404", true)
+	T.Equal(expected, w.Body.String())
 }
-func TestWebSetMode(t *testing.T) {
-	T := zlsgo.NewTest(t)
+
+func TestWebSetMode(T *testing.T) {
+	t := zlsgo.NewTest(T)
 	defer func() {
 		if r := recover(); r != nil {
-			T.T.Log("Recovered in f", r)
+			t.Log("Recovered in f", r)
 		}
 	}()
-	// SetMode(DebugMode)
-	// SetMode(TestMode)
-	// SetMode(ReleaseMode)
-	// SetMode("")
-	// SetMode("zweb.TestMode")
+	r := newServer()
+	r.SetMode(DebugMode)
+	r.SetMode(TestMode)
+	r.SetMode(ReleaseMode)
+	r.SetMode("")
+	r.SetMode("unknownMode")
 }
 
-// func TestWebRouter(t *testing.T) {
-// 	T := zlsgo.NewTest(t)
-// 	mux := New("TestWebRouter")
+func TestWebRouter(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	mux := newServer()
 
-// 	testRouterNotFound(mux, T)()
-// 	testRouterCustomNotFound(mux, T)()
-// 	testRouterPanicHandler(mux, T)()
-// 	testRouterCustomPanicHandler(mux, T)()
-// 	testRouterGET(mux, T)()
-// 	testRouterParam(mux, T)()
-// 	testRouterRegex(mux, T)()
-// 	testRouterPOST(mux, T)()
-// 	testRouterPUT(mux, T)()
-// 	testRouterPATCH(mux, T)()
-// 	testRouterDELETE(mux, T)()
-// 	testRouterUse(mux, T)()
-// 	testRouterGroup(mux, T)()
-// 	testRouterMatch(mux, T)()
-// }
+	testRouterNotFound(mux, t)
+	testRouterCustomNotFound(mux, t)
+	// testRouterPanicHandler(mux, t)
+	testRouterCustomPanicHandler(mux, t)
+	testRouterGET(mux, t)
+	// 	testRouterParam(mux, T)()
+	// 	testRouterRegex(mux, T)()
+	// 	testRouterPOST(mux, T)()
+	// 	testRouterPUT(mux, T)()
+	// 	testRouterPATCH(mux, T)()
+	// 	testRouterDELETE(mux, T)()
+	// 	testRouterUse(mux, T)()
+	// 	testRouterGroup(mux, T)()
+	// 	testRouterMatch(mux, T)()
+}
 
-// func testRouterGET(mux *Engine, T *zlsgo.TestUtil) func() {
-// 	expectedText := expected + "GET"
-// 	mux.GET(defrouter, func(c *Context) {
-// 		id := c.GetParam("id")
-// 		T.T.Log("id: ", id)
-// 		handle(expectedText)(c)
-// 	})
-// 	w := httptest.NewRecorder()
-// 	return func() {
-// 		req, _ := http.NewRequest(http.MethodGet, defrouter, nil)
-// 		mux.ServeHTTP(w, req)
-// 		T.Equal(expectedText, w.Body.String())
-// 	}
-// }
+func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
+	randString := zstring.Rand(5)
+
+	w := newRequest(r, "GET", "/?id="+randString, "/", func(c *Context) {
+		id := c.DefaultQuery("id", "not")
+		host := c.Host()
+		c.String(200, host+"|"+id)
+	})
+
+	t.Equal(200, w.Code)
+	t.Equal("http://"+host+"|"+randString, w.Body.String())
+}
 
 // func testRouterParam(mux *Engine, T *zlsgo.TestUtil) func() {
 // 	now := ztype.ToString(time.Now().Unix())
@@ -204,59 +230,28 @@ func TestWebSetMode(t *testing.T) {
 // 	}
 // }
 
-// func testRouterNotFound(mux *Engine, T *zlsgo.TestUtil) func() {
-// 	expectedText := "404 page not found\n"
+func testRouterNotFound(r *Engine, t *zlsgo.TestUtil) {
+	expectedText := "404 page not found\n"
+	w := newRequest(r, "GET", "/404", "")
+	t.Equal(404, w.Code)
+	t.Equal(expectedText, w.Body.String())
+}
 
-// 	w := httptest.NewRecorder()
-// 	return func() {
-// 		req, _ := http.NewRequest("GET", "xxxxxxxxxxxxxxxxxxxxx", nil)
-// 		mux.ServeHTTP(w, req)
-// 		T.Equal(expectedText, w.Body.String())
-// 	}
-// }
+func testRouterCustomNotFound(r *Engine, t *zlsgo.TestUtil) {
+	expectedText := "is 404"
+	r.NotFoundFunc(handleRes(expectedText))
 
-// func testRouterCustomNotFound(mux *Engine, T *zlsgo.TestUtil) func() {
-// 	expectedText := "404"
-// 	mux.NotFoundFunc(handle(expectedText))
-// 	w := httptest.NewRecorder()
-// 	return func() {
-// 		req, _ := http.NewRequest("GET", "xxxxxxxxxxxxxxxxxxxxx", nil)
-// 		mux.ServeHTTP(w, req)
-// 		T.Equal(expectedText, w.Body.String())
-// 	}
-// }
-// func testRouterPanicHandler(mux *Engine, T *zlsgo.TestUtil) func() {
-// 	expectedText := "panic"
-// 	mux.POST("panic", func(c *Context) {
-// 		panic(expectedText)
-// 	})
-// 	w := httptest.NewRecorder()
-// 	return func() {
-// 		defer func() {
-// 			if r := recover(); r != nil {
-// 				T.T.Log("Recovered in f", r)
-// 			}
-// 		}()
-// 		req, _ := http.NewRequest("POST", "panic", nil)
-// 		mux.ServeHTTP(w, req)
-// 	}
-// }
+	w := newRequest(r, "GET", "/404-2", "")
+	t.Equal(200, w.Code)
+	t.Equal(expectedText, w.Body.String())
+}
 
-// func testRouterCustomPanicHandler(mux *Engine, T *zlsgo.TestUtil) func() {
-// 	expectedText := "panic"
-// 	mux.POST("panic", func(c *Context) {
-// 		panic(expectedText)
-// 	})
-// 	mux.PanicHandler(func(c *Context, err interface{}) {
-// 		T.T.Log("received a panic", err)
-// 		T.Equal(err, expectedText)
-// 	})
-// 	w := httptest.NewRecorder()
-// 	return func() {
-// 		req, _ := http.NewRequest("POST", "panic", nil)
-// 		mux.ServeHTTP(w, req)
-// 	}
-// }
+func testRouterCustomPanicHandler(r *Engine, t *zlsgo.TestUtil) {
+	expectedText := "panic"
+	w := newRequest(r, "GET", "/panic", "", handleRes(expectedText))
+	t.Equal(200, w.Code)
+	t.Equal(expectedText, w.Body.String())
+}
 
 // func testRouterMatch(mux *Engine, T *zlsgo.TestUtil) func() {
 // 	requestUrl := "/id/1/id2/2"
@@ -332,8 +327,8 @@ func TestWebSetMode(t *testing.T) {
 // 	return func() {}
 // }
 
-// func handle(expected string) func(c *Context) {
-// 	return func(c *Context) {
-// 		fmt.Fprint(c.Writer, expected)
-// 	}
-// }
+func handleRes(expected string) func(c *Context) {
+	return func(c *Context) {
+		fmt.Fprint(c.Writer, expected)
+	}
+}

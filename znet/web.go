@@ -68,6 +68,7 @@ type (
 		panic      PanicFunc
 	}
 	info struct {
+		Mutex      sync.RWMutex
 		StartTime  time.Time
 		StopHandle bool
 		handlerLen int
@@ -114,6 +115,7 @@ func New(serverName ...string) *Engine {
 	
 	log := zlog.New("[" + name + "] ")
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
+	log.SetLogLevel(zlog.LogWarn)
 	
 	location, _ := time.LoadLocation(defaultLocation)
 	

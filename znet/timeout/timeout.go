@@ -17,25 +17,27 @@ import (
 	"github.com/sohaha/zlsgo/znet"
 )
 
-type bodyWriter struct {
-	http.ResponseWriter
-	body *bytes.Buffer
-}
+type (
+	bodyWriter struct {
+		http.ResponseWriter
+		body *bytes.Buffer
+	}
+)
 
 func (w bodyWriter) Write(b []byte) (int, error) {
 	return w.body.Write(b)
 }
 
-func New(t time.Duration) znet.HandlerFunc {
+func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc {
 	return func(c *znet.Context) {
-		if c.Request.URL.Path != "/ip" {
-			c.Next()
-			return
-		}
+		// if c.Request.URL.Path != "/ip" {
+		// 	c.Next()
+		// 	return
+		// }
 		buffer := zls.GetBuff()
 		blw := &bodyWriter{body: buffer, ResponseWriter: c.Writer}
 		finish := make(chan struct{}, 1)
-		ctx, cancel := context.WithTimeout(c.Request.Context(), t)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), waitingTime)
 		c.Writer = blw
 		c.Request = c.Request.WithContext(ctx)
 		go func() {
@@ -44,13 +46,19 @@ func New(t time.Duration) znet.HandlerFunc {
 		}()
 		select {
 		case <-ctx.Done():
+			c.Writer = blw.ResponseWriter
 			cancel()
-			c.Abort(http.StatusGatewayTimeout)
-			// It can't be released manually here.
-			// zls.PutBuff(buffer)
+			if len(custom) > 0 {
+				custom[0](c)
+				zls.PutBuff(buffer)
+				c.Abort()
+			} else {
+				c.Abort(http.StatusGatewayTimeout)
+			}
 		case <-finish:
-			blw.ResponseWriter.Write(buffer.Bytes())
+			_, _ = blw.ResponseWriter.Write(buffer.Bytes())
 			zls.PutBuff(buffer)
 		}
+		cancel()
 	}
 }

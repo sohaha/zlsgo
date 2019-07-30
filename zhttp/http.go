@@ -64,7 +64,7 @@ type (
 	}
 	DownloadProgress func(current, total int64)
 	UploadProgress   func(current, total int64)
-	R struct {
+	Engine           struct {
 		client      *http.Client
 		jsonEncOpts *jsonEncOpts
 		xmlEncOpts  *xmlEncOpts
@@ -157,11 +157,11 @@ func BodyXML(v interface{}) *bodyXml {
 	return &bodyXml{v: v}
 }
 
-// R is a convenient client for initiating requests
+// Engine is a convenient client for initiating requests
 
-// New create a new *R
-func New() *R {
-	return &R{flag: BitStdFlags}
+// New create a new *Engine
+func New() *Engine {
+	return &Engine{flag: BitStdFlags}
 }
 
 func (p *param) getValues() url.Values {
@@ -196,14 +196,14 @@ func (p *param) Empty() bool {
 	return p.Values == nil
 }
 
-func (r *R) Do(method, rawurl string, vs ...interface{}) (resp *Res, err error) {
+func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err error) {
 	if rawurl == "" {
 		return nil, ErrUrlNotSpecified
 	}
 	req := &http.Request{
 		Method:     method,
 		Header:     make(http.Header),
-		Proto:      "R/1.1",
+		Proto:      "Engine/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 	}
@@ -285,6 +285,7 @@ func (r *R) Do(method, rawurl string, vs ...interface{}) (resp *Res, err error) 
 			progress = vv
 		case context.Context:
 			req = req.WithContext(vv)
+			resp.req = req
 		case error:
 			return nil, vv
 		}
@@ -633,7 +634,7 @@ func SetClient(client *http.Client) {
 	std.SetClient(client)
 }
 
-func (r *R) SetFlags(flags int) {
+func (r *Engine) SetFlags(flags int) {
 	r.flag = flags
 }
 
@@ -641,7 +642,7 @@ func SetFlags(flags int) {
 	std.SetFlags(flags)
 }
 
-func (r *R) GetFlags() int {
+func (r *Engine) GetFlags() int {
 	return r.flag
 }
 

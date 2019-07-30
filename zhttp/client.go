@@ -42,51 +42,51 @@ func newClient() *http.Client {
 	}
 }
 
-func (r *R) Client() *http.Client {
+func (r *Engine) Client() *http.Client {
 	if r.client == nil {
 		r.client = newClient()
 	}
 	return r.client
 }
 
-func (r *R) SetClient(client *http.Client) {
+func (r *Engine) SetClient(client *http.Client) {
 	r.client = client
 }
 
-func (r *R) Get(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Get(url string, v ...interface{}) (*Res, error) {
 	return r.Do("GET", url, v...)
 }
 
-func (r *R) Post(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Post(url string, v ...interface{}) (*Res, error) {
 	return r.Do("POST", url, v...)
 }
 
-func (r *R) Put(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Put(url string, v ...interface{}) (*Res, error) {
 	return r.Do("PUT", url, v...)
 }
 
-func (r *R) Patch(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Patch(url string, v ...interface{}) (*Res, error) {
 	return r.Do("PATCH", url, v...)
 }
 
-func (r *R) Delete(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Delete(url string, v ...interface{}) (*Res, error) {
 	return r.Do("DELETE", url, v...)
 }
 
-func (r *R) Head(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Head(url string, v ...interface{}) (*Res, error) {
 	return r.Do("HEAD", url, v...)
 }
 
-func (r *R) Options(url string, v ...interface{}) (*Res, error) {
+func (r *Engine) Options(url string, v ...interface{}) (*Res, error) {
 	return r.Do("OPTIONS", url, v...)
 }
 
-func (r *R) getTransport() *http.Transport {
+func (r *Engine) getTransport() *http.Transport {
 	trans, _ := r.Client().Transport.(*http.Transport)
 	return trans
 }
 
-func (r *R) EnableInsecureTLS(enable bool) {
+func (r *Engine) EnableInsecureTLS(enable bool) {
 	trans := r.getTransport()
 	if trans == nil {
 		return
@@ -97,7 +97,7 @@ func (r *R) EnableInsecureTLS(enable bool) {
 	trans.TLSClientConfig.InsecureSkipVerify = enable
 }
 
-func (r *R) EnableCookie(enable bool) {
+func (r *Engine) EnableCookie(enable bool) {
 	if enable {
 		jar, _ := cookiejar.New(nil)
 		r.Client().Jar = jar
@@ -106,11 +106,11 @@ func (r *R) EnableCookie(enable bool) {
 	}
 }
 
-func (r *R) SetTimeout(d time.Duration) {
+func (r *Engine) SetTimeout(d time.Duration) {
 	r.Client().Timeout = d
 }
 
-func (r *R) SetProxyUrl(rawurl string) error {
+func (r *Engine) SetProxyUrl(rawurl string) error {
 	trans := r.getTransport()
 	if trans == nil {
 		return ErrNoTransport
@@ -123,7 +123,7 @@ func (r *R) SetProxyUrl(rawurl string) error {
 	return nil
 }
 
-func (r *R) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
+func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
 	trans := r.getTransport()
 	if trans == nil {
 		return ErrNoTransport
@@ -132,38 +132,38 @@ func (r *R) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
 	return nil
 }
 
-func (r *R) getJSONEncOpts() *jsonEncOpts {
+func (r *Engine) getJSONEncOpts() *jsonEncOpts {
 	if r.jsonEncOpts == nil {
 		r.jsonEncOpts = &jsonEncOpts{escapeHTML: true}
 	}
 	return r.jsonEncOpts
 }
 
-func (r *R) SetJSONEscapeHTML(escape bool) {
+func (r *Engine) SetJSONEscapeHTML(escape bool) {
 	opts := r.getJSONEncOpts()
 	opts.escapeHTML = escape
 }
 
-func (r *R) SetJSONIndent(prefix, indent string) {
+func (r *Engine) SetJSONIndent(prefix, indent string) {
 	opts := r.getJSONEncOpts()
 	opts.indentPrefix = prefix
 	opts.indentValue = indent
 }
 
-func (r *R) getXMLEncOpts() *xmlEncOpts {
+func (r *Engine) getXMLEncOpts() *xmlEncOpts {
 	if r.xmlEncOpts == nil {
 		r.xmlEncOpts = &xmlEncOpts{}
 	}
 	return r.xmlEncOpts
 }
 
-func (r *R) SetXMLIndent(prefix, indent string) {
+func (r *Engine) SetXMLIndent(prefix, indent string) {
 	opts := r.getXMLEncOpts()
 	opts.prefix = prefix
 	opts.indent = indent
 }
 
-func (r *R) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
+func (r *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		zlog.Error("load keys fail", err)

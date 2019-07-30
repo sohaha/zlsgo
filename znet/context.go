@@ -69,7 +69,10 @@ func (c *Context) SetHeader(key, value string) {
 
 // Next Execute the next Handler Func
 func (c *Context) Next() (next HandlerFunc) {
-	if !c.Info.StopHandle {
+	c.Info.Mutex.RLock()
+	StopHandle := c.Info.StopHandle
+	c.Info.Mutex.RUnlock()
+	if !StopHandle {
 		middlewareLen := len(c.Info.middleware)
 		if middlewareLen > 0 {
 			next = c.Info.middleware[0]

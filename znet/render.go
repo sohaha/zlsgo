@@ -46,12 +46,15 @@ func (c *Context) File(filepath string) {
 }
 
 func (c *Context) render(code int, r render) {
-	if !c.Info.StopHandle {
+	c.Info.Mutex.RLock()
+	StopHandle := c.Info.StopHandle
+	c.Info.Mutex.RUnlock()
+	if !StopHandle {
 		if err := r.Render(c, code); err != nil {
 			panic(err)
 		}
 	} else if c.Engine.webMode > releaseCode {
-		c.Log.Warn("abort, not Render many times")
+		c.Log.Warn("Abort, not Render many times")
 	}
 }
 
@@ -68,16 +71,16 @@ func writeContentType(w http.ResponseWriter, value string) {
 	}
 }
 
-func (r renderString) Render(c *Context, code int) error {
+func (r renderString) Render(c *Context, code int) (err error) {
 	w := c.Writer
 	writeContentType(w, plainContentType)
 	c.StatusCode(code)
 	if len(r.Data) > 0 {
-		fmt.Fprintf(w, r.Format, r.Data...)
+		_, err = fmt.Fprintf(w, r.Format, r.Data...)
 	} else {
-		io.WriteString(w, r.Format)
+		_, err = io.WriteString(w, r.Format)
 	}
-	return nil
+	return
 }
 
 func (r renderJSON) Render(c *Context, code int) error {
@@ -88,7 +91,7 @@ func (r renderJSON) Render(c *Context, code int) error {
 	if err != nil {
 		return err
 	}
-	w.Write(jsonBytes)
+	_, _ = w.Write(jsonBytes)
 	return nil
 }
 
@@ -133,7 +136,9 @@ func (c *Context) Template(code int, name string, data ...interface{}) {
 
 // Abort Abort
 func (c *Context) Abort(code ...int) {
+	c.Info.Mutex.Lock()
 	c.Info.StopHandle = true
+	c.Info.Mutex.Unlock()
 	if len(code) > 0 {
 		c.StatusCode(code[0])
 	}

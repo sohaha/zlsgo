@@ -18,7 +18,7 @@ import (
 )
 
 type Res struct {
-	r      *R
+	r      *Engine
 	req    *http.Request
 	resp   *http.Response
 	client *http.Client
@@ -103,7 +103,7 @@ func (r *Res) ToFile(name string) error {
 	if r.downloadProgress != nil && r.resp.ContentLength > 0 {
 		return r.download(file)
 	}
-	
+
 	//noinspection GoUnhandledErrorResult
 	defer r.resp.Body.Close()
 	_, err = io.Copy(file, r.resp.Body)
