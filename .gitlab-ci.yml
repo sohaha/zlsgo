@@ -3,7 +3,7 @@
 #     - redis:<版本号>
 
 variables:
-  PNAME: $CI_PROJECT_NAMESPACE.$CI_PROJECT_NAME # 不支持中文
+  PNAME: $CI_PROJECT_NAMESPACE.$CI_PROJECT_NAME #不支持中文
 
 stages:
   - install
@@ -20,6 +20,7 @@ cache:
 
 before_script:
 
+
 after_script:
 
 
@@ -27,10 +28,13 @@ test_go:
   stage: test
   image: golang:latest
   script:
-    - go fmt $(go list ./... | grep -v /vendor/)
-    - go vet $(go list ./... | grep -v /vendor/)
-    - go clean -testcache
-    - go test -race $(go list ./... | grep -v /vendor/)
+    - go test -race -v -test.short -coverprofile=coverage.out -timeout=20s $(go list ./... | grep -v /vendor/) -json > report.json
+    - ls -l
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - report.json
+      - coverage.out
   only:
     - master
     - dev
@@ -58,11 +62,12 @@ test_go:
 #     only:
 #         - master
 
-
 sonar:
   stage: sonar
   when: on_success
-  image: newtmitch/sonar-scanner:alpine
+  image:
+    name: newtmitch/sonar-scanner:3.2-alpine
+    entrypoint: ['']
   script:
     - cd $CI_PROJECT_DIR
     - sonar-scanner
@@ -71,7 +76,12 @@ sonar:
       -Dsonar.projectName=$PNAME
       -Dsonar.sources=.
       -Dsonar.projectBaseDir=.
+      -Dsonar.tests=.
       -Dsonar.exclusions=**/node_modules/**/*,**/vendor/**/*
+      -Dsonar.test.inclusions=**/*_test.go
+      -Dsonar.test.exclusions=**/vendor/**
+      -Dsonar.go.tests.reportPaths=report.json
+      -Dsonar.go.coverage.reportPaths=coverage.out
   cache:
     paths:
       - /root/.sonar/cache/

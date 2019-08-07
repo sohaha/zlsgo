@@ -156,7 +156,7 @@ func GetAllColorText() map[string]Color {
 
 // IsSupportColor IsSupportColor
 func IsSupportColor() bool {
-	if !DisableColor && (strings.Contains(os.Getenv("TERM"), "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "") {
+	if !DisableColor && (strings.Contains(os.Getenv("TERM"), "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "" || os.Getenv("ANSICON") != "" || strings.Contains(os.Getenv("TERM"), "256color")) {
 		return true
 	}
 

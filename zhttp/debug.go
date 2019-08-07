@@ -15,7 +15,13 @@ import (
 	"time"
 )
 
-var Debug = false
+const (
+	rn = "\r\n\r\n"
+)
+
+var (
+	Debug = false
+)
 
 type dumpConn struct {
 	io.Writer
@@ -29,21 +35,23 @@ func (c *dumpConn) SetDeadline(t time.Time) error      { return nil }
 func (c *dumpConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *dumpConn) SetWriteDeadline(t time.Time) error { return nil }
 
-type delegateReader struct {
-	c chan io.Reader
-	r io.Reader
-}
+type (
+	dummyBody struct {
+		N   int
+		off int
+	}
+
+	delegateReader struct {
+		c chan io.Reader
+		r io.Reader
+	}
+)
 
 func (r *delegateReader) Read(p []byte) (int, error) {
 	if r.r == nil {
 		r.r = <-r.c
 	}
 	return r.r.Read(p)
-}
-
-type dummyBody struct {
-	N   int
-	off int
 }
 
 func (d *dummyBody) Read(p []byte) (n int, err error) {
@@ -56,7 +64,7 @@ func (d *dummyBody) Read(p []byte) (n int, err error) {
 		err = io.EOF
 		return
 	}
-	
+
 	if l := len(p); l > 0 {
 		if l >= left {
 			n = left
@@ -69,7 +77,7 @@ func (d *dummyBody) Read(p []byte) (n int, err error) {
 			p[i] = '*'
 		}
 	}
-	
+
 	return
 }
 
@@ -83,7 +91,7 @@ type dumpBuffer struct {
 
 func (b *dumpBuffer) Write(p []byte) {
 	if b.Len() > 0 {
-		b.Buffer.WriteString("\r\n\r\n")
+		b.Buffer.WriteString(rn)
 	}
 	b.Buffer.Write(p)
 }
@@ -95,7 +103,7 @@ func (b *dumpBuffer) WriteString(s string) {
 func (r *Res) dumpRequest(dump *dumpBuffer) {
 	head := r.r.flag&BitReqHead != 0
 	body := r.r.flag&BitReqBody != 0
-	
+
 	if head {
 		r.dumpReqHead(dump)
 	}
@@ -116,46 +124,46 @@ func (r *Res) dumpReqHead(dump *dumpBuffer) {
 		*reqSend.URL = *r.req.URL
 		reqSend.URL.Scheme = "http"
 	}
-	
+
 	if reqSend.ContentLength > 0 {
 		reqSend.Body = &dummyBody{N: int(reqSend.ContentLength)}
 	} else {
 		reqSend.Body = &dummyBody{N: 1}
 	}
-	
+
 	var buf bytes.Buffer
 	pr, pw := io.Pipe()
 	defer pw.Close()
 	dr := &delegateReader{c: make(chan io.Reader)}
-	
+
 	t := &http.Transport{
-		Dial: func(net, addr string) (net.Conn, error) {
+		Dial: func(_, _ string) (net.Conn, error) {
 			return &dumpConn{io.MultiWriter(&buf, pw), dr}, nil
 		},
 	}
 	defer t.CloseIdleConnections()
-	
+
 	client := new(http.Client)
 	*client = *r.client
 	client.Transport = t
-	
+
 	go func() {
 		req, err := http.ReadRequest(bufio.NewReader(pr))
 		if err == nil {
-			io.Copy(ioutil.Discard, req.Body)
-			req.Body.Close()
+			_, _ = io.Copy(ioutil.Discard, req.Body)
+			_ = req.Body.Close()
 		}
-		
+
 		dr.c <- strings.NewReader("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
-		pr.Close()
+		_ = pr.Close()
 	}()
-	
+
 	_, err := client.Do(reqSend)
 	if err != nil {
 		dump.WriteString(err.Error())
 	} else {
 		reqDump := buf.Bytes()
-		if i := bytes.Index(reqDump, []byte("\r\n\r\n")); i >= 0 {
+		if i := bytes.Index(reqDump, []byte(rn)); i >= 0 {
 			reqDump = reqDump[:i]
 		}
 		dump.Write(reqDump)
@@ -170,7 +178,7 @@ func (r *Res) dumpResonse(dump *dumpBuffer) {
 		if err != nil {
 			dump.WriteString(err.Error())
 		} else {
-			if i := bytes.Index(responseBodyDump, []byte("\r\n\r\n")); i >= 0 {
+			if i := bytes.Index(responseBodyDump, []byte(rn)); i >= 0 {
 				responseBodyDump = responseBodyDump[:i]
 			}
 			dump.Write(responseBodyDump)
@@ -196,8 +204,8 @@ func (r *Res) Dump() string {
 		dump.WriteString(zstring.Pad("", 30, "=", zstring.PadRight))
 		l = dump.Len()
 	}
-	
+
 	r.dumpResonse(dump)
-	
+
 	return dump.String()
 }

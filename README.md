@@ -7,9 +7,11 @@ English | [简体中文](./README.ZH.md)
 
 Golang daily development common function library
 
+[Documentation](https://docs.73zls.com/zls-go/#)
+
 ## Why Zara
 
-- Convenient for daily development
+- Easy to use, lightweight enough
 
 ## QuickStart
 
@@ -22,16 +24,21 @@ $ go get github.com/sohaha/zlsgo
 ### Usage
 
 ```go
-package main
+// main.go
+package main 
 
-import(
-  "github.com/sohaha/zlsgo/zvar"
-  "fmt
-  )
+import (
+    "github.com/sohaha/zlsgo/znet"
+)
 
-func main()  {
-  name := "hi"
-  fmt.Println("This is a string",zvar.IsString(name))
+func main(){
+    r := znet.New()
+
+    r.GET("/hi", func(c *znet.Context) {
+        c.String(200, "Hello world")
+     })
+
+    znet.Run()
 }
 ```
 

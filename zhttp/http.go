@@ -31,6 +31,10 @@ import (
 	"github.com/sohaha/zlsgo/zlog"
 )
 
+const (
+	textContentType = "Content-Type"
+)
+
 var (
 	std        = New()
 	regNewline = regexp.MustCompile(`[\n\r]`)
@@ -461,8 +465,8 @@ func setBodyXml(req *http.Request, resp *Res, opts *xmlEncOpts, v interface{}) (
 }
 
 func setContentType(req *http.Request, contentType string) {
-	if req.Header.Get("Content-Type") == "" {
-		req.Header.Set("Content-Type", contentType)
+	if req.Header.Get(textContentType) == "" {
+		req.Header.Set(textContentType, contentType)
 	}
 }
 
@@ -577,7 +581,7 @@ func (m *multipartHelper) Upload(req *http.Request) {
 		bodyWriter.Close()
 		pw.Close()
 	}()
-	req.Header.Set("Content-Type", bodyWriter.FormDataContentType())
+	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
 	req.Body = ioutil.NopCloser(pr)
 }
 
@@ -617,7 +621,7 @@ func (m *multipartHelper) writeFile(w *multipart.Writer, fieldname, filename str
 	h.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
 			fieldname, filename))
-	h.Set("Content-Type", "application/octet-stream")
+	h.Set(textContentType, "application/octet-stream")
 	p, err := w.CreatePart(h)
 	if err != nil {
 		return err

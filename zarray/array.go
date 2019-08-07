@@ -88,7 +88,7 @@ func (array *Array) Unshift(value interface{}) error {
 // Push 向数组尾插入元素
 func (array *Array) Push(values ...interface{}) {
 	for i := 0; i < len(values); i++ {
-		array.Add(array.size, values[i])
+		_ = array.Add(array.size, values[i])
 	}
 }
 
@@ -112,6 +112,16 @@ func (array *Array) Add(index int, value interface{}) (err error) {
 	array.data[index] = value
 	array.size++
 	return
+}
+
+// ForEcho 遍历生成新数组
+func (array *Array) Map(fn func(interface{}) interface{}) *Array {
+	values, _ := Copy(array.data)
+	for i := 0; i < values.Length(); i++ {
+		value, _ := values.Get(i)
+		_ = values.Set(i, fn(value))
+	}
+	return values
 }
 
 // Get 获取对应 index 位置的元素
@@ -164,6 +174,7 @@ func (array *Array) Index(value interface{}) int {
 // Remove 删除 index 位置的元素，并返回
 func (array *Array) Remove(index int, l ...int) (value []interface{}, err error) {
 	r, size := array.checkIndex(index)
+
 	if r {
 		err = errors.New("remove failed. Illegal index")
 		return
@@ -172,6 +183,7 @@ func (array *Array) Remove(index int, l ...int) (value []interface{}, err error)
 	if len(l) > 0 && l[0] > 1 {
 		removeL = l[0]
 	}
+
 	value = make([]interface{}, removeL)
 	copy(value, array.data[index:index+removeL])
 	for i := index + removeL; i < array.size; i++ {

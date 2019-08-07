@@ -5,11 +5,11 @@
 ![flat](https://img.shields.io/github/languages/top/sohaha/zlsgo.svg?style=flat)
 [![codecov](https://codecov.io/gh/sohaha/zlsgo/branch/master/graph/badge.svg)](https://codecov.io/gh/sohaha/zlsgo)
 
-golang 日常开发常用函数库
+[详细文档](https://docs.73zls.com/zls-go/#)
 
 ## 特性
 
-- 方便日常开发
+- 简单易用、足够轻量
 
 ## 快速上手
 
@@ -22,16 +22,24 @@ $ go get github.com/sohaha/zlsgo
 ### 用法
 
 ```go
-package main
+// main.go
+package main 
 
-import(
-  "github.com/sohaha/zlsgo/zvar"
-  "fmt
-  )
+import (
+    "github.com/sohaha/zlsgo/znet"
+)
 
-func main()  {
-  name := "hi"
-  fmt.Println("This is a string",zvar.IsString(name))
+func main(){
+    // 获取一个实例
+    r := znet.New()
+
+    // 注册路由
+    r.GET("/hi", func(c *znet.Context) {
+        c.String(200, "Hello world")
+     })
+
+    // 启动
+    znet.Run()
 }
 ```
 

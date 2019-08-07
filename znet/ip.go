@@ -87,10 +87,9 @@ func ClientPublicIP(r *http.Request) string {
 		return ip
 	}
 
-	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil {
-		if !HasLocalIPddr(ip) {
-			return ip
-		}
+	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil && !HasLocalIPddr(ip) {
+		return ip
+
 	}
 
 	return ""

@@ -12,6 +12,8 @@
 *.out
 .DS_Store
 coverage.txt
+test.json
 zls-watch.yaml
 .idea/
 .vscode/
+report/

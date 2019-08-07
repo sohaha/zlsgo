@@ -19,7 +19,7 @@ func PathExist(path string) (int, error) {
 	f, err := os.Stat(path)
 	if err == nil {
 		isFile := 2
-		if f.IsDir() == true {
+		if f.IsDir() {
 			isFile = 1
 		}
 		return isFile, nil
