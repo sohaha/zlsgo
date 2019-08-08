@@ -16,29 +16,29 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	
+
 	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (
 	// ErrGenerateParameters is returned when generating a route withRequestLog wrong parameters.
 	ErrGenerateParameters = errors.New("params contains wrong parameters")
-	
+
 	// ErrNotFoundRoute is returned when generating a route that can not find route in tree.
 	ErrNotFoundRoute = errors.New("cannot find route in tree")
-	
+
 	// ErrNotFoundMethod is returned when generating a route that can not find method in tree.
 	ErrNotFoundMethod = errors.New("cannot find method in tree")
-	
+
 	// ErrPatternGrammar is returned when generating a route that pattern grammar error.
 	ErrPatternGrammar = errors.New("pattern grammar error")
-	
+
 	defaultPattern = `[\w\p{Han} ]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
-	
+
 	contextKey = contextKeyType{}
-	
+
 	methods = map[string]struct{}{
 		http.MethodGet:     {},
 		http.MethodPost:    {},
@@ -53,7 +53,7 @@ var (
 type (
 	// contextKeyType Private Value Structure for Each Request
 	contextKeyType struct{}
-	
+
 	// ParamsMapType Storage path parameters
 	ParamsMapType map[string]string
 )
@@ -203,12 +203,12 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	if !ok {
 		return "", ErrNotFoundMethod
 	}
-	
+
 	route, ok := tree.routes[routeName]
 	if !ok {
 		return "", ErrNotFoundRoute
 	}
-	
+
 	var segments []string
 	res := strings.Split(route.path, "/")
 	for _, segment := range res {
@@ -222,7 +222,7 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 				segments = append(segments, key)
 				continue
 			}
-			
+
 			if string(segment[0]) == "{" {
 				segmentLen := len(segment)
 				if string(segment[segmentLen-1]) == "}" {
@@ -235,16 +235,16 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 					segments = append(segments, key)
 					continue
 				}
-				
+
 				return "", ErrPatternGrammar
 			}
 			if string(segment[len(segment)-1]) == "}" && string(segment[0]) != "{" {
 				return "", ErrPatternGrammar
 			}
 		}
-		
+
 		segments = append(segments, segment)
-		
+
 		continue
 	}
 	return "/" + strings.Join(segments, "/"), nil
@@ -268,13 +268,13 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
-	
+
 	tree, ok := e.router.trees[method]
 	if !ok {
 		tree = NewTree()
 		e.router.trees[method] = tree
 	}
-	
+
 	if e.router.prefix != "" {
 		if path != "" {
 			path = e.router.prefix + "/" + strings.TrimPrefix(path, "/")
@@ -298,7 +298,7 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		middleware = append(middleware, moreHandler...)
 		handle = lastHandle
 	}
-	
+
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
 }
@@ -334,7 +334,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 	}
-	
+
 	if req.Method == "POST" && e.customMethodType != "" {
 		if tmpType, ok := rw.GetPostForm(e.customMethodType); ok {
 			req.Method = strings.ToUpper(tmpType)
@@ -344,7 +344,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		e.HandleNotFound(rw, e.router.middleware)
 		return
 	}
-	
+
 	nodes := e.router.trees[req.Method].Find(requestURL, false)
 	if len(nodes) > 0 {
 		node := nodes[0]
@@ -359,7 +359,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	
+
 	if len(nodes) == 0 {
 		res := strings.Split(requestURL, "/")
 		prefix := res[1]
@@ -394,7 +394,7 @@ func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 		handle(c, notFound, middleware)
 		return
 	}
-	
+
 	http.NotFound(c.Writer, c.Request)
 }
 
@@ -416,16 +416,16 @@ func (e *Engine) matchAndParse(requestURL string, path string) (matchParams Para
 		matchName []string
 		pattern   = zstring.Buffer()
 	)
-	
+
 	bl = true
 	matchParams = make(ParamsMapType)
-	
+
 	res := strings.Split(path, "/")
 	for _, str := range res {
 		if str == "" {
 			continue
 		}
-		
+
 		strLen := len(str)
 		firstChar := str[0]
 		lastChar := str[strLen-1]
@@ -455,7 +455,7 @@ func (e *Engine) matchAndParse(requestURL string, path string) (matchParams Para
 			pattern.WriteString(str)
 		}
 	}
-	
+
 	re := regexp.MustCompile(pattern.String())
 	if subMatch := re.FindSubmatch([]byte(requestURL)); subMatch != nil {
 		if string(subMatch[0]) == requestURL {
@@ -468,6 +468,6 @@ func (e *Engine) matchAndParse(requestURL string, path string) (matchParams Para
 			return
 		}
 	}
-	
+
 	return nil, false
 }

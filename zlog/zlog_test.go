@@ -8,6 +8,7 @@
 package zlog
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -56,6 +57,33 @@ func TestLog(T *testing.T) {
 	CleanLog(log)
 	e := os.RemoveAll("tmp/")
 	t.Log(e)
+}
+
+func TestTryError(T *testing.T) {
+	testTryErrorErr(T)
+	testTryErrorString(T)
+	testTryErrorXXX(T)
+}
+
+func testTryErrorString(T *testing.T) {
+	T.Log("testTryErrorString")
+	defer TryError()
+	Panic("testTryErrorString")
+}
+
+func testTryErrorErr(T *testing.T) {
+	T.Log("testTryErrorErr")
+	defer TryError(func(err error) {
+		T.Log("testTryErrorErr", err)
+	})
+	Panic(errors.New("testTryErrorErr"))
+}
+
+func testTryErrorXXX(T *testing.T) {
+	defer TryError(func(err error) {
+		T.Log("testTryErrorXXX", err)
+	})
+	Panic(11)
 }
 
 func TestLogPanic(T *testing.T) {

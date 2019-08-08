@@ -86,15 +86,7 @@ const (
 	OpStrikethrough
 )
 
-// ColorTextWrap ColorTextWrap
-func ColorTextWrap(color Color, text string) string {
-	if !IsSupportColor() {
-		return text
-	}
-	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color, text)
-}
-
-//OpTextWrap OpTextWrap
+// OpTextWrap OpTextWrap
 func OpTextWrap(color Op, text string) string {
 	if !IsSupportColor() {
 		return text
@@ -154,11 +146,14 @@ func GetAllColorText() map[string]Color {
 	}
 }
 
-// IsSupportColor IsSupportColor
-func IsSupportColor() bool {
-	if !DisableColor && (strings.Contains(os.Getenv("TERM"), "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "" || os.Getenv("ANSICON") != "" || strings.Contains(os.Getenv("TERM"), "256color")) {
-		return true
+// ColorTextWrap ColorTextWrap
+func ColorTextWrap(color Color, text string) string {
+	if !IsSupportColor() {
+		return text
 	}
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color, text)
+}
 
-	return false
+func isSupportColor() bool {
+	return !DisableColor && (strings.Contains(os.Getenv("TERM"), "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "" || os.Getenv("ANSICON") != "" || strings.Contains(os.Getenv("TERM"), "256color"))
 }

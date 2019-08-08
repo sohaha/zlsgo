@@ -15,7 +15,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
-	
+
 	"github.com/sohaha/zlsgo/zls"
 )
 
@@ -30,7 +30,7 @@ const (
 	BitTime                                                // Time Label Bit  01:23:12
 	BitMicroSeconds                                        // Microsecond label bit 01:23:12.111222
 	BitLongFile                                            // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
-	BitShortFile                                           // Final File Name   doc.go
+	BitShortFile                                           // Final File name   doc.go
 	BitLevel                                               // Current log level
 	BitStdFlag      = BitDate | BitTime                    // Standard header log format
 	BitDefault      = BitLevel | BitShortFile | BitStdFlag // Default log header format
@@ -153,7 +153,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 			itoa(buf, day, 2)
 			buf.WriteByte(' ') // "2019/04/11 "
 		}
-		
+
 		if log.flag&(BitTime|BitMicroSeconds) != 0 {
 			hour, min, sec := t.Clock()
 			itoa(buf, hour, 2)
@@ -167,11 +167,11 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 			}
 			buf.WriteByte(' ')
 		}
-		
+
 		if log.flag&BitLevel != 0 {
 			buf.WriteString(log.ColorTextWrap(levelColous[level], levels[level]+" "))
 		}
-		
+
 		if log.flag&(BitShortFile|BitLongFile) != 0 {
 			if log.flag&BitShortFile != 0 {
 				short := file
@@ -202,7 +202,7 @@ func (log *Logger) OutPut(level int, s string, prefixText ...string) error {
 	if log.level < level {
 		return nil
 	}
-	
+
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
@@ -221,7 +221,7 @@ func (log *Logger) OutPut(level int, s string, prefixText ...string) error {
 		}
 		log.mu.Lock()
 	}
-	
+
 	log.buf.Reset()
 	log.formatHeader(&log.buf, now, file, line, level)
 	log.buf.WriteString(s)
@@ -343,7 +343,7 @@ func (log *Logger) Track(logTip string, v ...int) {
 		depth = depth + v[1]
 		max = v[0]
 	}
-	
+
 	stop := func() bool {
 		if max == -1 {
 			return false
@@ -358,7 +358,7 @@ func (log *Logger) Track(logTip string, v ...int) {
 		}
 		b.WriteString(fmt.Sprintf("    %v:%d %v\n", file, line, name))
 	}
-	
+
 	_ = log.OutPut(LogDebug, b.String())
 }
 
@@ -402,9 +402,9 @@ func (log *Logger) SetPrefix(prefix string) {
 // SetLogFile Setting log file output
 func (log *Logger) SetLogFile(fileDir string, fileName string) {
 	var file *os.File
-	
+
 	_ = mkdirLog(fileDir)
-	
+
 	fullPath := fileDir + "/" + fileName
 	if log.checkFileExist(fullPath) {
 		file, _ = os.OpenFile(fullPath, os.O_APPEND|os.O_RDWR, 0644)
@@ -414,7 +414,7 @@ func (log *Logger) SetLogFile(fileDir string, fileName string) {
 	log.DisableConsoleColor()
 	log.mu.Lock()
 	defer log.mu.Unlock()
-	
+
 	log.closeFile()
 	log.file = file
 	log.out = file
@@ -466,7 +466,7 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 		buf.WriteByte('0')
 		return
 	}
-	
+
 	// Assemble decimal in reverse order.
 	var b [32]byte
 	bp := len(b)
@@ -475,7 +475,7 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 		wid--
 		b[bp] = byte(u%10) + '0'
 	}
-	
+
 	// avoid slicing b to avoid an allocation.
 	for bp < len(b) {
 		buf.WriteByte(b[bp])

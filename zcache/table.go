@@ -22,7 +22,7 @@ type (
 	}
 	// CacheItemPairList CacheItemPairList
 	CacheItemPairList []CacheItemPair
-	
+
 	// Table Table
 	Table struct {
 		sync.RWMutex

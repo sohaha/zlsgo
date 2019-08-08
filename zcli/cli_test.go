@@ -3,90 +3,103 @@ package zcli
 import (
 	"flag"
 	"github.com/sohaha/zlsgo"
+	"os"
 	"testing"
 )
 
-var (
-	globalFlagText = "-global=hello"
-	globalText     = "global"
-)
-
 func TestCli(T *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+	}
+	osExit = myExit
 	t := zlsgo.NewTest(T)
-	testRun(t)
-	defaultGlobalFlags(t)
-	testCommand(t)
-	testCommand2(t)
-	testCommandRequired(t)
-	testOther(t)
+	resetForTesting("-debug")
+	SetApp(&App{
+		Logo: `
+________  ____  .__   .__
+\___   /_/ ___\ |  |  |__|
+ /    / \  \___ |  |  |  |
+/_____ \ \___  >|  |__|  |
+      \/     \/ |____/|__|`,
+		Version: "1.0.1",
+	})
+	Add("run", "run", &testCmd{})
+	Run(func() {
+		t.Log("Run", *globalDebug)
+	})
 }
 
-func testRun(_ *zlsgo.TestUtil) {
-	resetForTesting("")
-	Run()
-}
-
-func testCommand2(t *zlsgo.TestUtil) {
+func TestCli2(T *testing.T) {
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
-	var got int
 	myExit := func(code int) {
-		got = code
 	}
 	osExit = myExit
-	resetForTesting(globalFlagText, "testCommand4", "help")
-	Add("testCommand4", "", &testCmd{}, RequiredFlags{})
+	resetForTesting("-debug")
 	Run()
-	t.Equal(0, got)
 }
 
-func testCommandRequired(t *zlsgo.TestUtil) {
+func TestVersion(T *testing.T) {
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
-	var got int
 	myExit := func(code int) {
-		got = code
 	}
 	osExit = myExit
-	GlobalRequired(RequiredFlags{"flag2", globalText})
-	resetForTesting(globalFlagText, "testCommand2", "-flag2=1")
-	c1 := &testCmd{}
-	c1cmd := Add("testCommand2", "", c1, RequiredFlags{"flag", globalText})
-	Add("", "", c1, nil)
-
-	showSubcommandUsage(flag.CommandLine, c1cmd)
-	Run()
-	t.Equal(true, c1.run)
-	t.Equal(got, 1)
+	t := zlsgo.NewTest(T)
+	resetForTesting("-version")
+	SetApp(&App{
+		Version: "1.0.1",
+	})
+	Run(func() {
+		t.Log("Run", *globalDebug)
+	})
 }
 
-func testCommand(t *zlsgo.TestUtil) {
-	resetForTesting(globalFlagText, "testCommand3", "-flag2=1")
-	flagGlobal := flag.String(globalText, "", "Description about global")
-	c1 := &testCmd{}
-	Add("testCommand3", "", c1, RequiredFlags{})
-	Run()
-	t.Equal(true, c1.run)
-	t.Equal(false, *c1.flag1)
-	t.Equal(1, *c1.flag2)
-	t.Equal("hello", *flagGlobal)
+func TestCliOther(_ *testing.T) {
+	testOther()
 }
 
-func defaultGlobalFlags(t *zlsgo.TestUtil) {
-	resetForTesting()
-	flagGlobal := flag.String(globalText, "", "Description ")
-	parse(true)
-	t.Equal(*flagGlobal, "")
+func TestCliCommand(_ *testing.T) {
+	requiredFlags = RequiredFlags{}
+	resetForTesting("test", "-flag1")
+	Add("test", "test", &testCmd{})
+	Run()
+	showFlags(flag.CommandLine)
+}
 
-	resetForTesting(globalFlagText)
-	flagGlobal = flag.String(globalText, "", "Description ")
-	parse(true)
-	t.Equal(*flagGlobal, "hello")
+func TestCliCommandErr(_ *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+	}
+	osExit = myExit
+	requiredFlags = RequiredFlags{}
+	resetForTesting("test")
+	Add("test", "test", &testCmd{})
+	Run()
+}
 
-	resetForTesting(globalFlagText, "-global2=hi")
-	flag.String("global1", "1", "")
-	flag.String("global2", "2", "")
-	total := numOfGlobalFlags()
+func TestCliCommandHelp(_ *testing.T) {
+	expectedName := "gopher"
+	requiredFlags = RequiredFlags{}
+	resetForTesting("testHelp", "-help")
+	matchingCmd := Add("testHelp", "test", &testCmd{})
+	expectedErrorHandling := flag.ExitOnError
+	expectedOutput := os.Stdout
+	parseSubcommand()
+	flag.CommandLine.Init(expectedName, expectedErrorHandling)
+	flag.CommandLine.SetOutput(expectedOutput)
+	showSubcommandUsage(flag.CommandLine, matchingCmd)
+	showFlags(flag.CommandLine)
+}
 
-	t.Equal(total, 2)
+func TestUnknown(_ *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+	}
+	osExit = myExit
+	resetForTesting("unknown")
+	Run()
 }

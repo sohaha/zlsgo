@@ -20,29 +20,27 @@ func init() {
 }
 
 // Add Registers a Cmd for the provided subCommand name
-func Add(name, description string, command Cmd, requiredFlags RequiredFlags) (cmd *cmdCont) {
+func Add(name, description string, command Cmd) (cmd *cmdCont) {
 	if name == "" {
-		Log.Error("Command cannot be empty")
+		Log.Error(getLangs("command_empty"))
 		return
 	}
 	cmd = &cmdCont{
 		name:          name,
 		desc:          description,
 		command:       command,
-		requiredFlags: requiredFlags,
+		requiredFlags: RequiredFlags{},
 	}
 	cmds[name] = cmd
 
 	return
 }
 
-// usage Prints the usage
 func usage() {
 	showHeadr()
 	showFlagsAndRequired := func() {
 		if numOfGlobalFlags() > 0 {
 			showFlags(flag.CommandLine)
-
 			showRequired(flag.CommandLine, requiredFlags)
 		}
 	}
@@ -54,22 +52,31 @@ func usage() {
 	Log.Printf("usage: %s <command>\n\n", firstParameter)
 	Log.Println("  where <command> is one of:")
 	for name, cont := range cmds {
-		Log.Printf("    "+tipText("%-15s")+" %s\n", name, cont.desc)
+		Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
 	}
 
 	showFlagsAndRequired()
-
-	Log.Printf(showText("\nMore Command information, please use: %s <command> --help\n"), firstParameter)
+	if !appConfig.HidePrompt {
+		Log.Printf(showText("\nMore Command information, please use: %s <command> --help\n"), firstParameter)
+	}
 }
 
 func showFlags(fg *flag.FlagSet) {
-	Log.Printf("\n  flags:\n")
+	Log.Printf("\n  optional flags:\n")
 	max := 50
 	showFlagsHelp()
+	flagsItems := zstring.Buffer()
 	fg.VisitAll(func(f *flag.Flag) {
 		s := zstring.Buffer()
 		flagsTitle := f.Name
+		output := false
+		if flagsTitle == "version" {
+			output = true
+		}
 		name, usage := flag.UnquoteUsage(f)
+		// if name == "" {
+		// 	name = "bool"
+		// }
 		sf := "    -%-12s"
 		if len(name) > 0 && name != "string" {
 			newName := showText(name)
@@ -88,8 +95,15 @@ func showFlags(fg *flag.FlagSet) {
 		if defValue != "" && defValue != "0" && defValue != "false" {
 			s.WriteString(fmt.Sprintf(" (default %v)", defValue))
 		}
-		Log.Println(s.String())
+		if output {
+			Log.Println(s.String())
+		} else {
+			s.WriteString("\n")
+			flagsItems.WriteString(s.String())
+		}
 	})
+
+	Log.Println(flagsItems.String())
 }
 
 // Start Start
@@ -116,9 +130,4 @@ func Run(runFunc ...runFunc) (ok bool) {
 	parse(!isRunFunc)
 	Start(runFunc...)
 	return
-}
-
-// GlobalRequired Set globally required flags
-func GlobalRequired(Required RequiredFlags) {
-	requiredFlags = Required
 }

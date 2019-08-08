@@ -10,6 +10,9 @@ import (
 )
 
 func parse(outHelp bool) {
+	if appConfig.Version != "" {
+		flagVersion = SetVar("version", getLangs("version")).Bool()
+	}
 	parseCommand(outHelp)
 	parseSubcommand()
 }
@@ -38,6 +41,11 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 }
 func parseCommand(outHelp bool) {
 	flag.Parse()
+	if *flagVersion {
+		showVersionNum()
+		osExit(0)
+		return
+	}
 	if len(cmds) < 1 {
 		return
 	}
@@ -48,33 +56,35 @@ func parseCommand(outHelp bool) {
 			Error(requiredErr.Error())
 		} else {
 			Help()
-			osExit(0)
 		}
 	}
+
 	if flag.NArg() < 1 {
 		if outHelp {
 			Help()
 		}
 		return
 	}
-
 }
 
 func parseSubcommand() {
 	name := flag.Arg(0)
 	if cont, ok := cmds[name]; ok {
+		matchingCmd = cont
 		firstParameter += " " + name
-		fs := cont.command.Flags(flag.NewFlagSet(name, flag.ExitOnError))
+		fsArgs := flag.Args()[1:]
+		fs := flag.NewFlagSet(name, flag.ExitOnError)
+		flag.CommandLine = fs
+		cont.command.Flags()
 		fs.SetOutput(&errWrite{})
 		fs.Usage = func() {
-			Log.Printf("usage of %s %s:\n", firstParameter, name)
-			Log.Printf("  %s", cont.desc)
+			Log.Printf("usage of %s:\n", firstParameter)
+			Log.Printf("\n  %s", cont.desc)
 			showFlags(fs)
 			showRequired(fs, cont.requiredFlags)
 		}
-		_ = fs.Parse(flag.Args()[1:])
+		_ = fs.Parse(fsArgs)
 		args = fs.Args()
-		matchingCmd = cont
 		flagMap := zarray.New(len(cont.requiredFlags))
 		for _, flagName := range cont.requiredFlags {
 			flagMap.Push(flagName)
@@ -92,9 +102,8 @@ func parseSubcommand() {
 			Error("required flags: %s", strings.Join(arr, ", "))
 		}
 
-		flag.CommandLine = fs
 	} else if name != "" {
-		Error("unknown testCommand: %s", errorText(name))
+		Error("unknown Command: %s", errorText(name))
 	}
 	return
 }

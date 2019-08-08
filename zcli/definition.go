@@ -17,15 +17,20 @@ var (
 	cmds           = make(map[string]*cmdCont)
 	matchingCmd    *cmdCont
 	args           []string
-	requiredFlags  RequiredFlags
-	appConfig      = &App{}
+	requiredFlags  = RequiredFlags{}
+	defaultLang    = "en"
+	appConfig      = &App{
+		Lang: defaultLang,
+	}
 )
 
 type (
 	App struct {
-		Logo     string
-		Version  string
-		HideHelp bool
+		Logo       string
+		Version    string
+		HideHelp   bool
+		HidePrompt bool
+		Lang       string
 	}
 	cmdCont struct {
 		name          string
@@ -38,16 +43,83 @@ type (
 	RequiredFlags []string
 	// Cmd represents a subCommand
 	Cmd interface {
-		Flags(*flag.FlagSet) *flag.FlagSet
+		Flags()
 		Run(args []string)
 	}
 	errWrite struct {
 		id int
 	}
-	stringArr []string
+	Var struct {
+		name  string
+		usage string
+	}
 )
+
+func getLangs(key string) string {
+	lang := appConfig.Lang
+	if lang == "" {
+		lang = defaultLang
+	}
+	langs := map[string]map[string]string{
+		"en": {
+			"command_empty": "Command name cannot be empty",
+			"help":          "Show Command help",
+			"version":       "View version",
+		},
+		"zh": {
+			"command_empty": "命令名不能为空",
+			"help":          "显示帮助信息",
+			"version":       "查看版本信息",
+		},
+	}
+	if lang, ok := langs[lang][key]; ok {
+		return lang
+	}
+	return ""
+}
 
 func (e *errWrite) Write(p []byte) (n int, err error) {
 	Error(ztype.ToString(p))
 	return 1, nil
+}
+
+func SetVar(name, usage string) *Var {
+	return &Var{
+		name:  name,
+		usage: usage,
+	}
+}
+
+// Required Set flag to be required
+func (v *Var) Required() *Var {
+	if matchingCmd != nil {
+		matchingCmd.requiredFlags = append(matchingCmd.requiredFlags, v.name)
+	} else {
+		requiredFlags = append(requiredFlags, v.name)
+	}
+	return v
+}
+
+func (v *Var) String(defaultValue ...string) *string {
+	var value string
+	if len(defaultValue) > 0 {
+		value = defaultValue[0]
+	}
+	return flag.String(v.name, value, v.usage)
+}
+
+func (v *Var) Int(defaultValue ...int) *int {
+	var value int
+	if len(defaultValue) > 0 {
+		value = defaultValue[0]
+	}
+	return flag.Int(v.name, value, v.usage)
+}
+
+func (v *Var) Bool(defaultValue ...bool) *bool {
+	var value bool
+	if len(defaultValue) > 0 {
+		value = defaultValue[0]
+	}
+	return flag.Bool(v.name, value, v.usage)
 }

@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 	"sync"
-	
+
 	// "strconv"
 	// "sync"
 	"time"
-	
+
 	"github.com/sohaha/zlsgo/zlog"
 	// "github.com/sohaha/zlsgo/zvar"
 )
@@ -58,7 +58,7 @@ type (
 		addr               []string
 		router             *router
 	}
-	
+
 	router struct {
 		prefix     string
 		middleware []HandlerFunc
@@ -75,7 +75,7 @@ type (
 		middleware []HandlerFunc
 		Data       map[string]interface{}
 	}
-	
+
 	// HandlerFunc HandlerFunc
 	HandlerFunc func(*Context)
 	// MiddlewareFunc MiddlewareFunc
@@ -84,12 +84,12 @@ type (
 	PanicFunc func(c *Context, err error)
 	// MiddlewareType is a public type that is used for middleware
 	MiddlewareType HandlerFunc
-	
+
 	// Parameters records some parameters
 	Parameters struct {
 		routeName string
 	}
-	
+
 	serverMap struct {
 		engine *Engine
 		srv    *http.Server
@@ -112,13 +112,13 @@ func New(serverName ...string) *Engine {
 	if len(serverName) > 0 {
 		name = serverName[0]
 	}
-	
+
 	log := zlog.New("[" + name + "] ")
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
 	log.SetLogLevel(zlog.LogWarn)
-	
+
 	location, _ := time.LoadLocation(defaultLocation)
-	
+
 	route := &router{
 		trees: make(map[string]*Tree),
 	}
@@ -133,15 +133,15 @@ func New(serverName ...string) *Engine {
 		addr:               []string{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 	}
-	
+
 	if _, ok := zservers[name]; ok {
 		Log.Fatalf("serverName: %s is has", name)
 	}
-	
+
 	zservers[name] = r
-	
+
 	r.Use(withRequestLog)
-	
+
 	return r
 }
 
@@ -213,7 +213,7 @@ func Run() {
 		srvMap sync.Map
 		m      sync.WaitGroup
 	)
-	
+
 	for _, e := range zservers {
 		for _, addr := range e.addr {
 			go func(addr string, e *Engine) {
@@ -235,12 +235,12 @@ func Run() {
 			}(addr, e)
 		}
 	}
-	
+
 	iskill := isKill()
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	
+
 	srvMap.Range(func(key, value interface{}) bool {
 		go func(value interface{}) {
 			if s, ok := value.(*serverMap); ok {
@@ -261,7 +261,7 @@ func Run() {
 		}(value)
 		return true
 	})
-	
+
 	m.Wait()
 }
 

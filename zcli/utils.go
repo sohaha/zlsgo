@@ -28,6 +28,7 @@ func showText(msg string) string {
 // Help show help
 func Help() {
 	flag.Usage()
+	osExit(0)
 }
 
 func numOfGlobalFlags() (count int) {
@@ -39,11 +40,13 @@ func numOfGlobalFlags() (count int) {
 
 func Error(format string, v ...interface{}) {
 	Log.Errorf(format, v...)
-	tip := zstring.Buffer()
-	tip.WriteString("\nPlease use ")
-	tip.WriteString(tipText("%s --help"))
-	tip.WriteString(" for more information")
-	Log.Printf(tip.String(), firstParameter)
+	if !appConfig.HidePrompt {
+		tip := zstring.Buffer()
+		tip.WriteString("\nPlease use ")
+		tip.WriteString(tipText("%s --help"))
+		tip.WriteString(" for more information")
+		Log.Printf(tip.String(), firstParameter)
+	}
 	osExit(1)
 }
 
@@ -82,7 +85,7 @@ func showFlagsHelp() {
 		help := zstring.Buffer()
 		help.WriteString(warnText(fmt.Sprintf("    -%-12s", "help")))
 		help.WriteString("\t")
-		help.WriteString("Show Command help")
+		help.WriteString(getLangs("help"))
 		Log.Println(help.String())
 	}
 }
@@ -93,6 +96,11 @@ func showVersion() (ok bool) {
 	if version != "" {
 		Log.Printf("Version: %s\n", version)
 	}
+	return
+}
+
+func showVersionNum() {
+	Log.Println(appConfig.Version)
 	return
 }
 

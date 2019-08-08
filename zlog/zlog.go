@@ -1,6 +1,9 @@
 package zlog
 
-import "os"
+import (
+	"errors"
+	"os"
+)
 
 var stdZLog = NewZLog(os.Stderr, "", BitDefault, 6, true, 3)
 
@@ -141,4 +144,23 @@ func Stack(v ...interface{}) {
 
 func init() {
 	stdZLog.calldDepth = 3
+}
+
+func TryError(fn ...func(err error)) {
+	if message := recover(); message != nil {
+		var err error
+		switch x := message.(type) {
+		case string:
+			err = errors.New(x)
+		case error:
+			err = x
+		default:
+			err = errors.New("unknow panic")
+		}
+		if len(fn) > 0 {
+			fn[0](err)
+		} else {
+			stdZLog.Error("Recovered panic error : ", err)
+		}
+	}
 }
