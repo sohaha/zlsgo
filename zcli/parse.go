@@ -75,16 +75,27 @@ func parseSubcommand() {
 		fsArgs := flag.Args()[1:]
 		fs := flag.NewFlagSet(name, flag.ExitOnError)
 		flag.CommandLine = fs
-		cont.command.Flags()
+		subcommand := &Subcommand{
+			Name:        cont.name,
+			Desc:        cont.desc,
+			Supplement:  cont.Supplement,
+			Parameter:   firstParameter,
+			CommandLine: fs,
+		}
+		cont.command.Flags(subcommand)
 		fs.SetOutput(&errWrite{})
 		fs.Usage = func() {
-			Log.Printf("usage of %s:\n", firstParameter)
-			Log.Printf("\n  %s", cont.desc)
-			showFlags(fs)
-			showRequired(fs, cont.requiredFlags)
+			Log.Printf("usage of %s:\n", subcommand.Parameter)
+			Log.Printf("\n  %s", subcommand.Desc)
+			if subcommand.Supplement != "" {
+				Log.Printf("\n%s", subcommand.Supplement)
+			}
+			ShowFlags(fs)
+			ShowRequired(fs, cont.requiredFlags)
 		}
 		_ = fs.Parse(fsArgs)
 		args = fs.Args()
+		argsIsHelp(args)
 		flagMap := zarray.New(len(cont.requiredFlags))
 		for _, flagName := range cont.requiredFlags {
 			flagMap.Push(flagName)

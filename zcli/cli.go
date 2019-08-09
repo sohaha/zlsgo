@@ -40,8 +40,8 @@ func usage() {
 	showHeadr()
 	showFlagsAndRequired := func() {
 		if numOfGlobalFlags() > 0 {
-			showFlags(flag.CommandLine)
-			showRequired(flag.CommandLine, requiredFlags)
+			ShowFlags(flag.CommandLine)
+			ShowRequired(flag.CommandLine, requiredFlags)
 		}
 	}
 	if len(cmds) == 0 {
@@ -61,9 +61,9 @@ func usage() {
 	}
 }
 
-func showFlags(fg *flag.FlagSet) {
+func ShowFlags(fg *flag.FlagSet) {
 	Log.Printf("\n  optional flags:\n")
-	max := 50
+	max := 40
 	showFlagsHelp()
 	flagsItems := zstring.Buffer()
 	fg.VisitAll(func(f *flag.Flag) {

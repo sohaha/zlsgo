@@ -14,7 +14,7 @@ func TestCli(T *testing.T) {
 	}
 	osExit = myExit
 	t := zlsgo.NewTest(T)
-	resetForTesting("-debug")
+	// resetForTesting("-debug")
 	SetApp(&App{
 		Logo: `
 ________  ____  .__   .__
@@ -65,7 +65,7 @@ func TestCliCommand(_ *testing.T) {
 	resetForTesting("test", "-flag1")
 	Add("test", "test", &testCmd{})
 	Run()
-	showFlags(flag.CommandLine)
+	ShowFlags(flag.CommandLine)
 }
 
 func TestCliCommandErr(_ *testing.T) {
@@ -91,7 +91,14 @@ func TestCliCommandHelp(_ *testing.T) {
 	flag.CommandLine.Init(expectedName, expectedErrorHandling)
 	flag.CommandLine.SetOutput(expectedOutput)
 	showSubcommandUsage(flag.CommandLine, matchingCmd)
-	showFlags(flag.CommandLine)
+	ShowFlags(flag.CommandLine)
+}
+
+func TestCliCommandHelp2(_ *testing.T) {
+	requiredFlags = RequiredFlags{}
+	resetForTesting("test", "ddd", "-h")
+	Add("test", "test", &testCmd{})
+	Run()
 }
 
 func TestUnknown(_ *testing.T) {

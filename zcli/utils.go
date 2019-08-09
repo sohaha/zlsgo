@@ -50,7 +50,7 @@ func Error(format string, v ...interface{}) {
 	osExit(1)
 }
 
-func showRequired(_ *flag.FlagSet, requiredFlags RequiredFlags) {
+func ShowRequired(_ *flag.FlagSet, requiredFlags RequiredFlags) {
 	flagMapLen := len(requiredFlags)
 	if flagMapLen > 0 {
 		Log.Printf("\n  required flags:\n")
@@ -64,7 +64,6 @@ func showRequired(_ *flag.FlagSet, requiredFlags RequiredFlags) {
 
 func showSubcommandUsage(fs *flag.FlagSet, cont *cmdCont) {
 	fs.Usage()
-	showRequired(fs, cont.requiredFlags)
 }
 
 func showLogo() (ok bool) {
@@ -109,5 +108,16 @@ func showHeadr() {
 	versionOk := showVersion()
 	if logoOk || versionOk {
 		Log.Println("")
+	}
+}
+
+func argsIsHelp(args []string) {
+	if !*flagHelp {
+		for _, value := range args {
+			if value == "-h" || value == "-help" || value == "--help" {
+				*flagHelp = true
+				return
+			}
+		}
 	}
 }

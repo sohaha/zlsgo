@@ -37,13 +37,14 @@ type (
 		desc          string
 		command       Cmd
 		requiredFlags RequiredFlags
+		Supplement    string
 	}
 	runFunc func()
 	// RequiredFlags RequiredFlags flags
 	RequiredFlags []string
 	// Cmd represents a subCommand
 	Cmd interface {
-		Flags()
+		Flags(subcommand *Subcommand)
 		Run(args []string)
 	}
 	errWrite struct {
@@ -52,6 +53,14 @@ type (
 	Var struct {
 		name  string
 		usage string
+	}
+	Subcommand struct {
+		cmdCont
+		CommandLine *flag.FlagSet
+		Name        string
+		Desc        string
+		Supplement  string
+		Parameter   string
 	}
 )
 
@@ -65,6 +74,7 @@ func getLangs(key string) string {
 			"command_empty": "Command name cannot be empty",
 			"help":          "Show Command help",
 			"version":       "View version",
+			"test":          "Test",
 		},
 		"zh": {
 			"command_empty": "命令名不能为空",
@@ -75,6 +85,11 @@ func getLangs(key string) string {
 	if lang, ok := langs[lang][key]; ok {
 		return lang
 	}
+
+	if lang, ok := langs[defaultLang][key]; ok {
+		return lang
+	}
+
 	return ""
 }
 

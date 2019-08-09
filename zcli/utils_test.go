@@ -6,7 +6,7 @@ import (
 )
 
 var globalDebug = SetVar("debug", "是否开启调试").Required().Bool()
-var globalTest = SetVar("test", "").Bool(true)
+var globalTest = SetVar("test--------------test----------------test", "testtesttesttesttesttesttesttesttesttesttest").Bool(true)
 
 type testCmd struct {
 	flag1 *bool
@@ -15,10 +15,10 @@ type testCmd struct {
 	run   bool
 }
 
-func (cmd *testCmd) Flags() {
+func (cmd *testCmd) Flags(sub *Subcommand) {
 	cmd.flag1 = SetVar("flag1", "Description about flag1").Required().Bool()
 	cmd.flag2 = SetVar("flag2", "Description about flag2").Int(1)
-	cmd.flag3 = SetVar("flag3", "Description about flag2").String("666")
+	cmd.flag3 = SetVar("flag333333333333333333333333333333333333", "Description about flag333333333333333333333333333333").String("666")
 }
 
 func (cmd *testCmd) Run(args []string) {
@@ -44,9 +44,11 @@ func testOther() {
 		HideHelp: true,
 		Lang:     "zh",
 	})
+	getLangs("test")
 	tipText("ok")
 	errorText("err")
 	showText("show")
 	warnText("warn")
+	Add("", "", &testCmd{})
 	Help()
 }
