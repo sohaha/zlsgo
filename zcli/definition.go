@@ -9,29 +9,38 @@ import (
 
 var (
 	// Log cli logger
-	Log            *zlog.Logger
-	firstParameter = os.Args[0]
-	flagHelp       = new(bool)
-	flagVersion    = new(bool)
-	osExit         = os.Exit
-	cmds           = make(map[string]*cmdCont)
-	matchingCmd    *cmdCont
-	args           []string
-	requiredFlags  = RequiredFlags{}
-	defaultLang    = "en"
-	appConfig      = &App{
-		Lang: defaultLang,
+	Log              *zlog.Logger
+	firstParameter   = os.Args[0]
+	flagHelp         = new(bool)
+	flagVersion      = new(bool)
+	osExit           = os.Exit
+	cmds             = make(map[string]*cmdCont)
+	matchingCmd      *cmdCont
+	args             []string
+	requiredFlags    = RequiredFlags{}
+	defaultLang      = "en"
+	unknownCommandFn = func(name string) {
+		Error("unknown Command: %s", errorText(name))
 	}
+	//appConfig      = &App{
+	//Lang: defaultLang,
+	//}
+	Logo        string
+	Description string
+	Version     string
+	HideHelp    bool
+	HidePrompt  bool
+	Lang        = defaultLang
 )
 
 type (
-	App struct {
-		Logo       string
-		Version    string
-		HideHelp   bool
-		HidePrompt bool
-		Lang       string
-	}
+	//App struct {
+	//Logo       string
+	//Version    string
+	//HideHelp   bool
+	//HidePrompt bool
+	//Lang       string
+	//}
 	cmdCont struct {
 		name          string
 		desc          string
@@ -65,10 +74,10 @@ type (
 )
 
 func getLangs(key string) string {
-	lang := appConfig.Lang
-	if lang == "" {
-		lang = defaultLang
-	}
+	//lang := appConfig.Lang
+	//if lang == "" {
+	//lang = defaultLang
+	//}
 	langs := map[string]map[string]string{
 		"en": {
 			"command_empty": "Command name cannot be empty",
@@ -82,7 +91,7 @@ func getLangs(key string) string {
 			"version":       "查看版本信息",
 		},
 	}
-	if lang, ok := langs[lang][key]; ok {
+	if lang, ok := langs[Lang][key]; ok {
 		return lang
 	}
 

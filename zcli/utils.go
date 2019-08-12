@@ -40,7 +40,7 @@ func numOfGlobalFlags() (count int) {
 
 func Error(format string, v ...interface{}) {
 	Log.Errorf(format, v...)
-	if !appConfig.HidePrompt {
+	if !HidePrompt {
 		tip := zstring.Buffer()
 		tip.WriteString("\nPlease use ")
 		tip.WriteString(tipText("%s --help"))
@@ -66,21 +66,20 @@ func showSubcommandUsage(fs *flag.FlagSet, cont *cmdCont) {
 	fs.Usage()
 }
 
-func showLogo() (ok bool) {
-	logo := appConfig.Logo
-	ok = logo != ""
-	if logo != "" {
-		Log.Printf("%s\n", strings.Replace(logo, "\n", "", 1))
+func showLogo() bool {
+	if Logo != "" {
+		Log.Printf("%s\n", strings.Replace(Logo, "\n", "", 1))
+		return true
 	}
-	return
+	return false
 }
 
-func SetApp(app *App) {
-	appConfig = app
-}
+//func SetApp(app *App) {
+//appConfig = app
+//}
 
 func showFlagsHelp() {
-	if !appConfig.HideHelp {
+	if !HideHelp {
 		help := zstring.Buffer()
 		help.WriteString(warnText(fmt.Sprintf("    -%-12s", "help")))
 		help.WriteString("\t")
@@ -89,24 +88,32 @@ func showFlagsHelp() {
 	}
 }
 
-func showVersion() (ok bool) {
-	version := appConfig.Version
-	ok = version != ""
-	if version != "" {
-		Log.Printf("Version: %s\n", version)
+func showDescription() bool {
+	if Description != "" {
+		Log.Printf("%s\n", Description)
+		return true
 	}
-	return
+	return false
+}
+
+func showVersion() bool {
+	if Version != "" {
+		Log.Printf("Version: %s\n", Version)
+		return true
+	}
+	return false
 }
 
 func showVersionNum() {
-	Log.Println(appConfig.Version)
+	Log.Println(Version)
 	return
 }
 
 func showHeadr() {
 	logoOk := showLogo()
+	descriptionOk := showDescription()
 	versionOk := showVersion()
-	if logoOk || versionOk {
+	if logoOk || versionOk || descriptionOk {
 		Log.Println("")
 	}
 }

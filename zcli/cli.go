@@ -36,6 +36,10 @@ func Add(name, description string, command Cmd) (cmd *cmdCont) {
 	return
 }
 
+func SetUnknownCommand(fn func(name string)) {
+	unknownCommandFn = fn
+}
+
 func usage() {
 	showHeadr()
 	showFlagsAndRequired := func() {
@@ -56,7 +60,7 @@ func usage() {
 	}
 
 	showFlagsAndRequired()
-	if !appConfig.HidePrompt {
+	if !HidePrompt {
 		Log.Printf(showText("\nMore Command information, please use: %s <command> --help\n"), firstParameter)
 	}
 }
@@ -78,8 +82,8 @@ func ShowFlags(fg *flag.FlagSet) {
 		// 	name = "bool"
 		// }
 		sf := "    -%-12s"
-		if len(name) > 0 && name != "string" {
-			newName := showText(name)
+		if len(name) > 0 {
+			newName := showText("<" + name + ">")
 			namePadLen := 12 + len(newName) - len(name)
 			flagsTitle += " " + newName
 			sf = "    -%-" + ztype.ToString(namePadLen) + "s"

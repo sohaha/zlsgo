@@ -38,12 +38,11 @@ func testOther() {
 	myExit := func(code int) {
 	}
 	osExit = myExit
-	SetApp(&App{
-		Logo:     "test",
-		Version:  "1.0.0",
-		HideHelp: true,
-		Lang:     "zh",
-	})
+	Logo = "test"
+	Version = "1.0.0"
+	HideHelp = true
+	Description = "test"
+	Lang = "zh"
 	getLangs("test")
 	tipText("ok")
 	errorText("err")

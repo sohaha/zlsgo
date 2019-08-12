@@ -15,15 +15,13 @@ func TestCli(T *testing.T) {
 	osExit = myExit
 	t := zlsgo.NewTest(T)
 	// resetForTesting("-debug")
-	SetApp(&App{
-		Logo: `
+	Logo = `
 ________  ____  .__   .__
 \___   /_/ ___\ |  |  |__|
  /    / \  \___ |  |  |  |
 /_____ \ \___  >|  |__|  |
-      \/     \/ |____/|__|`,
-		Version: "1.0.1",
-	})
+      \/     \/ |____/|__|`
+	Version = "1.0.1"
 	Add("run", "run", &testCmd{})
 	Run(func() {
 		t.Log("Run", *globalDebug)
@@ -48,9 +46,7 @@ func TestVersion(T *testing.T) {
 	osExit = myExit
 	t := zlsgo.NewTest(T)
 	resetForTesting("-version")
-	SetApp(&App{
-		Version: "1.0.1",
-	})
+	Version = "1.0.1"
 	Run(func() {
 		t.Log("Run", *globalDebug)
 	})
@@ -109,4 +105,21 @@ func TestUnknown(_ *testing.T) {
 	osExit = myExit
 	resetForTesting("unknown")
 	Run()
+}
+
+func TestUnknown2(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	var eCode = 0
+	myExit := func(code int) {
+		eCode = code
+	}
+	osExit = myExit
+	SetUnknownCommand(func(name string) {
+		T.Log(name)
+	})
+	resetForTesting("unknown")
+	Run()
+	t.Equal(1, eCode)
 }

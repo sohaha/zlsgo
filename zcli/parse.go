@@ -10,7 +10,7 @@ import (
 )
 
 func parse(outHelp bool) {
-	if appConfig.Version != "" {
+	if Version != "" {
 		flagVersion = SetVar("version", getLangs("version")).Bool()
 	}
 	parseCommand(outHelp)
@@ -112,9 +112,9 @@ func parseSubcommand() {
 			}
 			Error("required flags: %s", strings.Join(arr, ", "))
 		}
-
 	} else if name != "" {
-		Error("unknown Command: %s", errorText(name))
+		unknownCommandFn(name)
+		osExit(1)
 	}
 	return
 }
