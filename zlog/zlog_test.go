@@ -2,14 +2,18 @@ package zlog
 
 import (
 	"errors"
+	"github.com/sohaha/zlsgo"
 	"os"
 	"testing"
-
-	zls "github.com/sohaha/zlsgo"
 )
 
+func TestLogTrack(T *testing.T) {
+	Track("log with Track")
+	Stack("log with Stack")
+}
+
 func TestLog(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	text := "Text"
 
 	Debug("log with Debug")
@@ -25,8 +29,6 @@ func TestLog(T *testing.T) {
 	Println("log with Println")
 	Printf("%s", "log with Printf")
 
-	Track("log with Track")
-	Stack("log with Stack")
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()
 	t.Equal(LogFatal, level)
@@ -54,13 +56,14 @@ func TestLog(T *testing.T) {
 }
 
 func TestLogFatal(T *testing.T) {
+	ResetFlags(0)
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
 	}
 	osExit = myExit
-	Fatal("Fatal")
-	Fatalf("%s", "Fatal")
+	Fatal("TestLogFatal")
+	Fatalf("%s\n", "Fatal")
 }
 func TestTryError(T *testing.T) {
 	testTryErrorErr(T)

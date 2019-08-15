@@ -337,7 +337,6 @@ func (log *Logger) Stack(v ...interface{}) {
 	s := fmt.Sprint(v...)
 	s += "\n"
 	buf := make([]byte, LogMaxBuf)
-	// 得到当前堆栈信息
 	n := runtime.Stack(buf, true)
 	s += string(buf[:n])
 	s += "\n"

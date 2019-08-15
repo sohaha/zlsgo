@@ -80,11 +80,6 @@ func Success(v ...interface{}) {
 	Log.Success(v...)
 }
 
-// Track Track
-func Track(logTip string, v ...int) {
-	Log.Track(logTip, v...)
-}
-
 // Infof Infof
 func Infof(format string, v ...interface{}) {
 	Log.Infof(format, v...)
@@ -143,6 +138,11 @@ func Panicf(format string, v ...interface{}) {
 // Panic panic
 func Panic(v ...interface{}) {
 	Log.Panic(v...)
+}
+
+// Track Track
+func Track(logTip string, v ...int) {
+	Log.Track(logTip, v...)
 }
 
 // Stack Stack
