@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-06-06 15:21:30
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 15:57:34
- */
-
 package zlog
 
 import (
@@ -37,6 +30,7 @@ func TestLog(T *testing.T) {
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()
 	t.Equal(LogFatal, level)
+	ResetFlags(BitLevel | BitShortFile | BitStdFlag)
 	flage := GetFlags()
 	t.Equal(BitDefault, flage)
 	DisableConsoleColor()
@@ -47,7 +41,7 @@ func TestLog(T *testing.T) {
 	ForceConsoleColor()
 	ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
 	SetLogFile("tmp", "Log.log")
-	CleanLog(stdZLog)
+	CleanLog(Log)
 	log := New(text)
 	log.SetPrefix(text)
 	log.GetLogLevel()
@@ -59,6 +53,15 @@ func TestLog(T *testing.T) {
 	t.Log(e)
 }
 
+func TestLogFatal(T *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+	}
+	osExit = myExit
+	Fatal("Fatal")
+	Fatalf("%s", "Fatal")
+}
 func TestTryError(T *testing.T) {
 	testTryErrorErr(T)
 	testTryErrorString(T)

@@ -274,6 +274,10 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			uploads = append(uploads, vv)
 		case []FileUpload:
 			uploads = append(uploads, vv...)
+		case map[string]*http.Cookie:
+			for i := range vv {
+				req.AddCookie(vv[i])
+			}
 		case *http.Cookie:
 			req.AddCookie(vv)
 		case Host:
@@ -357,6 +361,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 
 	var response *http.Response
+
 	if r.flag&BitTime != 0 {
 		before := time.Now()
 		response, err = resp.client.Do(req)
@@ -365,6 +370,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	} else {
 		response, err = resp.client.Do(req)
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -382,6 +388,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		}
 		response.Body = body
 	}
+
 	//noinspection GoBoolExpressions
 	if Debug {
 		zlog.Println(resp.Dump())

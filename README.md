@@ -22,7 +22,7 @@
 $ go get github.com/sohaha/zlsgo
 ```
 
-### 用法
+### HTTP服务
 
 ```go
 // main.go
@@ -46,6 +46,20 @@ func main(){
 }
 ```
 
+### 日志工具
+```go
+package main 
+
+import (
+    "github.com/sohaha/zlsgo/zlog"
+)
+
+func main(){
+    zlog.Debug("这是一个测试")
+    zlog.Error("这是一个错误")
+    // zlog...
+}
+```
 ## LICENSE
 
 [MIT](LICENSE)

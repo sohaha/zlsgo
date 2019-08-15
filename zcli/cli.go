@@ -36,7 +36,7 @@ func Add(name, description string, command Cmd) (cmd *cmdCont) {
 	return
 }
 
-func SetUnknownCommand(fn func(name string)) {
+func SetUnknownCommand(fn func(_ string)) {
 	unknownCommandFn = fn
 }
 

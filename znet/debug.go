@@ -15,9 +15,11 @@ import (
 )
 
 func debugShowRequest(c *Context) {
-	method := "{" + c.Request.Method + "}"
-	method = zstring.Pad(method, 8, " ", 0)
-	c.Log.Debugf("Visit: [%d] %s %s\n", c.Code, method, c.Request.RequestURI)
+	method := zstring.Buffer()
+	method.WriteString("{")
+	method.WriteString(c.Request.Method)
+	method.WriteString("}")
+	c.Log.Debugf("Visit: [%d] %s %s\n", c.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
 }
 
 func showRouteDebug(log *zlog.Logger, tf, method, path string) string {

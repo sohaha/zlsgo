@@ -5,7 +5,7 @@
  * @Last Modified time: 2019-05-25 14:15:27
  */
 
-package zls
+package zfile
 
 import (
 	"fmt"

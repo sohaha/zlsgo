@@ -10,7 +10,6 @@ package zhttp
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -81,11 +80,6 @@ func (r *Engine) Options(url string, v ...interface{}) (*Res, error) {
 	return r.Do("OPTIONS", url, v...)
 }
 
-func (r *Engine) getTransport() *http.Transport {
-	trans, _ := r.Client().Transport.(*http.Transport)
-	return trans
-}
-
 func (r *Engine) EnableInsecureTLS(enable bool) {
 	trans := r.getTransport()
 	if trans == nil {
@@ -150,13 +144,6 @@ func (r *Engine) SetJSONIndent(prefix, indent string) {
 	opts.indentValue = indent
 }
 
-func (r *Engine) getXMLEncOpts() *xmlEncOpts {
-	if r.xmlEncOpts == nil {
-		r.xmlEncOpts = &xmlEncOpts{}
-	}
-	return r.xmlEncOpts
-}
-
 func (r *Engine) SetXMLIndent(prefix, indent string) {
 	opts := r.getXMLEncOpts()
 	opts.prefix = prefix
@@ -190,66 +177,14 @@ func (r *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 	return trans.TLSClientConfig, nil
 }
 
-func (r *Res) autoFormat(s fmt.State) {
-	req := r.req
-	if r.r.flag&BitTime != 0 {
-		fmt.Fprint(s, req.Method, " ", req.URL.String(), " ", r.cost)
-	} else {
-		fmt.Fprint(s, req.Method, " ", req.URL.String())
-	}
-
-	var pretty bool
-	var parts []string
-	addPart := func(part string) {
-		if part == "" {
-			return
-		}
-		parts = append(parts, part)
-		if !pretty && regNewline.MatchString(part) {
-			pretty = true
-		}
-	}
-	if r.r.flag&BitReqBody != 0 {
-		addPart(string(r.requesterBody))
-	}
-	if r.r.flag&BitRespBody != 0 {
-		addPart(r.String())
-	}
-
-	for _, part := range parts {
-		if pretty {
-			fmt.Fprint(s, "\n")
-		}
-		fmt.Fprint(s, " ", part)
-	}
+func (r *Engine) getTransport() *http.Transport {
+	trans, _ := r.Client().Transport.(*http.Transport)
+	return trans
 }
 
-func (r *Res) miniFormat(s fmt.State) {
-	req := r.req
-	if r.r.flag&BitTime != 0 {
-		fmt.Fprint(s, req.Method, " ", req.URL.String(), " ", r.cost)
-	} else {
-		fmt.Fprint(s, req.Method, " ", req.URL.String())
+func (r *Engine) getXMLEncOpts() *xmlEncOpts {
+	if r.xmlEncOpts == nil {
+		r.xmlEncOpts = &xmlEncOpts{}
 	}
-	if r.r.flag&BitReqBody != 0 && len(r.requesterBody) > 0 {
-		str := regNewline.ReplaceAllString(string(r.requesterBody), " ")
-		fmt.Fprint(s, " ", str)
-	}
-	if r.r.flag&BitRespBody != 0 && r.String() != "" {
-		str := regNewline.ReplaceAllString(r.String(), " ")
-		fmt.Fprint(s, " ", str)
-	}
-}
-
-func (r *Res) Format(s fmt.State, verb rune) {
-	if r == nil || r.req == nil {
-		return
-	}
-	if s.Flag('+') {
-		fmt.Fprint(s, r.Dump())
-	} else if s.Flag('-') {
-		r.miniFormat(s)
-	} else {
-		r.autoFormat(s)
-	}
+	return r.xmlEncOpts
 }

@@ -62,7 +62,7 @@ func ShowRequired(_ *flag.FlagSet, requiredFlags RequiredFlags) {
 	}
 }
 
-func showSubcommandUsage(fs *flag.FlagSet, cont *cmdCont) {
+func showSubcommandUsage(fs *flag.FlagSet, _ *cmdCont) {
 	fs.Usage()
 }
 
@@ -73,10 +73,6 @@ func showLogo() bool {
 	}
 	return false
 }
-
-//func SetApp(app *App) {
-//appConfig = app
-//}
 
 func showFlagsHelp() {
 	if !HideHelp {

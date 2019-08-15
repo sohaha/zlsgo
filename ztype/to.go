@@ -1,16 +1,10 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 12:44:23
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 13:03:30
- */
-
 // Package ztype provides Variable Type Related Operations
 package ztype
 
 import (
-	//"encoding/json"
+	// "encoding/json"
 	"encoding/json"
+	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
 	"strings"
 )
@@ -21,7 +15,8 @@ type appString interface {
 
 // ToByte to []byte
 func ToByte(i interface{}) []byte {
-	return []byte(ToString(i))
+	s := ToString(i)
+	return zstring.String2Bytes(&s)
 }
 
 // ToString to String
@@ -62,7 +57,7 @@ func ToString(i interface{}) string {
 	case string:
 		return value
 	case []byte:
-		return string(value)
+		return zstring.Bytes2String(value)
 	default:
 		if f, ok := value.(appString); ok {
 			return f.String()

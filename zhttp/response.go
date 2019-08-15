@@ -38,6 +38,18 @@ func (r *Res) Response() *http.Response {
 	return r.resp
 }
 
+func (r *Res) GetCookie() map[string]*http.Cookie {
+	cookiesRaw := r.Response().Cookies()
+	cookies := make(map[string]*http.Cookie, len(cookiesRaw))
+	var cookie *http.Cookie
+	for i := range cookiesRaw {
+		if cookie = cookiesRaw[i]; cookie != nil {
+			cookies[cookie.Name] = cookie
+		}
+	}
+	return cookies
+}
+
 func (r *Res) Bytes() []byte {
 	data, _ := r.ToBytes()
 	return data
@@ -59,6 +71,10 @@ func (r *Res) ToBytes() ([]byte, error) {
 	}
 	r.responseBody = respBody
 	return r.responseBody, nil
+}
+
+func (r *Res) Body() io.ReadCloser {
+	return r.resp.Body
 }
 
 func (r *Res) String() string {

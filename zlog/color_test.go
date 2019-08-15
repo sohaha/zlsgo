@@ -18,7 +18,7 @@ import (
 func TestColor(t *testing.T) {
 	T := zls.NewTest(t)
 	testText := "ok"
-	os.Setenv("ConEmuANSI", "ON")
+	_ = os.Setenv("ConEmuANSI", "ON")
 	bl := IsSupportColor()
 	T.Equal(true, bl)
 	OutAllColor()

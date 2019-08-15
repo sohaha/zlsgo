@@ -5,7 +5,7 @@
  * @Last Modified time: 2019-05-25 14:15:18
  */
 
-package zls
+package zfile
 
 import (
 	"testing"

@@ -277,7 +277,11 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 
 	if e.router.prefix != "" {
 		if path != "" {
-			path = e.router.prefix + "/" + strings.TrimPrefix(path, "/")
+			prefix := zstring.Buffer()
+			prefix.WriteString(e.router.prefix)
+			prefix.WriteString("/")
+			prefix.WriteString(strings.TrimPrefix(path, "/"))
+			path = prefix.String()
 		} else {
 			path = e.router.prefix
 		}

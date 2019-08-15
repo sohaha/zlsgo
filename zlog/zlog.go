@@ -5,147 +5,156 @@ import (
 	"os"
 )
 
-var stdZLog = NewZLog(os.Stderr, "", BitDefault, 6, true, 3)
+var (
+	Log    = NewZLog(os.Stderr, "", BitDefault, 6, true, 3)
+	osExit = os.Exit
+)
 
 // GetFlags Get the tag bits
 func GetFlags() int {
-	return stdZLog.GetFlags()
+	return Log.GetFlags()
 }
 
 // DisableConsoleColor DisableConsoleColor
 func DisableConsoleColor() {
-	stdZLog.DisableConsoleColor()
+	Log.DisableConsoleColor()
 }
 
 // ForceConsoleColor ForceConsoleColor
 func ForceConsoleColor() {
-	stdZLog.ForceConsoleColor()
+	Log.ForceConsoleColor()
 }
 
 // ResetFlags Setting Markup Bits
 func ResetFlags(flag int) {
-	stdZLog.ResetFlags(flag)
+	Log.ResetFlags(flag)
 }
 
 // AddFlag Set flag Tags
 func AddFlag(flag int) {
-	stdZLog.AddFlag(flag)
+	Log.AddFlag(flag)
 }
 
 // SetPrefix Setting log header prefix
 func SetPrefix(prefix string) {
-	stdZLog.SetPrefix(prefix)
+	Log.SetPrefix(prefix)
 }
 
 // SetLogFile Setting up log files
 func SetLogFile(fileDir string, fileName string) {
-	stdZLog.SetLogFile(fileDir, fileName)
+	Log.SetLogFile(fileDir, fileName)
+}
+
+// SetSaveLogFile SetSaveLogFile
+func SetSaveLogFile(fileDir string, fileName string) {
+	Log.SetSaveLogFile(fileDir, fileName)
 }
 
 // SetLogLevel Setting log display level
 func SetLogLevel(level int) {
-	stdZLog.SetLogLevel(level)
+	Log.SetLogLevel(level)
 }
 
 // GetLogLevel Setting log display level
 func GetLogLevel() int {
-	return stdZLog.level
+	return Log.level
 }
 
 // Debugf Debugf
 func Debugf(format string, v ...interface{}) {
-	stdZLog.Debugf(format, v...)
+	Log.Debugf(format, v...)
 }
 
 // Debug Debug
 func Debug(v ...interface{}) {
-	stdZLog.Debug(v...)
+	Log.Debug(v...)
 }
 
 // Successf Successf
 func Successf(format string, v ...interface{}) {
-	stdZLog.Successf(format, v...)
+	Log.Successf(format, v...)
 }
 
 // Success Success
 func Success(v ...interface{}) {
-	stdZLog.Success(v...)
+	Log.Success(v...)
 }
 
 // Track Track
 func Track(logTip string, v ...int) {
-	stdZLog.Track(logTip, v...)
+	Log.Track(logTip, v...)
 }
 
 // Infof Infof
 func Infof(format string, v ...interface{}) {
-	stdZLog.Infof(format, v...)
+	Log.Infof(format, v...)
 }
 
 // Info Info
 func Info(v ...interface{}) {
-	stdZLog.Info(v...)
+	Log.Info(v...)
 }
 
 // Warnf Warnf
 func Warnf(format string, v ...interface{}) {
-	stdZLog.Warnf(format, v...)
+	Log.Warnf(format, v...)
 }
 
 // Warn Warn
 func Warn(v ...interface{}) {
-	stdZLog.Warn(v...)
+	Log.Warn(v...)
 }
 
 // Errorf Errorf
 func Errorf(format string, v ...interface{}) {
-	stdZLog.Errorf(format, v...)
+	Log.Errorf(format, v...)
 }
 
 // Error Error
 func Error(v ...interface{}) {
-	stdZLog.Error(v...)
+	Log.Error(v...)
 }
 
 // Printf Printf
 func Printf(format string, v ...interface{}) {
-	stdZLog.Printf(format, v...)
+	Log.Printf(format, v...)
 }
 
 // Println Println
 func Println(v ...interface{}) {
-	stdZLog.Println(v...)
+	Log.Println(v...)
 }
 
 // Fatalf Fatalf
 func Fatalf(format string, v ...interface{}) {
-	stdZLog.Fatalf(format, v...)
+	Log.Fatalf(format, v...)
 }
 
 // Fatal Fatal
 func Fatal(v ...interface{}) {
-	stdZLog.Fatal(v...)
+	Log.Fatal(v...)
 }
 
 // Panicf Panicf
 func Panicf(format string, v ...interface{}) {
-	stdZLog.Panicf(format, v...)
+	Log.Panicf(format, v...)
 }
 
-// panic panic
+// Panic panic
 func Panic(v ...interface{}) {
-	stdZLog.Panic(v...)
+	Log.Panic(v...)
 }
 
 // Stack Stack
 func Stack(v ...interface{}) {
-	stdZLog.Stack(v...)
+	Log.Stack(v...)
 }
 
 func init() {
-	stdZLog.calldDepth = 3
+	Log.calldDepth = 3
 }
 
+// TryError TryError
 func TryError(fn ...func(err error)) {
 	if message := recover(); message != nil {
 		var err error
@@ -160,7 +169,7 @@ func TryError(fn ...func(err error)) {
 		if len(fn) > 0 {
 			fn[0](err)
 		} else {
-			stdZLog.Error("Recovered panic error : ", err)
+			Log.Error("Recovered panic error : ", err)
 		}
 	}
 }

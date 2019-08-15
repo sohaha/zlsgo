@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 12:44:23
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 13:03:41
- */
-
 package ztype
 
 import (

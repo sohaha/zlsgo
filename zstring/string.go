@@ -11,6 +11,7 @@ package zstring
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -24,6 +25,8 @@ const (
 	PadLeft
 	// PadSides Two-sided padding characters,If the two sides are not equal, the right side takes precedence.
 	PadSides
+	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterIdxMask = 1<<6 - 1 // All 1-bits, as many as 6
 )
 
 // Pad String padding
@@ -67,11 +70,6 @@ func Substr(str string, start int, length ...int) string {
 	return string(s[start:l])
 }
 
-const (
-	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	letterIdxMask = 1<<6 - 1 // All 1-bits, as many as 6
-)
-
 var src = rand.NewSource(time.Now().UnixNano())
 
 func Rand(n int) string {
@@ -85,5 +83,13 @@ func Rand(n int) string {
 		cache >>= 6
 		remain--
 	}
+	return Bytes2String(b)
+}
+
+func Bytes2String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
+}
+
+func String2Bytes(s *string) []byte {
+	return *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(s))))
 }

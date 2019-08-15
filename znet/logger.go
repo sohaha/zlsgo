@@ -9,6 +9,7 @@ package znet
 
 import (
 	"fmt"
+	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
 	"time"
 
@@ -28,14 +29,18 @@ func requestLog(c *Context) {
 		end := time.Now()
 		latency := end.Sub(c.Info.StartTime)
 		code := c.Code
-		status := " " + strconv.Itoa(code) + " "
+		var status string
+		statusCode := zstring.Buffer()
+		statusCode.WriteString(" ")
+		statusCode.WriteString(strconv.Itoa(code))
+		statusCode.WriteString(" ")
 		switch {
 		case code >= 200 && code <= 299:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorGreen, status)
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorGreen, statusCode.String())
 		case code >= 300 && code <= 399:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorYellow, status)
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorYellow, statusCode.String())
 		default:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorRed, status)
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorRed, statusCode.String())
 		}
 		ft := fmt.Sprintf("%s %15s %15v %%s  %%s", status, c.Log.ColorTextWrap(zlog.ColorWhite, c.ClientIP()), latency)
 		c.Log.Success(showRouteDebug(c.Log, ft, c.Request.Method, c.Request.RequestURI))

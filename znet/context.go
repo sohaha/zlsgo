@@ -8,6 +8,7 @@
 package znet
 
 import (
+	"github.com/sohaha/zlsgo/zstring"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,10 +30,13 @@ func (c *Context) CompletionLink(link string) string {
 	if isURL := zvalidator.IsURL(link); isURL {
 		return link
 	}
+	finalLink := zstring.Buffer()
+	finalLink.WriteString(c.Host())
 	if !strings.HasPrefix(link, "/") {
-		link = "/" + link
+		finalLink.WriteString("/")
 	}
-	return c.Host() + link
+	finalLink.WriteString(link)
+	return finalLink.String()
 }
 
 // IsWebsocket Is Websocket

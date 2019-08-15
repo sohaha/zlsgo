@@ -9,12 +9,11 @@ package zpprof
 
 import (
 	"fmt"
+	"github.com/sohaha/zlsgo/zfile"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
-
-	"github.com/sohaha/zlsgo/zls"
 )
 
 // SystemInfo SystemInfo
@@ -53,14 +52,14 @@ func newSystemInfo(startTime time.Time) *SystemInfo {
 		Runtime:      fmt.Sprintf("%d天%d小时%d分%d秒", costTime/(3600*24), costTime%(3600*24)/3600, costTime%3600/60, costTime%(60)),
 		GoroutineNum: strconv.Itoa(runtime.NumGoroutine()),
 		CPUNum:       strconv.Itoa(runtime.NumCPU()),
-		UsedMem:      zls.FileSizeFormat(int64(mstat.Alloc)),
-		TotalMem:     zls.FileSizeFormat(int64(mstat.TotalAlloc)),
-		SysMem:       zls.FileSizeFormat(int64(mstat.Sys)),
+		UsedMem:      zfile.FileSizeFormat(int64(mstat.Alloc)),
+		TotalMem:     zfile.FileSizeFormat(int64(mstat.TotalAlloc)),
+		SysMem:       zfile.FileSizeFormat(int64(mstat.Sys)),
 		Lookups:      strconv.FormatUint(mstat.Lookups, 10),
 		Mallocs:      strconv.FormatUint(mstat.Mallocs, 10),
 		Frees:        strconv.FormatUint(mstat.Frees, 10),
 		LastGCTime:   afterLastGC,
-		NextGC:       zls.FileSizeFormat(int64(mstat.NextGC)),
+		NextGC:       zfile.FileSizeFormat(int64(mstat.NextGC)),
 		PauseTotalNs: fmt.Sprintf("%.3fs", float64(mstat.PauseTotalNs)/1000/1000/1000),
 		PauseNs:      fmt.Sprintf("%.3fs", float64(mstat.PauseNs[(mstat.NumGC+255)%256])/1000/1000/1000),
 	}

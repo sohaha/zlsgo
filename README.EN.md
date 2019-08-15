@@ -24,7 +24,7 @@ Golang daily development common function library
 $ go get github.com/sohaha/zlsgo
 ```
 
-### Usage
+### HTTP Service
 
 ```go
 // main.go
@@ -45,6 +45,20 @@ func main(){
 }
 ```
 
+### Logging Tool
+```go
+package main 
+
+import (
+    "github.com/sohaha/zlsgo/zlog"
+)
+
+func main(){
+    zlog.Debug("This is a debug")
+    zlog.Error("This is a error")
+    // zlog...
+}
+```
 ## LICENSE
 
 [MIT](LICENSE)

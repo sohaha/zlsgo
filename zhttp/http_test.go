@@ -3,17 +3,12 @@ package zhttp
 import (
 	"fmt"
 	zls "github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/znet"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
-	"sync"
 	"testing"
-)
-
-var (
-	one    sync.Once
-	engine *znet.Engine
+	"time"
 )
 
 func TestHttp(T *testing.T) {
@@ -64,7 +59,7 @@ func TestHttp(T *testing.T) {
 	}
 	data = res.String()
 	t.Equal(expectedText+"123", data)
-
+	t.Log(res.GetCookie())
 }
 
 func GetMethod(t *zls.TestUtil) {
@@ -76,8 +71,17 @@ func GetMethod(t *zls.TestUtil) {
 		"text",
 		"{\"code\":200}",
 	}
+	EnableCookie(false)
 	for _, v := range values {
 		res, err := newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
+			cookie := &http.Cookie{
+				Name:     "c",
+				Value:    v,
+				Path:     "/",
+				HttpOnly: true,
+				MaxAge:   0,
+			}
+			w.Header().Add("Set-Cookie", cookie.String())
 			_, _ = w.Write([]byte(v))
 		})
 		if err != nil {
@@ -90,8 +94,11 @@ func GetMethod(t *zls.TestUtil) {
 		if data, err = res.ToString(); err == nil {
 			t.Equal(v, data)
 		}
-
+		t.Equal("GET", res.Request().Method)
+		t.Log(res.GetCookie())
+		t.Log(res.Body())
 	}
+	EnableCookie(true)
 }
 
 func forMethod(t *zls.TestUtil) {
@@ -107,29 +114,65 @@ func forMethod(t *zls.TestUtil) {
 
 func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Request), param ...interface{}) (res *Res, err error) {
 	ts := httptest.NewServer(http.HandlerFunc(handler))
-	url := ts.URL
+	curl := ts.URL
 	switch method {
 	case "Get":
-		res, err = Get(url, param...)
+		res, err = Get(curl, param...)
 	case "Post":
-		res, err = Post(url, param...)
+		res, err = Post(curl, param...)
 	case "Put":
-		res, err = Put(url, param...)
+		res, err = Put(curl, param...)
 	case "Head":
-		res, err = Head(url, param...)
+		res, err = Head(curl, param...)
 	case "Options":
-		res, err = Options(url, param...)
+		res, err = Options(curl, param...)
 	case "Delete":
-		res, err = Delete(url, param...)
+		res, err = Delete(curl, param...)
 	case "Patch":
-		res, err = Patch(url, param...)
+		res, err = Patch(curl, param...)
 	default:
 		method = strings.Title(method)
-		res, err = Do(method, url, param...)
+		res, err = Do(method, curl, param...)
 		if err == nil {
 			fmt.Println(res.Dump())
 		}
 	}
 
 	return
+}
+
+func TestHttpProxy(T *testing.T) {
+	t := zls.NewTest(T)
+	err := SetProxy(func(r *http.Request) (*url.URL, error) {
+		if strings.Contains(r.URL.String(), "qq.com") {
+			return url.Parse("http://127.0.0.1:6666")
+		}
+		return nil, nil
+	})
+	if err != nil {
+		t.T.Fatal(err)
+	}
+
+	SetTimeout(1 * time.Second)
+	_, err = Get("http://qq.com")
+	t.Equal(true, err != nil)
+	t.Log(err)
+	_, err = Get("http://baidu.com")
+	t.Equal(false, err != nil)
+	t.Log(err)
+}
+
+func TestHttpProxyUrl(T *testing.T) {
+	err := SetProxyUrl("http://127.0.0.1:6666")
+	t := zls.NewTest(T)
+	if err != nil {
+		t.T.Fatal(err)
+	}
+
+	SetTimeout(1 * time.Second)
+	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
+
+	})
+	t.Equal(true, err != nil)
+	t.Log(err)
 }

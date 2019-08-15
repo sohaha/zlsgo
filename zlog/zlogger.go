@@ -15,13 +15,6 @@ import (
 	"runtime"
 	"sync"
 	"time"
-
-	"github.com/sohaha/zlsgo/zls"
-)
-
-const (
-	// LogMaxBuf LogMaxBuf
-	LogMaxBuf = 1024 * 1024
 )
 
 // Log header information tag bit, using bitmap mode
@@ -34,6 +27,8 @@ const (
 	BitLevel                                               // Current log level
 	BitStdFlag      = BitDate | BitTime                    // Standard header log format
 	BitDefault      = BitLevel | BitShortFile | BitStdFlag // Default log header format
+	// LogMaxBuf LogMaxBuf
+	LogMaxBuf = 1024 * 1024
 )
 
 // log level
@@ -70,15 +65,19 @@ var levelColous = []Color{
 
 // Logger logger struct
 type Logger struct {
-	mu         sync.Mutex
-	prefix     string
-	flag       int
-	out        io.Writer
-	buf        bytes.Buffer
-	file       *os.File
-	calldDepth int
-	level      int
-	color      bool
+	mu            sync.RWMutex
+	prefix        string
+	flag          int
+	out           io.Writer
+	buf           bytes.Buffer
+	file          *os.File
+	calldDepth    int
+	level         int
+	color         bool
+	FileMaxSize   int64
+	fileDir       string
+	fileName      string
+	fileAndStdout bool
 }
 
 // New Initialize a log object
@@ -99,7 +98,7 @@ func NewZLog(out io.Writer, prefix string, flag int, level int, color bool, call
 
 // CleanLog CleanLog
 func CleanLog(log *Logger) {
-	log.closeFile()
+	log.CloseFile()
 }
 
 // DisableConsoleColor DisableConsoleColor
@@ -198,28 +197,25 @@ func (log *Logger) Writer() io.Writer {
 
 // OutPut Output log
 func (log *Logger) OutPut(level int, s string, prefixText ...string) error {
+	log.mu.Lock()
+	defer log.mu.Unlock()
 	isNotLevel := level == LogNot
 	if log.level < level {
 		return nil
 	}
-
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
 	now := time.Now()
 	var file string
 	var line int
-	log.mu.Lock()
-	defer log.mu.Unlock()
 	if !isNotLevel && (log.flag&(BitShortFile|BitLongFile) != 0) {
-		log.mu.Unlock()
 		var ok bool
 		_, file, line, ok = runtime.Caller(log.calldDepth)
 		if !ok {
 			file = "unknown-file"
 			line = 0
 		}
-		log.mu.Lock()
 	}
 
 	log.buf.Reset()
@@ -229,6 +225,24 @@ func (log *Logger) OutPut(level int, s string, prefixText ...string) error {
 		log.buf.WriteByte('\n')
 	}
 	_, err := log.out.Write(log.buf.Bytes())
+	if log.file != nil && log.FileMaxSize > 0 {
+		if fileInfo, err := log.file.Stat(); err == nil {
+			logSize := fileInfo.Size()
+			if logSize > log.FileMaxSize {
+				logFile := log.fileDir + "/" + log.fileName
+				oldFile := oldLogFile(log.fileDir, log.fileName)
+				log.CloseFile()
+				_ = os.Rename(logFile, oldFile)
+				file, _ := openFile(log.fileDir, log.fileName)
+				log.file = file
+				if log.fileAndStdout {
+					log.out = io.MultiWriter(log.file, os.Stdout)
+				} else {
+					log.out = file
+				}
+			}
+		}
+	}
 	return err
 }
 
@@ -295,13 +309,13 @@ func (log *Logger) Error(v ...interface{}) {
 // Fatalf Fatalf
 func (log *Logger) Fatalf(format string, v ...interface{}) {
 	_ = log.OutPut(LogFatal, fmt.Sprintf(format, v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 // Fatal Fatal
 func (log *Logger) Fatal(v ...interface{}) {
 	_ = log.OutPut(LogFatal, fmt.Sprintln(v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 // Panicf Panicf
@@ -399,40 +413,6 @@ func (log *Logger) SetPrefix(prefix string) {
 	log.prefix = prefix
 }
 
-// SetLogFile Setting log file output
-func (log *Logger) SetLogFile(fileDir string, fileName string) {
-	var file *os.File
-
-	_ = mkdirLog(fileDir)
-
-	fullPath := fileDir + "/" + fileName
-	if log.checkFileExist(fullPath) {
-		file, _ = os.OpenFile(fullPath, os.O_APPEND|os.O_RDWR, 0644)
-	} else {
-		file, _ = os.OpenFile(fullPath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
-	}
-	log.DisableConsoleColor()
-	log.mu.Lock()
-	defer log.mu.Unlock()
-
-	log.closeFile()
-	log.file = file
-	log.out = file
-}
-
-func (log *Logger) SetSaveLogFile(fileDir string, fileName string) {
-	log.SetLogFile(fileDir, fileName)
-	log.out = io.MultiWriter(log.file, os.Stdout)
-}
-
-func (log *Logger) closeFile() {
-	if log.file != nil {
-		_ = log.file.Close()
-		log.file = nil
-		log.out = os.Stderr
-	}
-}
-
 // SetLogLevel Setting log display level
 func (log *Logger) SetLogLevel(level int) {
 	log.level = level
@@ -441,23 +421,6 @@ func (log *Logger) SetLogLevel(level int) {
 // GetLogLevel Get log display level
 func (log *Logger) GetLogLevel() int {
 	return log.level
-}
-
-func (log *Logger) checkFileExist(filename string) bool {
-	return zls.FileExist(filename)
-}
-
-func mkdirLog(dir string) (e error) {
-	_, er := os.Stat(dir)
-	b := er == nil || os.IsExist(er)
-	if !b {
-		if err := os.MkdirAll(dir, 0775); err != nil {
-			if os.IsPermission(err) {
-				e = err
-			}
-		}
-	}
-	return
 }
 
 func itoa(buf *bytes.Buffer, i int, wid int) {
