@@ -2,6 +2,7 @@ package zlog
 
 import (
 	"errors"
+	"io"
 	"os"
 )
 
@@ -128,6 +129,11 @@ func Fatalf(format string, v ...interface{}) {
 // Fatal Fatal
 func Fatal(v ...interface{}) {
 	Log.Fatal(v...)
+}
+
+// Writer Writer
+func Writer() io.Writer {
+	return Log.Writer()
 }
 
 // Panicf Panicf

@@ -46,15 +46,19 @@ func (c *Context) File(filepath string) {
 }
 
 func (c *Context) render(code int, r render) {
-	c.Info.Mutex.RLock()
+	c.Info.Mutex.Lock()
 	StopHandle := c.Info.StopHandle
-	c.Info.Mutex.RUnlock()
-	if !StopHandle {
-		if err := r.Render(c, code); err != nil {
-			panic(err)
+	if StopHandle {
+		if c.Engine.IsDebug() {
+			c.Log.Warn("Abort, not Render many times")
 		}
-	} else if c.Engine.webMode > releaseCode {
-		c.Log.Warn("Abort, not Render many times")
+		c.Info.Mutex.Unlock()
+		return
+	}
+	c.Info.StopHandle = true
+	c.Info.Mutex.Unlock()
+	if err := r.Render(c, code); err != nil {
+		panic(err)
 	}
 }
 
@@ -155,7 +159,7 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 }
 
 // StatusCode StatusCode
-func (c *Context) StatusCode(statusCode int) {
-	c.Code = statusCode
-	c.Writer.WriteHeader(c.Code)
+func (c *Context) StatusCode(code int) {
+	c.Info.Code = code
+	c.Writer.WriteHeader(c.Info.Code)
 }

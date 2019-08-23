@@ -28,6 +28,7 @@ test_go:
   stage: test
   image: golang:latest
   script:
+    - go test -race -test.short -timeout=60s $(go list ./... | grep -v /vendor/)
     - go test -race -v -test.short -coverprofile=coverage.out -timeout=60s $(go list ./... | grep -v /vendor/) -json > report.json
     - ls -l
   artifacts:

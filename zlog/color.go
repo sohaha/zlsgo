@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 14:27:28
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 15:20:37
- */
-
 package zlog
 
 import (

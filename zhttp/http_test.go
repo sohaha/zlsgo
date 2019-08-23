@@ -144,19 +144,23 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 func TestHttpProxy(T *testing.T) {
 	t := zls.NewTest(T)
 	err := SetProxy(func(r *http.Request) (*url.URL, error) {
+		t.Log(r.URL.String())
 		if strings.Contains(r.URL.String(), "qq.com") {
 			return url.Parse("http://127.0.0.1:6666")
 		}
 		return nil, nil
 	})
+
 	if err != nil {
 		t.T.Fatal(err)
 	}
 
 	SetTimeout(1 * time.Second)
-	_, err = Get("http://qq.com")
+
+	_, err = Get("http://www.qq.com")
 	t.Equal(true, err != nil)
 	t.Log(err)
+
 	_, err = Get("http://baidu.com")
 	t.Equal(false, err != nil)
 	t.Log(err)
@@ -171,7 +175,6 @@ func TestHttpProxyUrl(T *testing.T) {
 
 	SetTimeout(1 * time.Second)
 	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
-
 	})
 	t.Equal(true, err != nil)
 	t.Log(err)

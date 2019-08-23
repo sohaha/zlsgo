@@ -37,7 +37,6 @@ type (
 	Context struct {
 		Writer  http.ResponseWriter
 		Request *http.Request
-		Code    int
 		Engine  *Engine
 		Info    *info
 		Log     *zlog.Logger
@@ -67,7 +66,9 @@ type (
 		notFound   HandlerFunc
 		panic      PanicFunc
 	}
+
 	info struct {
+		Code       int
 		Mutex      sync.RWMutex
 		StartTime  time.Time
 		StopHandle bool
@@ -163,6 +164,11 @@ func (e *Engine) SetAddr(addr ...string) {
 	e.addr = addr
 }
 
+// GetMiddleware GetMiddleware
+func (e *Engine) GetMiddleware() []HandlerFunc {
+	return e.router.middleware
+}
+
 // SetTimeLocation timezone
 func (e *Engine) SetTimeLocation(location string) {
 	e.timeLocation, _ = time.LoadLocation(location)
@@ -194,6 +200,11 @@ func (e *Engine) SetMode(value string) {
 	}
 	e.webModeName = value
 	e.Log.SetLogLevel(level)
+}
+
+// IsDebug IsDebug
+func (e *Engine) IsDebug() bool {
+	return e.webMode > releaseCode
 }
 
 // SetTimeout setTimeout

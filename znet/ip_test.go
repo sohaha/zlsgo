@@ -1,13 +1,7 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 12:48:09
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-29 17:54:00
- */
-
 package znet
 
 import (
+	"github.com/sohaha/zlsgo/ztype"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,11 +15,18 @@ func TestNetIp(t *testing.T) {
 	r.GET("/ip", func(c *Context) {
 		T.Equal("", c.ClientIP())
 		ip := "127.0.0.1"
+		ipb := uint(2130706433)
 		_, _ = IPString2Long("127")
 		l, _ := IPString2Long(ip)
-		T.Equal(uint(2130706433), l)
+		T.Equal(ipb, l)
 		i, _ := Long2IPString(l)
 		T.Equal(ip, i)
+		ip2P, _ := Long2IP(l)
+		T.Equal(ip, ztype.ToString(ip2P))
+		ip2L, _ := IP2Long(ip2P)
+		T.Equal(ipb, ip2L)
+		T.Equal(true, HasLocalIPddr(ip))
+		t.Log(RemoteIP(c.Request))
 	})
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ip", nil)

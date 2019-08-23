@@ -63,7 +63,7 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	e.webMode = releaseCode
 	return func() {
 		e.webMode = mode
-		if e.webMode > releaseCode {
+		if e.IsDebug() {
 			e.Log.Debug(msg)
 		}
 	}
@@ -289,7 +289,7 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
-	if e.webMode > releaseCode {
+	if e.IsDebug() {
 		e.Log.Debug(showRouteDebug(e.Log, "%s --> %s", method, path))
 	}
 	middleware := e.router.middleware
@@ -315,17 +315,17 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	rw := &Context{
 		Writer:  w,
 		Request: req,
-		Code:    http.StatusOK,
 		Engine:  e,
 		Log:     e.Log,
 		Info: &info{
+			Code:      http.StatusOK,
 			StartTime: time.Now(),
 		},
 	}
 	if e.router.panic != nil {
 		defer func() {
 			if err := recover(); err != nil {
-				rw.Code = http.StatusInternalServerError
+				rw.Info.Code = http.StatusInternalServerError
 				errMsg := errors.New(fmt.Sprint(err))
 				e.router.panic(rw, errMsg)
 				requestLog(rw)
@@ -390,7 +390,7 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 }
 
 func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
-	c.Code = http.StatusNotFound
+	c.Info.Code = http.StatusNotFound
 	if e.router.notFound != nil {
 		notFound := func(c *Context) {
 			e.router.notFound(c)

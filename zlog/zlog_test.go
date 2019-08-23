@@ -53,6 +53,7 @@ func TestLog(T *testing.T) {
 	CleanLog(log)
 	e := os.RemoveAll("tmp/")
 	t.Log(e)
+	Writer()
 }
 
 func TestLogFatal(T *testing.T) {

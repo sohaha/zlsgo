@@ -34,7 +34,7 @@ func applyCors(c *znet.Context) bool {
 
 	if c.Request.Method == "OPTIONS" {
 		c.SetHeader("Access-Control-Allow-Origin", origin)
-		c.Code = http.StatusNoContent
+		c.Info.Code = http.StatusNoContent
 		return false
 	}
 

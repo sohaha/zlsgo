@@ -25,10 +25,10 @@ func withRequestLog(c *Context) {
 }
 
 func requestLog(c *Context) {
-	if c.Engine.webMode > releaseCode {
+	if c.Engine.IsDebug() {
 		end := time.Now()
 		latency := end.Sub(c.Info.StartTime)
-		code := c.Code
+		code := c.Info.Code
 		var status string
 		statusCode := zstring.Buffer()
 		statusCode.WriteString(" ")
