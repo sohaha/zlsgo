@@ -144,26 +144,36 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 func TestHttpProxy(T *testing.T) {
 	t := zls.NewTest(T)
 	err := SetProxy(func(r *http.Request) (*url.URL, error) {
-		t.Log(r.URL.String())
 		if strings.Contains(r.URL.String(), "qq.com") {
+			t.Log(r.URL.String(), "SetProxy get", "http://127.0.0.1:6666")
 			return url.Parse("http://127.0.0.1:6666")
+		} else {
+			t.Log(r.URL.String(), "Not SetProxy")
 		}
 		return nil, nil
 	})
-
+	var res *Res
 	if err != nil {
 		t.T.Fatal(err)
 	}
 
-	SetTimeout(1 * time.Second)
+	SetTimeout(10 * time.Second)
 
-	_, err = Get("http://www.qq.com")
+	res, err = Get("http://www.qq.com")
+	if err == nil {
+		t.Log(res.Response().Status)
+	} else {
+		t.Log(err)
+	}
 	t.Equal(true, err != nil)
-	t.Log(err)
 
-	_, err = Get("http://baidu.com")
+	res, err = Get("https://github.com")
+	if err == nil {
+		t.Log(res.Response().Status)
+	} else {
+		t.Log(err)
+	}
 	t.Equal(false, err != nil)
-	t.Log(err)
 }
 
 func TestHttpProxyUrl(T *testing.T) {
@@ -177,5 +187,4 @@ func TestHttpProxyUrl(T *testing.T) {
 	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
 	})
 	t.Equal(true, err != nil)
-	t.Log(err)
 }
