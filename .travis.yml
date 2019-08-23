@@ -20,6 +20,7 @@ notifications:
 install:
 
 script:
+  - go test ./... -race
   - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
