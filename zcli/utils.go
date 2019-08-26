@@ -27,7 +27,11 @@ func showText(msg string) string {
 
 // Help show help
 func Help() {
-	flag.Usage()
+	if matchingCmd != nil {
+		showSubcommandUsage(flag.CommandLine, matchingCmd)
+	} else {
+		flag.Usage()
+	}
 	osExit(0)
 }
 

@@ -47,18 +47,18 @@ func (c *Context) GetQuery(key string) (string, bool) {
 	return "", false
 }
 
-func (c *Context) DefaultQuery(key string, defaultValue string) string {
+func (c *Context) DefaultQuery(key string, def string) string {
 	if value, ok := c.GetQuery(key); ok {
 		return value
 	}
-	return defaultValue
+	return def
 }
 
-func (c *Context) DefaultPostForm(key, defaultValue string) string {
+func (c *Context) DefaultPostForm(key, def string) string {
 	if value, ok := c.GetPostForm(key); ok {
 		return value
 	}
-	return defaultValue
+	return def
 }
 
 func (c *Context) GetPostForm(key string) (string, bool) {

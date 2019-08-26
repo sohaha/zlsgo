@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -72,6 +73,7 @@ func Substr(str string, start int, length ...int) string {
 
 var src = rand.NewSource(time.Now().UnixNano())
 
+// Rand rand string
 func Rand(n int) string {
 	b := make([]byte, n)
 	for i, cache, remain := n-1, src.Int63(), 10; i >= 0; {
@@ -86,10 +88,28 @@ func Rand(n int) string {
 	return Bytes2String(b)
 }
 
+// Bytes2String bytes to string
 func Bytes2String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
+// String2Bytes string to bytes
 func String2Bytes(s *string) []byte {
 	return *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(s))))
+}
+
+// Ucfirst Ucfirst
+func Ucfirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToUpper(v)) + str[i+1:]
+	}
+	return ""
+}
+
+// Lcfirst Lcfirst
+func Lcfirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToLower(v)) + str[i+1:]
+	}
+	return ""
 }

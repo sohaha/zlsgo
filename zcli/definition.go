@@ -124,26 +124,26 @@ func (v *Var) Required() *Var {
 	return v
 }
 
-func (v *Var) String(defaultValue ...string) *string {
+func (v *Var) String(def ...string) *string {
 	var value string
-	if len(defaultValue) > 0 {
-		value = defaultValue[0]
+	if len(def) > 0 {
+		value = def[0]
 	}
 	return flag.String(v.name, value, v.usage)
 }
 
-func (v *Var) Int(defaultValue ...int) *int {
+func (v *Var) Int(def ...int) *int {
 	var value int
-	if len(defaultValue) > 0 {
-		value = defaultValue[0]
+	if len(def) > 0 {
+		value = def[0]
 	}
 	return flag.Int(v.name, value, v.usage)
 }
 
-func (v *Var) Bool(defaultValue ...bool) *bool {
+func (v *Var) Bool(def ...bool) *bool {
 	var value bool
-	if len(defaultValue) > 0 {
-		value = defaultValue[0]
+	if len(def) > 0 {
+		value = def[0]
 	}
 	return flag.Bool(v.name, value, v.usage)
 }

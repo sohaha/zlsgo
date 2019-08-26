@@ -56,6 +56,15 @@ func TestPad(T *testing.T) {
 	t.Equal("000我的长度是二十,不够两边补零000", Pad(s4, 20, "0", PadSides))
 }
 
+func TestFirst(T *testing.T) {
+	t := zls.NewTest(T)
+	str := "my Name"
+	str = Ucfirst(str)
+	t.Equal("My Name", str)
+	str = Lcfirst(str)
+	t.Equal("my Name", str)
+}
+
 func BenchmarkStr(b *testing.B) {
 	s := ""
 	for i := 0; i < b.N; i++ {
