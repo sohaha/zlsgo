@@ -19,7 +19,8 @@ func TestBuffer(T *testing.T) {
 func TestRand(T *testing.T) {
 	t := zls.NewTest(T)
 	t.Log(Rand(4))
-	t.Log(Rand(100))
+	t.Log(Rand(10))
+	t.Log(Rand(4, "a1"))
 }
 
 func TestLen(T *testing.T) {

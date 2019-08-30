@@ -71,16 +71,21 @@ func Substr(str string, start int, length ...int) string {
 	return string(s[start:l])
 }
 
-var src = rand.NewSource(time.Now().UnixNano())
-
 // Rand rand string
-func Rand(n int) string {
+func Rand(n int, ostr ...string) string {
+	var src = rand.NewSource(time.Now().UnixNano())
+	var s string
 	b := make([]byte, n)
+	if len(ostr) > 0 {
+		s = ostr[0]
+	} else {
+		s = letterBytes
+	}
 	for i, cache, remain := n-1, src.Int63(), 10; i >= 0; {
 		if remain == 0 {
 			cache, remain = src.Int63(), 10
 		}
-		b[i] = letterBytes[int(cache&letterIdxMask)%len(letterBytes)]
+		b[i] = s[int(cache&letterIdxMask)%len(s)]
 		i--
 		cache >>= 6
 		remain--

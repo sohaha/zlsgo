@@ -8,7 +8,10 @@
 package znet
 
 import (
+	"errors"
+	"github.com/sohaha/zlsgo/zstring"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/url"
 	"os"
@@ -70,8 +73,8 @@ func (c *Context) GetPostForm(key string) (string, bool) {
 
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	req := c.Request
-	req.ParseForm()
-	req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
+	_ = req.ParseForm()
+	_ = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 	if values := req.PostForm[key]; len(values) > 0 {
 		return values, true
 	}
@@ -90,8 +93,8 @@ func (c *Context) PostFormMap(key string) map[string]string {
 
 func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	req := c.Request
-	req.ParseForm()
-	req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
+	_ = req.ParseForm()
+	_ = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 	dicts, exist := c.get(req.PostForm, key)
 
 	if !exist && req.MultipartForm != nil && req.MultipartForm.File != nil {
@@ -99,6 +102,20 @@ func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	}
 
 	return dicts, exist
+}
+
+func (c *Context) GetDataRaw() (result string, err error) {
+	if c.Request.Body == nil {
+		err = errors.New("request.Body is nil")
+		return
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(c.Request.Body)
+	if err == nil {
+		result = zstring.Bytes2String(body)
+	}
+
+	return
 }
 
 func (c *Context) get(m map[string][]string, key string) (map[string]string, bool) {
@@ -137,7 +154,10 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) erro
 		return err
 	}
 	defer out.Close()
+	_, err = io.Copy(out, src)
+	if err != nil {
+		return err
+	}
 
-	io.Copy(out, src)
 	return nil
 }

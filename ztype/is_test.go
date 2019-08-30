@@ -99,3 +99,24 @@ func TestIs(t *testing.T) {
 	tGetType3 := GetType(n)
 	T.Equal("chan int", tGetType3)
 }
+
+func BenchmarkIsStr(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = isStr("sss").(string)
+	}
+}
+
+func BenchmarkZIsStr(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = IsString(isStr("sss"))
+	}
+}
+
+func BenchmarkGetType(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = GetType(isStr("sss"))
+	}
+}
+func isStr(s interface{}) interface{} {
+	return s
+}

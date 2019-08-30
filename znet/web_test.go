@@ -59,11 +59,23 @@ func TestWeb(t *testing.T) {
 	T := zlsgo.NewTest(t)
 	r := newServer()
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
+		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())
 	r.GetMiddleware()
+}
+
+func TestPost(t *testing.T) {
+	T := zlsgo.NewTest(t)
+	r := newServer()
+	w := newRequest(r, "POST", "/", "/", func(c *Context) {
+		_, _ = c.GetDataRaw()
+		c.String(200, expected)
+	})
+	T.Equal(200, w.Code)
+	T.Equal(expected, w.Body.String())
 }
 
 func TestWebSetMode(T *testing.T) {
