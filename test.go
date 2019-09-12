@@ -1,6 +1,8 @@
 package zlsgo
 
 import (
+	"fmt"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -24,15 +26,27 @@ func (u *TestUtil) Equal(expected, actual interface{}) {
 	}
 }
 
-// Unequal Unequal
-func (u *TestUtil) Unequal(expected, actual interface{}) {
-	if reflect.DeepEqual(expected, actual) {
-		u.T.Errorf("Did not expect %v (type %v) - Got %v (type %v)", expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+func (u *TestUtil) EqualExit(expected, actual interface{}) {
+	if !reflect.DeepEqual(expected, actual) {
+		u.T.Fatalf("%s 期待:%v (type %v) - 结果:%v (type %v)", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
 	}
 }
 
+// Log log
 func (u *TestUtil) Log(v ...interface{}) {
-	u.T.Log(v...)
+	pc, _, _, _ := runtime.Caller(1)
+	f := runtime.FuncForPC(pc)
+	file, line := f.FileLine(pc)
+	base, _ := filepath.Abs(".")
+	path, _ := filepath.Rel(base, file)
+	tip := []interface{}{"  " + path + ":" + strconv.Itoa(line)}
+	va := append(tip, v...)
+	fmt.Println(va...)
+}
+
+// Fatal Fatal
+func (u *TestUtil) Fatal(v ...interface{}) {
+	u.T.Fatal(v...)
 }
 
 // PrintMyName PrintMyName
