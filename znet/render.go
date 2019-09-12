@@ -151,7 +151,7 @@ func (c *Context) Abort(code ...int) {
 // Redirect Redirect
 func (c *Context) Redirect(link string, statusCode ...int) {
 	c.Writer.Header().Set("Location", c.CompletionLink(link))
-	code := 302
+	code := http.StatusFound
 	if len(statusCode) > 0 {
 		code = statusCode[0]
 	}

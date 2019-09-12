@@ -3,12 +3,11 @@ package ztype
 import (
 	"testing"
 
-	zls "github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo"
 )
 
 func TestIs(t *testing.T) {
-
-	T := zls.NewTest(t)
+	T := zlsgo.NewTest(t)
 	var i int
 	tIsInt := IsInt(i)
 	T.Equal(true, tIsInt)
@@ -117,6 +116,14 @@ func BenchmarkGetType(b *testing.B) {
 		_ = GetType(isStr("sss"))
 	}
 }
+
 func isStr(s interface{}) interface{} {
 	return s
+}
+
+func TestIsEmpty(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	t.Log(IsEmpty(0))
+	var s interface{}
+	t.Log(IsEmpty(s))
 }

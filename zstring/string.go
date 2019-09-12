@@ -93,6 +93,12 @@ func Rand(n int, ostr ...string) string {
 	return Bytes2String(b)
 }
 
+// RandomInt randomInteger
+func RandomInt(num int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(num)
+}
+
 // Bytes2String bytes to string
 func Bytes2String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
@@ -117,4 +123,22 @@ func Lcfirst(str string) string {
 		return string(unicode.ToLower(v)) + str[i+1:]
 	}
 	return ""
+}
+
+// IsUcfirst tests whether the given byte b is in upper case
+func IsUcfirst(str *string) bool {
+	b := String2Bytes(str)
+	if b[0] >= byte('A') && b[0] <= byte('Z') {
+		return true
+	}
+	return false
+}
+
+// IsLcfirst tests whether the given byte b is in lower case
+func IsLcfirst(str *string) bool {
+	b := String2Bytes(str)
+	if b[0] >= byte('a') && b[0] <= byte('z') {
+		return true
+	}
+	return false
 }

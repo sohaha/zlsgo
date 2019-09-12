@@ -23,11 +23,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
+	
 	"github.com/sohaha/zlsgo/zlog"
 )
 
@@ -37,7 +36,7 @@ const (
 
 var (
 	std        = New()
-	regNewline = regexp.MustCompile(`[\n\r]`)
+	// regNewline = regexp.MustCompile(`[\n\r]`)
 )
 
 var (
@@ -521,7 +520,7 @@ func (m *multipartHelper) Upload(req *http.Request) {
 	go func() {
 		for key, values := range m.form {
 			for _, value := range values {
-				bodyWriter.WriteField(key, value)
+				_ = bodyWriter.WriteField(key, value)
 			}
 		}
 		var upload func(io.Writer, io.Reader) error

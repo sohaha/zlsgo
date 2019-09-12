@@ -1,14 +1,7 @@
-/*
- * @Author: seekwe
- * @Date:   2019-06-06 16:06:44
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 16:12:05
- */
-
 package zvalidator
 
 import (
-	"encoding/json"
+	"github.com/sohaha/zlsgo/zjson"
 	"net"
 	"regexp"
 	"strconv"
@@ -86,6 +79,5 @@ func IsTime(str string, format string) bool {
 
 // IsJSON check if the string is valid JSON (note: uses json.Unmarshal).
 func IsJSON(str string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(str), &js) == nil
+	return zjson.Valid(str)
 }

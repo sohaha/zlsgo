@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 13:08:23
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 14:15:18
- */
-
 package zfile
 
 import (
@@ -13,23 +6,31 @@ import (
 	"github.com/sohaha/zlsgo"
 )
 
-func TestFile(t *testing.T) {
-	T := zlsgo.NewTest(t)
-	dirPath := "."
-	tIsDir := DirExist(dirPath)
-	T.Equal(true, tIsDir)
+func TestFile(T *testing.T) {
+	t := zlsgo.NewTest(T)
 
 	filePath := "../doc.go"
 	tIsFile := FileExist(filePath)
-	T.Equal(true, tIsFile)
+	t.Equal(true, tIsFile)
 
 	notPath := "zlsgo.php"
 	status, _ := PathExist(notPath)
-	T.Equal(0, status)
+	t.Equal(0, status)
 
 	size := FileSize("../doc.go")
-	T.Equal("0 B" != size, true)
+	t.Equal("0 B" != size, true)
 
 	size = FileSize("../_doc.go")
-	T.Equal("0 B" == size, true)
+	t.Equal("0 B" == size, true)
+
+	dirPath := RealPathMkdir("../zfile")
+
+	tIsDir := DirExist(dirPath)
+	t.Equal(true, tIsDir)
+
+	path := RealPathMkdir("../tmp")
+	RealPathMkdir(path + "/ooo")
+	t.Log(path)
+	t.Equal(true, Rmdir(path, true))
+	t.Equal(true, Rmdir(path))
 }

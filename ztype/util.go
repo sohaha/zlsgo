@@ -45,10 +45,19 @@ func GetType(s interface{}) string {
 	return varType
 }
 
-func reflectPtr(v interface{}) reflect.Value {
-	r := reflect.ValueOf(v)
+func ReflectPtr(r reflect.Value) reflect.Value {
 	if r.Kind() == reflect.Ptr {
 		r = r.Elem()
 	}
 	return r
+}
+
+func InArray(needle, hystack interface{}) bool {
+	nt := ToString(needle)
+	for _, item := range Slice(hystack) {
+		if nt == ToString(item) {
+			return true
+		}
+	}
+	return false
 }

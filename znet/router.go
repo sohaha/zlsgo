@@ -392,14 +392,12 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 	c.Info.Code = http.StatusNotFound
 	if e.router.notFound != nil {
-		notFound := func(c *Context) {
-			e.router.notFound(c)
-		}
-		handle(c, notFound, middleware)
+		handle(c, e.router.notFound, middleware)
 		return
 	}
-
-	http.NotFound(c.Writer, c.Request)
+	handle(c, func(_ *Context) {
+		http.NotFound(c.Writer, c.Request)
+	}, middleware)
 }
 
 func handle(c *Context, handler HandlerFunc, middleware []HandlerFunc) {

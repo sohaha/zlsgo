@@ -10,7 +10,7 @@ import (
 var (
 	// Log cli logger
 	Log              *zlog.Logger
-	firstParameter   = os.Args[0]
+	FirstParameter   = os.Args[0]
 	flagHelp         = new(bool)
 	flagVersion      = new(bool)
 	osExit           = os.Exit

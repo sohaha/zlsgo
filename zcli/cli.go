@@ -49,11 +49,11 @@ func usage() {
 		}
 	}
 	if len(cmds) == 0 {
-		Log.Printf("usage of %s:\n", showText(firstParameter))
+		Log.Printf("usage of %s:\n", showText(FirstParameter))
 		showFlagsAndRequired()
 		return
 	}
-	Log.Printf("usage: %s <command>\n\n", firstParameter)
+	Log.Printf("usage: %s <command>\n\n", FirstParameter)
 	Log.Println("  where <command> is one of:")
 	for name, cont := range cmds {
 		Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
@@ -61,7 +61,7 @@ func usage() {
 
 	showFlagsAndRequired()
 	if !HidePrompt {
-		Log.Printf(showText("\nMore Command information, please use: %s <command> --help\n"), firstParameter)
+		Log.Printf(showText("\nMore Command information, please use: %s <command> --help\n"), FirstParameter)
 	}
 }
 
@@ -120,6 +120,11 @@ func Start(runFunc ...runFunc) {
 		}
 		return
 	}
+	requiredErr := parseRequiredFlags(flag.CommandLine, requiredFlags)
+	if requiredErr != nil {
+		Error(requiredErr.Error())
+	}
+
 	isRunFunc := len(runFunc) > 0
 	if isRunFunc {
 		runFunc[0]()

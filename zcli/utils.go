@@ -49,7 +49,7 @@ func Error(format string, v ...interface{}) {
 		tip.WriteString("\nPlease use ")
 		tip.WriteString(tipText("%s --help"))
 		tip.WriteString(" for more information")
-		Log.Printf(tip.String(), firstParameter)
+		Log.Printf(tip.String(), FirstParameter)
 	}
 	osExit(1)
 }

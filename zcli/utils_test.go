@@ -27,7 +27,7 @@ func (cmd *testCmd) Run(args []string) {
 
 func resetForTesting(args ...string) {
 	os.Args = append([]string{"cmd"}, args...)
-	firstParameter = os.Args[0]
+	FirstParameter = os.Args[0]
 	Log.Debug(os.Args)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }

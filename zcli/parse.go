@@ -39,8 +39,13 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 	}
 	return
 }
-func parseCommand(outHelp bool) {
+
+func Parse() {
 	flag.Parse()
+}
+
+func parseCommand(outHelp bool) {
+	Parse()
 	if *flagVersion {
 		showVersionNum()
 		osExit(0)
@@ -71,7 +76,7 @@ func parseSubcommand() {
 	name := flag.Arg(0)
 	if cont, ok := cmds[name]; ok {
 		matchingCmd = cont
-		firstParameter += " " + name
+		FirstParameter += " " + name
 		fsArgs := flag.Args()[1:]
 		fs := flag.NewFlagSet(name, flag.ExitOnError)
 		flag.CommandLine = fs
@@ -79,7 +84,7 @@ func parseSubcommand() {
 			Name:        cont.name,
 			Desc:        cont.desc,
 			Supplement:  cont.Supplement,
-			Parameter:   firstParameter,
+			Parameter:   FirstParameter,
 			CommandLine: fs,
 		}
 		cont.command.Flags(subcommand)

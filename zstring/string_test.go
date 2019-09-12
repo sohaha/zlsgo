@@ -2,6 +2,7 @@ package zstring
 
 import (
 	"testing"
+	"unsafe"
 
 	zls "github.com/sohaha/zlsgo"
 )
@@ -21,6 +22,7 @@ func TestRand(T *testing.T) {
 	t.Log(Rand(4))
 	t.Log(Rand(10))
 	t.Log(Rand(4, "a1"))
+	t.Log(RandomInt(4))
 }
 
 func TestLen(T *testing.T) {
@@ -61,9 +63,12 @@ func TestFirst(T *testing.T) {
 	t := zls.NewTest(T)
 	str := "my Name"
 	str = Ucfirst(str)
+	t.Equal(true, IsUcfirst(&str))
+	t.Equal(false, IsLcfirst(&str))
 	t.Equal("My Name", str)
 	str = Lcfirst(str)
-	t.Equal("my Name", str)
+	t.Equal(true, IsLcfirst(&str))
+	t.Equal(false, IsUcfirst(&str))
 }
 
 func BenchmarkStr(b *testing.B) {
@@ -102,5 +107,13 @@ func BenchmarkTo2(b *testing.B) {
 		s := "我是中国人"
 		b := []byte(s)
 		_ = string(b)
+	}
+}
+
+func BenchmarkTo3(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		s := "我是中国人"
+		b := []byte(s)
+		_ = string(*(*[]byte)(unsafe.Pointer(&b)))
 	}
 }

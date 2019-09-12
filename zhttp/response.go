@@ -62,9 +62,9 @@ func (r *Res) ToBytes() ([]byte, error) {
 	if r.responseBody != nil {
 		return r.responseBody, nil
 	}
-	//noinspection GoUnhandledErrorResult
 	defer r.resp.Body.Close()
 	respBody, err := ioutil.ReadAll(r.resp.Body)
+	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
 	if err != nil {
 		r.err = err
 		return nil, err
@@ -110,16 +110,16 @@ func (r *Res) ToFile(name string) error {
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
-
+	
 	if r.responseBody != nil {
 		_, err = file.Write(r.responseBody)
 		return err
 	}
-
+	
 	if r.downloadProgress != nil && r.resp.ContentLength > 0 {
 		return r.download(file)
 	}
-
+	
 	//noinspection GoUnhandledErrorResult
 	defer r.resp.Body.Close()
 	_, err = io.Copy(file, r.resp.Body)

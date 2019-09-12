@@ -5,19 +5,23 @@ import (
 	"runtime"
 )
 
+func GetOs() string {
+	return runtime.GOOS
+}
+
 // IsWin system. linux windows darwin
 func IsWin() bool {
-	return runtime.GOOS == "windows"
+	return GetOs() == "windows"
 }
 
 // IsMac system
 func IsMac() bool {
-	return runtime.GOOS == "darwin"
+	return GetOs() == "darwin"
 }
 
 // IsLinux system
 func IsLinux() bool {
-	return runtime.GOOS == "linux"
+	return GetOs() == "linux"
 }
 
 // Getenv get ENV value by key name

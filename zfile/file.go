@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 )
 
 // PathExist PathExist
@@ -72,4 +73,31 @@ func FileSizeFormat(s int64) string {
 
 func logn(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
+}
+
+// RealPath get an absolute path
+func RealPath(path string) (realPath string) {
+	realPath, _ = filepath.Abs(path)
+	return
+}
+
+// RealPathMkdir get an absolute path, create it if it doesn't exist
+func RealPathMkdir(path string) string {
+	realPath := RealPath(path)
+	if DirExist(realPath) {
+		return realPath
+	}
+	_ = os.Mkdir(path, os.ModePerm)
+	return realPath
+}
+
+// Rmdir rmdir,support to keep the current directory
+func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
+	realPath := RealPath(path)
+	err := os.RemoveAll(realPath)
+	ok = err == nil
+	if ok && len(notIncludeSelf) > 0 && notIncludeSelf[0] {
+		_ = os.Mkdir(path, os.ModePerm)
+	}
+	return
 }
