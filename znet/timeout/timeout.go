@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sohaha/zlsgo/zls"
 	"github.com/sohaha/zlsgo/znet"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -30,11 +30,7 @@ func (w bodyWriter) Write(b []byte) (int, error) {
 
 func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc {
 	return func(c *znet.Context) {
-		// if c.Request.URL.Path != "/ip" {
-		// 	c.Next()
-		// 	return
-		// }
-		buffer := zls.GetBuff()
+		buffer := zutil.GetBuff()
 		blw := &bodyWriter{body: buffer, ResponseWriter: c.Writer}
 		finish := make(chan struct{}, 1)
 		ctx, cancel := context.WithTimeout(c.Request.Context(), waitingTime)
@@ -50,14 +46,14 @@ func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc
 			cancel()
 			if len(custom) > 0 {
 				custom[0](c)
-				zls.PutBuff(buffer)
+				zutil.PutBuff(buffer)
 				c.Abort()
 			} else {
 				c.Abort(http.StatusGatewayTimeout)
 			}
 		case <-finish:
 			_, _ = blw.ResponseWriter.Write(buffer.Bytes())
-			zls.PutBuff(buffer)
+			zutil.PutBuff(buffer)
 		}
 		cancel()
 	}

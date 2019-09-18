@@ -1,11 +1,11 @@
 package zlsgo
 
 import (
-	"fmt"
-	"path/filepath"
+	"path"
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +17,46 @@ type TestUtil struct {
 // NewTest testing object
 func NewTest(t *testing.T) *TestUtil {
 	return &TestUtil{t}
+}
+
+func (u *TestUtil) GetCallerInfo() string {
+	var info string
+
+	for i := 0; ; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+
+		basename := path.Base(file)
+		if !strings.HasSuffix(basename, "_test.go") {
+			continue
+		}
+
+		funcName := runtime.FuncForPC(pc).Name()
+		index := strings.LastIndex(funcName, ".Test")
+		if -1 == index {
+			index = strings.LastIndex(funcName, ".Benchmark")
+			if index == -1 {
+				continue
+			}
+		}
+		funcName = funcName[index+1:]
+
+		if index := strings.IndexByte(funcName, '.'); index > -1 {
+			funcName = funcName[:index]
+			info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
+			continue
+		}
+
+		info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
+		break
+	}
+
+	if info == "" {
+		info = "<Unable to get information>"
+	}
+	return info
 }
 
 // Equal Equal
@@ -34,25 +74,19 @@ func (u *TestUtil) EqualExit(expected, actual interface{}) {
 
 // Log log
 func (u *TestUtil) Log(v ...interface{}) {
-	pc, _, _, _ := runtime.Caller(1)
-	f := runtime.FuncForPC(pc)
-	file, line := f.FileLine(pc)
-	base, _ := filepath.Abs(".")
-	path, _ := filepath.Rel(base, file)
-	tip := []interface{}{"  " + path + ":" + strconv.Itoa(line)}
+	tip := []interface{}{"\n  " + u.PrintMyName()}
 	va := append(tip, v...)
-	fmt.Println(va...)
+	u.T.Log(va...)
 }
 
 // Fatal Fatal
 func (u *TestUtil) Fatal(v ...interface{}) {
-	u.T.Fatal(v...)
+	tip := []interface{}{"\n  " + u.PrintMyName()}
+	va := append(tip, v...)
+	u.T.Fatal(va...)
 }
 
 // PrintMyName PrintMyName
 func (u *TestUtil) PrintMyName() string {
-	pc, _, _, _ := runtime.Caller(2)
-	f := runtime.FuncForPC(pc)
-	file, line := f.FileLine(pc)
-	return file + ":" + strconv.Itoa(line)
+	return "@" + u.GetCallerInfo()
 }

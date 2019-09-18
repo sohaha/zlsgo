@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-24 19:18:58
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 13:47:29
- */
-
 package zcache
 
 import (

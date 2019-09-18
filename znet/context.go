@@ -87,6 +87,15 @@ func (c *Context) Next() (next HandlerFunc) {
 	return
 }
 
+// RedirectNext redirect rext
+func (c *Context) RedirectNext(path string) (not bool) {
+	c.Info.middleware = c.Info.middleware[0:0]
+	if c.Request.RequestURI != path {
+		return c.Engine.FindHandle(c, c.Request, path, false)
+	}
+	return
+}
+
 // SetCookie Set Cookie
 func (c *Context) SetCookie(name, value string) {
 	cookie := &http.Cookie{

@@ -349,16 +349,30 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if e.FindHandle(rw, req, requestURL, true) {
+		e.HandleNotFound(rw, e.router.middleware)
+	}
+}
+
+func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
 	nodes := e.router.trees[req.Method].Find(requestURL, false)
 	if len(nodes) > 0 {
 		node := nodes[0]
 		if node.handle != nil {
 			if node.path == requestURL {
-				handle(rw, node.handle, node.middleware)
+				if applyMiddleware {
+					handle(rw, node.handle, node.middleware)
+				} else {
+					handle(rw, node.handle, []HandlerFunc{})
+				}
 				return
 			}
 			if node.path == requestURL[1:] {
-				handle(rw, node.handle, node.middleware)
+				if applyMiddleware {
+					handle(rw, node.handle, node.middleware)
+				} else {
+					handle(rw, node.handle, []HandlerFunc{})
+				}
 				return
 			}
 		}
@@ -374,13 +388,17 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					ctx := context.WithValue(req.Context(), contextKey, matchParamsMap)
 					req = req.WithContext(ctx)
 					rw.Request = req
-					handle(rw, handler, node.middleware)
+					if applyMiddleware {
+						handle(rw, handler, node.middleware)
+					} else {
+						handle(rw, handler, []HandlerFunc{})
+					}
 					return
 				}
 			}
 		}
 	}
-	e.HandleNotFound(rw, e.router.middleware)
+	return true
 }
 
 func (e *Engine) Use(middleware ...HandlerFunc) {
@@ -462,9 +480,11 @@ func (e *Engine) matchAndParse(requestURL string, path string) (matchParams Para
 	if subMatch := re.FindSubmatch([]byte(requestURL)); subMatch != nil {
 		if string(subMatch[0]) == requestURL {
 			subMatch = subMatch[1:]
-			for k, v := range subMatch {
-				if key := matchName[k]; key != "" {
-					matchParams[key] = string(v)
+			if len(matchName) != 0 {
+				for k, v := range subMatch {
+					if key := matchName[k]; key != "" {
+						matchParams[key] = string(v)
+					}
 				}
 			}
 			return

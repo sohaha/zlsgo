@@ -3,7 +3,9 @@ package ztype
 import (
 	"testing"
 
+	"fmt"
 	zls "github.com/sohaha/zlsgo"
+	"strconv"
 )
 
 type st interface {
@@ -146,4 +148,82 @@ func TestTo(t *testing.T) {
 	T.Equal(true, ToBool(str))
 	T.Equal(false, ToBool(ni))
 
+}
+
+//func BenchmarkToString0(b *testing.B) {
+//s := 123
+//for i := 0; i < b.N; i++ {
+//_ = strconv.Itoa(s)
+//}
+//}
+
+func BenchmarkToString1(b *testing.B) {
+	s := true
+	for i := 0; i < b.N; i++ {
+		_ = ToString(s)
+	}
+	//type a struct {
+	//Na string `json:"n"`
+	//}
+
+	//n := &a{
+	//Na: "hi",
+	//}
+	//b.Log(ToString(n))
+	//b.Log(ToString(*n))
+}
+func BenchmarkToString2(b *testing.B) {
+	s := true
+	for i := 0; i < b.N; i++ {
+		_ = String(s)
+	}
+	//type a struct {
+	//Na string `json:"n"`
+	//}
+
+	//n := &a{
+	//Na: "hi",
+	//}
+	//b.Log(String(n))
+	//b.Log(String(*n))
+}
+func String(val interface{}) string {
+	if val == nil {
+		return ""
+	}
+
+	switch t := val.(type) {
+	case bool:
+		return strconv.FormatBool(t)
+	case int:
+		return strconv.FormatInt(int64(t), 10)
+	case int8:
+		return strconv.FormatInt(int64(t), 10)
+	case int16:
+		return strconv.FormatInt(int64(t), 10)
+	case int32:
+		return strconv.FormatInt(int64(t), 10)
+	case int64:
+		return strconv.FormatInt(t, 10)
+	case uint:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint64:
+		return strconv.FormatUint(t, 10)
+	case float32:
+		return strconv.FormatFloat(float64(t), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	case []byte:
+		return string(t)
+	case string:
+		return t
+	default:
+		return fmt.Sprintf("%v", val)
+	}
 }

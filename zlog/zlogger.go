@@ -356,7 +356,9 @@ func (log *Logger) Track(logTip string, v ...int) {
 		depth = depth + v[1]
 		max = v[0]
 	}
-
+	if max == 0 {
+		max = 9999
+	}
 	stop := func() bool {
 		if max == -1 {
 			return false

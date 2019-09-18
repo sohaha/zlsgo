@@ -1,11 +1,8 @@
-package zls
+package zutil
 
 import (
-	"os"
-	"os/exec"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 func WithLockContext(fn func()) {
@@ -22,6 +19,7 @@ func WithRunTimeContext(closer func(), callback func(time.Duration)) {
 	callback(timeduration)
 }
 
+// IfVal Simulate ternary calculations, pay attention to handling no variables or indexing problems
 func IfVal(condition bool, trueVal, falseVal interface{}) interface{} {
 	if condition {
 		return trueVal
@@ -29,16 +27,26 @@ func IfVal(condition bool, trueVal, falseVal interface{}) interface{} {
 	return falseVal
 }
 
-func ExecCommand(commandName string, arg ...string) (string, error) {
-	var data string
-	c := exec.Command(commandName, arg...)
-	c.Env = os.Environ()
-	out, err := c.CombinedOutput()
-	if out != nil {
-		data = *(*string)(unsafe.Pointer(&out))
+func Try(fn func(), catch func(e interface{}), finally ...func()) {
+	if len(finally) > 0 {
+		defer func() {
+			finally[0]()
+		}()
 	}
+	defer func() {
+		if err := recover(); err != nil {
+			if catch != nil {
+				catch(err)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+	fn()
+}
+
+func CheckErr(err error) {
 	if err != nil {
-		return data, err
+		panic(err)
 	}
-	return data, nil
 }

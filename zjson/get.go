@@ -2268,14 +2268,9 @@ func parseInt(s string) (n int, ok bool) {
 	return n, true
 }
 
-const minUint53 = 0
-const maxUint53 = 4503599627370495
-const minInt53 = -2251799813685248
-const maxInt53 = 2251799813685247
-
 func floatToUint(f float64) (n uint, ok bool) {
 	n = uint(f)
-	if float64(n) == f && n >= minUint53 && n <= maxUint53 {
+	if float64(n) == f {
 		return n, true
 	}
 	return 0, false
@@ -2283,7 +2278,7 @@ func floatToUint(f float64) (n uint, ok bool) {
 
 func floatToInt(f float64) (n int, ok bool) {
 	n = int(f)
-	if float64(n) == f && n >= minInt53 && n <= maxInt53 {
+	if float64(n) == f {
 		return n, true
 	}
 	return 0, false

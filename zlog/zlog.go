@@ -1,7 +1,6 @@
 package zlog
 
 import (
-	"errors"
 	"io"
 	"os"
 )
@@ -158,24 +157,4 @@ func Stack(v ...interface{}) {
 
 func init() {
 	Log.calldDepth = 3
-}
-
-// TryError TryError
-func TryError(fn ...func(err error)) {
-	if message := recover(); message != nil {
-		var err error
-		switch x := message.(type) {
-		case string:
-			err = errors.New(x)
-		case error:
-			err = x
-		default:
-			err = errors.New("unknow panic")
-		}
-		if len(fn) > 0 {
-			fn[0](err)
-		} else {
-			Log.Error("Recovered panic error : ", err)
-		}
-	}
 }

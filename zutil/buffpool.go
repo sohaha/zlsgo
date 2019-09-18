@@ -1,10 +1,4 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-29 15:15:22
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-29 15:15:34
- */
-package zls
+package zutil
 
 import (
 	"bytes"
@@ -22,7 +16,6 @@ func GetBuff() *bytes.Buffer {
 		var byteSlice []byte
 		byteSlice = make([]byte, 0, BuffSize)
 		buffer = bytes.NewBuffer(byteSlice)
-
 	} else {
 		buffer = item.(*bytes.Buffer)
 	}

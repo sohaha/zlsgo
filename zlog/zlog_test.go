@@ -1,7 +1,6 @@
 package zlog
 
 import (
-	"errors"
 	"github.com/sohaha/zlsgo"
 	"os"
 	"testing"
@@ -65,32 +64,6 @@ func TestLogFatal(T *testing.T) {
 	osExit = myExit
 	Fatal("TestLogFatal")
 	Fatalf("%s\n", "Fatal")
-}
-func TestTryError(T *testing.T) {
-	testTryErrorErr(T)
-	testTryErrorString(T)
-	testTryErrorXXX(T)
-}
-
-func testTryErrorString(T *testing.T) {
-	T.Log("testTryErrorString")
-	defer TryError()
-	Panic("testTryErrorString")
-}
-
-func testTryErrorErr(T *testing.T) {
-	T.Log("testTryErrorErr")
-	defer TryError(func(err error) {
-		T.Log("testTryErrorErr", err)
-	})
-	Panic(errors.New("testTryErrorErr"))
-}
-
-func testTryErrorXXX(T *testing.T) {
-	defer TryError(func(err error) {
-		T.Log("testTryErrorXXX", err)
-	})
-	Panic(11)
 }
 
 func TestLogPanic(T *testing.T) {

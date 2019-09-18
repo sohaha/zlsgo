@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
+
 	"github.com/sohaha/zlsgo/zlog"
 )
 
@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	std        = New()
+	std = New()
 	// regNewline = regexp.MustCompile(`[\n\r]`)
 )
 

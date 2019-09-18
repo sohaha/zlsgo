@@ -3,6 +3,7 @@ package znet
 import (
 	"context"
 	"net/http"
+	"strings"
 	"sync"
 
 	// "strconv"
@@ -237,7 +238,13 @@ func Run() {
 					// MaxHeaderBytes: 1 << 20,
 				}
 				srvMap.Store(addr, &serverMap{e, srv})
-				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+addr)))
+				hostname := "http://"
+				if strings.Index(addr, ":") == 0 {
+					hostname += "127.0.0.1" + addr
+				} else {
+					hostname += addr
+				}
+				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+hostname)))
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					e.Log.Fatalf("Listen: %s\n", err)
 				} else if err != http.ErrServerClosed {

@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-24 19:15:39
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 15:29:33
- */
-
 package zcache
 
 import (
@@ -21,7 +14,7 @@ var (
 	mutex                        sync.RWMutex
 )
 
-// New New
+// New new cache
 func New(table string) *Table {
 	mutex.RLock()
 	t, ok := cache[table]
