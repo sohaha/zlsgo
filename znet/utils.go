@@ -1,8 +1,21 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-24 13:34:10
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-29 17:15:24
- */
-
 package znet
+
+import (
+	"github.com/sohaha/zlsgo/zstring"
+	"strings"
+)
+
+func completionPath(path, prefix string) string {
+	if prefix != "" {
+		if path != "" {
+			tmp := zstring.Buffer()
+			tmp.WriteString(prefix)
+			tmp.WriteString("/")
+			tmp.WriteString(strings.TrimPrefix(path, "/"))
+			path = tmp.String()
+		} else {
+			path = prefix
+		}
+	}
+	return path
+}

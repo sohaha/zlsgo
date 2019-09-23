@@ -10,13 +10,21 @@ import (
 	"path/filepath"
 )
 
-var res zjson.Res
+var res = zjson.Parse("{}")
 
 func GetJSON(name ...string) zjson.Res {
 	if len(name) > 0 {
 		return res.Get(name[0])
 	}
 	return res
+}
+
+func SetJSON(name string, value interface{}) (err error) {
+	str, err := zjson.Set(res.String(), name, value)
+	if err == nil {
+		res = zjson.Parse(str)
+	}
+	return
 }
 
 func SaveJSON(file, json string) (err error) {

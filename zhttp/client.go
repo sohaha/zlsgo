@@ -100,6 +100,16 @@ func (r *Engine) EnableCookie(enable bool) {
 	}
 }
 
+func (r *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request) error) {
+	if len(fn) > 0 {
+		r.Client().CheckRedirect = fn[0]
+	} else {
+		r.Client().CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
+}
+
 func (r *Engine) SetTimeout(d time.Duration) {
 	r.Client().Timeout = d
 }

@@ -96,7 +96,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, handle HandlerFunc) {
-	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s --> %s", "Any", path))
+	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s --> %s", "Any", completionPath(path, e.router.prefix)))
 	e.GET(path, handle)
 	e.POST(path, handle)
 	e.PUT(path, handle)
@@ -275,17 +275,7 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		e.router.trees[method] = tree
 	}
 
-	if e.router.prefix != "" {
-		if path != "" {
-			prefix := zstring.Buffer()
-			prefix.WriteString(e.router.prefix)
-			prefix.WriteString("/")
-			prefix.WriteString(strings.TrimPrefix(path, "/"))
-			path = prefix.String()
-		} else {
-			path = e.router.prefix
-		}
-	}
+	path = completionPath(path, e.router.prefix)
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
