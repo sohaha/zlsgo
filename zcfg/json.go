@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/sohaha/zlsgo/zhttp"
 	"github.com/sohaha/zlsgo/zjson"
-	"github.com/sohaha/zlsgo/zstring"
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
@@ -32,7 +31,7 @@ func SaveJSON(file, json string) (err error) {
 	if err != nil {
 		return
 	}
-	return ioutil.WriteFile(path, zstring.String2Bytes(&json), 0644)
+	return ioutil.WriteFile(path, []byte(json), 0644)
 }
 
 func UnmarshalJSON(v interface{}) error {
