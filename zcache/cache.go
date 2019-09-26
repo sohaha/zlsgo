@@ -12,7 +12,13 @@ var (
 	ErrKeyNotFoundAndNotCallback = errors.New("key is not in cache and no callback is set")
 	cache                        = make(map[string]*Table)
 	mutex                        sync.RWMutex
+	// Cache default
+	Cache *Table
 )
+
+func init() {
+	Cache = New("defaultZCache")
+}
 
 // New new cache
 func New(table string) *Table {

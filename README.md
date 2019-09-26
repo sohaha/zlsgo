@@ -60,6 +60,11 @@ func main(){
     // zlog...
 }
 ```
+
+### 更多功能
+
+请阅读文档 [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/)
+
 ## LICENSE
 
 [MIT](LICENSE)

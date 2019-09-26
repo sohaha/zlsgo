@@ -59,6 +59,11 @@ func main(){
     // zlog...
 }
 ```
+
+### More features
+
+Please read the documentation [https://docs.73zls.com/zls-go/](https://docs.73zls.com/zls-go/#)
+
 ## LICENSE
 
 [MIT](LICENSE)

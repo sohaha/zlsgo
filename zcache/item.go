@@ -18,7 +18,7 @@ type CacheItem struct {
 }
 
 // newCacheItem newCacheItem
-func newCacheItem(key interface{}, lifeSpan time.Duration, data interface{}) *CacheItem {
+func newCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *CacheItem {
 	t := time.Now()
 	return &CacheItem{
 		key:            key,
@@ -63,7 +63,7 @@ func (item *CacheItem) AccessCount() int64 {
 	return item.accessCount
 }
 
-// Key Key
+// Key item key
 func (item *CacheItem) Key() interface{} {
 	return item.key
 }

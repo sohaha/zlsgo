@@ -52,7 +52,7 @@ func (table *Table) ForEach(trans func(key interface{}, item *CacheItem)) {
 }
 
 // SetLoadNotCallback SetLoadNotCallback
-func (table *Table) SetLoadNotCallback(f func(interface{}, ...interface{}) *CacheItem) {
+func (table *Table) SetLoadNotCallback(f func(key interface{}, args ...interface{}) *CacheItem) {
 	table.Lock()
 	defer table.Unlock()
 	table.loadNotCallback = f
@@ -102,7 +102,7 @@ func (table *Table) expirationCheck() {
 			continue
 		}
 		if now.Sub(accessedOn) >= lifeSpan {
-			table.deleteInternal(key)
+			_, _ = table.deleteInternal(key)
 		} else {
 			if smallestDuration == 0 || lifeSpan-now.Sub(accessedOn) < smallestDuration {
 				smallestDuration = lifeSpan - now.Sub(accessedOn)
@@ -136,13 +136,18 @@ func (table *Table) addInternal(item *CacheItem) {
 	}
 }
 
-// Set Set
-func (table *Table) Set(key interface{}, lifeSpan time.Duration, data interface{}) *CacheItem {
-	item := newCacheItem(key, lifeSpan, data)
+// SetRaw set cache
+func (table *Table) SetRaw(key, data interface{}, lifeSpan time.Duration) *CacheItem {
+	item := newCacheItem(key, data, lifeSpan)
 	table.Lock()
 	table.addInternal(item)
 
 	return item
+}
+
+// set set cache for time second
+func (table *Table) Set(key, data interface{}, lifeSpan uint) *CacheItem {
+	return table.SetRaw(key, data, time.Duration(lifeSpan)*time.Second)
 }
 
 func (table *Table) deleteInternal(key interface{}) (*CacheItem, error) {
@@ -170,7 +175,7 @@ func (table *Table) deleteInternal(key interface{}) (*CacheItem, error) {
 	return r, nil
 }
 
-// Delete Delete
+// Delete Delete cache
 func (table *Table) Delete(key interface{}) (*CacheItem, error) {
 	table.Lock()
 	defer table.Unlock()
@@ -187,8 +192,8 @@ func (table *Table) Exists(key interface{}) bool {
 	return ok
 }
 
-// NotFoundAdd NotFoundAdd
-func (table *Table) NotFoundAdd(key interface{}, lifeSpan time.Duration, data interface{}) bool {
+// Add Add
+func (table *Table) Add(key interface{}, data interface{}, lifeSpan time.Duration) bool {
 	table.Lock()
 
 	if _, ok := table.items[key]; ok {
@@ -196,14 +201,14 @@ func (table *Table) NotFoundAdd(key interface{}, lifeSpan time.Duration, data in
 		return false
 	}
 
-	item := newCacheItem(key, lifeSpan, data)
+	item := newCacheItem(key, data, lifeSpan)
 	table.addInternal(item)
 
 	return true
 }
 
-// Get Get
-func (table *Table) Get(key interface{}, args ...interface{}) (*CacheItem, error) {
+// GetRaw GetRaw
+func (table *Table) GetRaw(key interface{}, args ...interface{}) (*CacheItem, error) {
 	table.RLock()
 	r, ok := table.items[key]
 	loadData := table.loadNotCallback
@@ -217,7 +222,7 @@ func (table *Table) Get(key interface{}, args ...interface{}) (*CacheItem, error
 	if loadData != nil {
 		item := loadData(key, args...)
 		if item != nil {
-			table.Set(key, item.lifeSpan, item.data)
+			table.SetRaw(key, item.data, item.lifeSpan)
 			return item, nil
 		}
 
@@ -225,6 +230,15 @@ func (table *Table) Get(key interface{}, args ...interface{}) (*CacheItem, error
 	}
 
 	return nil, ErrKeyNotFound
+}
+
+func (table *Table) Get(key interface{}, args ...interface{}) (value interface{}, err error) {
+	data, err := table.GetRaw(key, args...)
+	if err != nil {
+		return
+	}
+	value = data.Data()
+	return
 }
 
 // Clear Clear
