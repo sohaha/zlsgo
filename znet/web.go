@@ -2,14 +2,14 @@ package znet
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
-	"strings"
 	"sync"
-
+	
 	// "strconv"
 	// "sync"
 	"time"
-
+	
 	"github.com/sohaha/zlsgo/zlog"
 	// "github.com/sohaha/zlsgo/zvar"
 )
@@ -21,12 +21,8 @@ const (
 	// ReleaseMode release
 	ReleaseMode = "release"
 	// TestMode test
-	TestMode = "test"
-)
-
-const (
+	TestMode          = "test"
 	defaultServerName = "Z"
-	defaultAddr       = ":3788"
 	defaultLocation   = "Local" // "Asia/Shanghai"
 	releaseCode       = iota
 	debugCode
@@ -55,10 +51,23 @@ type (
 		ShowFavicon        bool
 		MaxMultipartMemory int64
 		customMethodType   string
-		addr               []string
+		addr               []addrSt
 		router             *router
 	}
-
+	
+	TlsCfg struct {
+		Cert           string
+		Key            string
+		HTTPAddr       string
+		HTTPProcessing interface{}
+		Config         *tls.Config
+	}
+	
+	addrSt struct {
+		addr string
+		TlsCfg
+	}
+	
 	router struct {
 		prefix     string
 		middleware []HandlerFunc
@@ -67,7 +76,7 @@ type (
 		notFound   HandlerFunc
 		panic      PanicFunc
 	}
-
+	
 	info struct {
 		Code       int
 		Mutex      sync.RWMutex
@@ -77,7 +86,7 @@ type (
 		middleware []HandlerFunc
 		Data       map[string]interface{}
 	}
-
+	
 	// HandlerFunc HandlerFunc
 	HandlerFunc func(*Context)
 	// MiddlewareFunc MiddlewareFunc
@@ -86,12 +95,12 @@ type (
 	PanicFunc func(c *Context, err error)
 	// MiddlewareType is a public type that is used for middleware
 	MiddlewareType HandlerFunc
-
+	
 	// Parameters records some parameters
 	Parameters struct {
 		routeName string
 	}
-
+	
 	serverMap struct {
 		engine *Engine
 		srv    *http.Server
@@ -100,8 +109,11 @@ type (
 
 var (
 	// Log Log
-	Log      = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
-	zservers = map[string]*Engine{}
+	Log         = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
+	zservers    = map[string]*Engine{}
+	defaultAddr = addrSt{
+		addr: ":3788",
+	}
 )
 
 func init() {
@@ -114,13 +126,13 @@ func New(serverName ...string) *Engine {
 	if len(serverName) > 0 {
 		name = serverName[0]
 	}
-
+	
 	log := zlog.New("[" + name + "] ")
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
 	log.SetLogLevel(zlog.LogWarn)
-
+	
 	location, _ := time.LoadLocation(defaultLocation)
-
+	
 	route := &router{
 		trees: make(map[string]*Tree),
 	}
@@ -132,18 +144,18 @@ func New(serverName ...string) *Engine {
 		webModeName:        ReleaseMode,
 		webMode:            releaseCode,
 		timeLocation:       location,
-		addr:               []string{defaultAddr},
+		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 	}
-
+	
 	if _, ok := zservers[name]; ok {
 		Log.Fatalf("serverName: %s is has", name)
 	}
-
+	
 	zservers[name] = r
-
+	
 	r.Use(withRequestLog)
-
+	
 	return r
 }
 
@@ -161,8 +173,15 @@ func Server(serverName ...string) (engine *Engine, ok bool) {
 }
 
 // SetAddr SetAddr
-func (e *Engine) SetAddr(addr ...string) {
-	e.addr = addr
+func (e *Engine) SetAddr(addrString string, tlsConfig ...TlsCfg) {
+	e.addr = []addrSt{
+		resolveAddr(addrString, tlsConfig...),
+	}
+}
+
+// AddAddr AddAddr
+func (e *Engine) AddAddr(addrString string, tlsConfig ...TlsCfg) {
+	e.addr = append(e.addr, resolveAddr(addrString, tlsConfig...))
 }
 
 // GetMiddleware GetMiddleware
@@ -219,17 +238,24 @@ func (e *Engine) SetTimeout(Timeout time.Duration, WriteTimeout ...time.Duration
 	}
 }
 
-// Run Run
+// Run run serve
 func Run() {
 	var (
 		srvMap sync.Map
 		m      sync.WaitGroup
 	)
-
+	
 	for _, e := range zservers {
-		for _, addr := range e.addr {
-			go func(addr string, e *Engine) {
+		for _, cfg := range e.addr {
+			go func(cfg addrSt, e *Engine) {
 				m.Add(1)
+				isTls := cfg.Cert != "" || cfg.Config != nil
+				addr := cfg.addr
+				hostname := "http://"
+				if isTls {
+					hostname = "https://"
+				}
+				hostname += resolveHostname(addr)
 				srv := &http.Server{
 					Addr:         addr,
 					Handler:      e,
@@ -238,27 +264,48 @@ func Run() {
 					// MaxHeaderBytes: 1 << 20,
 				}
 				srvMap.Store(addr, &serverMap{e, srv})
-				hostname := "http://"
-				if strings.Index(addr, ":") == 0 {
-					hostname += "127.0.0.1" + addr
-				} else {
-					hostname += addr
-				}
+				
 				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+hostname)))
-				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				var err error
+				if isTls {
+					if cfg.Config != nil {
+						srv.TLSConfig = cfg.Config
+					}
+					if cfg.HTTPAddr != "" {
+						go func(e *Engine) {
+							newHostname := "http://" + resolveHostname(cfg.HTTPAddr)
+							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+newHostname)))
+							var err error
+							switch processing := cfg.HTTPProcessing.(type) {
+							case string:
+								// e.Log.Warn(addr + " Redirect " + cfg.HTTPAddr)
+								err = http.ListenAndServe(cfg.HTTPAddr, &tlsRedirectHandler{Domain: processing})
+							case http.Handler:
+								err = http.ListenAndServe(cfg.HTTPAddr, processing)
+							default:
+								err = http.ListenAndServe(cfg.HTTPAddr, e)
+							}
+							e.Log.Errorf("HTTP Listen: %s\n", err)
+						}(e)
+					}
+					err = srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
+				} else {
+					err = srv.ListenAndServe()
+				}
+				if err != nil && err != http.ErrServerClosed {
 					e.Log.Fatalf("Listen: %s\n", err)
 				} else if err != http.ErrServerClosed {
 					e.Log.Info(err)
 				}
-			}(addr, e)
+			}(cfg, e)
 		}
 	}
-
+	
 	iskill := isKill()
-
+	
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-
+	
 	srvMap.Range(func(key, value interface{}) bool {
 		go func(value interface{}) {
 			if s, ok := value.(*serverMap); ok {
@@ -279,7 +326,7 @@ func Run() {
 		}(value)
 		return true
 	})
-
+	
 	m.Wait()
 }
 
