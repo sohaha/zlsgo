@@ -1,7 +1,6 @@
 package zjson
 
 import (
-	"encoding/json"
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zstring"
 	"strings"
@@ -135,6 +134,12 @@ func TestGet(T *testing.T) {
 	t.Log(parseData.Get("@reverse").String())
 }
 
+func TestGetFormat(T *testing.T) {
+	SetModifiersState(true)
+	t := zlsgo.NewTest(T)
+	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
+}
+
 func BenchmarkGet(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = Get(demo, "i")
@@ -145,21 +150,5 @@ func BenchmarkGetBytes(b *testing.B) {
 	demoByte := []byte(demo)
 	for i := 0; i < b.N; i++ {
 		_ = GetBytes(demoByte, "i")
-	}
-}
-
-func BenchmarkUnmarshal(b *testing.B) {
-	var demoData Demo
-	demoByte := []byte(demo)
-	for i := 0; i < b.N; i++ {
-		_ = Unmarshal(demoByte, &demoData)
-	}
-}
-
-func BenchmarkGOUnmarshal(b *testing.B) {
-	var demoData Demo
-	demoByte := []byte(demo)
-	for i := 0; i < b.N; i++ {
-		_ = json.Unmarshal(demoByte, &demoData)
 	}
 }

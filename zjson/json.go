@@ -101,12 +101,12 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 					jbytes := []byte(jstr)
 					if stringify {
 						jbytes[res.Index] = '"'
-						copy(jbytes[res.Index+1:], []byte(raw))
+						copy(jbytes[res.Index+1:], zstring.String2Bytes(&raw))
 						jbytes[res.Index+1+len(raw)] = '"'
 						copy(jbytes[res.Index+1+len(raw)+1:],
 							jbytes[res.Index+len(res.Raw):])
 					} else {
-						copy(jbytes[res.Index:], []byte(raw))
+						copy(jbytes[res.Index:], zstring.String2Bytes(&raw))
 						copy(jbytes[res.Index+len(raw):],
 							jbytes[res.Index+len(res.Raw):])
 					}
@@ -152,9 +152,9 @@ func SetOptions(json, path string, value interface{},
 		opts = &nopts
 		opts.ReplaceInPlace = false
 	}
-	jsonb := []byte(json)
+	jsonb := zstring.String2Bytes(&json)
 	res, err := SetBytesOptions(jsonb, path, value, opts)
-	return string(res), err
+	return zstring.Bytes2String(res), err
 }
 
 func SetBytesOptions(json []byte, path string, value interface{},
@@ -164,7 +164,7 @@ func SetBytesOptions(json []byte, path string, value interface{},
 		optimistic = opts.Optimistic
 		inplace = opts.ReplaceInPlace
 	}
-	jstr := string(json)
+	jstr := zstring.Bytes2String(json)
 	var res []byte
 	var err error
 	switch v := value.(type) {
@@ -173,14 +173,14 @@ func SetBytesOptions(json []byte, path string, value interface{},
 		if merr != nil {
 			return nil, merr
 		}
-		raw := string(b)
+		raw := zstring.Bytes2String(b)
 		res, err = set(jstr, path, raw, false, false, optimistic, inplace)
 	case dtype:
 		res, err = set(jstr, path, "", false, true, optimistic, inplace)
 	case string:
 		res, err = set(jstr, path, v, true, false, optimistic, inplace)
 	case []byte:
-		raw := string(v)
+		raw := zstring.Bytes2String(v)
 		res, err = set(jstr, path, raw, true, false, optimistic, inplace)
 	case bool:
 		if v {
@@ -227,8 +227,8 @@ func SetBytesOptions(json []byte, path string, value interface{},
 
 func SetRawBytesOptions(json []byte, path string, value []byte,
 	opts *StSetOptions) ([]byte, error) {
-	jstr := string(json)
-	vstr := string(value)
+	jstr := zstring.Bytes2String(json)
+	vstr := zstring.Bytes2String(value)
 	var optimistic, inplace bool
 	if opts != nil {
 		optimistic = opts.Optimistic

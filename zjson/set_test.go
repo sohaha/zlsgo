@@ -68,6 +68,7 @@ func TestSet(T *testing.T) {
 	var j = struct {
 		Name string `json:"n"`
 	}{"isName"}
-	jj, err := SetMarshal("", "", j)
+	jj, err := Marshal(j)
 	t.Log(string(jj), err)
+	t.Log(Stringify(j))
 }

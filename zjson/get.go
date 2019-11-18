@@ -414,7 +414,7 @@ func Parse(json string) Res {
 }
 
 func ParseBytes(json []byte) Res {
-	return Parse(string(json))
+	return Parse(zstring.Bytes2String(json))
 }
 
 func tonum(json string) (raw string, num float64) {
@@ -868,7 +868,7 @@ func parseObjectPath(path string) (r objectPathResult) {
 						}
 						continue
 					} else if path[i] == '.' {
-						r.part = string(epart)
+						r.part = zstring.Bytes2String(epart)
 						if ModifiersState() &&
 							i < len(path)-1 && path[i+1] == '@' {
 							r.pipe = path[i+1:]
@@ -880,7 +880,7 @@ func parseObjectPath(path string) (r objectPathResult) {
 						r.more = true
 						return
 					} else if path[i] == '|' {
-						r.part = string(epart)
+						r.part = zstring.Bytes2String(epart)
 						r.pipe = path[i+1:]
 						r.piped = true
 						return
@@ -890,7 +890,7 @@ func parseObjectPath(path string) (r objectPathResult) {
 					epart = append(epart, path[i])
 				}
 			}
-			r.part = string(epart)
+			r.part = zstring.Bytes2String(epart)
 			return
 		}
 	}
@@ -1352,14 +1352,14 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 									if len(raw) == 0 {
 										raw = res.String()
 									}
-									jsons = append(jsons, []byte(raw)...)
+									jsons = append(jsons, zstring.String2Bytes(&raw)...)
 									k++
 								}
 							}
 						}
 						jsons = append(jsons, ']')
 						c.value.Type = JSON
-						c.value.Raw = string(jsons)
+						c.value.Raw = zstring.Bytes2String(jsons)
 						return i + 1, true
 					}
 					if rp.alogok {
@@ -1374,7 +1374,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				}
 				if len(multires) > 0 && !c.value.Exists() {
 					c.value = Res{
-						Raw:  string(append(multires, ']')),
+						Raw:  zstring.Bytes2String(append(multires, ']')),
 						Type: JSON,
 					}
 				}
@@ -1551,7 +1551,7 @@ func appendJSONString(dst []byte, s string) []byte {
 	for i := 0; i < len(s); i++ {
 		if s[i] < ' ' || s[i] == '\\' || s[i] == '"' || s[i] > 126 {
 			d, _ := json.Marshal(s)
-			return append(dst, string(d)...)
+			return append(dst, zstring.Bytes2String(d)...)
 		}
 	}
 	dst = append(dst, '"')
@@ -1641,7 +1641,7 @@ func Get(json, path string) Res {
 				}
 				b = append(b, kind+2)
 				var res Res
-				res.Raw = string(b)
+				res.Raw = zstring.Bytes2String(b)
 				res.Type = JSON
 				if len(path) > 0 {
 					res = res.Get(path[1:])
@@ -1695,15 +1695,15 @@ func unescape(json string) string {
 	for i := 0; i < len(json); i++ {
 		switch {
 		case json[i] < ' ':
-			return string(str)
+			return zstring.Bytes2String(str)
 		case json[i] == '\\':
 			i++
 			if i >= len(json) {
-				return string(str)
+				return zstring.Bytes2String(str)
 			}
 			switch json[i] {
 			default:
-				return string(str)
+				return zstring.Bytes2String(str)
 			case '\\':
 				str = append(str, '\\')
 			case '/':
@@ -1722,7 +1722,7 @@ func unescape(json string) string {
 				str = append(str, '"')
 			case 'u':
 				if i+5 > len(json) {
-					return string(str)
+					return zstring.Bytes2String(str)
 				}
 				r := runeit(json[i+1:])
 				i += 5
@@ -1741,7 +1741,7 @@ func unescape(json string) string {
 			str = append(str, json[i])
 		}
 	}
-	return string(str)
+	return zstring.Bytes2String(str)
 }
 
 func parseAny(json string, i int, hit bool) (int, Res, bool) {

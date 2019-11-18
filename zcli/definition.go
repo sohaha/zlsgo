@@ -15,6 +15,7 @@ var (
 	flagVersion      = new(bool)
 	osExit           = os.Exit
 	cmds             = make(map[string]*cmdCont)
+	cmdsKey          []string
 	matchingCmd      *cmdCont
 	args             []string
 	requiredFlags    = RequiredFlags{}

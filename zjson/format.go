@@ -1,6 +1,7 @@
 package zjson
 
 import (
+	"github.com/sohaha/zlsgo/zstring"
 	"sort"
 )
 
@@ -110,7 +111,7 @@ func (arr *byKey) Len() int {
 func (arr *byKey) Less(i, j int) bool {
 	key1 := arr.json[arr.pairs[i].kstart+1 : arr.pairs[i].kend-1]
 	key2 := arr.json[arr.pairs[j].kstart+1 : arr.pairs[j].kend-1]
-	return string(key1) < string(key2)
+	return zstring.Bytes2String(key1) < zstring.Bytes2String(key2)
 }
 
 func (arr *byKey) Swap(i, j int) {

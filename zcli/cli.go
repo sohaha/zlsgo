@@ -33,6 +33,7 @@ func Add(name, description string, command Cmd) (cmd *cmdCont) {
 	}
 	cmds[name] = cmd
 
+	cmdsKey = append(cmdsKey, name)
 	return
 }
 
@@ -55,8 +56,11 @@ func usage() {
 	}
 	Log.Printf("usage: %s <command>\n\n", FirstParameter)
 	Log.Println("  where <command> is one of:")
-	for name, cont := range cmds {
-		Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
+	for _, name := range cmdsKey {
+		if cont, ok := cmds[name]; ok {
+			//for name, cont := range cmds {
+			Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
+		}
 	}
 
 	showFlagsAndRequired()

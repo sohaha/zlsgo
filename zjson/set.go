@@ -20,6 +20,16 @@ type pathResult struct {
 	more  bool
 }
 
+func Stringify(value interface{}) (json string) {
+	if jsonByte, err := jsong.Marshal(value); err != nil {
+		json = zstring.Bytes2String(jsonByte)
+	} else {
+		json = "{}"
+	}
+
+	return
+}
+
 func parsePath(path string) (pathResult, error) {
 	var r pathResult
 	if len(path) > 0 && path[0] == ':' {
@@ -57,8 +67,8 @@ func parsePath(path string) (pathResult, error) {
 						}
 						continue
 					} else if path[i] == '.' {
-						r.part = string(epart)
-						r.gpart = string(gpart)
+						r.part = zstring.Bytes2String(epart)
+						r.gpart = zstring.Bytes2String(gpart)
 						r.path = path[i+1:]
 						r.more = true
 						return r, nil
@@ -71,8 +81,8 @@ func parsePath(path string) (pathResult, error) {
 					gpart = append(gpart, path[i])
 				}
 			}
-			r.part = string(epart)
-			r.gpart = string(gpart)
+			r.part = zstring.Bytes2String(epart)
+			r.gpart = zstring.Bytes2String(gpart)
 			return r, nil
 		}
 	}
@@ -352,16 +362,8 @@ func isOptimisticPath(path string) bool {
 	return true
 }
 
-func SetMarshal(json interface{}, path string, value interface{}) ([]byte, error) {
-	var data []byte
-	switch v := json.(type) {
-	case string:
-		data = zstring.String2Bytes(&v)
-	case []byte:
-		data = v
-	}
-
-	return SetBytes(data, path, value)
+func Marshal(json interface{}) ([]byte, error) {
+	return SetBytes([]byte{}, "", json)
 }
 
 func Set(json, path string, value interface{}) (string, error) {
@@ -385,7 +387,7 @@ func SetRawOptions(json, path, value string, opts *StSetOptions) (string, error)
 	if err == ErrNoChange {
 		return json, nil
 	}
-	return string(res), err
+	return zstring.Bytes2String(res), err
 }
 
 func SetRawBytes(json []byte, path string, value []byte) ([]byte, error) {
