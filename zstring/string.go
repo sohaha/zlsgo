@@ -11,13 +11,23 @@ package zstring
 import (
 	"fmt"
 	"math/rand"
-	"reflect"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 	"unsafe"
 )
+
+type sliceT struct {
+	array unsafe.Pointer
+	len   int
+	cap   int
+}
+
+type stringStruct struct {
+	str unsafe.Pointer
+	len int
+}
 
 const (
 	// PadRight Right padding character
@@ -105,8 +115,10 @@ func Bytes2String(b []byte) string {
 }
 
 // String2Bytes string to bytes
-func String2Bytes(s *string) []byte {
-	return *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(s))))
+func String2Bytes(s string) []byte {
+	str := (*stringStruct)(unsafe.Pointer(&s))
+	ret := sliceT{array: str.str, len: str.len, cap: str.len}
+	return *(*[]byte)(unsafe.Pointer(&ret))
 }
 
 // Ucfirst Ucfirst
@@ -126,7 +138,7 @@ func Lcfirst(str string) string {
 }
 
 // IsUcfirst tests whether the given byte b is in upper case
-func IsUcfirst(str *string) bool {
+func IsUcfirst(str string) bool {
 	b := String2Bytes(str)
 	if b[0] >= byte('A') && b[0] <= byte('Z') {
 		return true
@@ -135,7 +147,7 @@ func IsUcfirst(str *string) bool {
 }
 
 // IsLcfirst tests whether the given byte b is in lower case
-func IsLcfirst(str *string) bool {
+func IsLcfirst(str string) bool {
 	b := String2Bytes(str)
 	if b[0] >= byte('a') && b[0] <= byte('z') {
 		return true

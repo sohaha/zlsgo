@@ -58,7 +58,7 @@ func usage() {
 	Log.Println("  where <command> is one of:")
 	for _, name := range cmdsKey {
 		if cont, ok := cmds[name]; ok {
-			//for name, cont := range cmds {
+			// for name, cont := range cmds {
 			Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
 		}
 	}
@@ -76,12 +76,27 @@ func ShowFlags(fg *flag.FlagSet) {
 	flagsItems := zstring.Buffer()
 	fg.VisitAll(func(f *flag.Flag) {
 		s := zstring.Buffer()
-		flagsTitle := f.Name
+		flagsTitle := strings.Replace(f.Name, cliPrefix, "", 1)
+		for _, key := range varShortsKey {
+			if flagsTitle == key {
+				return
+			}
+		}
 		output := false
 		if flagsTitle == "version" {
 			output = true
 		}
 		name, usage := flag.UnquoteUsage(f)
+		for key, v := range varsKey {
+			shorts := v.shorts
+			if key == flagsTitle && len(shorts) > 0 {
+				for key := range shorts {
+					shorts[key] = "-" + shorts[key]
+				}
+				flagsTitle += ", " + strings.Join(shorts, ", ")
+			}
+		}
+
 		// if name == "" {
 		// 	name = "bool"
 		// }

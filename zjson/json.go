@@ -87,7 +87,7 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 		if !Valid(raw) {
 			return nil, ErrPathEmpty
 		}
-		return zstring.String2Bytes(&raw), nil
+		return zstring.String2Bytes(raw), nil
 	}
 	if !del && optimistic && isOptimisticPath(path) {
 		res := Get(jstr, path)
@@ -101,12 +101,12 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 					jbytes := []byte(jstr)
 					if stringify {
 						jbytes[res.Index] = '"'
-						copy(jbytes[res.Index+1:], zstring.String2Bytes(&raw))
+						copy(jbytes[res.Index+1:], zstring.String2Bytes(raw))
 						jbytes[res.Index+1+len(raw)] = '"'
 						copy(jbytes[res.Index+1+len(raw)+1:],
 							jbytes[res.Index+len(res.Raw):])
 					} else {
-						copy(jbytes[res.Index:], zstring.String2Bytes(&raw))
+						copy(jbytes[res.Index:], zstring.String2Bytes(raw))
 						copy(jbytes[res.Index+len(raw):],
 							jbytes[res.Index+len(res.Raw):])
 					}
@@ -152,7 +152,7 @@ func SetOptions(json, path string, value interface{},
 		opts = &nopts
 		opts.ReplaceInPlace = false
 	}
-	jsonb := zstring.String2Bytes(&json)
+	jsonb := zstring.String2Bytes(json)
 	res, err := SetBytesOptions(jsonb, path, value, opts)
 	return zstring.Bytes2String(res), err
 }

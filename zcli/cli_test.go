@@ -83,7 +83,7 @@ func TestCliCommandHelp(_ *testing.T) {
 	matchingCmd := Add("testHelp", "test", &testCmd{})
 	expectedErrorHandling := flag.ExitOnError
 	expectedOutput := os.Stdout
-	parseSubcommand()
+	parseSubcommand(flag.Args())
 	flag.CommandLine.Init(expectedName, expectedErrorHandling)
 	flag.CommandLine.SetOutput(expectedOutput)
 	showSubcommandUsage(flag.CommandLine, matchingCmd)

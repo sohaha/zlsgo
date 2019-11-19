@@ -1352,7 +1352,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 									if len(raw) == 0 {
 										raw = res.String()
 									}
-									jsons = append(jsons, zstring.String2Bytes(&raw)...)
+									jsons = append(jsons, zstring.String2Bytes(raw)...)
 									k++
 								}
 							}
@@ -1937,7 +1937,7 @@ func Unmarshal(json, v interface{}) error {
 	var data []byte
 	switch v := json.(type) {
 	case string:
-		data = zstring.String2Bytes(&v)
+		data = zstring.String2Bytes(v)
 	case []byte:
 		data = v
 	}
@@ -2221,7 +2221,7 @@ func validnull(data []byte, i int) (outi int, ok bool) {
 }
 
 func Valid(json string) bool {
-	_, ok := validpayload(zstring.String2Bytes(&json), 0)
+	_, ok := validpayload(zstring.String2Bytes(json), 0)
 	return ok
 }
 
@@ -2367,13 +2367,13 @@ func modPretty(json, arg string) string {
 			}
 			return true
 		})
-		return zstring.Bytes2String(FormatOptions(zstring.String2Bytes(&json), &opts))
+		return zstring.Bytes2String(FormatOptions(zstring.String2Bytes(json), &opts))
 	}
-	return zstring.Bytes2String(Format(zstring.String2Bytes(&json)))
+	return zstring.Bytes2String(Format(zstring.String2Bytes(json)))
 }
 
 func modUgly(json, _ string) string {
-	return zstring.Bytes2String(Ugly(zstring.String2Bytes(&json)))
+	return zstring.Bytes2String(Ugly(zstring.String2Bytes(json)))
 }
 
 func modReverse(json, _ string) string {

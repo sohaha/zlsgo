@@ -126,7 +126,7 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 			}
 			for i := 0; i < rv.NumField(); i++ {
 				fieldName := rt.Field(i).Name
-				if !zstring.IsUcfirst(&fieldName) {
+				if !zstring.IsUcfirst(fieldName) {
 					continue
 				}
 				name = ""

@@ -3,6 +3,7 @@ package zcli
 import (
 	"flag"
 	"os"
+	"testing"
 )
 
 var globalDebug = SetVar("debug", "是否开启调试").Required().Bool()
@@ -28,7 +29,7 @@ func (cmd *testCmd) Run(args []string) {
 func resetForTesting(args ...string) {
 	os.Args = append([]string{"cmd"}, args...)
 	FirstParameter = os.Args[0]
-	Log.Debug(os.Args)
+	Log.Debugf("resetForTesting: %s\n", os.Args)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
@@ -50,4 +51,12 @@ func testOther() {
 	warnText("warn")
 	Add("", "", &testCmd{})
 	Help()
+}
+
+func TestUtil(T *testing.T) {
+	BuildGoVersion = "--"
+	BuildTime = "--"
+	showVersionNum(true)
+	Version = ""
+	showVersion()
 }

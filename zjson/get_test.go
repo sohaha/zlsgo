@@ -79,7 +79,7 @@ func TestGet(T *testing.T) {
 		return true
 	})
 
-	byteData := zstring.String2Bytes(&demo)
+	byteData := zstring.String2Bytes(demo)
 	t.EqualExit(true, ValidBytes(byteData))
 	t.EqualExit("暴龙兽", GetBytes(byteData, "user.name").String())
 
@@ -109,11 +109,11 @@ func TestGet(T *testing.T) {
 		Quality string `json:"quality"`
 	}
 	var demoData Demo
-	demoJson := Ugly(zstring.String2Bytes(&demo))
+	demoJson := Ugly(zstring.String2Bytes(demo))
 	err := Unmarshal(demoJson, &demoData)
 	t.Log(err, demoData)
 
-	err = Unmarshal(zstring.String2Bytes(&demo), &demoData)
+	err = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	t.EqualExit(true, err == nil)
 	t.Log(err, demoData)
 

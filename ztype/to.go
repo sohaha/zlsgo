@@ -16,7 +16,7 @@ type appString interface {
 // ToByte to []byte
 func ToByte(i interface{}) []byte {
 	s := ToString(i)
-	return zstring.String2Bytes(&s)
+	return zstring.String2Bytes(s)
 }
 
 // ToString to String

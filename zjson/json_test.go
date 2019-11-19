@@ -8,7 +8,7 @@ import (
 
 func BenchmarkUnmarshal(b *testing.B) {
 	var demoData Demo
-	demoByte := zstring.String2Bytes(&demo)
+	demoByte := zstring.String2Bytes(demo)
 	for i := 0; i < b.N; i++ {
 		_ = Unmarshal(demoByte, &demoData)
 	}
@@ -16,7 +16,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 
 func BenchmarkGolangUnmarshal(b *testing.B) {
 	var demoData Demo
-	demoByte := zstring.String2Bytes(&demo)
+	demoByte := zstring.String2Bytes(demo)
 	for i := 0; i < b.N; i++ {
 		_ = json.Unmarshal(demoByte, &demoData)
 	}
@@ -24,7 +24,7 @@ func BenchmarkGolangUnmarshal(b *testing.B) {
 
 func BenchmarkMarshal(b *testing.B) {
 	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(&demo), &demoData)
+	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	for i := 0; i < b.N; i++ {
 		_, _ = Marshal(demoData)
 	}
@@ -32,7 +32,7 @@ func BenchmarkMarshal(b *testing.B) {
 
 func BenchmarkStringify(b *testing.B) {
 	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(&demo), &demoData)
+	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	for i := 0; i < b.N; i++ {
 		Stringify(demoData)
 	}
@@ -40,7 +40,7 @@ func BenchmarkStringify(b *testing.B) {
 
 func BenchmarkGolangMarshal(b *testing.B) {
 	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(&demo), &demoData)
+	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	for i := 0; i < b.N; i++ {
 		_, _ = json.Marshal(demoData)
 	}

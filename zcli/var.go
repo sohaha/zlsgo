@@ -5,9 +5,14 @@ import (
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/ztype"
 	"os"
+	"strings"
 )
 
+const cliPrefix = ""
+
 var (
+	BuildTime      = ""
+	BuildGoVersion = ""
 	// Log cli logger
 	Log              *zlog.Logger
 	FirstParameter   = os.Args[0]
@@ -23,25 +28,28 @@ var (
 	unknownCommandFn = func(name string) {
 		Error("unknown Command: %s", errorText(name))
 	}
-	//appConfig      = &App{
-	//Lang: defaultLang,
-	//}
-	Logo        string
-	Description string
-	Version     string
-	HideHelp    bool
-	HidePrompt  bool
-	Lang        = defaultLang
+	// appConfig      = &App{
+	// Lang: defaultLang,
+	// }
+	Logo         string
+	Description  string
+	Version      string
+	HideHelp     bool
+	HidePrompt   bool
+	Lang         = defaultLang
+	varsKey      = map[string]*Var{}
+	varShortsKey = make([]string, 0)
+	ShortValues  = map[string]interface{}{}
 )
 
 type (
-	//App struct {
-	//Logo       string
-	//Version    string
-	//HideHelp   bool
-	//HidePrompt bool
-	//Lang       string
-	//}
+	// App struct {
+	// Logo       string
+	// Version    string
+	// HideHelp   bool
+	// HidePrompt bool
+	// Lang       string
+	// }
 	cmdCont struct {
 		name          string
 		desc          string
@@ -61,8 +69,9 @@ type (
 		id int
 	}
 	Var struct {
-		name  string
-		usage string
+		name   string
+		usage  string
+		shorts []string
 	}
 	Subcommand struct {
 		cmdCont
@@ -75,10 +84,10 @@ type (
 )
 
 func getLangs(key string) string {
-	//lang := appConfig.Lang
-	//if lang == "" {
-	//lang = defaultLang
-	//}
+	// lang := appConfig.Lang
+	// if lang == "" {
+	// lang = defaultLang
+	// }
 	langs := map[string]map[string]string{
 		"en": {
 			"command_empty": "Command name cannot be empty",
@@ -104,15 +113,23 @@ func getLangs(key string) string {
 }
 
 func (e *errWrite) Write(p []byte) (n int, err error) {
-	Error(ztype.ToString(p))
+	Error(strings.Replace(ztype.ToString(p), cliPrefix, "", 1))
 	return 1, nil
 }
 
 func SetVar(name, usage string) *Var {
-	return &Var{
-		name:  name,
+	v := &Var{
+		name:  cliPrefix + name,
 		usage: usage,
 	}
+	varsKey[name] = v
+	return v
+}
+
+func (v *Var) Short(short string) *Var {
+	v.shorts = append(v.shorts, short)
+	varShortsKey = append(varShortsKey, short)
+	return v
 }
 
 // Required Set flag to be required
@@ -130,6 +147,9 @@ func (v *Var) String(def ...string) *string {
 	if len(def) > 0 {
 		value = def[0]
 	}
+	v.setFlagbind(func(name string) {
+		ShortValues[name] = flag.String(name, value, v.usage)
+	})
 	return flag.String(v.name, value, v.usage)
 }
 
@@ -138,6 +158,9 @@ func (v *Var) Int(def ...int) *int {
 	if len(def) > 0 {
 		value = def[0]
 	}
+	v.setFlagbind(func(name string) {
+		ShortValues[name] = flag.Int(name, value, v.usage)
+	})
 	return flag.Int(v.name, value, v.usage)
 }
 
@@ -146,5 +169,17 @@ func (v *Var) Bool(def ...bool) *bool {
 	if len(def) > 0 {
 		value = def[0]
 	}
+	v.setFlagbind(func(name string) {
+		ShortValues[name] = flag.Bool(name, value, v.usage)
+	})
 	return flag.Bool(v.name, value, v.usage)
+}
+
+func (v *Var) setFlagbind(fn func(name string)) {
+	shortLen := len(v.shorts)
+	if shortLen > 0 {
+		for i := 0; i < shortLen; i++ {
+			fn(v.shorts[i])
+		}
+	}
 }

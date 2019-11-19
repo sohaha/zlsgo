@@ -63,12 +63,12 @@ func TestFirst(T *testing.T) {
 	t := zls.NewTest(T)
 	str := "my Name"
 	str = Ucfirst(str)
-	t.Equal(true, IsUcfirst(&str))
-	t.Equal(false, IsLcfirst(&str))
+	t.Equal(true, IsUcfirst(str))
+	t.Equal(false, IsLcfirst(str))
 	t.Equal("My Name", str)
 	str = Lcfirst(str)
-	t.Equal(true, IsLcfirst(&str))
-	t.Equal(false, IsUcfirst(&str))
+	t.Equal(true, IsLcfirst(str))
+	t.Equal(false, IsUcfirst(str))
 }
 
 func BenchmarkStr(b *testing.B) {
@@ -89,7 +89,7 @@ func BenchmarkStrBuffer(b *testing.B) {
 func TestTo(T *testing.T) {
 	t := zls.NewTest(T)
 	s := "我是中国人"
-	b := String2Bytes(&s)
+	b := String2Bytes(s)
 	s2 := Bytes2String(b)
 	t.Equal(s, s2)
 }
@@ -97,7 +97,7 @@ func TestTo(T *testing.T) {
 func BenchmarkTo(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		s := "我是中国人"
-		b := String2Bytes(&s)
+		b := String2Bytes(s)
 		_ = Bytes2String(b)
 	}
 }

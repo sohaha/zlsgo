@@ -104,8 +104,21 @@ func showVersion() bool {
 	return false
 }
 
-func showVersionNum() {
-	Log.Println(Version)
+func showVersionNum(info bool) {
+	if info {
+		Log.Printf("version=%s\n", Version)
+		//noinspection GoBoolExpressions
+		if BuildGoVersion != "" {
+			Log.Printf("goVersion=%s\n", BuildGoVersion)
+		}
+		//noinspection GoBoolExpressions
+		if BuildTime != "" {
+			Log.Printf("buildTime=%s\n", BuildTime)
+		}
+	} else {
+		Log.Println(Version)
+	}
+
 	return
 }
 

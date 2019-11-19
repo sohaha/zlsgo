@@ -13,7 +13,7 @@ var demo = `{
 
 func TestFormat(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	pretty := Format(zstring.String2Bytes(&demo))
+	pretty := Format(zstring.String2Bytes(demo))
 	t.Log(zstring.Bytes2String(pretty))
 
 	str2 := Ugly(pretty)
