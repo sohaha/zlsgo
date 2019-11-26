@@ -12,7 +12,7 @@ import (
 
 func parse(outHelp bool) {
 	if Version != "" {
-		flagVersion = SetVar("version", getLangs("version")).Short("V").Bool()
+		flagVersion = SetVar("version", getLangs("version")).short("V").Bool()
 	}
 	parseCommand(outHelp)
 	parseSubcommand(flag.Args())
@@ -26,6 +26,8 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 			flagMap.Push(flagName)
 		}
 		fs.Visit(func(f *flag.Flag) {
+			Log .Error(f.Name)
+			
 			_, _ = flagMap.RemoveValue(f.Name)
 		})
 		flagMapLen := flagMap.Length()
@@ -98,7 +100,7 @@ func parseCommand(outHelp bool) {
 	if requiredErr != nil {
 		if len(flag.Args()) > 0 {
 			Error(requiredErr.Error())
-		} else {
+		} else if outHelp {
 			Help()
 		}
 	}

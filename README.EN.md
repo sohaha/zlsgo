@@ -12,6 +12,8 @@ Golang daily development common function library
 
 [Check out the documentation](https://docs.73zls.com/zls-go/#)
 
+Recommended to use with the `zzz watch` command of [zzz](https://github.com/sohaha/zzz)
+
 ## Why Zara
 
 - Easy to use, lightweight enough
@@ -62,7 +64,7 @@ func main(){
 
 ### More features
 
-Please read the documentation [https://docs.73zls.com/zls-go/](https://docs.73zls.com/zls-go/#)
+Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
 
 ## LICENSE
 

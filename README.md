@@ -10,6 +10,8 @@
 
 [查看文档](https://docs.73zls.com/zls-go/#)
 
+建议搭配 [zzz](https://github.com/sohaha/zzz) 的 `zzz watch` 指令使用
+
 ## 特性
 
 - 简单易用、足够轻量
@@ -63,7 +65,7 @@ func main(){
 
 ### 更多功能
 
-请阅读文档 [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/)
+请阅读文档 [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
 
 ## LICENSE
 

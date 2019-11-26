@@ -126,8 +126,9 @@ func SetVar(name, usage string) *Var {
 	return v
 }
 
-func (v *Var) Short(short string) *Var {
+func (v *Var) short(short string) *Var {
 	v.shorts = append(v.shorts, short)
+	// todo 防止重复添加
 	varShortsKey = append(varShortsKey, short)
 	return v
 }
@@ -176,10 +177,7 @@ func (v *Var) Bool(def ...bool) *bool {
 }
 
 func (v *Var) setFlagbind(fn func(name string)) {
-	shortLen := len(v.shorts)
-	if shortLen > 0 {
-		for i := 0; i < shortLen; i++ {
-			fn(v.shorts[i])
-		}
+	for _, s := range v.shorts {
+		fn(s)
 	}
 }
