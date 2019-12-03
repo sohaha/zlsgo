@@ -10,10 +10,12 @@ package zhttp
 import (
 	"encoding/json"
 	"encoding/xml"
+	"github.com/sohaha/zlsgo/zfile"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -104,6 +106,12 @@ func (r *Res) ToXML(v interface{}) error {
 }
 
 func (r *Res) ToFile(name string) error {
+	nameSplit := strings.Split(name, "/")
+	nameSplitLen := len(nameSplit)
+	if nameSplitLen > 1 {
+		dir := strings.Join(nameSplit[0:nameSplitLen-1], "/")
+		name = zfile.RealPathMkdir(dir) + "/" + nameSplit[nameSplitLen-1]
+	}
 	file, err := os.Create(name)
 	if err != nil {
 		return err

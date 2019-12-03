@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/sohaha/zlsgo/zstring"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -40,7 +41,7 @@ func (s *shellStdBuffer) String() string {
 }
 
 func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
-	stdErr io.Writer) (code int, output string, err error) {
+	stdErr io.Writer) (code int, outStr, errStr string, err error) {
 
 	var (
 		status syscall.WaitStatus
@@ -49,7 +50,7 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 	)
 
 	if strings.TrimSpace(command) == "" {
-		return 1, "", errors.New("no such command")
+		return 1, "", "", errors.New("no such command")
 	}
 
 	if Debug {
@@ -59,6 +60,7 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 
 	var arr = strings.Split(command, " ")
 	var cmd = exec.Command(arr[0], arr[1:]...)
+	cmd.Env = os.Environ()
 
 	stdout = newShellStdBuffer(stdOut)
 	stderr = newShellStdBuffer(stdErr)
@@ -69,7 +71,7 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 
 	err = cmd.Start()
 	if err != nil {
-		return 1, "", err
+		return 1, "", "", err
 	}
 
 	err = cmd.Wait()
@@ -84,21 +86,18 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 		}
 	}
 
-	if isSuccess {
-		output = stdout.String()
-	} else {
-		output = stderr.String()
-	}
+	outStr = stdout.String()
+	errStr = stderr.String()
 
-	return status.ExitStatus(), output, nil
+	return status.ExitStatus(), outStr, outStr, nil
 }
 
-func Run(command string) (code int, output string, err error) {
+func Run(command string) (code int, outStr, errStr string, err error) {
 	return execCommand(command, nil, nil, nil)
 }
 
 func OutRun(command string, stdIn io.Reader, stdOut io.Writer,
-	stdErr io.Writer) (code int, output string, err error) {
+	stdErr io.Writer) (code int, outStr, errStr string, err error) {
 	return execCommand(command, stdIn, stdOut, stdErr)
 }
 

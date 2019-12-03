@@ -25,7 +25,7 @@ func PathExist(path string) (int, error) {
 		}
 		return isFile, nil
 	}
-
+	
 	return 0, err
 }
 
@@ -76,18 +76,21 @@ func logn(n, b float64) float64 {
 }
 
 // RealPath get an absolute path
-func RealPath(path string) (realPath string) {
+func RealPath(path string, addSlash ...bool) (realPath string) {
 	realPath, _ = filepath.Abs(path)
+	if len(addSlash) > 0 && addSlash[0] {
+		realPath += "/"
+	}
 	return
 }
 
 // RealPathMkdir get an absolute path, create it if it doesn't exist
-func RealPathMkdir(path string) string {
-	realPath := RealPath(path)
+func RealPathMkdir(path string, addSlash ...bool) string {
+	realPath := RealPath(path, addSlash...)
 	if DirExist(realPath) {
 		return realPath
 	}
-	_ = os.Mkdir(path, os.ModePerm)
+	_ = os.MkdirAll(path, os.ModePerm)
 	return realPath
 }
 

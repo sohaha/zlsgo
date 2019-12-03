@@ -160,8 +160,6 @@ func BodyXML(v interface{}) *bodyXml {
 	return &bodyXml{v: v}
 }
 
-// Engine is a convenient client for initiating requests
-
 // New create a new *Engine
 func New() *Engine {
 	return &Engine{flag: BitStdFlags}
