@@ -17,3 +17,4 @@ zls-watch.yaml
 .idea/
 .vscode/
 report/
+gotest

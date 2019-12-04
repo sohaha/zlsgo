@@ -25,7 +25,7 @@ func PathExist(path string) (int, error) {
 		}
 		return isFile, nil
 	}
-	
+
 	return 0, err
 }
 
@@ -78,6 +78,7 @@ func logn(n, b float64) float64 {
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
 	realPath, _ = filepath.Abs(path)
+	// realPath =filepath.Clean(realPath)
 	if len(addSlash) > 0 && addSlash[0] {
 		realPath += "/"
 	}
