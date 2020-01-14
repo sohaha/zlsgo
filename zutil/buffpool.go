@@ -13,8 +13,7 @@ func GetBuff() *bytes.Buffer {
 	var buffer *bytes.Buffer
 	item := buffPool.Get()
 	if item == nil {
-		var byteSlice []byte
-		byteSlice = make([]byte, 0, BuffSize)
+		byteSlice := make([]byte, 0, BuffSize)
 		buffer = bytes.NewBuffer(byteSlice)
 	} else {
 		buffer = item.(*bytes.Buffer)

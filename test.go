@@ -19,6 +19,7 @@ func NewTest(t *testing.T) *TestUtil {
 	return &TestUtil{t}
 }
 
+// GetCallerInfo GetCallerInfo
 func (u *TestUtil) GetCallerInfo() string {
 	var info string
 
@@ -66,6 +67,7 @@ func (u *TestUtil) Equal(expected, actual interface{}) {
 	}
 }
 
+// EqualExit EqualExit
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
 		u.T.Fatalf("%s 期待:%v (type %v) - 结果:%v (type %v)", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))

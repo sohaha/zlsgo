@@ -1,18 +1,29 @@
 package zjson
 
 import (
+	"bytes"
 	"github.com/sohaha/zlsgo/zstring"
 	"sort"
 )
 
-type StFormatOptions struct {
-	Width    int
-	Prefix   string
-	Indent   string
-	SortKeys bool
-}
+type (
+	Map             map[string]string
+	rMap            map[rune]interface{}
+	StFormatOptions struct {
+		Width    int
+		Prefix   string
+		Indent   string
+		SortKeys bool
+	}
+)
 
-var DefOptions = &StFormatOptions{Width: 80, Prefix: "", Indent: "  ", SortKeys: false}
+var (
+	DefOptions = &StFormatOptions{Width: 80, Prefix: "", Indent: "  ", SortKeys: false}
+	Maches     = []Map{
+		{"start": "//", "end": "\n"},
+		{"start": "/*", "end": "*/"},
+	}
+)
 
 func Format(json []byte) []byte { return FormatOptions(json, nil) }
 
@@ -34,6 +45,10 @@ func FormatOptions(json []byte, opts *StFormatOptions) []byte {
 }
 
 func Ugly(json []byte) []byte {
+	jsonStr, err := Discard(zstring.Bytes2String(json))
+	if err == nil {
+		json = zstring.String2Bytes(jsonStr)
+	}
 	buf := make([]byte, 0, len(json))
 	return ugly(buf, json)
 }
@@ -280,4 +295,71 @@ func appendTabs(buf []byte, prefix, indent string, tabs int) []byte {
 		}
 	}
 	return buf
+}
+
+func Discard(json string) (string, error) {
+	var (
+		buffer    bytes.Buffer
+		flag      int
+		v         rune
+		protected bool
+	)
+	runes := []rune(json)
+	flag = -1
+	for i := 0; i < len(runes); {
+		v = runes[i]
+		if flag == -1 {
+			for f, v := range Maches {
+				l := match(&runes, i, v["start"])
+				if l != 0 {
+					flag = f
+					i += l
+					break
+				}
+			}
+			if flag == -1 {
+				if protected {
+					buffer.WriteRune(v)
+					if v == '"' {
+						protected = true
+					}
+				} else {
+					r := filter(v)
+					if r != 0 {
+						buffer.WriteRune(v)
+					}
+				}
+			} else {
+				continue
+			}
+		} else {
+			l := match(&runes, i, Maches[flag]["end"])
+			if l != 0 {
+				flag = -1
+				i += l
+				continue
+			}
+		}
+		i++
+	}
+	return buffer.String(), nil
+}
+
+func filter(v rune) rune {
+	switch v {
+	case ' ':
+	case '\n':
+	case '\t':
+	default:
+		return v
+	}
+	return 0
+}
+
+func match(runes *[]rune, i int, dst string) int {
+	dstLen := len([]rune(dst))
+	if len(*runes)-i >= dstLen && string((*runes)[i:i+dstLen]) == dst {
+		return dstLen
+	}
+	return 0
 }

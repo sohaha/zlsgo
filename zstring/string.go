@@ -9,6 +9,7 @@
 package zstring
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -153,4 +154,9 @@ func IsLcfirst(str string) bool {
 		return true
 	}
 	return false
+}
+
+func TrimBOM(fileBytes []byte) []byte {
+	trimmedBytes := bytes.Trim(fileBytes, "\xef\xbb\xbf")
+	return trimmedBytes
 }

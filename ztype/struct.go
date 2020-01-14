@@ -48,7 +48,7 @@ func (s *StructEngin) ToMap(data interface{}) []map[string]interface{} {
 
 func (s *StructEngin) get(val reflect.Value) {
 	valType := val.Type()
-	var mapTmp = make(map[string]interface{}, 0)
+	var mapTmp = make(map[string]interface{})
 	for i := 0; i < val.NumField(); i++ {
 		valueField := val.Field(i)
 		typeField := valType.Field(i)

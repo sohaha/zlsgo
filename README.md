@@ -67,6 +67,15 @@ func main(){
 
 请阅读文档 [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
 
+## Todo
+
+- [x] HttpServer
+- [x] HttpClient
+- [x] Logger
+- [x] Json
+- [ ] Validator
+- [ ] ...
+
 ## LICENSE
 
 [MIT](LICENSE)

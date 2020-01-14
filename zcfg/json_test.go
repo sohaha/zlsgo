@@ -8,17 +8,20 @@ import (
 
 func TestJSONCfg(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	remote := "https://raw.githubusercontent.com/sohaha/ZlsPHP/master/composer.json"
-	json, err := JSONCfg(remote)
+	remote := "https://unpkg.com/zls-cli@0.6.0/package.json"
+	json, err := JSON(remote)
+	if err != nil {
+		t.Log(err)
+	}
 	t.EqualExit(json, GetJSON())
 	t.EqualExit(nil, err)
 	name := GetJSON("name").String()
-	t.EqualExit("zls/zls", name)
+	t.EqualExit("zls-cli", name)
 	_ = SetJSON("test", "ok")
 	t.EqualExit("ok", GetJSON("test").String())
 	_ = SaveJSON("test.json", GetJSON().String())
 
-	json, _ = JSONCfg("test.json")
+	json, _ = JSON("test.json")
 	t.EqualExit(name, json.Get("name").String())
 	zfile.Rmdir("test.json")
 }

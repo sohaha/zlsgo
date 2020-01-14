@@ -18,7 +18,7 @@ func TestColor(t *testing.T) {
 	if bl {
 		T.Equal(fmt.Sprintf("\x1b[%dm%s\x1b[0m", ColorGreen, testText), ColorTextWrap(ColorGreen, testText))
 	} else {
-		T.Equal(fmt.Sprintf("%s", testText), ColorTextWrap(ColorGreen, testText))
+		T.Equal(testText, ColorTextWrap(ColorGreen, testText))
 	}
 
 	DisableColor = true

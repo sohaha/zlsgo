@@ -167,7 +167,7 @@ func TestHttpProxy(T *testing.T) {
 	}
 	t.Equal(true, err != nil)
 
-	res, err = Get("https://github.com")
+	res, err = Get("https://www.npmjs.com/package/zls-vue-spa/")
 	if err == nil {
 		t.Log(res.Response().Status)
 	} else {

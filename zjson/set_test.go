@@ -59,7 +59,8 @@ func TestSet(T *testing.T) {
 	t.EqualExit(true, err == nil)
 	t.Log(string(strBytes), err)
 
-	strBytes, err = SetBytes(strBytes, "setBytes2.s", "new set")
+	_, _ = SetBytes(strBytes, "setBytes2.s", "new set")
+
 	strBytes, err = SetBytesOptions(strBytes, "setBytes3.op", "new set", &StSetOptions{Optimistic: true, ReplaceInPlace: true})
 
 	t.Log(string(strBytes), err)

@@ -90,6 +90,7 @@ func TestTo(T *testing.T) {
 	t := zls.NewTest(T)
 	s := "我是中国人"
 	b := String2Bytes(s)
+	b = TrimBOM(b)
 	s2 := Bytes2String(b)
 	t.Equal(s, s2)
 }

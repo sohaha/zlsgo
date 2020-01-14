@@ -14,6 +14,8 @@ import (
 
 var (
 	Debug = false
+	Env   []string
+	Dir   string
 )
 
 type shellStdBuffer struct {
@@ -60,8 +62,17 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 
 	var arr = strings.Split(command, " ")
 	var cmd = exec.Command(arr[0], arr[1:]...)
-	cmd.Env = os.Environ()
 
+	if Env == nil {
+		cmd.Env = os.Environ()
+	} else {
+		cmd.Env = Env
+		Env = nil
+	}
+	if Dir != "" {
+		cmd.Dir = Dir
+		Dir = ""
+	}
 	stdout = newShellStdBuffer(stdOut)
 	stderr = newShellStdBuffer(stdErr)
 
