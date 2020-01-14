@@ -43,61 +43,61 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 		return r
 	}
 	m := map[string]interface{}{}
-	switch value.(type) {
+	switch value := value.(type) {
 	case map[interface{}]interface{}:
-		for k, v := range value.(map[interface{}]interface{}) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]string:
-		for k, v := range value.(map[interface{}]string) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]int:
-		for k, v := range value.(map[interface{}]int) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]uint:
-		for k, v := range value.(map[interface{}]uint) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]float32:
-		for k, v := range value.(map[interface{}]float32) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]float64:
-		for k, v := range value.(map[interface{}]float64) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[string]bool:
-		for k, v := range value.(map[string]bool) {
+		for k, v := range value {
 			m[k] = v
 		}
 	case map[string]int:
-		for k, v := range value.(map[string]int) {
+		for k, v := range value {
 			m[k] = v
 		}
 	case map[string]uint:
-		for k, v := range value.(map[string]uint) {
+		for k, v := range value {
 			m[k] = v
 		}
 	case map[string]float32:
-		for k, v := range value.(map[string]float32) {
+		for k, v := range value {
 			m[k] = v
 		}
 	case map[string]float64:
-		for k, v := range value.(map[string]float64) {
+		for k, v := range value {
 			m[k] = v
 		}
 	case map[int]interface{}:
-		for k, v := range value.(map[int]interface{}) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[int]string:
-		for k, v := range value.(map[int]string) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	case map[uint]string:
-		for k, v := range value.(map[uint]string) {
+		for k, v := range value {
 			m[ToString(k)] = v
 		}
 	default:

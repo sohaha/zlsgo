@@ -47,13 +47,13 @@ func FileSize(file string) (size string) {
 	if err != nil {
 		size = FileSizeFormat(0)
 	} else {
-		size = FileSizeFormat(fileInfo.Size())
+		size = FileSizeFormat(uint64(fileInfo.Size()))
 	}
 	return
 }
 
 // FileSizeFormat Format file size
-func FileSizeFormat(s int64) string {
+func FileSizeFormat(s uint64) string {
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	humanateBytes := func(s uint64, base float64, sizes []string) string {
 		if s < 10 {
@@ -68,7 +68,7 @@ func FileSizeFormat(s int64) string {
 		}
 		return fmt.Sprintf(f+" %s", val, suffix)
 	}
-	return humanateBytes(uint64(s), 1024, sizes)
+	return humanateBytes(s, 1024, sizes)
 }
 
 func logn(n, b float64) float64 {
@@ -78,7 +78,7 @@ func logn(n, b float64) float64 {
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
 	realPath, _ = filepath.Abs(path)
-	// realPath =filepath.Clean(realPath)
+	realPath = filepath.ToSlash(realPath)
 	if len(addSlash) > 0 && addSlash[0] {
 		realPath += "/"
 	}
