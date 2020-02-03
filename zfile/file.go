@@ -2,7 +2,7 @@
  * @Author: seekwe
  * @Date:   2019-05-17 17:08:52
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-25 14:15:27
+ * @Last Modified time: 2020-02-02 21:31:04
  */
 
 package zfile
@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // PathExist PathExist
@@ -59,7 +60,7 @@ func FileSizeFormat(s uint64) string {
 		if s < 10 {
 			return fmt.Sprintf("%d B", s)
 		}
-		e := math.Floor(logn(float64(s), base))
+		e := math.Floor(logSize(float64(s), base))
 		suffix := sizes[int(e)]
 		val := float64(s) / math.Pow(base, math.Floor(e))
 		f := "%.0f"
@@ -71,17 +72,15 @@ func FileSizeFormat(s uint64) string {
 	return humanateBytes(s, 1024, sizes)
 }
 
-func logn(n, b float64) float64 {
+func logSize(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
 }
 
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
 	realPath, _ = filepath.Abs(path)
-	realPath = filepath.ToSlash(realPath)
-	if len(addSlash) > 0 && addSlash[0] {
-		realPath += "/"
-	}
+	realPath = pathAddSlash(filepath.ToSlash(realPath), addSlash...)
+
 	return
 }
 
@@ -104,4 +103,22 @@ func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 		_ = os.Mkdir(path, os.ModePerm)
 	}
 	return
+}
+
+// ProgramPath program directory path
+func ProgramPath(addSlash ...bool) (path string) {
+	ePath, err := os.Executable()
+	if err != nil {
+		ePath = RealPath(".")
+	}
+	path = pathAddSlash(filepath.Dir(ePath), addSlash...)
+
+	return
+}
+
+func pathAddSlash(path string, addSlash ...bool) string {
+	if len(addSlash) > 0 && addSlash[0] && !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return path
 }

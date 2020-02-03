@@ -33,4 +33,5 @@ func TestFile(T *testing.T) {
 	t.Log(path)
 	t.Equal(true, Rmdir(path, true))
 	t.Equal(true, Rmdir(path))
+	_ = ProgramPath(true)
 }

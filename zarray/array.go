@@ -62,7 +62,6 @@ func (array *Array) resize(capacity int) {
 		newArray[i] = array.data[i]
 	}
 	array.data = newArray
-	newArray = nil
 }
 
 // CapLength 获取数组容量
