@@ -8,6 +8,7 @@ func Match(str, pattern string) bool {
 	}
 	return deepMatch(str, pattern)
 }
+
 func deepMatch(str, pattern string) bool {
 	for len(pattern) > 0 {
 		if pattern[0] > 0x7f {

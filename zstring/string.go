@@ -2,7 +2,7 @@
  * @Author: seekwe
  * @Date:   2019-05-09 12:44:23
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 16:11:30
+ * @Last Modified time: 2020-01-30 18:35:06
  */
 
 // Package zstring provides String related operations
@@ -11,9 +11,7 @@ package zstring
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 	"unsafe"
@@ -64,50 +62,29 @@ func Pad(raw string, length int, padStr string, padType int) string {
 	return raw
 }
 
-// Len String length (Chinese)
+// Len string length (utf8)
 func Len(str string) int {
 	// strings.Count(str,"")-1
 	return utf8.RuneCountInString(str)
 }
 
-// Substr substr
+// Substr returns part of a string
 func Substr(str string, start int, length ...int) string {
 	s := []rune(str)
-	var l int
+	sl := len(s)
+	if start < 0 {
+		start = sl + start
+	}
+
 	if len(length) > 0 {
-		l = length[0] + start
-	} else {
-		l = len(s)
-	}
-	return string(s[start:l])
-}
-
-// Rand rand string
-func Rand(n int, ostr ...string) string {
-	var src = rand.NewSource(time.Now().UnixNano())
-	var s string
-	b := make([]byte, n)
-	if len(ostr) > 0 {
-		s = ostr[0]
-	} else {
-		s = letterBytes
-	}
-	for i, cache, remain := n-1, src.Int63(), 10; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), 10
+		ll := length[0]
+		if ll < 0 {
+			sl = sl + ll
+		} else {
+			sl = ll + start
 		}
-		b[i] = s[int(cache&letterIdxMask)%len(s)]
-		i--
-		cache >>= 6
-		remain--
 	}
-	return Bytes2String(b)
-}
-
-// RandomInt randomInteger
-func RandomInt(num int) int {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(num)
+	return string(s[start:sl])
 }
 
 // Bytes2String bytes to string

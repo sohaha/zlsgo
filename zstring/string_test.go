@@ -4,11 +4,11 @@ import (
 	"testing"
 	"unsafe"
 
-	zls "github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo"
 )
 
 func TestBuffer(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	l := "0"
 	l += "1"
 	b := Buffer()
@@ -17,30 +17,25 @@ func TestBuffer(T *testing.T) {
 	t.Equal(l, b.String())
 }
 
-func TestRand(T *testing.T) {
-	t := zls.NewTest(T)
-	t.Log(Rand(4))
-	t.Log(Rand(10))
-	t.Log(Rand(4, "a1"))
-	t.Log(RandomInt(4))
-}
-
 func TestLen(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	s := "我是中国人"
 	t.Equal(5, Len(s))
 	t.Log(Len(s), len(s))
 }
 
 func TestSubstr(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	s := "0123"
 	t.Equal(Substr(s, 1), "123")
 	t.Equal(Substr(s, 2, 1), "2")
+	t.Equal("A,是我呀",Substr("你好A,是我呀", 2))
+	t.Equal("是我呀",Substr("你好A,是我呀", -3))
+	t.Equal("A,是",Substr("你好A,是我呀", 2,-2))
 }
 
 func TestPad(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	l := "我的这里一共8字"
 	t.Equal(8, Len(l))
 
@@ -60,7 +55,7 @@ func TestPad(T *testing.T) {
 }
 
 func TestFirst(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	str := "my Name"
 	str = Ucfirst(str)
 	t.Equal(true, IsUcfirst(str))
@@ -87,7 +82,7 @@ func BenchmarkStrBuffer(b *testing.B) {
 }
 
 func TestTo(T *testing.T) {
-	t := zls.NewTest(T)
+	t := zlsgo.NewTest(T)
 	s := "我是中国人"
 	b := String2Bytes(s)
 	b = TrimBOM(b)
