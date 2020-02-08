@@ -73,9 +73,8 @@ func (c *Context) GetPostForm(key string) (string, bool) {
 
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	req := c.Request
-	_ = req.ParseForm()
-	_ = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
-	if values := req.PostForm[key]; len(values) > 0 {
+	postForm, _ := c.GetPostFormAll()
+	if values := postForm[key]; len(values) > 0 {
 		return values, true
 	}
 	if req.MultipartForm != nil && req.MultipartForm.File != nil {
@@ -86,6 +85,20 @@ func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	return []string{}, false
 }
 
+func (c *Context) GetPostFormAll() (value url.Values, err error) {
+	value = url.Values{}
+	req := c.Request
+	if req.PostForm == nil {
+		if c.ContentType() == MIMEMultipartPOSTForm {
+			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
+		} else {
+			err = req.ParseForm()
+		}
+	}
+	value = req.PostForm
+	return
+}
+
 func (c *Context) PostFormMap(key string) map[string]string {
 	dicts, _ := c.GetPostFormMap(key)
 	return dicts
@@ -93,9 +106,8 @@ func (c *Context) PostFormMap(key string) map[string]string {
 
 func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	req := c.Request
-	_ = req.ParseForm()
-	_ = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
-	dicts, exist := c.get(req.PostForm, key)
+	postForm, _ := c.GetPostFormAll()
+	dicts, exist := c.get(postForm, key)
 
 	if !exist && req.MultipartForm != nil && req.MultipartForm.File != nil {
 		dicts, exist = c.get(req.MultipartForm.Value, key)

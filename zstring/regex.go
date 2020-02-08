@@ -58,19 +58,45 @@ func setRegexCache(pattern string, regex *regexp.Regexp) {
 	})
 }
 
-// IsMatch check for match
-func IsMatch(pattern string, str string) bool {
+// RegexMatch check for match
+func RegexMatch(pattern string, str string) bool {
 	if r, err := getRegexpCompile(pattern); err == nil {
 		return r.Match(String2Bytes(str))
 	}
 	return false
 }
 
-// Extract extract matching text
-func Extract(pattern string, str string) ([]string, error) {
+// RegexExtract extract matching text
+func RegexExtract(pattern string, str string) ([]string, error) {
 	r, err := getRegexpCompile(pattern)
 	if err == nil {
 		return r.FindStringSubmatch(str), nil
 	}
 	return nil, err
+}
+
+// RegexFind return matching position
+func RegexFind(pattern string, str string, n int) [][]int {
+	if r, err := getRegexpCompile(pattern); err == nil {
+		return r.FindAllIndex(String2Bytes(str), n)
+	}
+	return [][]int{}
+}
+
+// RegexReplace replacing matches of the Regexp
+func RegexReplace(pattern string, str, repl string) (string, error) {
+	r, err := getRegexpCompile(pattern)
+	if err == nil {
+		str = r.ReplaceAllString(str, repl)
+	}
+	return str, err
+}
+
+// RegexReplaceFunc replacing matches of the Regexp
+func RegexReplaceFunc(pattern string, str string, repl func(string) string) (string, error) {
+	r, err := getRegexpCompile(pattern)
+	if err == nil {
+		str = r.ReplaceAllStringFunc(str, repl)
+	}
+	return str, err
 }

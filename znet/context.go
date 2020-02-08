@@ -2,18 +2,17 @@
  * @Author: seekwe
  * @Date:   2019-05-10 17:05:54
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 16:13:28
+ * @Last Modified time: 2020-02-02 18:21:53
  */
 
 package znet
 
 import (
-	"github.com/sohaha/zlsgo/zstring"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/sohaha/zlsgo/zvalidator"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 // Host Get the current Host
@@ -27,7 +26,7 @@ func (c *Context) Host() string {
 
 // CompletionLink Complete the link and add the current domain name if it is not linked
 func (c *Context) CompletionLink(link string) string {
-	if isURL := zvalidator.IsURL(link); isURL {
+	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		return link
 	}
 	finalLink := zstring.Buffer()
@@ -97,13 +96,17 @@ func (c *Context) RedirectNext(path string) (not bool) {
 }
 
 // SetCookie Set Cookie
-func (c *Context) SetCookie(name, value string) {
+func (c *Context) SetCookie(name, value string, maxAge ...int) {
+	_maxAge := 0
+	if len(maxAge) > 0 {
+		_maxAge = maxAge[0]
+	}
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   0,
+		MaxAge:   _maxAge,
 	}
 	c.Writer.Header().Add("Set-Cookie", cookie.String())
 }
@@ -118,7 +121,7 @@ func (c *Context) GetCookie(name string) string {
 	return v
 }
 
-// Referer request referer.
+// Referer request referer
 func (c *Context) Referer() string {
 	return c.Request.Header.Get("Referer")
 }
@@ -126,4 +129,15 @@ func (c *Context) Referer() string {
 // UserAgent http request UserAgent
 func (c *Context) UserAgent() string {
 	return c.Request.Header.Get("User-Agent")
+}
+
+// ContentType returns the Content-Type header of the request
+func (c *Context) ContentType() string {
+	content := c.GetHeader("Content-Type")
+	for i, char := range content {
+		if char == ' ' || char == ';' {
+			return content[:i]
+		}
+	}
+	return content
 }

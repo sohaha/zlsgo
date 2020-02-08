@@ -3,15 +3,12 @@ package znet
 import (
 	"context"
 	"crypto/tls"
+	"github.com/sohaha/zlsgo/ztime"
 	"net/http"
 	"sync"
-
-	// "strconv"
-	// "sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zlog"
-	// "github.com/sohaha/zlsgo/zvar"
 )
 
 const (
@@ -23,7 +20,6 @@ const (
 	// TestMode test
 	TestMode          = "test"
 	defaultServerName = "Z"
-	defaultLocation   = "Local" // "Asia/Shanghai"
 	releaseCode       = iota
 	debugCode
 	testCode
@@ -131,8 +127,6 @@ func New(serverName ...string) *Engine {
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
 	log.SetLogLevel(zlog.LogWarn)
 
-	location, _ := time.LoadLocation(defaultLocation)
-
 	route := &router{
 		trees: make(map[string]*Tree),
 	}
@@ -143,7 +137,7 @@ func New(serverName ...string) *Engine {
 		writeTimeout:       0 * time.Second,
 		webModeName:        ReleaseMode,
 		webMode:            releaseCode,
-		timeLocation:       location,
+		timeLocation:       ztime.GetTimeZone(),
 		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 	}
@@ -190,8 +184,8 @@ func (e *Engine) GetMiddleware() []HandlerFunc {
 }
 
 // SetTimeLocation timezone
-func (e *Engine) SetTimeLocation(location string) {
-	e.timeLocation, _ = time.LoadLocation(location)
+func (e *Engine) SetTimeZone(zone int) {
+	e.timeLocation = ztime.SetTimeZone(zone).GetTimeZone()
 }
 
 // SetCustomMethodField SetCustomMethodField

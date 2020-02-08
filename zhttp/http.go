@@ -2,9 +2,10 @@
  * @Author: seekwe
  * @Date:   2019-05-15 19:37:01
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-30 14:50:56
+ * @Last Modified time: 2020-01-31 22:45:51
  */
 
+// Package zhttp provides http client related operations
 package zhttp
 
 import (
@@ -668,6 +669,10 @@ func EnableCookie(enable bool) {
 
 func SetTimeout(d time.Duration) {
 	std.SetTimeout(d)
+}
+
+func CloseProxy() error {
+	return std.CloseProxy()
 }
 
 func SetProxyUrl(rawurl string) error {

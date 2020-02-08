@@ -42,13 +42,19 @@ func TestIsPattern(T *testing.T) {
 	t.Equal(false, IsPattern("hello pickup"))
 }
 
-func BenchmarkMatch(b *testing.B) {
+func BenchmarkMatch1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Match(z, "hello *")
 	}
 }
 
-func BenchmarkContains(b *testing.B) {
+func BenchmarkMatch2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RegexMatch(`hello`, z)
+	}
+}
+
+func BenchmarkMatch3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		strings.Contains(z, "hello ")
 	}

@@ -2,7 +2,7 @@
  * @Author: seekwe
  * @Date:   2019-05-30 13:19:45
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-30 13:41:41
+ * @Last Modified time: 2020-01-31 22:44:40
  */
 
 package zhttp
@@ -133,6 +133,15 @@ func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
 		return ErrNoTransport
 	}
 	trans.Proxy = proxy
+	return nil
+}
+
+func (r *Engine) CloseProxy() error {
+	trans := r.getTransport()
+	if trans == nil {
+		return ErrNoTransport
+	}
+	trans.Proxy = http.ProxyFromEnvironment
 	return nil
 }
 

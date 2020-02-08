@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"github.com/sohaha/zlsgo/zstring"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -33,13 +34,25 @@ func newServer() *Engine {
 	return engine
 }
 
-func newRequest(r *Engine, method string, url string, path string, handler ...HandlerFunc) *httptest.ResponseRecorder {
+func newRequest(r *Engine, method string, urlAndBody interface{}, path string, handler ...HandlerFunc) *httptest.ResponseRecorder {
+	var (
+		body        io.Reader
+		_url        string
+		contentType string
+	)
 	method = strings.ToUpper(method)
+	if u, ok := urlAndBody.(string); ok {
+		_url = u
+	} else if u, ok := urlAndBody.([]string); ok {
+		_url = u[0]
+		body = strings.NewReader(u[1])
+		contentType = u[2]
+	}
 	if len(handler) > 0 {
 		firstHandler := handler[0]
 		handlers := handler[1:]
 		if path == "" {
-			path = url
+			path = _url
 		}
 		switch method {
 		case "GET":
@@ -49,8 +62,12 @@ func newRequest(r *Engine, method string, url string, path string, handler ...Ha
 		}
 	}
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(method, url, nil)
+	req, _ := http.NewRequest(method, _url, body)
 	req.Host = host
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -76,6 +93,52 @@ func TestPost(t *testing.T) {
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())
+}
+
+func TestShouldBind(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	r := newServer()
+	w := newRequest(r, "POST", []string{"/?c=999", "d[C][Cc]=88&arr=1&arr=2&d[a]=1&a=123&b=abc&name=seekwe&s=true&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
+		ct := c.ContentType()
+		t.Equal(MIMEPOSTForm, ct)
+		all, err := c.GetPostFormAll()
+		T.Log(all, err)
+		r, e := c.GetDataRaw()
+		T.Log(r, e)
+		r, _ = c.GetPostForm("b")
+		d, _ := c.GetPostFormMap("d")
+		T.Log(d)
+		arr2, _ := c.GetPostFormArray("arr")
+		T.Log("arr2", arr2)
+		t.EqualExit("abc", r)
+		r, _ = c.GetQuery("c")
+		t.EqualExit("999", r)
+
+		ss := struct {
+			Abc int
+			d   int
+			Arr struct {
+				A int    `z:"a"`
+				B string `z:"b"`
+				C struct {
+					Cc string `z:"cc"`
+				} `z:"C"`
+			} `z:"d"`
+			Arr2   []string `z:"arr"`
+			Status bool     `z:"s"`
+			Name   string   `z:"name"`
+		}{
+			d:    99,
+			Name: "是我",
+		}
+		err = c.Bind(&ss)
+		T.Log(fmt.Sprintf("%v", ss), err)
+		// err = Request(c.Request).Field(&ss,"")
+		// t.Log(1, ss, err)
+		c.String(200, expected)
+	})
+	t.Equal(200, w.Code)
+	t.Equal(expected, w.Body.String())
 }
 
 func TestWebSetMode(T *testing.T) {

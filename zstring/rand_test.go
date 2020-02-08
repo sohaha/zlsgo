@@ -14,8 +14,27 @@ func TestRand(T *testing.T) {
 	t.Log(RandInt(4, 10))
 }
 
-func BenchmarkRand(b *testing.B) {
+func BenchmarkRandStr(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Rand(1)
+	}
+}
+
+func BenchmarkRandStr2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Rand(10)
+	}
+}
+
+
+func BenchmarkRandInt(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RandInt(10,99)
+	}
+}
+
+func BenchmarkRandInt2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RandInt(10000,99999)
 	}
 }

@@ -29,9 +29,9 @@ func TestSubstr(T *testing.T) {
 	s := "0123"
 	t.Equal(Substr(s, 1), "123")
 	t.Equal(Substr(s, 2, 1), "2")
-	t.Equal("A,是我呀",Substr("你好A,是我呀", 2))
-	t.Equal("是我呀",Substr("你好A,是我呀", -3))
-	t.Equal("A,是",Substr("你好A,是我呀", 2,-2))
+	t.Equal("A,是我呀", Substr("你好A,是我呀", 2))
+	t.Equal("是我呀", Substr("你好A,是我呀", -3))
+	t.Equal("A,是", Substr("你好A,是我呀", 2, -2))
 }
 
 func TestPad(T *testing.T) {
@@ -64,6 +64,41 @@ func TestFirst(T *testing.T) {
 	str = Lcfirst(str)
 	t.Equal(true, IsLcfirst(str))
 	t.Equal(false, IsUcfirst(str))
+}
+
+func TestSnakeCaseCamelCase(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	t.Equal("", SnakeCaseToCamelCase("", true))
+	t.Equal("HelloWorld", SnakeCaseToCamelCase("hello_world", true))
+	t.Equal("helloWorld", SnakeCaseToCamelCase("hello_world", false))
+	t.Equal("helloWorld", SnakeCaseToCamelCase("hello-world", false, "-"))
+
+	t.Equal("", CamelCaseToSnakeCase(""))
+	t.Equal("hello_world", CamelCaseToSnakeCase("HelloWorld"))
+	t.Equal("hello_world", CamelCaseToSnakeCase("helloWorld"))
+	t.Equal("hello-world", CamelCaseToSnakeCase("helloWorld", "-"))
+}
+
+func TestXss(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	htmls := [][]string{
+		{"", ""},
+		{"Hello, World!", "Hello, World!"},
+		{"foo&amp;bar", "foo&amp;bar"},
+		{`Hello <a href="www.example.com/">World</a>!`, "Hello World!"},
+		{"Foo <textarea>Bar</textarea> Baz", "Foo Bar Baz"},
+		{"Foo <!-- Bar --> Baz", "Foo Baz"},
+		{"<", "<"},
+		{"foo < bar", "foo < bar"},
+		{`Foo<script type="text/javascript">alert(1337)</script>Bar`, "FooBar"},
+		{`Foo<div title="1>2">Bar`, "Foo2\">Bar"},
+		{`I <3 Ponies!`, `I <3 Ponies!`},
+		{`<script>foo()</script>`, ``},
+		{`<script>foo()</script>`, ``},
+	}
+	for _, v := range htmls {
+		t.Equal(v[1], XssClean(v[0]))
+	}
 }
 
 func BenchmarkStr(b *testing.B) {
