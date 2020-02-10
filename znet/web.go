@@ -84,9 +84,9 @@ type (
 	}
 
 	// HandlerFunc HandlerFunc
-	HandlerFunc func(*Context)
+	HandlerFunc func(c *Context)
 	// MiddlewareFunc MiddlewareFunc
-	MiddlewareFunc func(*Context, HandlerFunc)
+	MiddlewareFunc func(c *Context, fn HandlerFunc)
 	// PanicFunc PanicFunc
 	PanicFunc func(c *Context, err error)
 	// MiddlewareType is a public type that is used for middleware

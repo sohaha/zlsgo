@@ -10,9 +10,11 @@ package zlog
 import (
 	"bytes"
 	"fmt"
+	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -345,11 +347,9 @@ func (log *Logger) Stack(v ...interface{}) {
 
 // Track Track
 func (log *Logger) Track(logTip string, v ...int) {
-	b := bytes.NewBufferString(logTip)
-	b.WriteString("\n")
-	l := len(v)
-	depth := log.calldDepth - 1
+	depth := log.calldDepth
 	max := 1
+	l := len(v)
 	if l == 1 {
 		max = v[0]
 	} else if l > 1 {
@@ -359,6 +359,15 @@ func (log *Logger) Track(logTip string, v ...int) {
 	if max == 0 {
 		max = 9999
 	}
+	b := zstring.Buffer()
+	track := TrackCurrent(max, depth)
+	b.WriteString(logTip)
+	b.WriteString("\n")
+	b.WriteString(strings.Join(track, "\n"))
+	_ = log.OutPut(LogDebug, b.String(), true)
+}
+
+func TrackCurrent(max, depth int) (track []string) {
 	stop := func() bool {
 		if max == -1 {
 			return false
@@ -371,10 +380,9 @@ func (log *Logger) Track(logTip string, v ...int) {
 		if !ok || stop() {
 			break
 		}
-		b.WriteString(fmt.Sprintf("    %v:%d %v", file, line, name))
+		track = append(track, fmt.Sprintf("%v:%d %v", file, line, name))
 	}
-
-	_ = log.OutPut(LogDebug, b.String(), true)
+	return
 }
 
 func callerName(skip int) (name, file string, line int, ok bool) {

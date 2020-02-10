@@ -71,6 +71,13 @@ func (c *Context) GetPostForm(key string) (string, bool) {
 	return "", false
 }
 
+func (c *Context) DefaultFormOrQuery(key string, def string) string {
+	if value, ok := c.GetPostForm(key); ok {
+		return value
+	}
+	return c.DefaultQuery(key, def)
+}
+
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	req := c.Request
 	postForm, _ := c.GetPostFormAll()

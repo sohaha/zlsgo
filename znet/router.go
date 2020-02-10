@@ -33,9 +33,11 @@ var (
 	// ErrPatternGrammar is returned when generating a route that pattern grammar error.
 	ErrPatternGrammar = errors.New("pattern grammar error")
 
-	defaultPattern = `[\w\p{Han} ]+`
+	defaultPattern = `[\w\p{Han}\.\- ]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
+	allPattern     = `[\w\p{Han}\.\-\/ ]*`
+	allKey         = `*`
 
 	contextKey = contextKeyType{}
 
@@ -95,16 +97,21 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 	log()
 }
 
-func (e *Engine) Any(path string, handle HandlerFunc) {
+func (e *Engine) Any(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
 	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s --> %s", "Any", completionPath(path, e.router.prefix)))
-	e.GET(path, handle)
-	e.POST(path, handle)
-	e.PUT(path, handle)
-	e.DELETE(path, handle)
-	e.PATCH(path, handle)
-	e.HEAD(path, handle)
-	e.OPTIONS(path, handle)
+	e.GET(path, handle, moreHandler...)
+	e.POST(path, handle, moreHandler...)
+	e.PUT(path, handle, moreHandler...)
+	e.DELETE(path, handle, moreHandler...)
+	e.PATCH(path, handle, moreHandler...)
+	e.HEAD(path, handle, moreHandler...)
+	e.OPTIONS(path, handle, moreHandler...)
 	log()
+}
+
+func (e *Engine) Customize(method, path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
+	method = strings.ToUpper(method)
+	e.Handle(method, path, handle, moreHandler...)
 }
 
 func (e *Engine) GET(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
@@ -316,11 +323,14 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				rw.Info.Code = http.StatusInternalServerError
-				errMsg := errors.New(fmt.Sprint(err))
+				errMsg, ok := err.(error)
+				if !ok {
+					errMsg = errors.New(fmt.Sprint(err))
+				}
 				e.router.panic(rw, errMsg)
 				requestLog(rw)
 				e.Log.Error(errMsg)
-				e.Log.Track("Track Panic: ", 1, 3)
+				e.Log.Track("Track Panic: ", 0, 2)
 				// Log.Stack()
 				// trace := make([]byte, 1<<16)
 				// n := runtime.Stack(trace, true)
@@ -422,63 +432,25 @@ func (e *Engine) Match(requestURL string, path string) bool {
 
 // matchAndParse checks if the request matches the route path and returns a map of the parsed
 func (e *Engine) matchAndParse(requestURL string, path string) (matchParams ParamsMapType, bl bool) {
-	var (
-		matchName []string
-		pattern   = zstring.Buffer()
-	)
-
 	bl = true
 	matchParams = make(ParamsMapType)
-
 	res := strings.Split(path, "/")
-	for _, str := range res {
-		if str == "" {
-			continue
-		}
-
-		strLen := len(str)
-		firstChar := str[0]
-		lastChar := str[strLen-1]
-		// todo Need to optimize
-		if string(firstChar) == "{" && string(lastChar) == "}" {
-			matchStr := string(str[1 : strLen-1])
-			res := strings.Split(matchStr, ":")
-			matchName = append(matchName, res[0])
-			pattern.WriteString("/(")
-			pattern.WriteString(res[1])
-			pattern.WriteString(")")
-		} else if string(firstChar) == ":" {
-			matchStr := str
-			res := strings.Split(matchStr, ":")
-			matchName = append(matchName, res[1])
-			if res[1] == idKey {
-				pattern.WriteString("/(")
-				pattern.WriteString(idPattern)
-				pattern.WriteString(")")
-			} else {
-				pattern.WriteString("/(")
-				pattern.WriteString(defaultPattern)
-				pattern.WriteString(")")
-			}
-		} else {
-			pattern.WriteString("/")
-			pattern.WriteString(str)
-		}
+	pattern, matchName := parsPattern(res)
+	rr, err := zstring.RegexExtract(pattern, requestURL)
+	if err != nil || len(rr) == 0 {
+		return nil, false
 	}
 
-	re := regexp.MustCompile(pattern.String())
-	if subMatch := re.FindSubmatch([]byte(requestURL)); subMatch != nil {
-		if string(subMatch[0]) == requestURL {
-			subMatch = subMatch[1:]
-			if len(matchName) != 0 {
-				for k, v := range subMatch {
-					if key := matchName[k]; key != "" {
-						matchParams[key] = string(v)
-					}
+	if rr[0] == requestURL {
+		rr = rr[1:]
+		if len(matchName) != 0 {
+			for k, v := range rr {
+				if key := matchName[k]; key != "" {
+					matchParams[key] = v
 				}
 			}
-			return
 		}
+		return
 	}
 
 	return nil, false

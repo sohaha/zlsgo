@@ -42,12 +42,12 @@ func (table *Table) Count() int {
 }
 
 // ForEach ForEach
-func (table *Table) ForEach(trans func(key interface{}, item *CacheItem)) {
+func (table *Table) ForEach(trans func(key, value interface{})) {
 	table.RLock()
 	defer table.RUnlock()
 
 	for k, v := range table.items {
-		trans(k, v)
+		trans(k, v.Data())
 	}
 }
 

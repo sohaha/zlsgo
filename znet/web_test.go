@@ -59,6 +59,8 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 			r.GET(path, firstHandler, handlers...)
 		case "POST":
 			r.POST(path, firstHandler, handlers...)
+		default:
+			r.Customize(method, path, firstHandler, handlers...)
 		}
 	}
 	w := httptest.NewRecorder()
@@ -95,12 +97,26 @@ func TestPost(t *testing.T) {
 	T.Equal(expected, w.Body.String())
 }
 
+
+func TestMore(t *testing.T) {
+	T := zlsgo.NewTest(t)
+	r := newServer()
+	w := newRequest(r, "delete", "/", "/", func(c *Context) {
+		_, _ = c.GetDataRaw()
+		c.String(200, expected)
+	})
+	T.Equal(200, w.Code)
+	T.Equal(expected, w.Body.String())
+}
+
+
 func TestShouldBind(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	r := newServer()
 	w := newRequest(r, "POST", []string{"/?c=999", "d[C][Cc]=88&arr=1&arr=2&d[a]=1&a=123&b=abc&name=seekwe&s=true&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
 		ct := c.ContentType()
 		t.Equal(MIMEPOSTForm, ct)
+		_ = c.DefaultFormOrQuery("ok", "yes")
 		all, err := c.GetPostFormAll()
 		T.Log(all, err)
 		r, e := c.GetDataRaw()

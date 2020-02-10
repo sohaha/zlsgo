@@ -58,10 +58,10 @@ func TestCacheForEach(T *testing.T) {
 	data := 666
 
 	c.Set("name1", data, 1)
-	c.Set("name2", data, 1)
+	c.Set("name2", "name--2", 1)
 
-	c.ForEach(func(key interface{}, item *CacheItem) {
-		t.Log(key)
+	c.ForEach(func(key, value interface{}) {
+		t.Log(key, value)
 	})
 
 	time.Sleep(2 * time.Second)

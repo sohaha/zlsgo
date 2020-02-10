@@ -42,6 +42,56 @@ func resolveHostname(addrString string) string {
 	return addrString
 }
 
+func parsPattern(res []string) (string, []string) {
+	var (
+		matchName []string
+		pattern   = zstring.Buffer()
+	)
+	for _, str := range res {
+		if str == "" {
+			continue
+		}
+		strLen := len(str)
+		firstChar := string(str[0])
+		lastChar := string(str[strLen-1])
+		// todo Need to optimize
+		if firstChar == "{" && lastChar == "}" {
+			matchStr := string(str[1 : strLen-1])
+			res := strings.Split(matchStr, ":")
+			matchName = append(matchName, res[0])
+			pattern.WriteString("/(")
+			pattern.WriteString(res[1])
+			pattern.WriteString(")")
+		} else if firstChar == ":" {
+			matchStr := str
+			res := strings.Split(matchStr, ":")
+			matchName = append(matchName, res[1])
+			if res[1] == idKey {
+				pattern.WriteString("/(")
+				pattern.WriteString(idPattern)
+				pattern.WriteString(")")
+			} else if res[1] == allKey {
+				pattern.WriteString("/(")
+				pattern.WriteString(allPattern)
+				pattern.WriteString(")")
+			} else {
+				pattern.WriteString("/(")
+				pattern.WriteString(defaultPattern)
+				pattern.WriteString(")")
+			}
+		} else if firstChar == "*" {
+			pattern.WriteString("/(")
+			pattern.WriteString(allPattern)
+			pattern.WriteString(")")
+			matchName = append(matchName, allKey)
+		} else {
+			pattern.WriteString("/")
+			pattern.WriteString(str)
+		}
+	}
+	return pattern.String(), matchName
+}
+
 type tlsRedirectHandler struct {
 	Domain string
 }

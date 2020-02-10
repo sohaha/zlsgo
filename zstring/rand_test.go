@@ -26,15 +26,14 @@ func BenchmarkRandStr2(b *testing.B) {
 	}
 }
 
-
 func BenchmarkRandInt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		RandInt(10,99)
+		RandInt(10, 99)
 	}
 }
 
 func BenchmarkRandInt2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		RandInt(10000,99999)
+		RandInt(10000, 99999)
 	}
 }

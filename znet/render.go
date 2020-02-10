@@ -120,6 +120,15 @@ func (c *Context) JSON(code int, values interface{}) {
 	c.render(code, renderJSON{Data: values})
 }
 
+// ResJSON ResJSON
+func (c *Context) ResJSON(code int, msg string, data interface{}) {
+	httpState := code
+	if code < 300 && code >= 200 {
+		httpState = http.StatusOK
+	}
+	c.render(httpState, renderJSON{Data: J{Code: code, Data: data, Msg: msg}})
+}
+
 func (c *Context) HTML(code int, html string) {
 	c.render(code, renderHTML{
 		Name: "",
