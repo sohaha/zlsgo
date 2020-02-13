@@ -3,11 +3,11 @@ package zfile
 import (
 	"testing"
 
-	"github.com/sohaha/zlsgo"
+	. "github.com/sohaha/zlsgo"
 )
 
 func TestFile(T *testing.T) {
-	t := zlsgo.NewTest(T)
+	t := NewTest(T)
 
 	filePath := "../doc.go"
 	tIsFile := FileExist(filePath)
@@ -24,7 +24,6 @@ func TestFile(T *testing.T) {
 	t.Equal("0 B" == size, true)
 
 	dirPath := RealPathMkdir("../zfile")
-
 	tIsDir := DirExist(dirPath)
 	t.Equal(true, tIsDir)
 
@@ -34,4 +33,17 @@ func TestFile(T *testing.T) {
 	t.Equal(true, Rmdir(path, true))
 	t.Equal(true, Rmdir(path))
 	_ = ProgramPath(true)
+}
+
+func TestCopy(tt *testing.T) {
+	t := NewTest(tt)
+	dest := RealPathMkdir("../tmp", true)
+	defer Rmdir(dest)
+	err := CopyFile("../doc.go", dest+"tmp.tmp")
+	t.Equal(nil, err)
+	err = CopyDir("../znet", dest, func(srcFilePath, destFilePath string) bool {
+		return srcFilePath == "../znet/timeout/timeout.go"
+	})
+	t.Equal(nil, err)
+
 }

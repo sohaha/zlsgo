@@ -9,6 +9,7 @@ package zfile
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -103,6 +104,69 @@ func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 		_ = os.Mkdir(path, os.ModePerm)
 	}
 	return
+}
+
+// CopyFile copies the source file to the dest file.
+func CopyFile(source string, dest string) (err error) {
+	sourcefile, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer sourcefile.Close()
+	destfile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer destfile.Close()
+	_, err = io.Copy(destfile, sourcefile)
+	if err == nil {
+		sourceinfo, err := os.Stat(source)
+		if err != nil {
+			err = os.Chmod(dest, sourceinfo.Mode())
+		}
+	}
+	return nil
+}
+
+// CopyDir copies the source directory to the dest directory.
+func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFilePath string) bool) (err error) {
+	sourceinfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(dest, sourceinfo.Mode())
+	if err != nil {
+		return err
+	}
+	directory, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
+	var filter func(srcFilePath, destFilePath string) bool
+	if len(filterFn) > 0 {
+		filter = filterFn[0]
+	}
+	copySum := len(objects)
+	for _, obj := range objects {
+		srcFilePath := filepath.Join(source, obj.Name())
+		destFilePath := filepath.Join(dest, obj.Name())
+		if obj.IsDir() {
+			_ = CopyDir(srcFilePath, destFilePath, filterFn...)
+		} else if filter == nil || filter(srcFilePath, destFilePath) {
+			_ = CopyFile(srcFilePath, destFilePath)
+		} else {
+			copySum--
+		}
+	}
+	if copySum < 1 {
+		Rmdir(dest)
+	}
+	return nil
 }
 
 // ProgramPath program directory path
