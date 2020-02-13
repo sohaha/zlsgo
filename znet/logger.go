@@ -25,11 +25,11 @@ func withRequestLog(c *Context) {
 }
 
 func requestLog(c *Context) {
+	var status string
 	if c.Engine.IsDebug() {
 		end := time.Now()
 		latency := end.Sub(c.Info.StartTime)
 		code := c.Info.Code
-		var status string
 		statusCode := zstring.Buffer()
 		statusCode.WriteString(" ")
 		statusCode.WriteString(strconv.Itoa(code))

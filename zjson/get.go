@@ -2220,9 +2220,9 @@ func validnull(data []byte, i int) (outi int, ok bool) {
 	return i, false
 }
 
-func Valid(json string) bool {
-	_, ok := validpayload(zstring.String2Bytes(json), 0)
-	return ok
+func Valid(json string) (ok bool) {
+	_, ok = validpayload(zstring.String2Bytes(json), 0)
+	return
 }
 
 func ValidBytes(json []byte) bool {

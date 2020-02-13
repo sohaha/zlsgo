@@ -1,9 +1,8 @@
 package zstring
 
 import (
-	"testing"
-
 	"github.com/sohaha/zlsgo"
+	"testing"
 )
 
 func TestRand(T *testing.T) {

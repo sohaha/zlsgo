@@ -9,6 +9,7 @@ package znet
 
 import (
 	"errors"
+	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"io/ioutil"
@@ -123,7 +124,30 @@ func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	return dicts, exist
 }
 
+func (c *Context) GetJSON(key string) zjson.Res {
+	j, _ := c.GetJSONs()
+
+	return j.Get(key)
+}
+
+func (c *Context) GetJSONs() (json zjson.Res, err error) {
+	var body string
+	body, err = c.GetDataRaw()
+	if err != nil {
+		return
+	}
+	if !zjson.Valid(body) {
+		err = errors.New("illegal json format")
+		return
+	}
+	json = zjson.Parse(body)
+	return
+}
+
 func (c *Context) GetDataRaw() (result string, err error) {
+	if c.rawData != "" {
+		return c.rawData, nil
+	}
 	if c.Request.Body == nil {
 		err = errors.New("request.Body is nil")
 		return
@@ -133,7 +157,7 @@ func (c *Context) GetDataRaw() (result string, err error) {
 	if err == nil {
 		result = zstring.Bytes2String(body)
 	}
-
+	c.rawData = result
 	return
 }
 

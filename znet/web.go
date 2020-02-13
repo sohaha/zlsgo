@@ -30,6 +30,7 @@ type (
 	Context struct {
 		Writer  http.ResponseWriter
 		Request *http.Request
+		rawData string
 		Engine  *Engine
 		Info    *info
 		Log     *zlog.Logger
@@ -74,13 +75,15 @@ type (
 	}
 
 	info struct {
-		Code       int
-		Mutex      sync.RWMutex
-		StartTime  time.Time
-		StopHandle bool
-		handlerLen int
-		middleware []HandlerFunc
-		Data       map[string]interface{}
+		Code          int
+		Mutex         sync.RWMutex
+		StartTime     time.Time
+		StopHandle    bool
+		handlerLen    int
+		middleware    []HandlerFunc
+		customizeData map[string]interface{}
+		heades        map[string]string
+		render        render
 	}
 
 	// HandlerFunc HandlerFunc
@@ -198,13 +201,13 @@ func (e *Engine) SetMode(value string) {
 	var level int
 	switch value {
 	case ReleaseMode, "":
-		level = zlog.LogWarn
+		level = zlog.LogSuccess
 		e.webMode = releaseCode
 	case DebugMode:
 		level = zlog.LogDebug
 		e.webMode = debugCode
 	case TestMode:
-		level = zlog.LogSuccess
+		level = zlog.LogInfo
 		e.webMode = testCode
 	default:
 		e.Log.Panic("web mode unknown: " + value)

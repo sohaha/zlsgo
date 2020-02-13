@@ -10,6 +10,7 @@ package znet
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sohaha/zlsgo/zstring"
 	"html/template"
 	"io"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 type (
 	render interface {
 		Render(*Context, int) error
-		// WriteContentType(w http.ResponseWriter)
+		Content() (content string)
 	}
 	renderString struct {
 		Format string
@@ -32,35 +33,13 @@ type (
 		Name     string
 		Data     interface{}
 	}
+	Api struct {
+		Code int         `json:"code" example:"200"`
+		Msg  string      `json:"msg"`
+		Data interface{} `json:"data"`
+	}
+	Data map[string]interface{}
 )
-
-type H map[string]interface{}
-type J struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
-
-func (c *Context) File(filepath string) {
-	http.ServeFile(c.Writer, c.Request, filepath)
-}
-
-func (c *Context) render(code int, r render) {
-	c.Info.Mutex.Lock()
-	StopHandle := c.Info.StopHandle
-	if StopHandle {
-		if c.Engine.IsDebug() {
-			c.Log.Warn("Abort, not Render many times")
-		}
-		c.Info.Mutex.Unlock()
-		return
-	}
-	c.Info.StopHandle = true
-	c.Info.Mutex.Unlock()
-	if err := r.Render(c, code); err != nil {
-		panic(err)
-	}
-}
 
 var (
 	plainContentType = "text/plain; charset=utf-8"
@@ -68,17 +47,31 @@ var (
 	jsonContentType  = "application/json; charset=utf-8"
 )
 
-func writeContentType(w http.ResponseWriter, value string) {
-	header := w.Header()
-	if val := header["Content-Type"]; len(val) == 0 {
-		w.Header().Set("Content-Type", value)
-	}
+func (c *Context) File(filepath string) {
+	http.ServeFile(c.Writer, c.Request, filepath)
 }
 
-func (r renderString) Render(c *Context, code int) (err error) {
+func (c *Context) render(code int, r render) {
+	c.Info.Mutex.Lock()
+	c.Info.Code = code
+	c.Info.render = r
+	c.Info.StopHandle = true
+	c.Info.Mutex.Unlock()
+}
+func (r *renderString) Content() (content string) {
+	if len(r.Data) > 0 {
+		content = fmt.Sprintf(r.Format, r.Data...)
+	} else {
+		content = r.Format
+	}
+
+	return
+}
+
+func (r *renderString) Render(c *Context, code int) (err error) {
 	w := c.Writer
-	writeContentType(w, plainContentType)
-	c.StatusCode(code)
+	c.SetStatus(code)
+	c.SetHeader("Content-Type", plainContentType)
 	if len(r.Data) > 0 {
 		_, err = fmt.Fprintf(w, r.Format, r.Data...)
 	} else {
@@ -87,10 +80,19 @@ func (r renderString) Render(c *Context, code int) (err error) {
 	return
 }
 
-func (r renderJSON) Render(c *Context, code int) error {
+func (r *renderJSON) Content() (content string) {
+	j, err := json.Marshal(r.Data)
+	if err != nil {
+		return
+	}
+	content = zstring.Bytes2String(j)
+	return
+}
+
+func (r *renderJSON) Render(c *Context, code int) error {
 	w := c.Writer
-	writeContentType(w, jsonContentType)
-	c.StatusCode(code)
+	c.SetStatus(code)
+	c.SetHeader("Content-Type", jsonContentType)
 	jsonBytes, err := json.Marshal(r.Data)
 	if err != nil {
 		return err
@@ -99,12 +101,31 @@ func (r renderJSON) Render(c *Context, code int) error {
 	return nil
 }
 
-func (r renderHTML) Render(c *Context, code int) (err error) {
-	w := c.Writer
-	writeContentType(w, htmlContentType)
-	c.StatusCode(code)
+func (r *renderHTML) Content() (content string) {
 	if r.Name != "" {
-		t := template.Must(template.ParseFiles(r.Name))
+		var t *template.Template
+		var err error
+		t, err = templateParse(r.Name)
+		if err != nil {
+			return
+		}
+		content = t.Name()
+	} else {
+		content = fmt.Sprint(r.Data)
+	}
+	return
+}
+
+func (r *renderHTML) Render(c *Context, code int) (err error) {
+	w := c.Writer
+	c.SetStatus(code)
+	c.SetHeader("Content-Type", htmlContentType)
+	if r.Name != "" {
+		var t *template.Template
+		t, err = templateParse(r.Name)
+		if err != nil {
+			return
+		}
 		err = t.Execute(w, r.Data)
 	} else {
 		_, err = fmt.Fprint(c.Writer, r.Data)
@@ -113,11 +134,11 @@ func (r renderHTML) Render(c *Context, code int) (err error) {
 }
 
 func (c *Context) String(code int, format string, values ...interface{}) {
-	c.render(code, renderString{Format: format, Data: values})
+	c.render(code, &renderString{Format: format, Data: values})
 }
 
 func (c *Context) JSON(code int, values interface{}) {
-	c.render(code, renderJSON{Data: values})
+	c.render(code, &renderJSON{Data: values})
 }
 
 // ResJSON ResJSON
@@ -126,11 +147,11 @@ func (c *Context) ResJSON(code int, msg string, data interface{}) {
 	if code < 300 && code >= 200 {
 		httpState = http.StatusOK
 	}
-	c.render(httpState, renderJSON{Data: J{Code: code, Data: data, Msg: msg}})
+	c.render(httpState, &renderJSON{Data: Api{Code: code, Data: data, Msg: msg}})
 }
 
 func (c *Context) HTML(code int, html string) {
-	c.render(code, renderHTML{
+	c.render(code, &renderHTML{
 		Name: "",
 		Data: html,
 	})
@@ -141,7 +162,7 @@ func (c *Context) Template(code int, name string, data ...interface{}) {
 	if len(data) > 0 {
 		_data = data[0]
 	}
-	c.render(code, renderHTML{
+	c.render(code, &renderHTML{
 		Name: name,
 		Data: _data,
 	})
@@ -153,7 +174,7 @@ func (c *Context) Abort(code ...int) {
 	c.Info.StopHandle = true
 	c.Info.Mutex.Unlock()
 	if len(code) > 0 {
-		c.StatusCode(code[0])
+		c.SetStatus(code[0])
 	}
 }
 
@@ -164,11 +185,19 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 	if len(statusCode) > 0 {
 		code = statusCode[0]
 	}
-	c.StatusCode(code)
+	c.SetStatus(code)
 }
 
-// StatusCode StatusCode
-func (c *Context) StatusCode(code int) {
+func (c *Context) SetStatus(code int) *Context {
+	c.Info.Mutex.Lock()
 	c.Info.Code = code
-	c.Writer.WriteHeader(c.Info.Code)
+	c.Info.Mutex.Unlock()
+	return c
+}
+
+func (c *Context) PrevStatus() (code int) {
+	c.Info.Mutex.Lock()
+	code = c.Info.Code
+	c.Info.Mutex.Unlock()
+	return
 }

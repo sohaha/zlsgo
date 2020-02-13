@@ -1,14 +1,20 @@
 package znet
 
 import (
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 	"net/http"
 	"strings"
+
+	"html/template"
 )
 
 func completionPath(path, prefix string) string {
 	if prefix != "" {
 		if path != "" {
+			if strings.HasPrefix(path, "/") && strings.HasSuffix(prefix, "/") {
+				prefix = strings.TrimSuffix(prefix, "/")
+			}
 			tmp := zstring.Buffer()
 			tmp.WriteString(prefix)
 			tmp.WriteString("/")
@@ -42,6 +48,14 @@ func resolveHostname(addrString string) string {
 	return addrString
 }
 
+func templateParse(file string) (t *template.Template, err error) {
+	if zfile.FileExist(file) {
+		t, err = template.ParseFiles(file)
+	} else {
+		t, err = template.New(file).Parse(file)
+	}
+	return
+}
 func parsPattern(res []string) (string, []string) {
 	var (
 		matchName []string

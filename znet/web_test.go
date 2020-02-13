@@ -2,6 +2,7 @@ package znet
 
 import (
 	"fmt"
+	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"net/http"
@@ -74,10 +75,12 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 	return w
 }
 
-func TestWeb(t *testing.T) {
-	T := zlsgo.NewTest(t)
+func TestWeb(tt *testing.T) {
+	T := zlsgo.NewTest(tt)
 	r := newServer()
+	// r.SetMode(ReleaseMode)
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
+		tt.Log("TestWeb")
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 	})
@@ -86,21 +89,71 @@ func TestWeb(t *testing.T) {
 	r.GetMiddleware()
 }
 
-func TestPost(t *testing.T) {
-	T := zlsgo.NewTest(t)
+func TestPost(tt *testing.T) {
+	T := zlsgo.NewTest(tt)
 	r := newServer()
-	w := newRequest(r, "POST", "/", "/", func(c *Context) {
+	r.SetMode(DebugMode)
+	w := newRequest(r, "POST", "/Post", "/Post", func(c *Context) {
+
+		tt.Log("==1==")
+		c.Next()
+		tt.Log("--1--")
+		tt.Log("PrevContent", c.PrevContent())
+		T.Equal(expected, zjson.Get(c.PrevContent(), "msg").String())
+
+		tt.Log("PrevStatus", c.PrevStatus())
+		c.SetStatus(211)
+		c.JSON(211, Api{
+			Code: 0,
+			Msg:  "replace",
+			Data: nil,
+		})
+	}, func(c *Context) {
+		tt.Log("==2==")
+		c.Next()
+	}, func(c *Context) {
+		tt.Log("TestWeb")
 		_, _ = c.GetDataRaw()
-		c.String(200, expected)
+		c.JSON(201, Api{
+			Code: 200,
+			Msg:  expected,
+			Data: nil,
+		})
 	})
-	T.Equal(200, w.Code)
-	T.Equal(expected, w.Body.String())
+	T.Equal(211, w.Code)
+	T.Equal("replace", zjson.Get(w.Body.String(), "msg").String())
+	
+	w = newRequest(r, "POST", "/Post2", "/Post2",
+		func(c *Context) {
+			c.Abort(222)
+		}, func(c *Context) {
+			c.String(200, "ok")
+		})
+	T.Equal(222, w.Code)
 }
 
+func TestHTML(tt *testing.T) {
+	T := zlsgo.NewTest(tt)
+	r := newServer()
+	w := newRequest(r, "GET", "/TestHTML", "/TestHTML", func(c *Context) {
+		tt.Log("TestHTML")
+		c.HTML(202, `<html>123</html>`)
+	})
+	T.Equal(202, w.Code)
+	T.EqualExit(`<html>123</html>`, w.Body.String())
+
+	w = newRequest(r, "GET", "/TestHTML2", "/TestHTML2", func(c *Context) {
+		tt.Log("TestHTML2")
+		c.Template(202, `<html>{{.title}}</html>`, Data{"title": "ZlsGo"})
+	})
+	T.Equal(202, w.Code)
+	T.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
+}
 
 func TestMore(t *testing.T) {
 	T := zlsgo.NewTest(t)
 	r := newServer()
+	r.SetMode(DebugMode)
 	w := newRequest(r, "delete", "/", "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
@@ -108,7 +161,6 @@ func TestMore(t *testing.T) {
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())
 }
-
 
 func TestShouldBind(T *testing.T) {
 	t := zlsgo.NewTest(T)
@@ -151,13 +203,13 @@ func TestShouldBind(T *testing.T) {
 		T.Log(fmt.Sprintf("%v", ss), err)
 		// err = Request(c.Request).Field(&ss,"")
 		// t.Log(1, ss, err)
-		c.String(200, expected)
+		c.String(210, expected)
 	})
-	t.Equal(200, w.Code)
-	t.Equal(expected, w.Body.String())
+	t.EqualExit(210, w.Code)
+	t.EqualExit(expected, w.Body.String())
 }
 
-func TestWebSetMode(T *testing.T) {
+func TestSetMode(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	defer func() {
 		if r := recover(); r != nil {

@@ -63,26 +63,54 @@ func (c *Context) GetHeader(key string) string {
 
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
+	c.Info.Mutex.RLock()
 	if value == "" {
-		c.Writer.Header().Del(key)
+		delete(c.Info.heades, key)
 	} else {
+		c.Info.heades[key] = value
+	}
+	c.Info.Mutex.RUnlock()
+}
+
+func (c *Context) done() {
+	c.Info.Mutex.RLock()
+	code := c.Info.Code
+	heades := c.Info.heades
+	r := c.Info.render
+	c.Info.Mutex.RUnlock()
+	for key, value := range heades {
 		c.Writer.Header().Set(key, value)
+	}
+	c.Writer.WriteHeader(code)
+	if r != nil {
+		if err := r.Render(c, code); err != nil {
+			panic(err)
+		}
 	}
 }
 
-// Next Execute the next Handler Func
+func (c *Context) PrevContent() (content string) {
+	c.Info.Mutex.RLock()
+	r := c.Info.render
+	c.Info.Mutex.RUnlock()
+	if r != nil {
+		content = r.Content()
+	}
+	return
+}
 func (c *Context) Next() (next HandlerFunc) {
 	c.Info.Mutex.RLock()
 	StopHandle := c.Info.StopHandle
 	c.Info.Mutex.RUnlock()
+	middlewareLen := len(c.Info.middleware)
 	if !StopHandle {
-		middlewareLen := len(c.Info.middleware)
 		if middlewareLen > 0 {
 			next = c.Info.middleware[0]
 			c.Info.middleware = c.Info.middleware[1:]
 			next(c)
 		}
 	}
+
 	return
 }
 
@@ -140,4 +168,23 @@ func (c *Context) ContentType() string {
 		}
 	}
 	return content
+}
+
+// SetCustomParam SetCustomParam
+func (c *Context) SetCustomParam(key string, value interface{}) *Context {
+	c.Info.Mutex.Lock()
+	c.Info.customizeData[key] = value
+	c.Info.Mutex.Unlock()
+	return c
+}
+
+// GetCustomParam GetCustomParam
+func (c *Context) GetCustomParam(key string, def ...interface{}) (value interface{}, ok bool) {
+	c.Info.Mutex.RLock()
+	value, ok = c.Info.customizeData[key]
+	if !ok && (len(def) > 0) {
+		value = def[0]
+	}
+	c.Info.Mutex.RUnlock()
+	return
 }

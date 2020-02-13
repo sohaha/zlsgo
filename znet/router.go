@@ -185,6 +185,13 @@ func (e *Engine) OPTIONSAndName(path string, handle HandlerFunc, routeName strin
 }
 
 func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *Engine) {
+	rprefix := e.router.prefix
+	if rprefix != "" {
+		if strings.HasSuffix(rprefix, "/") && strings.HasPrefix(prefix, "/") {
+			prefix = strings.TrimPrefix(prefix, "/")
+		}
+		prefix = rprefix + prefix
+	}
 	route := &router{
 		prefix:     prefix,
 		trees:      e.router.trees,
@@ -315,8 +322,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Engine:  e,
 		Log:     e.Log,
 		Info: &info{
-			Code:      http.StatusOK,
-			StartTime: time.Now(),
+			Code:          http.StatusOK,
+			StartTime:     time.Now(),
+			heades:        map[string]string{},
+			customizeData: map[string]interface{}{},
 		},
 	}
 	if e.router.panic != nil {
@@ -422,6 +431,7 @@ func handle(c *Context, handler HandlerFunc, middleware []HandlerFunc) {
 	c.Info.middleware = append(middleware, handler)
 	c.Info.handlerLen = len(c.Info.middleware)
 	c.Next()
+	c.done()
 }
 
 // Match checks if the request matches the route pattern
