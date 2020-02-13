@@ -94,7 +94,7 @@ func TestPost(tt *testing.T) {
 	r := newServer()
 	r.SetMode(DebugMode)
 	w := newRequest(r, "POST", "/Post", "/Post", func(c *Context) {
-
+		c.SetCustomParam("k1", "k1-data")
 		tt.Log("==1==")
 		c.Next()
 		tt.Log("--1--")
@@ -108,11 +108,19 @@ func TestPost(tt *testing.T) {
 			Msg:  "replace",
 			Data: nil,
 		})
+		tt.Log(c.GetCustomParam("k1"))
+		tt.Log(c.GetCustomParam("k2"))
+		tt.Log(c.GetCustomParam("k2-2"))
+		tt.Log(c.GetCustomParam("k3"))
+		tt.Log(c.GetCustomParam("k4"))
 	}, func(c *Context) {
+		c.SetCustomParam("k2", "k2-data")
 		tt.Log("==2==")
 		c.Next()
+		c.SetCustomParam("k2-2", "k2-2-data")
 	}, func(c *Context) {
 		tt.Log("TestWeb")
+		c.SetCustomParam("k3", "k3-data")
 		_, _ = c.GetDataRaw()
 		c.JSON(201, Api{
 			Code: 200,
@@ -122,7 +130,7 @@ func TestPost(tt *testing.T) {
 	})
 	T.Equal(211, w.Code)
 	T.Equal("replace", zjson.Get(w.Body.String(), "msg").String())
-	
+
 	w = newRequest(r, "POST", "/Post2", "/Post2",
 		func(c *Context) {
 			c.Abort(222)
