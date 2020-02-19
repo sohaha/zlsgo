@@ -1,9 +1,10 @@
 package zstring
 
 import (
-	"github.com/sohaha/zlsgo"
 	"strings"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 var (
