@@ -8,6 +8,7 @@
 package zhttp
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"github.com/sohaha/zlsgo/zfile"
@@ -28,6 +29,7 @@ type Res struct {
 	*multipartHelper
 	requesterBody    []byte
 	responseBody     []byte
+	responseRawBody  io.ReadCloser
 	downloadProgress DownloadProgress
 	err              error
 }
@@ -75,7 +77,21 @@ func (r *Res) ToBytes() ([]byte, error) {
 	return r.responseBody, nil
 }
 
-func (r *Res) Body() io.ReadCloser {
+func (r *Res) Body() (body io.ReadCloser) {
+	if r.err != nil {
+		return nil
+	}
+	if r.responseBody != nil {
+		return ioutil.NopCloser(bytes.NewReader(r.responseBody))
+	}
+	defer r.resp.Body.Close()
+	respBody, err := ioutil.ReadAll(r.resp.Body)
+	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
+	if err != nil {
+		r.err = err
+		return nil
+	}
+	r.responseBody = respBody
 	return r.resp.Body
 }
 

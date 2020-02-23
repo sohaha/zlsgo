@@ -73,6 +73,7 @@ type (
 		jsonEncOpts *jsonEncOpts
 		xmlEncOpts  *xmlEncOpts
 		flag        int
+		debug       bool
 	}
 
 	bodyJson struct {
@@ -163,7 +164,8 @@ func BodyXML(v interface{}) *bodyXml {
 
 // New create a new *Engine
 func New() *Engine {
-	return &Engine{flag: BitStdFlags}
+	//noinspection ALL
+	return &Engine{flag: BitStdFlags, debug: Debug}
 }
 
 func (p *param) getValues() url.Values {
@@ -387,8 +389,8 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		response.Body = body
 	}
 
-	//noinspection GoBoolExpressions
-	if Debug {
+	if //noinspection GoBoolExpressions
+	Debug || r.debug {
 		zlog.Println(resp.Dump())
 	}
 	return

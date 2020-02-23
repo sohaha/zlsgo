@@ -2,6 +2,7 @@ package zcache
 
 import (
 	"errors"
+	"github.com/sohaha/zlsgo/zlog"
 	"sync"
 )
 
@@ -11,13 +12,36 @@ var (
 	// ErrKeyNotFoundAndNotCallback ErrKeyNotFoundAndNotCallback
 	ErrKeyNotFoundAndNotCallback = errors.New("key is not in cache and no callback is set")
 	cache                        = make(map[string]*Table)
+	ite                          = New("defaultCache")
 	mutex                        sync.RWMutex
-	// Cache default
-	Cache *Table
 )
 
-func init() {
-	Cache = New("defaultZCache")
+func SetLogger(logger *zlog.Logger) {
+	ite.SetLogger(logger)
+}
+
+func Set(key, data interface{}, lifeSpan uint, interval ...bool) {
+	ite.Set(key, data, lifeSpan, interval...)
+}
+
+func Delete(key interface{}) (*Item, error) {
+	return ite.Delete(key)
+}
+
+func Clear() {
+	ite.Clear()
+}
+
+func Get(key interface{}) (value interface{}, err error) {
+	return ite.Get(key)
+}
+
+func GetRaw(key interface{}) (*Item, error) {
+	return ite.GetRaw(key)
+}
+
+func SetDeleteCallback(f func(*Item) bool) {
+	ite.SetDeleteCallback(f)
 }
 
 // New new cache
@@ -32,7 +56,7 @@ func New(table string) *Table {
 		if !ok {
 			t = &Table{
 				name:  table,
-				items: make(map[interface{}]*CacheItem),
+				items: make(map[interface{}]*Item),
 			}
 			cache[table] = t
 		}

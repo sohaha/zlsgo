@@ -3,6 +3,7 @@ package zhttp
 import (
 	"fmt"
 	zls "github.com/sohaha/zlsgo"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,8 +22,6 @@ func TestHttp(T *testing.T) {
 	)
 
 	forMethod(t)
-
-	GetMethod(t)
 
 	// test post
 	expectedText = "ok"
@@ -62,41 +61,54 @@ func TestHttp(T *testing.T) {
 	t.Log(res.GetCookie())
 }
 
-func GetMethod(t *zls.TestUtil) {
+func TestJONS(tt *testing.T) {
+	t := zls.NewTest(tt)
+	jsonData := `{"name":"is json"}`
+	v := BodyJSON(jsonData)
+	_, _ = newMethod("POST", func(w http.ResponseWriter, r *http.Request) {
+		tt.Log(v)
+		body, err := ioutil.ReadAll(r.Body)
+		t.EqualExit(nil, err)
+		t.EqualExit(jsonData, string(body))
+		t.EqualExit("application/json; charset=UTF-8", r.Header.Get("Content-Type"))
+	}, v, Header{"name": "ok"})
+}
+
+func TestGetMethod(tt *testing.T) {
+	t := zls.NewTest(tt)
 	jsonData := struct {
 		Code int `json:"code"`
 	}{}
 	data := ""
 	values := [...]string{
 		"text",
-		"{\"code\":200}",
+		"{\"code\":201}",
 	}
 	EnableCookie(false)
-	for _, v := range values {
+	for i, v := range values {
+		cookie := &http.Cookie{
+			Name:     "c",
+			Value:    "ok" + fmt.Sprint(i),
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   0,
+		}
 		res, err := newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
-			cookie := &http.Cookie{
-				Name:     "c",
-				Value:    v,
-				Path:     "/",
-				HttpOnly: true,
-				MaxAge:   0,
-			}
+			tt.Log(v)
 			w.Header().Add("Set-Cookie", cookie.String())
 			_, _ = w.Write([]byte(v))
-		})
-		if err != nil {
-			t.T.Fatal(err)
-		}
+		}, v)
+		tt.Log("get ok", i, err)
+		t.Equal(nil, err)
 		if err = res.ToJSON(&jsonData); err == nil {
-			t.Equal(200, jsonData.Code)
-			return
+			t.Equal(201, jsonData.Code)
 		}
 		if data, err = res.ToString(); err == nil {
 			t.Equal(v, data)
 		}
 		t.Equal("GET", res.Request().Method)
-		t.Log(res.GetCookie())
-		t.Log(res.Body())
+		tt.Log(res.GetCookie())
+		tt.Log(res.String(), "\n")
 	}
 	EnableCookie(true)
 }
@@ -117,7 +129,9 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 	curl := ts.URL
 	switch method {
 	case "Get":
+		std.debug = true
 		res, err = Get(curl, param...)
+		std.debug = false
 	case "Post":
 		res, err = Post(curl, param...)
 	case "Put":
@@ -141,6 +155,21 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 	return
 }
 
+func TestRes(t *testing.T) {
+	tt := zls.NewTest(t)
+	// res, err := Get("https://www.npmjs.com/package/zls-vue-spa/")
+	res, err := Get("http://baidu.com")
+	tt.Equal(nil, err)
+	// t.Log(res.Body())
+	// respBody, err := ioutil.ReadAll(res.Body())
+	// t.Log(res.Body())
+	// t.Log(string(respBody))
+	t.Log(res.Body())
+	t.Log(res.String())
+	t.Log(res.Body())
+	respBody, _ := ioutil.ReadAll(res.Body())
+	t.Log(string(respBody))
+}
 func TestHttpProxy(T *testing.T) {
 	t := zls.NewTest(T)
 	err := SetProxy(func(r *http.Request) (*url.URL, error) {

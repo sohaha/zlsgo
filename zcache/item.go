@@ -5,77 +5,88 @@ import (
 	"time"
 )
 
-// CacheItem CacheItem
-type CacheItem struct {
+// Item Item
+type Item struct {
 	sync.RWMutex
-	key            interface{}
-	data           interface{}
-	lifeSpan       time.Duration
-	createdTime    time.Time
-	accessedTime   time.Time
-	accessCount    int64
-	deleteCallback func(key interface{})
+	key              interface{}
+	data             interface{}
+	lifeSpan         time.Duration
+	createdTime      time.Time
+	accessedTime     time.Time
+	accessCount      int64
+	intervalLifeSpan bool
+	deleteCallback   func(item *Item) bool
 }
 
 // newCacheItem newCacheItem
-func newCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *CacheItem {
+func newCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *Item {
 	t := time.Now()
-	return &CacheItem{
-		key:            key,
-		lifeSpan:       lifeSpan,
-		createdTime:    t,
-		accessedTime:   t,
-		accessCount:    0,
-		deleteCallback: nil,
-		data:           data,
+	return &Item{
+		key:              key,
+		lifeSpan:         lifeSpan,
+		createdTime:      t,
+		accessedTime:     t,
+		accessCount:      0,
+		intervalLifeSpan: false,
+		deleteCallback:   nil,
+		data:             data,
 	}
 }
 
-// KeepAlive KeepAlive
-func (item *CacheItem) KeepAlive() {
+func (item *Item) keepAlive() {
 	item.Lock()
-	defer item.Unlock()
 	item.accessedTime = time.Now()
 	item.accessCount++
+	item.Unlock()
 }
 
 // LifeSpan LifeSpan
-func (item *CacheItem) LifeSpan() time.Duration {
+func (item *Item) LifeSpan() time.Duration {
 	return item.lifeSpan
 }
 
+// LifeSpanUint LifeSpanUint
+func (item *Item) LifeSpanUint() uint {
+	return uint(item.lifeSpan / time.Second)
+}
+
 // AccessedTime AccessedTime
-func (item *CacheItem) AccessedTime() time.Time {
+func (item *Item) AccessedTime() time.Time {
 	item.RLock()
 	defer item.RUnlock()
 	return item.accessedTime
 }
 
 // CreatedTime CreatedTime
-func (item *CacheItem) CreatedTime() time.Time {
+func (item *Item) CreatedTime() time.Time {
 	return item.createdTime
 }
 
+// RemainingLife RemainingLife
+func (item *Item) RemainingLife() time.Duration {
+	return item.createdTime.Add(item.lifeSpan).Sub(time.Now())
+}
+
 // AccessCount AccessCount
-func (item *CacheItem) AccessCount() int64 {
+func (item *Item) AccessCount() int64 {
 	item.RLock()
 	defer item.RUnlock()
 	return item.accessCount
 }
 
 // Key item key
-func (item *CacheItem) Key() interface{} {
+func (item *Item) Key() interface{} {
 	return item.key
 }
 
-// Data Data
-func (item *CacheItem) Data() interface{} {
+// Data data
+func (item *Item) Data() interface{} {
 	return item.data
 }
 
 // SetDeleteCallback SetDeleteCallback
-func (item *CacheItem) SetDeleteCallback(f func(interface{})) {
+func (item *Item) SetDeleteCallback(fn func(item *Item) bool) {
 	item.Lock()
-	defer item.Unlock()
-	item.deleteCallback = f
+	item.deleteCallback = fn
+	item.Unlock()
 }
