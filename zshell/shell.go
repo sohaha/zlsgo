@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (

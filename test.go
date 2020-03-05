@@ -67,6 +67,16 @@ func (u *TestUtil) Equal(expected, actual interface{}) {
 	}
 }
 
+// EqualTrue EqualTrue
+func (u *TestUtil) EqualTrue(actual interface{}) {
+	u.Equal(true, actual)
+}
+
+// EqualNil EqualNil
+func (u *TestUtil) EqualNil(actual interface{}) {
+	u.Equal(nil, actual)
+}
+
 // EqualExit EqualExit
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {

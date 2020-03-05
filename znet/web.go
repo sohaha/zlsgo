@@ -3,12 +3,13 @@ package znet
 import (
 	"context"
 	"crypto/tls"
-	"github.com/sohaha/zlsgo/ztime"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zshell"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 const (
@@ -300,25 +301,32 @@ func Run() {
 
 	iskill := isKill()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
+
+	if !iskill {
+		runNewProcess()
+	}
 
 	srvMap.Range(func(key, value interface{}) bool {
 		go func(value interface{}) {
 			if s, ok := value.(*serverMap); ok {
 				r := s.engine
-				r.Log.Warn("Shutdown server ...")
-				if err := s.srv.Shutdown(ctx); err != nil {
-					r.Log.Error(err)
-				} else {
-					r.Log.Success("Shutdown server done")
-				}
 				if iskill {
-					m.Done()
-				} else {
-					runNewProcess(s.srv)
-					m.Done()
+					r.Log.Warn("Shutdown server ...")
 				}
+				err := s.srv.Shutdown(ctx)
+				if err != nil {
+					if iskill {
+						r.Log.Error("Timeout forced close")
+					}
+					s.srv.Close()
+				} else {
+					if iskill {
+						r.Log.Success("Shutdown server done")
+					}
+				}
+				m.Done()
 			}
 		}(value)
 		return true
@@ -327,6 +335,11 @@ func Run() {
 	m.Wait()
 }
 
-func runNewProcess(srv *http.Server) {
-	Log.Warn("In development...")
+func runNewProcess() {
+	pid, err := zshell.RunNewProcess()
+	if err != nil {
+		Log.Error(err)
+	} else {
+		Log.Warn("Restart pid: ", pid)
+	}
 }
