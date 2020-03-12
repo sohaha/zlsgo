@@ -87,6 +87,8 @@ func (c *Context) done() {
 		if err := r.Render(c, code); err != nil {
 			panic(err)
 		}
+	}else if code != 200{
+		c.Writer.WriteHeader(code)
 	}
 }
 
