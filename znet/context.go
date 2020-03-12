@@ -81,8 +81,9 @@ func (c *Context) done() {
 	for key, value := range heades {
 		c.Writer.Header().Set(key, value)
 	}
-	c.Writer.WriteHeader(code)
+
 	if r != nil {
+		c.Writer.WriteHeader(code)
 		if err := r.Render(c, code); err != nil {
 			panic(err)
 		}
