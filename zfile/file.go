@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+var RootPath = RealPath(".", true)
+
 // PathExist PathExist
 // 1 exists and is a directory path, 2 exists and is a file path, 0 does not exist
 func PathExist(path string) (int, error) {
@@ -75,6 +77,12 @@ func FileSizeFormat(s uint64) string {
 
 func logSize(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
+}
+
+// SafePath get an safe absolute path
+func SafePath(path string, addSlash ...bool) string {
+	realPath := RealPath(path, addSlash...)
+	return strings.TrimPrefix(realPath, RootPath)
 }
 
 // RealPath get an absolute path

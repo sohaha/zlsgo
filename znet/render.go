@@ -21,6 +21,9 @@ type (
 		Render(*Context, int) error
 		Content() (content string)
 	}
+	renderByte struct {
+		Data []byte
+	}
 	renderString struct {
 		Format string
 		Data   []interface{}
@@ -58,13 +61,25 @@ func (c *Context) render(code int, r render) {
 	c.Info.StopHandle = true
 	c.Info.Mutex.Unlock()
 }
+
+func (r *renderByte) Content() (content string) {
+	return zstring.Bytes2String(r.Data)
+}
+
+func (r *renderByte) Render(c *Context, code int) (err error) {
+	w := c.Writer
+	c.SetStatus(code)
+	c.SetHeader("Content-Type", plainContentType)
+	_, err = w.Write(r.Data)
+	return
+}
+
 func (r *renderString) Content() (content string) {
 	if len(r.Data) > 0 {
 		content = fmt.Sprintf(r.Format, r.Data...)
 	} else {
 		content = r.Format
 	}
-
 	return
 }
 
@@ -131,6 +146,10 @@ func (r *renderHTML) Render(c *Context, code int) (err error) {
 		_, err = fmt.Fprint(c.Writer, r.Data)
 	}
 	return
+}
+
+func (c *Context) Byte(code int, value []byte) {
+	c.render(code, &renderByte{Data: value})
 }
 
 func (c *Context) String(code int, format string, values ...interface{}) {

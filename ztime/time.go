@@ -32,3 +32,7 @@ func Week(t time.Time) int {
 func MonthRange(year int, month int) (beginTime, endTime int64, err error) {
 	return newZtime.MonthRange(year, month)
 }
+
+func Parse(str string) (time.Time, error) {
+	return newZtime.Parse(str)
+}

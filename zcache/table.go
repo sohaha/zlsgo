@@ -158,7 +158,7 @@ func (table *Table) SetRaw(key, data interface{}, lifeSpan time.Duration, interv
 	return item
 }
 
-// Set set cache
+// Set set cache whether to automatically renew
 func (table *Table) Set(key, data interface{}, lifeSpan uint, interval ...bool) *Item {
 	return table.SetRaw(key, data, time.Duration(lifeSpan)*time.Second, interval...)
 }

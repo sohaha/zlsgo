@@ -103,7 +103,7 @@ func TestPost(tt *testing.T) {
 
 		tt.Log("PrevStatus", c.PrevStatus())
 		c.SetStatus(211)
-		c.JSON(211, Api{
+		c.JSON(211, &Api{
 			Code: 0,
 			Msg:  "replace",
 			Data: nil,
@@ -138,6 +138,13 @@ func TestPost(tt *testing.T) {
 			c.String(200, "ok")
 		})
 	T.Equal(222, w.Code)
+
+	w = newRequest(r, "POST", "/Post3", "/Post3",
+		func(c *Context) {
+			c.Byte(200, []byte("ok"))
+		})
+	T.Equal(200, w.Code)
+	T.Equal("ok", w.Body.String())
 }
 
 func TestHTML(tt *testing.T) {

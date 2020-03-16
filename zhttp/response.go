@@ -92,7 +92,7 @@ func (r *Res) Body() (body io.ReadCloser) {
 		return nil
 	}
 	r.responseBody = respBody
-	return r.resp.Body
+	return ioutil.NopCloser(bytes.NewReader(r.responseBody))
 }
 
 func (r *Res) String() string {

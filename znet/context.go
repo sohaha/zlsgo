@@ -17,11 +17,15 @@ import (
 
 // Host Get the current Host
 func (c *Context) Host() string {
-	scheme := "http://"
-	if c.Request.TLS != nil {
-		scheme = "https://"
+	scheme := c.Request.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		scheme = "http"
+		if c.Request.TLS != nil {
+			scheme = "https"
+		}
 	}
-	return scheme + c.Request.Host
+
+	return scheme + "://" + c.Request.Host
 }
 
 // CompletionLink Complete the link and add the current domain name if it is not linked
@@ -87,7 +91,7 @@ func (c *Context) done() {
 		if err := r.Render(c, code); err != nil {
 			panic(err)
 		}
-	}else if code != 200{
+	} else if code != 0 && code != 200 {
 		c.Writer.WriteHeader(code)
 	}
 }

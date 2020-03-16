@@ -423,6 +423,7 @@ func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 		return
 	}
 	handle(c, func(_ *Context) {
+		c.Abort(0)
 		http.NotFound(c.Writer, c.Request)
 	}, middleware)
 }

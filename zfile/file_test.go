@@ -27,6 +27,9 @@ func TestFile(T *testing.T) {
 	tIsDir := DirExist(dirPath)
 	t.Equal(true, tIsDir)
 
+	dirPath = SafePath("../zfile/ok")
+	t.Equal("ok", dirPath)
+
 	path := RealPathMkdir("../tmp")
 	RealPathMkdir(path + "/ooo")
 	t.Log(path)
