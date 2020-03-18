@@ -109,9 +109,13 @@ type (
 
 var (
 	// Log Log
-	Log         = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
-	zservers    = map[string]*Engine{}
-	defaultAddr = addrSt{
+	Log = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
+	// Shutdown Done executed after shutting down the server
+	ShutdownDone func()
+	// CloseHotRestart
+	CloseHotRestart bool
+	zservers        = map[string]*Engine{}
+	defaultAddr     = addrSt{
 		addr: ":3788",
 	}
 )
@@ -304,7 +308,7 @@ func Run() {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	if !iskill {
+	if !iskill && !CloseHotRestart {
 		runNewProcess()
 	}
 
@@ -320,7 +324,7 @@ func Run() {
 					if iskill {
 						r.Log.Error("Timeout forced close")
 					}
-					s.srv.Close()
+					_ = s.srv.Close()
 				} else {
 					if iskill {
 						r.Log.Success("Shutdown server done")
@@ -333,13 +337,14 @@ func Run() {
 	})
 
 	m.Wait()
+	if ShutdownDone != nil {
+		ShutdownDone()
+	}
 }
 
 func runNewProcess() {
-	pid, err := zshell.RunNewProcess()
+	_, err := zshell.RunNewProcess()
 	if err != nil {
 		Log.Error(err)
-	} else {
-		Log.Warn("Restart pid: ", pid)
 	}
 }

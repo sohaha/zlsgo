@@ -169,6 +169,10 @@ func TestMore(t *testing.T) {
 	T := zlsgo.NewTest(t)
 	r := newServer()
 	r.SetMode(DebugMode)
+	ShutdownDone = func() {
+
+	}
+	CloseHotRestart = true
 	w := newRequest(r, "delete", "/", "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)

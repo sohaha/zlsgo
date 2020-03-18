@@ -2,7 +2,7 @@
  * @Author: seekwe
  * @Date:   2019-05-17 13:45:52
  * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 15:37:24
+ * @Last Modified time: 2020-02-17 12:22:00
  */
 
 package zlog
@@ -10,13 +10,16 @@ package zlog
 import (
 	"bytes"
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
+	"text/tabwriter"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 // Log header information tag bit, using bitmap mode
@@ -42,26 +45,29 @@ const (
 	LogSuccess
 	LogInfo
 	LogDebug
+	LogDump
 	LogNot = -1
 )
 
-var levels = []string{
-	"[FATAL]",
-	"[PANIC]",
-	"[ERROR]",
-	"[WARN] ",
-	"[SUCCE]",
-	"[INFO] ",
-	"[DEBUG]",
+var Levels = []string{
+	"[Fatal]",
+	"[Panic]",
+	"[Error]",
+	"[Warn] ",
+	"[Succe]",
+	"[Info] ",
+	"[Debug]",
+	"[Dump] ",
 }
 
-var levelColous = []Color{
+var LevelColous = []Color{
 	ColorRed,
 	ColorLightRed,
 	ColorRed,
 	ColorYellow,
 	ColorGreen,
 	ColorBlue,
+	ColorLightCyan,
 	ColorCyan,
 }
 
@@ -81,6 +87,23 @@ type Logger struct {
 	fileName      string
 	fileAndStdout bool
 }
+type (
+	formatter struct {
+		v     reflect.Value
+		force bool
+		quote bool
+	}
+	visit struct {
+		v   uintptr
+		typ reflect.Type
+	}
+	zprinter struct {
+		io.Writer
+		tw      *tabwriter.Writer
+		visited map[visit]int
+		depth   int
+	}
+)
 
 // New Initialize a log object
 func New(moduleName ...string) *Logger {
@@ -88,7 +111,7 @@ func New(moduleName ...string) *Logger {
 	if len(moduleName) > 0 {
 		name = moduleName[0]
 	}
-	return NewZLog(os.Stderr, name, BitDefault, 6, true, 2)
+	return NewZLog(os.Stderr, name, BitDefault, LogDump, true, 2)
 }
 
 // NewZLog Create log
@@ -170,7 +193,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 		}
 
 		if log.flag&BitLevel != 0 {
-			buf.WriteString(log.ColorTextWrap(levelColous[level], levels[level]+" "))
+			buf.WriteString(log.ColorTextWrap(LevelColous[level], Levels[level]+" "))
 		}
 
 		if log.flag&(BitShortFile|BitLongFile) != 0 {
@@ -266,6 +289,41 @@ func (log *Logger) Debugf(format string, v ...interface{}) {
 // Debug Debug
 func (log *Logger) Debug(v ...interface{}) {
 	_ = log.OutPut(LogDebug, fmt.Sprintln(v...), true)
+}
+
+// Dumpln Dumpln
+func (log *Logger) Dumpln(v ...interface{}) {
+	if log.level < LogDump {
+		return
+	}
+	v = append([]interface{}{"\n"}, v...)
+	v = append(v, "\n")
+	args := formatArgs(v...)
+	_, file, line, ok := callerName(1)
+	if ok {
+		names, err := argNames(file, line)
+		if err == nil {
+			args = prependArgName(names, args)
+		}
+	}
+	_ = log.OutPut(LogDump, fmt.Sprintln(args), true)
+}
+
+// Dump Dump
+func (log *Logger) Dump(v ...interface{}) {
+	if log.level < LogDump {
+		return
+	}
+	args := formatArgs(v...)
+	_, file, line, ok := callerName(1)
+	if ok {
+		names, err := argNames(file, line)
+		if err == nil {
+			args = prependArgName(names, args)
+		}
+	}
+
+	_ = log.OutPut(LogDump, fmt.Sprintln(args), true)
 }
 
 // Successf Successf
@@ -439,7 +497,6 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 		return
 	}
 
-	// Assemble decimal in reverse order.
 	var b [32]byte
 	bp := len(b)
 	for ; u > 0 || wid > 0; u /= 10 {
@@ -448,9 +505,50 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 		b[bp] = byte(u%10) + '0'
 	}
 
-	// avoid slicing b to avoid an allocation.
 	for bp < len(b) {
 		buf.WriteByte(b[bp])
 		bp++
 	}
+}
+
+func formatArgs(args ...interface{}) []string {
+	formatted := make([]string, 0, len(args))
+	for _, a := range args {
+		s := ColorTextWrap(ColorCyan, sprint(a))
+		formatted = append(formatted, s)
+	}
+	return formatted
+}
+
+func sprint(a ...interface{}) string {
+	return fmt.Sprint(wrap(a, true)...)
+}
+
+func wrap(a []interface{}, force bool) []interface{} {
+	w := make([]interface{}, len(a))
+	for i, x := range a {
+		w[i] = formatter{v: reflect.ValueOf(x), force: force}
+	}
+	return w
+}
+
+func writeByte(w io.Writer, b byte) {
+	_, _ = w.Write([]byte{b})
+}
+
+func prependArgName(names, values []string) []string {
+	prepended := make([]string, len(values))
+	for i, value := range values {
+		name := ""
+		if i < len(names) {
+			name = names[i]
+		}
+		if name == "" {
+			prepended[i] = value
+			continue
+		}
+		name = ColorTextWrap(ColorBlue, OpTextWrap(OpBold, name))
+		prepended[i] = fmt.Sprintf("%s=%s", name, value)
+	}
+	return prepended
 }

@@ -58,6 +58,7 @@ func Text(value string, name ...string) *Engine {
 	var obj Engine
 	obj.value = value
 	obj.setRawValue = true
+	obj.queue = list.New()
 	if len(name) > 0 {
 		obj.name = name[0]
 	}
