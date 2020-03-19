@@ -315,7 +315,7 @@ func testRouterNotFound(r *Engine, t *zlsgo.TestUtil) {
 
 func testRouterCustomNotFound(r *Engine, t *zlsgo.TestUtil) {
 	expectedText := "is 404"
-	r.NotFoundFunc(handleRes(expectedText))
+	r.NotFoundHandler(handleRes(expectedText))
 
 	w := newRequest(r, "GET", "/404-2", "")
 	t.Equal(200, w.Code)

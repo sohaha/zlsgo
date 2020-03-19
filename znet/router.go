@@ -264,7 +264,7 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	return "/" + strings.Join(segments, "/"), nil
 }
 
-func (e *Engine) NotFoundFunc(handler HandlerFunc) {
+func (e *Engine) NotFoundHandler(handler HandlerFunc) {
 	e.router.notFound = handler
 }
 
@@ -337,9 +337,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					errMsg = errors.New(fmt.Sprint(err))
 				}
 				e.router.panic(rw, errMsg)
+				rw.done()
 				requestLog(rw)
-				e.Log.Error(errMsg)
-				e.Log.Track("Track Panic: ", 0, 2)
+				// e.Log.Error(errMsg)
+				// e.Log.Track("Track Panic: ", 0, 2)
 				// Log.Stack()
 				// trace := make([]byte, 1<<16)
 				// n := runtime.Stack(trace, true)
@@ -348,6 +349,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}()
 	}
 
+	// custom method type
 	if req.Method == "POST" && e.customMethodType != "" {
 		if tmpType, ok := rw.GetPostForm(e.customMethodType); ok {
 			req.Method = strings.ToUpper(tmpType)
@@ -418,6 +420,16 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 
 func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 	c.Info.Code = http.StatusNotFound
+	if e.webModeName == DebugMode {
+		middleware = []HandlerFunc{
+			func(c *Context) {
+				c.Next()
+				requestLog(c)
+			},
+		}
+	} else {
+		middleware = []HandlerFunc{}
+	}
 	if e.router.notFound != nil {
 		handle(c, e.router.notFound, middleware)
 		return

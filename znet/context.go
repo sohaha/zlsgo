@@ -79,9 +79,8 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) done() {
 	c.Info.Mutex.RLock()
 	code := c.Info.Code
-	heades := c.Info.heades
 	r := c.Info.render
-	for key, value := range heades {
+	for key, value := range c.Info.heades {
 		c.Writer.Header().Set(key, value)
 	}
 	c.Info.Mutex.RUnlock()
@@ -117,15 +116,6 @@ func (c *Context) Next() (next HandlerFunc) {
 		}
 	}
 
-	return
-}
-
-// RedirectNext redirect rext
-func (c *Context) RedirectNext(path string) (not bool) {
-	c.Info.middleware = c.Info.middleware[0:0]
-	if c.Request.RequestURI != path {
-		return c.Engine.FindHandle(c, c.Request, path, false)
-	}
 	return
 }
 
