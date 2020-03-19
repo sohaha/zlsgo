@@ -81,11 +81,10 @@ func (c *Context) done() {
 	code := c.Info.Code
 	heades := c.Info.heades
 	r := c.Info.render
-	c.Info.Mutex.RUnlock()
 	for key, value := range heades {
 		c.Writer.Header().Set(key, value)
 	}
-
+	c.Info.Mutex.RUnlock()
 	if r != nil {
 		c.Writer.WriteHeader(code)
 		if err := r.Render(c, code); err != nil {
