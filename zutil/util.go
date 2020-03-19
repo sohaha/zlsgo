@@ -1,6 +1,7 @@
 package zutil
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -45,8 +46,12 @@ func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	fn()
 }
 
-func CheckErr(err error) {
+func CheckErr(err error, exit ...bool) {
 	if err != nil {
+		if len(exit) > 0 && exit[0] {
+			log.Fatalln(err)
+			return
+		}
 		panic(err)
 	}
 }

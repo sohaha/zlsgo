@@ -8,33 +8,45 @@
 package znet
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"html/template"
-	"io"
 	"net/http"
+
+	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
 	render interface {
 		Render(*Context, int) error
-		Content() (content string)
+		Content() (content []byte)
 	}
 	renderByte struct {
-		Data []byte
+		Data        []byte
+		ContentDate []byte
 	}
 	renderString struct {
-		Format string
-		Data   []interface{}
+		Format      string
+		Data        []interface{}
+		ContentDate []byte
 	}
 	renderJSON struct {
-		Data interface{}
+		Data        interface{}
+		ContentDate []byte
+	}
+	renderFile struct {
+		Status      interface{}
+		Data        interface{}
+		ContentDate []byte
 	}
 	renderHTML struct {
-		Template *template.Template
-		Name     string
-		Data     interface{}
+		Template    *template.Template
+		Name        string
+		Data        interface{}
+		ContentDate []byte
 	}
 	Api struct {
 		Code int         `json:"code" example:"200"`
@@ -45,14 +57,10 @@ type (
 )
 
 var (
-	plainContentType = "text/plain; charset=utf-8"
-	htmlContentType  = "text/html; charset=utf-8"
-	jsonContentType  = "application/json; charset=utf-8"
+	ContentTypePlain = "text/plain; charset=utf-8"
+	ContentTypeHTML  = "text/html; charset=utf-8"
+	ContentTypeJSON  = "application/json; charset=utf-8"
 )
-
-func (c *Context) File(filepath string) {
-	http.ServeFile(c.Writer, c.Request, filepath)
-}
 
 func (c *Context) render(code int, r render) {
 	c.Info.Mutex.Lock()
@@ -62,101 +70,110 @@ func (c *Context) render(code int, r render) {
 	c.Info.Mutex.Unlock()
 }
 
-func (r *renderByte) Content() (content string) {
-	return zstring.Bytes2String(r.Data)
+func (r *renderByte) Content() []byte {
+	return r.Data
 }
 
 func (r *renderByte) Render(c *Context, code int) (err error) {
 	w := c.Writer
 	c.SetStatus(code)
-	c.SetHeader("Content-Type", plainContentType)
 	_, err = w.Write(r.Data)
 	return
 }
 
-func (r *renderString) Content() (content string) {
-	if len(r.Data) > 0 {
-		content = fmt.Sprintf(r.Format, r.Data...)
-	} else {
-		content = r.Format
+func (r *renderString) Content() []byte {
+	if r.ContentDate != nil {
+		return r.ContentDate
 	}
-	return
+	if len(r.Data) > 0 {
+		r.ContentDate = zstring.String2Bytes(fmt.Sprintf(r.Format, r.Data...))
+	} else {
+		r.ContentDate = zstring.String2Bytes(r.Format)
+	}
+	return r.ContentDate
 }
 
 func (r *renderString) Render(c *Context, code int) (err error) {
 	w := c.Writer
 	c.SetStatus(code)
-	c.SetHeader("Content-Type", plainContentType)
-	if len(r.Data) > 0 {
-		_, err = fmt.Fprintf(w, r.Format, r.Data...)
-	} else {
-		_, err = io.WriteString(w, r.Format)
-	}
+	_, err = w.Write(r.Content())
 	return
 }
 
-func (r *renderJSON) Content() (content string) {
-	j, err := json.Marshal(r.Data)
-	if err != nil {
-		return
+func (r *renderJSON) Content() []byte {
+	if r.ContentDate != nil {
+		return r.ContentDate
 	}
-	content = zstring.Bytes2String(j)
-	return
+	r.ContentDate, _ = json.Marshal(r.Data)
+	return r.ContentDate
+}
+
+func (r *renderFile) Content() []byte {
+	if r.ContentDate != nil {
+		return r.ContentDate
+	}
+	r.ContentDate = zstring.String2Bytes(r.Data.(string))
+	return r.ContentDate
+}
+
+func (r *renderFile) Render(c *Context, _ int) error {
+	http.ServeFile(c.Writer, c.Request, r.Data.(string))
+	return nil
 }
 
 func (r *renderJSON) Render(c *Context, code int) error {
 	w := c.Writer
 	c.SetStatus(code)
-	c.SetHeader("Content-Type", jsonContentType)
-	jsonBytes, err := json.Marshal(r.Data)
-	if err != nil {
-		return err
-	}
-	_, _ = w.Write(jsonBytes)
+	_, _ = w.Write(r.Content())
 	return nil
 }
 
-func (r *renderHTML) Content() (content string) {
+func (r *renderHTML) Content() []byte {
+	if r.ContentDate != nil {
+		return r.ContentDate
+	}
 	if r.Name != "" {
 		var t *template.Template
 		var err error
 		t, err = templateParse(r.Name)
 		if err != nil {
-			return
+			return r.ContentDate
 		}
-		content = t.Name()
+		var buf bytes.Buffer
+		err = t.Execute(&buf, r.Data)
+		if err != nil {
+			return r.ContentDate
+		}
+		r.ContentDate = buf.Bytes()
 	} else {
-		content = fmt.Sprint(r.Data)
+		r.ContentDate = zstring.String2Bytes(fmt.Sprint(r.Data))
 	}
-	return
+	return r.ContentDate
 }
 
 func (r *renderHTML) Render(c *Context, code int) (err error) {
 	w := c.Writer
 	c.SetStatus(code)
-	c.SetHeader("Content-Type", htmlContentType)
-	if r.Name != "" {
-		var t *template.Template
-		t, err = templateParse(r.Name)
-		if err != nil {
-			return
-		}
-		err = t.Execute(w, r.Data)
-	} else {
-		_, err = fmt.Fprint(c.Writer, r.Data)
-	}
+	_, _ = w.Write(r.Content())
 	return
 }
 
 func (c *Context) Byte(code int, value []byte) {
+	c.SetContentType(ContentTypePlain)
 	c.render(code, &renderByte{Data: value})
 }
 
 func (c *Context) String(code int, format string, values ...interface{}) {
+	c.SetContentType(ContentTypePlain)
 	c.render(code, &renderString{Format: format, Data: values})
 }
 
+func (c *Context) File(filepath string) {
+	c.render(zutil.IfVal(zfile.FileExist(filepath), 200, 404).(int), &renderFile{Data: filepath})
+}
+
 func (c *Context) JSON(code int, values interface{}) {
+	c.SetContentType(ContentTypeJSON)
 	c.render(code, &renderJSON{Data: values})
 }
 
@@ -169,13 +186,16 @@ func (c *Context) ResJSON(code int, msg string, data interface{}) {
 	c.render(httpState, &renderJSON{Data: Api{Code: code, Data: data, Msg: msg}})
 }
 
+// HTML export html
 func (c *Context) HTML(code int, html string) {
+	c.SetContentType(ContentTypeHTML)
 	c.render(code, &renderHTML{
 		Name: "",
 		Data: html,
 	})
 }
 
+// Template export template
 func (c *Context) Template(code int, name string, data ...interface{}) {
 	var _data interface{}
 	if len(data) > 0 {
@@ -214,9 +234,22 @@ func (c *Context) SetStatus(code int) *Context {
 	return c
 }
 
+func (c *Context) SetContentType(contentType string) *Context {
+	c.SetHeader("Content-Type", contentType)
+	return c
+}
+
+func (c *Context) GetContentType() string {
+	c.Info.Mutex.RLock()
+	value, _ := c.Info.heades["Content-Type"]
+	c.Info.Mutex.RUnlock()
+	return value
+}
+
+// PrevStatus current http status code
 func (c *Context) PrevStatus() (code int) {
-	c.Info.Mutex.Lock()
+	c.Info.Mutex.RLock()
 	code = c.Info.Code
-	c.Info.Mutex.Unlock()
+	c.Info.Mutex.RUnlock()
 	return
 }

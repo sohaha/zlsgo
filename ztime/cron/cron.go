@@ -14,16 +14,16 @@ type (
 		NextTime time.Time
 		run      func()
 	}
-	cronJobTable struct {
+	CronJobTable struct {
 		table sync.Map
 	}
 )
 
-func New() *cronJobTable {
-	return &cronJobTable{}
+func New() *CronJobTable {
+	return &CronJobTable{}
 }
 
-func (c *cronJobTable) Add(cronLine string, fn func()) (remove func(), err error) {
+func (c *CronJobTable) Add(cronLine string, fn func()) (remove func(), err error) {
 	var expr *Expression
 	expr, err = Parse(cronLine)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *cronJobTable) Add(cronLine string, fn func()) (remove func(), err error
 	return
 }
 
-func (c *cronJobTable) Run() {
+func (c *CronJobTable) Run() {
 	go func() {
 		for {
 			now := time.Now()

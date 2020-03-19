@@ -60,20 +60,20 @@ func (c *Context) ClientIP() (IP string) {
 	return
 }
 
-// GetHeader  Get Header
+// GetHeader Get Header
 func (c *Context) GetHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
-	c.Info.Mutex.RLock()
+	c.Info.Mutex.Lock()
 	if value == "" {
 		delete(c.Info.heades, key)
 	} else {
 		c.Info.heades[key] = value
 	}
-	c.Info.Mutex.RUnlock()
+	c.Info.Mutex.Unlock()
 }
 
 func (c *Context) done() {
@@ -96,7 +96,7 @@ func (c *Context) done() {
 	}
 }
 
-func (c *Context) PrevContent() (content string) {
+func (c *Context) PrevContent() (content []byte) {
 	c.Info.Mutex.RLock()
 	r := c.Info.render
 	c.Info.Mutex.RUnlock()
