@@ -33,4 +33,5 @@ func TestNewTime(T *testing.T) {
 	_, _, err := MonthRange(0, 30)
 	t.Equal(true, err != nil)
 	t.Log(GetTimeZone())
+	t.Log(Now())
 }

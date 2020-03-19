@@ -267,7 +267,7 @@ func Run() {
 				}
 				srvMap.Store(addr, &serverMap{e, srv})
 
-				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+hostname)))
+				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+hostname)))
 				var err error
 				if isTls {
 					if cfg.Config != nil {
@@ -276,7 +276,7 @@ func Run() {
 					if cfg.HTTPAddr != "" {
 						go func(e *Engine) {
 							newHostname := "http://" + resolveHostname(cfg.HTTPAddr)
-							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen "+newHostname)))
+							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+newHostname)))
 							var err error
 							switch processing := cfg.HTTPProcessing.(type) {
 							case string:

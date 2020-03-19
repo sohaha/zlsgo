@@ -7,6 +7,10 @@ import (
 
 var newZtime = New()
 
+func Now(format ...string) string {
+	return newZtime.FormatTime(time.Now(), format...)
+}
+
 // SetTimeZone SetTimeZone
 func SetTimeZone(zone int) *TimeEngine {
 	return newZtime.SetTimeZone(zone)
