@@ -359,8 +359,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if e.preHandle != nil && e.preHandle(rw) {
+		rw.done()
 		return
 	}
+	rw.Info.StopHandle = false
 	if _, ok := e.router.trees[req.Method]; !ok {
 		e.HandleNotFound(rw, e.router.middleware)
 		return

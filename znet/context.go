@@ -106,8 +106,8 @@ func (c *Context) PrevContent() (content []byte) {
 func (c *Context) Next() (next HandlerFunc) {
 	c.Info.Mutex.RLock()
 	StopHandle := c.Info.StopHandle
-	c.Info.Mutex.RUnlock()
 	middlewareLen := len(c.Info.middleware)
+	c.Info.Mutex.RUnlock()
 	if !StopHandle {
 		if middlewareLen > 0 {
 			next = c.Info.middleware[0]
