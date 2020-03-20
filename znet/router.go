@@ -360,6 +360,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if e.preHandle != nil && e.preHandle(rw) {
 		rw.done()
+		requestLog(rw)
 		return
 	}
 	rw.Info.StopHandle = false
@@ -428,7 +429,7 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 
 func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 	c.Info.Code = http.StatusNotFound
-	if e.webModeName == DebugMode {
+	if e.IsDebug() {
 		middleware = []HandlerFunc{
 			func(c *Context) {
 				c.Next()
