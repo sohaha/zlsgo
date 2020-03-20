@@ -1,9 +1,16 @@
 package zvalid
 
 import (
-	"github.com/sohaha/zlsgo"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
+
+func TestValidRule(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	err := Text("a1Cb.1").Required().HasLetter().HasLower().HasUpper().HasNumber().HasSymbol().HasString("b").HasPrefix("a").HasSuffix("1").Password().StrongPassword().Error()
+	t.Log(err)
+}
 
 func TestValidNew(tt *testing.T) {
 	var err error

@@ -39,19 +39,20 @@ type (
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
-		// Log Log
-		Log                *zlog.Logger
-		readTimeout        time.Duration
-		writeTimeout       time.Duration
-		webModeName        string
-		webMode            int
-		timeLocation       *time.Location
-		ShowFavicon        bool
-		MaxMultipartMemory int64
-		customMethodType   string
-		addr               []addrSt
-		router             *router
-	}
+	// Log Log
+	Log                *zlog.Logger
+	readTimeout        time.Duration
+	writeTimeout       time.Duration
+	webModeName        string
+	webMode            int
+	timeLocation       *time.Location
+	ShowFavicon        bool
+	MaxMultipartMemory int64
+	customMethodType   string
+	addr               []addrSt
+	router             *router
+	preHandle          func(context *Context)bool
+}
 
 	TlsCfg struct {
 		Cert           string

@@ -1,7 +1,9 @@
 package zfile
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	. "github.com/sohaha/zlsgo"
 )
@@ -48,5 +50,19 @@ func TestCopy(tt *testing.T) {
 		return srcFilePath == "../znet/timeout/timeout.go"
 	})
 	t.Equal(nil, err)
+}
 
+func TestPut(t *testing.T) {
+	var err error
+	tt := NewTest(t)
+	defer os.Remove("./text.txt")
+	err = PutOffset("./text.txt", []byte(time.Now().String()+"\n"), 0)
+	tt.EqualNil(err)
+	err = PutAppend("./text.txt", []byte(time.Now().String()+"\n"))
+	tt.EqualNil(err)
+	os.Remove("./text.txt")
+	err = PutAppend("./text.txt", []byte(time.Now().String()+"\n"))
+	tt.EqualNil(err)
+	err = PutOffset("./text.txt", []byte("\n(ok)\n"), 5)
+	tt.EqualNil(err)
 }

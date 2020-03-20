@@ -264,6 +264,10 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	return "/" + strings.Join(segments, "/"), nil
 }
 
+func (e *Engine) PreHandle(preHandle func(context *Context) (stop bool)) {
+	e.preHandle = preHandle
+}
+
 func (e *Engine) NotFoundHandler(handler HandlerFunc) {
 	e.router.notFound = handler
 }
@@ -312,8 +316,7 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	requestURL := req.URL.Path
-	if !e.ShowFavicon && requestURL == "/favicon.ico" {
+	if !e.ShowFavicon && req.URL.Path == "/favicon.ico" {
 		return
 	}
 	rw := &Context{
@@ -351,16 +354,19 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// custom method type
 	if req.Method == "POST" && e.customMethodType != "" {
-		if tmpType, ok := rw.GetPostForm(e.customMethodType); ok {
+		if tmpType := rw.GetHeader(e.customMethodType); tmpType != "" {
 			req.Method = strings.ToUpper(tmpType)
 		}
+	}
+	if e.preHandle != nil && e.preHandle(rw) {
+		return
 	}
 	if _, ok := e.router.trees[req.Method]; !ok {
 		e.HandleNotFound(rw, e.router.middleware)
 		return
 	}
 
-	if e.FindHandle(rw, req, requestURL, true) {
+	if e.FindHandle(rw, req, req.URL.Path, true) {
 		e.HandleNotFound(rw, e.router.middleware)
 	}
 }

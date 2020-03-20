@@ -194,3 +194,35 @@ func pathAddSlash(path string, addSlash ...bool) string {
 	}
 	return path
 }
+
+// PutOffset open the specified file and write data from the specified location
+func PutOffset(path string, b []byte, offset int64) (err error) {
+	var file *os.File
+	if FileExist(path) {
+		file, err = os.OpenFile(path, os.O_WRONLY,  os.ModeAppend)
+	} else {
+		file, err = os.Create(path)
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteAt(b, offset)
+	return err
+}
+
+// PutAppend open the specified file and write data at the end of the file
+func PutAppend(path string, b []byte) (err error) {
+	var file *os.File
+	if FileExist(path) {
+		file, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	} else {
+		file, err = os.Create(path)
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(b)
+	return err
+}

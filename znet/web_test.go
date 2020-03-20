@@ -32,6 +32,9 @@ func newServer() *Engine {
 		engine = New("Web-test")
 		engine.SetMode(DebugMode)
 		engine.SetTimeout(3 * time.Second)
+		engine.PreHandle(func(context *Context) (stop bool) {
+			return
+		})
 	})
 	return engine
 }
