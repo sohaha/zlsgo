@@ -51,8 +51,8 @@ func (c *Context) IsWebsocket() bool {
 	return false
 }
 
-// ClientIP Client IP
-func (c *Context) ClientIP() (IP string) {
+// GetClientIP Client IP
+func (c *Context) GetClientIP() (IP string) {
 	IP = ClientPublicIP(c.Request)
 	if IP == "" {
 		IP = ClientIP(c.Request)
@@ -77,6 +77,7 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) done() {
+	data := c.PrevContent()
 	c.Info.Mutex.RLock()
 	code := c.Info.Code
 	r := c.Info.render
@@ -86,7 +87,8 @@ func (c *Context) done() {
 	c.Info.Mutex.RUnlock()
 	if r != nil {
 		c.Writer.WriteHeader(code)
-		if err := r.Render(c, code); err != nil {
+		_, err := c.Writer.Write(data)
+		if err != nil {
 			panic(err)
 		}
 	} else if code != 0 && code != 200 {
@@ -99,7 +101,7 @@ func (c *Context) PrevContent() (content []byte) {
 	r := c.Info.render
 	c.Info.Mutex.RUnlock()
 	if r != nil {
-		content = r.Content()
+		content = r.Content(c)
 	}
 	return
 }
@@ -113,6 +115,7 @@ func (c *Context) Next() (next HandlerFunc) {
 			next = c.Info.middleware[0]
 			c.Info.middleware = c.Info.middleware[1:]
 			next(c)
+			c.PrevContent()
 		}
 	}
 
@@ -145,13 +148,13 @@ func (c *Context) GetCookie(name string) string {
 	return v
 }
 
-// Referer request referer
-func (c *Context) Referer() string {
+// GetReferer request referer
+func (c *Context) GetReferer() string {
 	return c.Request.Header.Get("Referer")
 }
 
-// UserAgent http request UserAgent
-func (c *Context) UserAgent() string {
+// GetUserAgent http request UserAgent
+func (c *Context) GetUserAgent() string {
 	return c.Request.Header.Get("User-Agent")
 }
 

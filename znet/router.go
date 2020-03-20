@@ -36,7 +36,7 @@ var (
 	defaultPattern = `[\w\p{Han}\.\- ]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
-	allPattern     = `[\w\p{Han}\.\-\/ ]*`
+	allPattern     = `[\w\p{Han}\s\S]+`
 	allKey         = `*`
 
 	contextKey = contextKeyType{}
@@ -205,6 +205,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		customMethodType:   e.customMethodType,
 		router:             route,
 		Log:                e.Log,
+		Cache:              e.Cache,
 	}
 	if len(groupHandle) > 0 {
 		groupHandle[0](engine)

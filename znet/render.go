@@ -12,7 +12,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
+	"mime"
 	"net/http"
+	"path/filepath"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -21,8 +24,7 @@ import (
 
 type (
 	render interface {
-		Render(*Context, int) error
-		Content() (content []byte)
+		Content(c *Context) (content []byte)
 	}
 	renderByte struct {
 		Data        []byte
@@ -38,8 +40,8 @@ type (
 		ContentDate []byte
 	}
 	renderFile struct {
-		Status      interface{}
-		Data        interface{}
+		Data        string
+		FileExist   bool
 		ContentDate []byte
 	}
 	renderHTML struct {
@@ -53,7 +55,11 @@ type (
 		Msg  string      `json:"msg"`
 		Data interface{} `json:"data"`
 	}
-	Data map[string]interface{}
+	Data     map[string]interface{}
+	fileData struct {
+		Type    string
+		Content []byte
+	}
 )
 
 var (
@@ -70,21 +76,16 @@ func (c *Context) render(code int, r render) {
 	c.Info.Mutex.Unlock()
 }
 
-func (r *renderByte) Content() []byte {
+func (r *renderByte) Content(c *Context) []byte {
+	c.SetContentType(ContentTypePlain)
 	return r.Data
 }
 
-func (r *renderByte) Render(c *Context, code int) (err error) {
-	w := c.Writer
-	c.SetStatus(code)
-	_, err = w.Write(r.Data)
-	return
-}
-
-func (r *renderString) Content() []byte {
+func (r *renderString) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
+	c.SetContentType(ContentTypePlain)
 	if len(r.Data) > 0 {
 		r.ContentDate = zstring.String2Bytes(fmt.Sprintf(r.Format, r.Data...))
 	} else {
@@ -93,45 +94,35 @@ func (r *renderString) Content() []byte {
 	return r.ContentDate
 }
 
-func (r *renderString) Render(c *Context, code int) (err error) {
-	w := c.Writer
-	c.SetStatus(code)
-	_, err = w.Write(r.Content())
-	return
-}
-
-func (r *renderJSON) Content() []byte {
+func (r *renderJSON) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
+	c.SetContentType(ContentTypeJSON)
 	r.ContentDate, _ = json.Marshal(r.Data)
 	return r.ContentDate
 }
 
-func (r *renderFile) Content() []byte {
+func (r *renderFile) Content(c *Context) []byte {
+	if !r.FileExist {
+		return []byte{}
+	}
+
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	r.ContentDate = zstring.String2Bytes(r.Data.(string))
+
+	fType := mime.TypeByExtension(filepath.Ext(r.Data))
+	c.SetContentType(fType)
+	r.ContentDate, _ = ioutil.ReadFile(r.Data)
 	return r.ContentDate
 }
 
-func (r *renderFile) Render(c *Context, _ int) error {
-	http.ServeFile(c.Writer, c.Request, r.Data.(string))
-	return nil
-}
-
-func (r *renderJSON) Render(c *Context, code int) error {
-	w := c.Writer
-	c.SetStatus(code)
-	_, _ = w.Write(r.Content())
-	return nil
-}
-
-func (r *renderHTML) Content() []byte {
+func (r *renderHTML) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
+	c.SetContentType(ContentTypeHTML)
 	if r.Name != "" {
 		var t *template.Template
 		var err error
@@ -151,29 +142,21 @@ func (r *renderHTML) Content() []byte {
 	return r.ContentDate
 }
 
-func (r *renderHTML) Render(c *Context, code int) (err error) {
-	w := c.Writer
-	c.SetStatus(code)
-	_, _ = w.Write(r.Content())
-	return
-}
-
 func (c *Context) Byte(code int, value []byte) {
-	c.SetContentType(ContentTypePlain)
 	c.render(code, &renderByte{Data: value})
 }
 
 func (c *Context) String(code int, format string, values ...interface{}) {
-	c.SetContentType(ContentTypePlain)
 	c.render(code, &renderString{Format: format, Data: values})
 }
 
-func (c *Context) File(filepath string) {
-	c.render(zutil.IfVal(zfile.FileExist(filepath), 200, 404).(int), &renderFile{Data: filepath})
+func (c *Context) File(path string) {
+	fileExist := zfile.FileExist(path)
+	code := zutil.IfVal(fileExist, 200, 404).(int)
+	c.render(code, &renderFile{Data: path, FileExist: fileExist})
 }
 
 func (c *Context) JSON(code int, values interface{}) {
-	c.SetContentType(ContentTypeJSON)
 	c.render(code, &renderJSON{Data: values})
 }
 
@@ -188,7 +171,6 @@ func (c *Context) ResJSON(code int, msg string, data interface{}) {
 
 // HTML export html
 func (c *Context) HTML(code int, html string) {
-	c.SetContentType(ContentTypeHTML)
 	c.render(code, &renderHTML{
 		Name: "",
 		Data: html,
@@ -239,7 +221,7 @@ func (c *Context) SetContentType(contentType string) *Context {
 	return c
 }
 
-func (c *Context) GetContentType() string {
+func (c *Context) PrevContentType() string {
 	c.Info.Mutex.RLock()
 	value, _ := c.Info.heades["Content-Type"]
 	c.Info.Mutex.RUnlock()

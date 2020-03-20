@@ -42,7 +42,7 @@ func requestLog(c *Context) {
 		default:
 			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorRed, statusCode.String())
 		}
-		ft := fmt.Sprintf("%s %15s %15v %%s  %%s", status, c.ClientIP(), latency)
+		ft := fmt.Sprintf("%s %15s %15v %%s  %%s", status, c.GetClientIP(), latency)
 		c.Log.Success(showRouteDebug(c.Log, ft, c.Request.Method, c.Request.RequestURI))
 	}
 }

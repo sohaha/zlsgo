@@ -1,7 +1,9 @@
 package zstring
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/sohaha/zlsgo"
@@ -146,5 +148,32 @@ func BenchmarkTo3(b *testing.B) {
 		s := "我是中国人"
 		b := []byte(s)
 		_ = string(*(*[]byte)(unsafe.Pointer(&b)))
+	}
+}
+
+func getRandomString(l int) string {
+	str := "0123456789abcdefghijklmnopqrstuvwxyz"
+	bytes := []byte(str)
+	result := []byte{}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < l; i++ {
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+	return string(result)
+}
+
+func BenchmarkBuffer1(b *testing.B) {
+	bb := Buffer()
+	str := getRandomString(99999)
+	for i := 0; i < b.N; i++ {
+		bb.WriteString(str)
+	}
+}
+
+func BenchmarkBuffer2(b *testing.B) {
+	bb := Buffer(99999 * b.N)
+	str := getRandomString(99999)
+	for i := 0; i < b.N; i++ {
+		bb.WriteString(str)
 	}
 }

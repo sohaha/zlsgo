@@ -158,7 +158,7 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 func TestRes(t *testing.T) {
 	tt := zls.NewTest(t)
 	// res, err := Get("https://www.npmjs.com/package/zls-vue-spa/")
-	res, err := Get("http://baidu.com")
+	res, err := Get("https://bing.com")
 	tt.Equal(nil, err)
 	// t.Log(res.Body())
 	// respBody, err := ioutil.ReadAll(res.Body())

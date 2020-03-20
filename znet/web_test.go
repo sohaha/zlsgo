@@ -156,7 +156,7 @@ func TestPost(tt *testing.T) {
 		c.WithValue("k2", "k2-data")
 		tt.Log("==2==")
 		c.Next()
-		tt.Log("GetContentType", c.GetContentType())
+		tt.Log("PrevContentType", c.PrevContentType())
 		c.WithValue("k2-2", "k2-2-data")
 	}, func(c *Context) {
 		tt.Log("TestWeb")

@@ -13,7 +13,7 @@ func TestNetIp(t *testing.T) {
 	T := zlsgo.NewTest(t)
 	r := newServer()
 	r.GET("/ip", func(c *Context) {
-		T.Equal("", c.ClientIP())
+		T.Equal("", c.GetClientIP())
 		ip := "127.0.0.1"
 		ipb := uint(2130706433)
 		_, _ = IPString2Long("127")

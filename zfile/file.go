@@ -199,7 +199,7 @@ func pathAddSlash(path string, addSlash ...bool) string {
 func PutOffset(path string, b []byte, offset int64) (err error) {
 	var file *os.File
 	if FileExist(path) {
-		file, err = os.OpenFile(path, os.O_WRONLY,  os.ModeAppend)
+		file, err = os.OpenFile(path, os.O_WRONLY, os.ModeAppend)
 	} else {
 		file, err = os.Create(path)
 	}
