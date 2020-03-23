@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/sohaha/zlsgo/zfile"
@@ -28,6 +29,7 @@ type (
 	}
 	renderByte struct {
 		Data        []byte
+		Type        string
 		ContentDate []byte
 	}
 	renderString struct {
@@ -56,7 +58,8 @@ type (
 		Data interface{} `json:"data"`
 	}
 	Data     map[string]interface{}
-	fileData struct {
+	PrevData struct {
+		Code    int
 		Type    string
 		Content []byte
 	}
@@ -77,7 +80,7 @@ func (c *Context) render(code int, r render) {
 }
 
 func (r *renderByte) Content(c *Context) []byte {
-	c.SetContentType(ContentTypePlain)
+	c.SetContentType(zutil.IfVal(r.Type != "", r.Type, ContentTypePlain).(string))
 	return r.Data
 }
 
@@ -150,9 +153,18 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 	c.render(code, &renderString{Format: format, Data: values})
 }
 
+func (c *Context) SetContent(data *PrevData) {
+	c.render(data.Code, &renderByte{Data: data.Content, Type: data.Type})
+}
+
 func (c *Context) File(path string) {
 	fileExist := zfile.FileExist(path)
 	code := zutil.IfVal(fileExist, 200, 404).(int)
+	if fileExist {
+		if f, err := os.Stat(path); err == nil {
+			c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
+		}
+	}
 	c.render(code, &renderFile{Data: path, FileExist: fileExist})
 }
 
@@ -221,17 +233,22 @@ func (c *Context) SetContentType(contentType string) *Context {
 	return c
 }
 
-func (c *Context) PrevContentType() string {
+func (c *Context) PrevContent() *PrevData {
 	c.Info.Mutex.RLock()
-	value, _ := c.Info.heades["Content-Type"]
+	r := c.Info.render
+	code := c.Info.Code
+	ctype, hasType := c.Info.heades["Content-Type"]
 	c.Info.Mutex.RUnlock()
-	return value
-}
-
-// PrevStatus current http status code
-func (c *Context) PrevStatus() (code int) {
-	c.Info.Mutex.RLock()
-	code = c.Info.Code
-	c.Info.Mutex.RUnlock()
-	return
+	if !hasType {
+		ctype = ContentTypePlain
+	}
+	var content []byte
+	if r != nil {
+		content = r.Content(c)
+	}
+	return &PrevData{
+		Code:    code,
+		Type:    ctype,
+		Content: content,
+	}
 }

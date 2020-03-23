@@ -79,32 +79,22 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) done() {
 	data := c.PrevContent()
 	c.Info.Mutex.RLock()
-	code := c.Info.Code
 	r := c.Info.render
 	for key, value := range c.Info.heades {
 		c.Writer.Header().Set(key, value)
 	}
 	c.Info.Mutex.RUnlock()
 	if r != nil {
-		c.Writer.WriteHeader(code)
-		_, err := c.Writer.Write(data)
+		c.Writer.WriteHeader(data.Code)
+		_, err := c.Writer.Write(data.Content)
 		if err != nil {
 			panic(err)
 		}
-	} else if code != 0 && code != 200 {
-		c.Writer.WriteHeader(code)
+	} else if data.Code != 0 && data.Code != 200 {
+		c.Writer.WriteHeader(data.Code)
 	}
 }
 
-func (c *Context) PrevContent() (content []byte) {
-	c.Info.Mutex.RLock()
-	r := c.Info.render
-	c.Info.Mutex.RUnlock()
-	if r != nil {
-		content = r.Content(c)
-	}
-	return
-}
 func (c *Context) Next() (next HandlerFunc) {
 	c.Info.Mutex.RLock()
 	StopHandle := c.Info.StopHandle

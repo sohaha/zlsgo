@@ -325,6 +325,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Request: req,
 		Engine:  e,
 		Log:     e.Log,
+		Cache:   Cache,
 		Info: &info{
 			Code:          http.StatusOK,
 			StartTime:     time.Now(),

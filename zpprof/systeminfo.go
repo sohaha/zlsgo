@@ -9,32 +9,34 @@ package zpprof
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zfile"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 // SystemInfo SystemInfo
 type SystemInfo struct {
 	ServerName   string
-	Runtime      string //运行时间
-	GoroutineNum string //goroutine数量
-	CPUNum       string //cpu核数
-	UsedMem      string //当前内存使用量
-	TotalMem     string //总分配的内存
-	SysMem       string //系统内存占用量
-	Lookups      string //指针查找次数
-	Mallocs      string //内存分配次数
-	Frees        string //内存释放次数
-	LastGCTime   string //距离上次GC时间
-	NextGC       string //下次GC内存回收量
-	PauseTotalNs string //GC暂停时间总量
-	PauseNs      string //上次GC暂停时间
+	Runtime      string // 运行时间
+	GoroutineNum string // goroutine数量
+	CPUNum       string // cpu核数
+	UsedMem      string // 当前内存使用量
+	TotalMem     string // 总分配的内存
+	SysMem       string // 系统内存占用量
+	Lookups      string // 指针查找次数
+	Mallocs      string // 内存分配次数
+	Frees        string // 内存释放次数
+	LastGCTime   string // 距离上次GC时间
+	NextGC       string // 下次GC内存回收量
+	PauseTotalNs string // GC暂停时间总量
+	PauseNs      string // 上次GC暂停时间
+	HeapInuse    string // 正在使用的堆内存
 }
 
-func newSystemInfo(startTime time.Time) *SystemInfo {
+func NewSystemInfo(startTime time.Time) *SystemInfo {
 	var afterLastGC string
 	mstat := &runtime.MemStats{}
 	runtime.ReadMemStats(mstat)
@@ -52,6 +54,7 @@ func newSystemInfo(startTime time.Time) *SystemInfo {
 		Runtime:      fmt.Sprintf("%d天%d小时%d分%d秒", costTime/(3600*24), costTime%(3600*24)/3600, costTime%3600/60, costTime%(60)),
 		GoroutineNum: strconv.Itoa(runtime.NumGoroutine()),
 		CPUNum:       strconv.Itoa(runtime.NumCPU()),
+		HeapInuse:    zfile.FileSizeFormat(uint64(mstat.HeapInuse)),
 		UsedMem:      zfile.FileSizeFormat(uint64(mstat.Alloc)),
 		TotalMem:     zfile.FileSizeFormat(uint64(mstat.TotalAlloc)),
 		SysMem:       zfile.FileSizeFormat(uint64(mstat.Sys)),

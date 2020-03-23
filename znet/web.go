@@ -37,6 +37,7 @@ type (
 		Engine  *Engine
 		Info    *info
 		Log     *zlog.Logger
+		Cache   *zcache.Table
 		next    HandlerFunc
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path

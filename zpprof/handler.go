@@ -20,12 +20,13 @@ import (
 var startTime = time.Now()
 
 func infoHandler(c *znet.Context) {
-	m := newSystemInfo(startTime)
+	m := NewSystemInfo(startTime)
 	info := fmt.Sprintf("%s:%s\n", "服务器", m.ServerName)
 	info += fmt.Sprintf("%s:%s\n", "运行时间", m.Runtime)
 	info += fmt.Sprintf("%s:%s\n", "goroutine数量", m.GoroutineNum)
 	info += fmt.Sprintf("%s:%s\n", "CPU核数", m.CPUNum)
 	info += fmt.Sprintf("%s:%s\n", "当前内存使用量", m.UsedMem)
+	info += fmt.Sprintf("%s:%s\n", "当前堆内存使用量", m.HeapInuse)
 	info += fmt.Sprintf("%s:%s\n", "总分配的内存", m.TotalMem)
 	info += fmt.Sprintf("%s:%s\n", "系统内存占用量", m.SysMem)
 	info += fmt.Sprintf("%s:%s\n", "指针查找次数", m.Lookups)
@@ -88,8 +89,12 @@ func redirectPprof(c *znet.Context) {
 
 func authDebug(token string) znet.HandlerFunc {
 	return func(c *znet.Context) {
-		if token == "" || c.DefaultQuery("token", "") == token {
+		getToken := c.DefaultQuery("token", c.GetCookie("debug-token"))
+		c.SetCookie("debug-token", token, 600)
+		if token == "" || getToken == token {
 			c.Next()
+		} else {
+			c.Byte(401, []byte("No permission"))
 		}
 	}
 }
