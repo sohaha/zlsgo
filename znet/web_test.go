@@ -99,7 +99,6 @@ func TestFile(tt *testing.T) {
 	w := newRequest(r, "GET", "/TestFile", "/TestFile", func(c *Context) {
 		c.Next()
 		tt.Log("PrevContent", c.PrevContent())
-		tt.Log("PrevStatus", c.PrevStatus())
 	}, func(c *Context) {
 		tt.Log("TestFile")
 		c.File("doc.go")
@@ -117,7 +116,6 @@ func TestFile(tt *testing.T) {
 	w = newRequest(r, "GET", "/TestFile3", "/TestFile3", func(c *Context) {
 		c.Next()
 		tt.Log("PrevContent", c.PrevContent())
-		tt.Log("PrevStatus", c.PrevStatus())
 		c.String(211, "file")
 	}, func(c *Context) {
 		tt.Log("TestFile")
@@ -136,17 +134,17 @@ func TestPost(tt *testing.T) {
 		tt.Log("==1==")
 		c.Next()
 		tt.Log("--1--")
-		tt.Log("PrevContent", zstring.Bytes2String(c.PrevContent()))
-		T.Equal(expected, zjson.Get(zstring.Bytes2String(c.PrevContent()), "msg").String())
-		tt.Log("PrevContent2", zstring.Bytes2String(c.PrevContent()))
-		tt.Log("PrevStatus", c.PrevStatus())
+		tt.Log("PrevContent", zstring.Bytes2String(c.PrevContent().Content))
+		T.Equal(expected, zjson.Get(zstring.Bytes2String(c.PrevContent().Content), "msg").String())
+		tt.Log("PrevContent2", zstring.Bytes2String(c.PrevContent().Content))
+		tt.Log("PrevStatus", c.PrevContent().Code)
 		c.SetStatus(211)
 		c.JSON(211, &Api{
 			Code: 0,
 			Msg:  "replace",
 			Data: nil,
 		})
-		tt.Log("PrevContent3", zstring.Bytes2String(c.PrevContent()))
+		tt.Log("PrevContent3", zstring.Bytes2String(c.PrevContent().Content))
 		tt.Log(c.Value("k1"))
 		tt.Log(c.Value("k2"))
 		tt.Log(c.Value("k2-2"))
@@ -156,7 +154,9 @@ func TestPost(tt *testing.T) {
 		c.WithValue("k2", "k2-data")
 		tt.Log("==2==")
 		c.Next()
-		tt.Log("PrevContentType", c.PrevContentType())
+		p := c.PrevContent()
+		ctype := p.Type
+		tt.Log("PrevContentType", ctype)
 		c.WithValue("k2-2", "k2-2-data")
 	}, func(c *Context) {
 		tt.Log("TestWeb")

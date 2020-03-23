@@ -20,7 +20,6 @@ func TestWebTimeout(tt *testing.T) {
 		c.Next()
 		tt.Log("--1--")
 		tt.Log("PrevContent:", c.PrevContent())
-		tt.Log("PrevStatus:", c.PrevStatus())
 	}, New(1*time.Second), func(c *znet.Context) {
 		tt.Log("timeout_1")
 		c.String(201, "timeout_1")
