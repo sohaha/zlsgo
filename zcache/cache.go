@@ -2,8 +2,9 @@ package zcache
 
 import (
 	"errors"
-	"github.com/sohaha/zlsgo/zlog"
 	"sync"
+
+	"github.com/sohaha/zlsgo/zlog"
 )
 
 var (
@@ -38,6 +39,10 @@ func Get(key interface{}) (value interface{}, err error) {
 
 func GetRaw(key interface{}) (*Item, error) {
 	return ite.GetRaw(key)
+}
+
+func GetLocked(key interface{}) (interface{}, func(data interface{}, lifeSpan uint, interval ...bool)) {
+	return ite.GetLocked(key)
 }
 
 func SetDeleteCallback(f func(*Item) bool) {

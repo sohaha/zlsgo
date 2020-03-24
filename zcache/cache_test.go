@@ -1,11 +1,12 @@
 package zcache_test
 
 import (
+	"testing"
+	"time"
+
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
-	"testing"
-	"time"
 )
 
 func TestCache(tt *testing.T) {
@@ -185,4 +186,16 @@ func TestCacheForEach(tt *testing.T) {
 
 	time.Sleep(time.Millisecond * 1100)
 	t.EqualExit(0, c.Count())
+}
+
+func TestGetLocked(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	data, set := zcache.GetLocked("GetLocked")
+	tt.Equal(nil, data)
+	if set != nil {
+		set("GetLocked ok", 1)
+	}
+	data, set = zcache.GetLocked("GetLocked")
+	tt.Equal(true, set == nil)
+	tt.Equal("GetLocked ok", data)
 }

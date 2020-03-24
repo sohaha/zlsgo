@@ -1,10 +1,11 @@
 package zcache
 
 import (
-	"github.com/sohaha/zlsgo/zlog"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/zlog"
 )
 
 type (
@@ -34,20 +35,24 @@ type (
 	}
 )
 
-// Count Count
+// Count get the number of caches
 func (table *Table) Count() int {
 	table.RLock()
 	defer table.RUnlock()
 	return len(table.items)
 }
 
-// ForEach ForEach
+// ForEach traversing the cache
 func (table *Table) ForEach(trans func(key, value interface{})) {
 	table.RLock()
-	defer table.RUnlock()
-
+	items := make(map[interface{}]interface{}, table.Count())
 	for k, v := range table.items {
-		trans(k, v.Data())
+		items[k] = v.Data()
+	}
+	table.RUnlock()
+
+	for k, v := range items {
+		trans(k, v)
 	}
 }
 
@@ -210,7 +215,7 @@ func (table *Table) Exists(key interface{}) bool {
 	return ok
 }
 
-// Add Add
+// Add if the cache does not exist then adding does not take effect
 func (table *Table) Add(key interface{}, data interface{}, lifeSpan time.Duration, intervalLifeSpan ...bool) bool {
 	table.Lock()
 
@@ -226,6 +231,28 @@ func (table *Table) Add(key interface{}, data interface{}, lifeSpan time.Duratio
 	table.addInternal(item)
 
 	return true
+}
+
+// GetLocked if the cache is not obtained, it will be locked directly
+func (table *Table) GetLocked(key interface{}) (interface{}, func(data interface{}, lifeSpan uint, interval ...bool)) {
+	table.RLock()
+	r, ok := table.items[key]
+	table.RUnlock()
+	if ok {
+		r.keepAlive()
+		return r.Data(), nil
+	}
+	tmp := table.SetRaw(key, "", 0)
+	tmp.Lock()
+	return nil, func(data interface{}, lifeSpan uint, interval ...bool) {
+		tmp.Unlock()
+		item := newCacheItem(key, data, time.Duration(lifeSpan)*time.Second)
+		if len(interval) > 0 {
+			item.intervalLifeSpan = interval[0]
+		}
+		table.Lock()
+		table.addInternal(item)
+	}
 }
 
 // GetRaw GetRaw

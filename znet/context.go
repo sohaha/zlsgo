@@ -88,7 +88,8 @@ func (c *Context) done() {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {
-			panic(err)
+			// panic(err)
+			c.Log.Error(err)
 		}
 	} else if data.Code != 0 && data.Code != 200 {
 		c.Writer.WriteHeader(data.Code)
