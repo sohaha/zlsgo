@@ -14,6 +14,9 @@ var DisableColor = false
 // Color Color
 type Color int
 
+// Format Format
+type Format int
+
 // Op Op
 type Op int
 
@@ -80,11 +83,11 @@ const (
 )
 
 // OpTextWrap OpTextWrap
-func OpTextWrap(color Op, text string) string {
+func OpTextWrap(op Op, text string) string {
 	if !IsSupportColor() {
 		return text
 	}
-	return fmt.Sprintf("\x1b[%dm%s", color, text)
+	return fmt.Sprintf("\x1b[%dm%s", op, text)
 }
 
 // ColorBackgroundWrap ColorBackgroundWrap

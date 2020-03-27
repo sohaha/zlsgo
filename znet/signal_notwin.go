@@ -8,6 +8,16 @@ import (
 	"syscall"
 )
 
+// Restart Restart
+func (e *Engine) Restart() error {
+	pid := os.Getpid()
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return proc.Signal(syscall.SIGUSR2)
+}
+
 func isKill() bool {
 	quit := make(chan os.Signal)
 	// signal.Notify(quit, os.Interrupt, os.Kill)

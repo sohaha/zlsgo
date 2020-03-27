@@ -3,10 +3,16 @@
 package znet
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 )
+
+// Restart Restart
+func (e *Engine) Restart() error {
+	return errors.New("Windows does not support")
+}
 
 func isKill() bool {
 	quit := make(chan os.Signal)

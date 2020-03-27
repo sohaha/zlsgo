@@ -2,7 +2,7 @@
  * @Author: seekwe
  * @Date:   2019-05-10 17:05:54
  * @Last Modified by:   seekwe
- * @Last Modified time: 2020-02-02 18:21:53
+ * @Last Modified time: 2020-03-06 19:07:15
  */
 
 package znet
@@ -160,16 +160,16 @@ func (c *Context) ContentType() string {
 	return content
 }
 
-// SetCustomParam SetCustomParam
-func (c *Context) SetCustomParam(key string, value interface{}) *Context {
+// WithValue context sharing data
+func (c *Context) WithValue(key string, value interface{}) *Context {
 	c.Info.Mutex.Lock()
 	c.Info.customizeData[key] = value
 	c.Info.Mutex.Unlock()
 	return c
 }
 
-// GetCustomParam GetCustomParam
-func (c *Context) GetCustomParam(key string, def ...interface{}) (value interface{}, ok bool) {
+// Value get context sharing data
+func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
 	c.Info.Mutex.RLock()
 	value, ok = c.Info.customizeData[key]
 	if !ok && (len(def) > 0) {
