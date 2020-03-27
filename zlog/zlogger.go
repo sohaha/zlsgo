@@ -291,24 +291,6 @@ func (log *Logger) Debug(v ...interface{}) {
 	_ = log.OutPut(LogDebug, fmt.Sprintln(v...), true)
 }
 
-// Dumpln Dumpln
-func (log *Logger) Dumpln(v ...interface{}) {
-	if log.level < LogDump {
-		return
-	}
-	v = append([]interface{}{"\n"}, v...)
-	v = append(v, "\n")
-	args := formatArgs(v...)
-	_, file, line, ok := callerName(1)
-	if ok {
-		names, err := argNames(file, line)
-		if err == nil {
-			args = prependArgName(names, args)
-		}
-	}
-	_ = log.OutPut(LogDump, fmt.Sprintln(args), true)
-}
-
 // Dump Dump
 func (log *Logger) Dump(v ...interface{}) {
 	if log.level < LogDump {
@@ -323,7 +305,7 @@ func (log *Logger) Dump(v ...interface{}) {
 		}
 	}
 
-	_ = log.OutPut(LogDump, fmt.Sprintln(args), true)
+	_ = log.OutPut(LogDump, fmt.Sprintln(args...), true)
 }
 
 // Successf Successf
@@ -511,8 +493,8 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 	}
 }
 
-func formatArgs(args ...interface{}) []string {
-	formatted := make([]string, 0, len(args))
+func formatArgs(args ...interface{}) []interface{} {
+	formatted := make([]interface{}, 0, len(args))
 	for _, a := range args {
 		s := ColorTextWrap(ColorCyan, sprint(a))
 		formatted = append(formatted, s)
@@ -536,8 +518,8 @@ func writeByte(w io.Writer, b byte) {
 	_, _ = w.Write([]byte{b})
 }
 
-func prependArgName(names, values []string) []string {
-	prepended := make([]string, len(values))
+func prependArgName(names []string, values []interface{}) []interface{} {
+	prepended := make([]interface{}, len(values))
 	for i, value := range values {
 		name := ""
 		if i < len(names) {
@@ -548,7 +530,7 @@ func prependArgName(names, values []string) []string {
 			continue
 		}
 		name = ColorTextWrap(ColorBlue, OpTextWrap(OpBold, name))
-		prepended[i] = fmt.Sprintf("%s=%s", name, value)
+		prepended[i] = fmt.Sprintf("\n%s=%s", name, value)
 	}
 	return prepended
 }

@@ -21,10 +21,12 @@ func GetTimeZone() *time.Location {
 	return newZtime.GetTimeZone()
 }
 
+// FormatTime format time
 func FormatTime(t time.Time, format ...string) string {
 	return newZtime.FormatTime(t, format...)
 }
 
+// FormatTimestamp format timestamp
 func FormatTimestamp(timestamp int64, format ...string) string {
 	return newZtime.FormatTimestamp(timestamp, format...)
 }
@@ -37,6 +39,7 @@ func MonthRange(year int, month int) (beginTime, endTime int64, err error) {
 	return newZtime.MonthRange(year, month)
 }
 
-func Parse(str string) (time.Time, error) {
-	return newZtime.Parse(str)
+// Parse string to time
+func Parse(str string, format ...string) (time.Time, error) {
+	return newZtime.Parse(str, format...)
 }

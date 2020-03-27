@@ -1,9 +1,10 @@
 package zlog
 
 import (
-	"github.com/sohaha/zlsgo"
 	"os"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestLogTrack(T *testing.T) {
@@ -14,7 +15,6 @@ func TestLogTrack(T *testing.T) {
 func TestLog(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	text := "Text"
-
 	Debug("log with Debug")
 	Debugf("%s", "log with Debug")
 	Info("log with Info")
@@ -27,6 +27,7 @@ func TestLog(T *testing.T) {
 	Errorf("%s", "log with Error")
 	Println("log with Println")
 	Printf("%s", "log with Printf")
+	Dump("log with Dump", t, T,nil)
 
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()

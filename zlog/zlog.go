@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	Log    = NewZLog(os.Stderr, "", BitDefault, 6, true, 3)
+	Log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 3)
 	osExit = os.Exit
 )
 
@@ -68,6 +68,11 @@ func Debugf(format string, v ...interface{}) {
 // Debug Debug
 func Debug(v ...interface{}) {
 	Log.Debug(v...)
+}
+
+// Dump Dump
+func Dump(v ...interface{}) {
+	Log.Dump(v...)
 }
 
 // Successf Successf

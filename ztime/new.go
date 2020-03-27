@@ -1,12 +1,48 @@
 package ztime
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
-const timeTpl string = "2006-01-02 15:04:05"
+const (
+	timePattern = `(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})[:\sT-]*(\d{0,2}:{0,1}\d{0,2}:{0,1}\d{0,2}){0,1}\.{0,1}(\d{0,9})([\sZ]{0,1})([\+-]{0,1})([:\d]*)`
+)
+
+var (
+	timeTpl      = "2006-01-02 15:04:05"
+	formatKeyTpl = map[byte]string{
+		'd': "02",
+		'D': "Mon",
+		'w': "Monday",
+		'N': "Monday",
+		'S': "02",
+		'l': "Monday",
+		'F': "January",
+		'm': "01",
+		'M': "Jan",
+		'n': "1",
+		'Y': "2006",
+		'y': "06",
+		'a': "pm",
+		'A': "PM",
+		'g': "3",
+		'h': "03",
+		'H': "15",
+		'i': "04",
+		's': "05",
+		'O': "-0700",
+		'P': "-07:00",
+		'T': "MST",
+		'c': "2006-01-02T15:04:05-07:00",
+		'r': "Mon, 02 Jan 06 15:04 MST",
+	}
+)
 
 type TimeEngine struct {
 	zone *time.Location
@@ -21,15 +57,32 @@ func Zone(zone ...int) *time.Location {
 }
 
 // FormatTlp FormatTlp
-func FormatTlp(tpl string) string {
-	tpl = strings.ToLower(tpl)
-	tpl = strings.Replace(tpl, "y", "2006", -1)
-	tpl = strings.Replace(tpl, "m", "01", -1)
-	tpl = strings.Replace(tpl, "d", "02", -1)
-	tpl = strings.Replace(tpl, "h", "15", -1)
-	tpl = strings.Replace(tpl, "i", "04", -1)
-	tpl = strings.Replace(tpl, "s", "05", -1)
-	return tpl
+func FormatTlp(format string) string {
+	runes := []rune(format)
+	buffer := bytes.NewBuffer(nil)
+	for i := 0; i < len(runes); i++ {
+		switch runes[i] {
+		case '\\':
+			if i < len(runes)-1 {
+				buffer.WriteRune(runes[i+1])
+				i += 2
+				continue
+			} else {
+				return buffer.String()
+			}
+		default:
+			if runes[i] > 255 {
+				buffer.WriteRune(runes[i])
+				break
+			}
+			if f, ok := formatKeyTpl[byte(runes[i])]; ok {
+				buffer.WriteString(f)
+			} else {
+				buffer.WriteRune(runes[i])
+			}
+		}
+	}
+	return buffer.String()
 }
 
 // New new timeEngine
@@ -68,9 +121,9 @@ func (e *TimeEngine) FormatTime(t time.Time, format ...string) string {
 	t = e.in(t)
 	tpl := timeTpl
 	if len(format) > 0 {
-		tpl = format[0]
+		tpl = FormatTlp(format[0])
 	}
-	return t.Format(FormatTlp(tpl))
+	return t.Format(tpl)
 }
 
 // FormatTimestamp convert UNIX time to time string
@@ -79,8 +132,50 @@ func (e *TimeEngine) FormatTimestamp(timestamp int64, format ...string) string {
 }
 
 // Parse Parse
-func (e *TimeEngine) Parse(str string) (time.Time, error) {
-	return time.ParseInLocation(timeTpl, str, e.GetTimeZone())
+func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error) {
+	if len(format) > 0 {
+		return time.ParseInLocation(FormatTlp(format[0]), str, e.GetTimeZone())
+	}
+	var year, month, day, hour, min, sec string
+	match, err := zstring.RegexExtract(timePattern, str)
+	if err != nil {
+		return
+	}
+	matchLen := len(match)
+	if matchLen == 0 {
+		err = errors.New("cannot parse")
+		return
+	}
+	if matchLen > 1 && match[1] != "" {
+		for k, v := range match {
+			match[k] = strings.TrimSpace(v)
+		}
+		arr := make([]string, 3)
+		for _, v := range []string{"-", "/", "."} {
+			arr = strings.Split(match[1], v)
+			if len(arr) >= 3 {
+				break
+			}
+		}
+		if len(arr) < 3 {
+			err = errors.New("cannot parse date")
+			return
+		}
+		year = arr[0]
+		month = zstring.Pad(arr[1], 2, "0", zstring.PadLeft)
+		day = zstring.Pad(arr[2], 2, "0", zstring.PadLeft)
+	}
+	if len(match[2]) > 0 {
+		s := strings.Replace(match[2], ":", "", -1)
+		if len(s) < 6 {
+			s += strings.Repeat("0", 6-len(s))
+		}
+		hour = zstring.Pad(s[0:2], 2, "0", zstring.PadLeft)
+		min = zstring.Pad(s[2:4], 2, "0", zstring.PadLeft)
+		sec = zstring.Pad(s[4:6], 2, "0", zstring.PadLeft)
+	}
+	return time.ParseInLocation(timeTpl, fmt.Sprintf("%s-%s-%s %s:%s:%s", year, month, day, hour, min, sec), e.GetTimeZone())
+
 }
 
 func (e *TimeEngine) Week(t time.Time) int {
