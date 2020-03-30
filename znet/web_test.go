@@ -35,6 +35,7 @@ func newServer() *Engine {
 		engine.PreHandle(func(context *Context) (stop bool) {
 			return
 		})
+		CloseHotRestartFileMd5()
 	})
 	return engine
 }
@@ -79,17 +80,21 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 	return w
 }
 
-func TestWeb(tt *testing.T) {
-	T := zlsgo.NewTest(tt)
+func TestWeb(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	r := newServer()
+
+	_, ok := Server("Web-test")
+	tt.EqualExit(true, ok)
+
 	// r.SetMode(ReleaseMode)
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
-		tt.Log("TestWeb")
+		t.Log("TestWeb")
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 	})
-	T.Equal(200, w.Code)
-	T.Equal(expected, w.Body.String())
+	tt.Equal(200, w.Code)
+	tt.Equal(expected, w.Body.String())
 	r.GetMiddleware()
 }
 
@@ -187,22 +192,42 @@ func TestPost(tt *testing.T) {
 	T.Equal("ok", w.Body.String())
 }
 
-func TestHTML(tt *testing.T) {
-	T := zlsgo.NewTest(tt)
+func TestCustomMethod(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	r.SetCustomMethodField("_m_")
+
+	r.PUT("/CustomMethod", func(c *Context) {
+		c.String(200, `put`)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/CustomMethod", nil)
+
+	req.Header.Add("_m_", "put")
+	req.Host = host
+
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("put", w.Body.String())
+}
+
+func TestHTML(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	r := newServer()
 	w := newRequest(r, "GET", "/TestHTML", "/TestHTML", func(c *Context) {
-		tt.Log("TestHTML")
+		t.Log("TestHTML")
 		c.HTML(202, `<html>123</html>`)
 	})
-	T.Equal(202, w.Code)
-	T.EqualExit(`<html>123</html>`, w.Body.String())
+	tt.Equal(202, w.Code)
+	tt.EqualExit(`<html>123</html>`, w.Body.String())
 
 	w = newRequest(r, "GET", "/TestHTML2", "/TestHTML2", func(c *Context) {
-		tt.Log("TestHTML2")
+		t.Log("TestHTML2")
 		c.Template(202, `<html>{{.title}}</html>`, Data{"title": "ZlsGo"})
 	})
-	T.Equal(202, w.Code)
-	T.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
+	tt.Equal(202, w.Code)
+	tt.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
 }
 
 func TestMore(t *testing.T) {

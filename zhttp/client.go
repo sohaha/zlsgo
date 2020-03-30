@@ -136,7 +136,7 @@ func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
 	return nil
 }
 
-func (r *Engine) CloseProxy() error {
+func (r *Engine) RemoveProxy() error {
 	trans := r.getTransport()
 	if trans == nil {
 		return ErrNoTransport

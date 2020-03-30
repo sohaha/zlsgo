@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-17 13:45:52
- * @Last Modified by:   seekwe
- * @Last Modified time: 2020-02-17 12:22:00
- */
-
 package zlog
 
 import (
@@ -519,18 +512,20 @@ func writeByte(w io.Writer, b byte) {
 }
 
 func prependArgName(names []string, values []interface{}) []interface{} {
-	prepended := make([]interface{}, len(values))
+	vLen := len(values)
+	nLen := len(names)
+	prepended := make([]interface{}, vLen)
 	for i, value := range values {
 		name := ""
-		if i < len(names) {
+		if i < nLen {
 			name = names[i]
 		}
 		if name == "" {
-			prepended[i] = value
+			prepended[i] = OpTextWrap(OpBold, value.(string))
 			continue
 		}
 		name = ColorTextWrap(ColorBlue, OpTextWrap(OpBold, name))
-		prepended[i] = fmt.Sprintf("\n%s=%s", name, value)
+		prepended[i] = fmt.Sprintf("%s=%s", name, value)
 	}
 	return prepended
 }

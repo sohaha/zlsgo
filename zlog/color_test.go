@@ -13,7 +13,6 @@ func TestColor(t *testing.T) {
 	testText := "ok"
 	_ = os.Setenv("ConEmuANSI", "ON")
 	bl := IsSupportColor()
-	// T.Equal(true, bl)
 	OutAllColor()
 	if bl {
 		T.Equal(fmt.Sprintf("\x1b[%dm%s\x1b[0m", ColorGreen, testText), ColorTextWrap(ColorGreen, testText))

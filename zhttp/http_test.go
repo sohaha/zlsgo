@@ -2,7 +2,6 @@ package zhttp
 
 import (
 	"fmt"
-	zls "github.com/sohaha/zlsgo"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +9,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	zls "github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 func TestHttp(T *testing.T) {
@@ -170,50 +172,62 @@ func TestRes(t *testing.T) {
 	respBody, _ := ioutil.ReadAll(res.Body())
 	t.Log(string(respBody))
 }
-func TestHttpProxy(T *testing.T) {
-	t := zls.NewTest(T)
+
+func TestHttpProxy(t *testing.T) {
+	tt := zls.NewTest(t)
 	err := SetProxy(func(r *http.Request) (*url.URL, error) {
 		if strings.Contains(r.URL.String(), "qq.com") {
-			t.Log(r.URL.String(), "SetProxy get", "http://127.0.0.1:6666")
+			tt.Log(r.URL.String(), "SetProxy get", "http://127.0.0.1:6666")
 			return url.Parse("http://127.0.0.1:6666")
 		} else {
-			t.Log(r.URL.String(), "Not SetProxy")
+			tt.Log(r.URL.String(), "Not SetProxy")
 		}
 		return nil, nil
 	})
 	var res *Res
 	if err != nil {
-		t.T.Fatal(err)
+		tt.T.Fatal(err)
 	}
 
 	SetTimeout(10 * time.Second)
 
 	res, err = Get("http://www.qq.com")
 	if err == nil {
-		t.Log(res.Response().Status)
+		tt.Log(res.Response().Status)
 	} else {
-		t.Log(err)
+		tt.Log(err)
 	}
-	t.Equal(true, err != nil)
+	tt.Equal(true, err != nil)
 
 	res, err = Get("https://www.npmjs.com/package/zls-vue-spa/")
 	if err == nil {
-		t.Log(res.Response().Status)
+		tt.Log(res.Response().Status)
 	} else {
-		t.Log(err)
+		tt.Log(err)
 	}
-	t.Equal(false, err != nil)
+	tt.Equal(false, err != nil)
 }
 
-func TestHttpProxyUrl(T *testing.T) {
+func TestHttpProxyUrl(t *testing.T) {
 	err := SetProxyUrl("http://127.0.0.1:6666")
-	t := zls.NewTest(T)
+	tt := zls.NewTest(t)
 	if err != nil {
-		t.T.Fatal(err)
+		tt.T.Fatal(err)
 	}
 
 	SetTimeout(1 * time.Second)
 	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
 	})
-	t.Equal(true, err != nil)
+	tt.Equal(true, err != nil)
+}
+
+func TestToFile(t *testing.T) {
+	tt := zls.NewTest(t)
+	_ = RemoveProxy()
+	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json")
+	tt.EqualNil(err)
+	err = res.ToFile("../zhttp/package.json")
+	tt.EqualNil(err)
+	tt.Log(77)
+	zfile.Rmdir("../zhttp/package.json")
 }

@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-10 14:00:48
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-05 11:44:30
- */
-
 package zpprof
 
 import (
@@ -36,7 +29,7 @@ func infoHandler(c *znet.Context) {
 	info += fmt.Sprintf("%s:%s\n", "下次GC内存回收量", m.NextGC)
 	info += fmt.Sprintf("%s:%s\n", "GC暂停时间总量", m.PauseTotalNs)
 	info += fmt.Sprintf("%s:%s\n", "上次GC暂停时间", m.PauseNs)
-	fmt.Fprint(c.Writer, info)
+	_, _ = fmt.Fprint(c.Writer, info)
 }
 
 func indexHandler(c *znet.Context) {

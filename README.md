@@ -72,8 +72,9 @@ func main(){
 - [x] HttpServer
 - [x] HttpClient
 - [x] Logger
-- [x] Json
-- [ ] Validator
+- [x] Json processing
+- [x] String processing
+- [x] Validator
 - [ ] ...
 
 ## LICENSE

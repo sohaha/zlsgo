@@ -3,12 +3,15 @@ package znet
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zshell"
+	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 
 	"github.com/sohaha/zlsgo/zlog"
@@ -120,6 +123,7 @@ var (
 	ShutdownDone func()
 	// CloseHotRestart
 	CloseHotRestart bool
+	fileMd5         string
 	zservers        = map[string]*Engine{}
 	defaultAddr     = addrSt{
 		addr: ":3788",
@@ -128,6 +132,7 @@ var (
 
 func init() {
 	Log.ResetFlags(zlog.BitTime | zlog.BitLevel)
+	fileMd5, _ = zstring.Md5File(os.Args[0])
 }
 
 // New returns a newly initialized Engine object that implements the Engine
@@ -208,6 +213,11 @@ func (e *Engine) SetCustomMethodField(field string) {
 	e.customMethodType = field
 }
 
+// CloseHotRestartFileMd5 CloseHotRestartFileMd5
+func CloseHotRestartFileMd5() {
+	fileMd5 = ""
+}
+
 // SetMode Setting Server Mode
 func (e *Engine) SetMode(value string) {
 	var level int
@@ -274,7 +284,8 @@ func Run() {
 				}
 				srvMap.Store(addr, &serverMap{e, srv})
 
-				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+hostname)))
+				wrap := fmt.Sprintf("%s %s  Pid: %d", e.Log.OpTextWrap(zlog.OpBold, "Listen:"), hostname, os.Getpid())
+				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, wrap))
 				var err error
 				if isTls {
 					if cfg.Config != nil {
@@ -350,7 +361,10 @@ func Run() {
 }
 
 func runNewProcess() {
-	_, err := zshell.RunNewProcess()
+	if fileMd5 == "" {
+		Log.Warn("ignore execution file md5 check")
+	}
+	_, err := zshell.RunNewProcess(fileMd5)
 	if err != nil {
 		Log.Error(err)
 	}

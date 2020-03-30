@@ -673,8 +673,8 @@ func SetTimeout(d time.Duration) {
 	std.SetTimeout(d)
 }
 
-func CloseProxy() error {
-	return std.CloseProxy()
+func RemoveProxy() error {
+	return std.RemoveProxy()
 }
 
 func SetProxyUrl(rawurl string) error {

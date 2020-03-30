@@ -66,6 +66,16 @@ func main(){
 
 Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
 
+## Todo
+
+- [x] HttpServer
+- [x] HttpClient
+- [x] Logger
+- [x] Json processing
+- [x] String processing
+- [x] Validator
+- [ ] ...
+
 ## LICENSE
 
 [MIT](LICENSE)

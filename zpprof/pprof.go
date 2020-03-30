@@ -9,6 +9,8 @@
 package zpprof
 
 import (
+	"net/http"
+
 	"github.com/sohaha/zlsgo/znet"
 )
 
@@ -38,4 +40,12 @@ func Register(r *znet.Engine, token string) (RouterGroup *znet.Engine) {
 		g.GET("/pprof/trace", traceHandler)
 	})
 	return
+}
+
+func ListenAndServe(addr ...string) error {
+	a := "localhost:8082"
+	if len(addr) > 0 {
+		a = addr[0]
+	}
+	return http.ListenAndServe(a, nil)
 }

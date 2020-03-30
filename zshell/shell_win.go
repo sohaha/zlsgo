@@ -6,6 +6,6 @@ import (
 	"errors"
 )
 
-func RunNewProcess() (pid int, err error) {
+func RunNewProcess(filemd5 string) (pid int, err error) {
 	return 0, errors.New("Windows does not support")
 }

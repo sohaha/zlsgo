@@ -106,9 +106,6 @@ func argNames(filename string, line int) ([]string, error) {
 		if fset.Position(call.End()).Line != line {
 			return true
 		}
-		if !isDumpCall(call) {
-			return true
-		}
 		for _, arg := range call.Args {
 			names = append(names, argName(arg))
 		}
@@ -116,33 +113,6 @@ func argNames(filename string, line int) ([]string, error) {
 	})
 
 	return names, nil
-}
-
-func isDumpCall(n *ast.CallExpr) bool {
-	return isDumpFunction(n) || isDumpPackage(n)
-}
-
-func isDumpFunction(n *ast.CallExpr) bool {
-	ident, is := n.Fun.(*ast.Ident)
-	if !is {
-		return false
-	}
-
-	return ident.Name == "Dump"
-}
-
-func isDumpPackage(n *ast.CallExpr) bool {
-	sel, is := n.Fun.(*ast.SelectorExpr)
-	if !is {
-		return false
-	}
-
-	ident, is := sel.X.(*ast.Ident)
-	if !is {
-		return false
-	}
-
-	return ident.Name == "Log"
 }
 
 func exprToString(arg ast.Expr) string {
