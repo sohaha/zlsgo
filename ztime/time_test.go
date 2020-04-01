@@ -35,15 +35,13 @@ func TestNewTime(t *testing.T) {
 	tt.Equal(currentDate, FormatTime(nowTime))
 	tt.Equal(currentDate, FormatTimestamp(now))
 
-	beginTime, endTime, err := MonthRange(0, 0)
-	tt.EqualNil(err)
-	tt.Equal(int64(1582992000), beginTime)
-	tt.Equal(int64(1585670399), endTime)
-
-	beginTime, endTime, err = MonthRange(0, 10)
+	beginTime, endTime, err := MonthRange(2020, 10)
 	tt.EqualNil(err)
 	tt.Equal(int64(1601481600), beginTime)
 	tt.Equal(int64(1604159999), endTime)
+
+	_, _, err = MonthRange(0, 0)
+	tt.EqualNil(err)
 
 	_, _, err = MonthRange(0, 30)
 	tt.Equal(true, err != nil)
