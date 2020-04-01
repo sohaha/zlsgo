@@ -202,7 +202,6 @@ func (r *Res) Dump() string {
 	l := dump.Len()
 	if l > 0 {
 		dump.WriteString(zstring.Pad("", 30, "=", zstring.PadRight))
-		// l = dump.Len()
 	}
 
 	r.dumpResonse(dump)

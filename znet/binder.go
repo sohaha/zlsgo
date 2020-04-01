@@ -171,7 +171,7 @@ func valueBinder(f func(value string, dst reflect.Value) error) Func {
 
 func bindValue(val string, dst reflect.Value) error {
 	return Binder{
-		Values: map[string][]string{"": []string{val}},
+		Values: map[string][]string{"": {val}},
 	}.field(dst, "")
 }
 
@@ -346,7 +346,7 @@ func nextKey(key string) string {
 
 func bindStruct(binder Binder, name string, dst reflect.Value) error {
 	fieldValues := make(map[string]struct{})
-	for key, _ := range binder.Values {
+	for key := range binder.Values {
 		if name != "" && !strings.HasPrefix(key, name+".") {
 			continue
 		}

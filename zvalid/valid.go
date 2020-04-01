@@ -75,16 +75,12 @@ func (v *Engine) setError(msg string, customError ...string) error {
 // Required Must have a value (zero values ​​other than "" are allowed). If this rule is not used, when the parameter value is "", data validation does not take effect by default
 func (v *Engine) Required(customError ...string) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
-		if v.err != nil {
-			return v
-		}
 		if v.value == "" {
 			v.err = v.setError("不能为空", customError...)
 			return v
 		}
 		return v
-
-	})
+	}, true)
 }
 
 // Customize customize valid
@@ -92,12 +88,21 @@ func (v *Engine) Customize(fn func(rawValue string, err error) (newValue string,
 	return pushQueue(v, func(v *Engine) *Engine {
 		v.value, v.err = fn(v.value, v.err)
 		return v
-	})
+	},true)
 }
 
-func pushQueue(v *Engine, fn queueT) *Engine {
+func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) *Engine {
+	pFn := fn
+	if !(len(DisableCheckErr) > 0 && DisableCheckErr[0]) {
+		pFn = func(v *Engine) *Engine {
+			if v.err != nil {
+				return v
+			}
+			return fn(v)
+		}
+	}
 	vc := clone(v)
-	vc.queue.PushBack(fn)
+	vc.queue.PushBack(pFn)
 	return vc
 }
 

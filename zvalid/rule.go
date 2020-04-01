@@ -2,12 +2,13 @@ package zvalid
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zjson"
-	"github.com/sohaha/zlsgo/zstring"
 	"net"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 // IsBool booleanValue

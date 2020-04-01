@@ -23,7 +23,7 @@ func (v *Engine) Default(value interface{}) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
 		v.defaultValue = value
 		return v
-	})
+	},true)
 }
 
 // Separator specify the separator of the slice type
@@ -56,6 +56,7 @@ func BatchVar(target interface{}, source *Engine) *ele {
 
 // Var assign the filtered result to the specified variable
 func Var(target interface{}, source *Engine) error {
+	source.Result()
 	if source.err != nil && source.defaultValue == nil {
 		if source.silent {
 			return nil

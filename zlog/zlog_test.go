@@ -27,7 +27,7 @@ func TestLog(T *testing.T) {
 	Errorf("%s", "log with Error")
 	Println("log with Println")
 	Printf("%s", "log with Printf")
-	Dump("log with Dump", t, T,nil)
+	Dump("log with Dump", t, T, nil)
 
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()

@@ -103,9 +103,9 @@ func (v *Engine) Result() (string, error) {
 				q(v)
 			}
 			v.queue.Remove(queue)
+
 		}
 	}
-
 	if v.err != nil {
 		return "", v.err
 	}
