@@ -1,3 +1,4 @@
+// Package zshell use a simple way to execute shell commands
 package zshell
 
 import (

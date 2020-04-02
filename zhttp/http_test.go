@@ -224,10 +224,12 @@ func TestHttpProxyUrl(t *testing.T) {
 func TestToFile(t *testing.T) {
 	tt := zls.NewTest(t)
 	_ = RemoveProxy()
+	SetTimeout(20 * time.Second)
 	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json")
 	tt.EqualNil(err)
-	err = res.ToFile("../zhttp/package.json")
-	tt.EqualNil(err)
-	tt.Log(77)
+	if err != nil {
+		err = res.ToFile("../zhttp/package.json")
+		tt.EqualNil(err)
+	}
 	zfile.Rmdir("../zhttp/package.json")
 }

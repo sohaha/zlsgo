@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-15 19:37:01
- * @Last Modified by:   seekwe
- * @Last Modified time: 2020-01-31 22:45:51
- */
-
 // Package zhttp provides http client related operations
 package zhttp
 

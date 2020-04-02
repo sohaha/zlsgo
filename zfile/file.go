@@ -1,10 +1,4 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-17 17:08:52
- * @Last Modified by:   seekwe
- * @Last Modified time: 2020-02-02 21:31:04
- */
-
+// Package zfile file and path operations in daily development
 package zfile
 
 import (

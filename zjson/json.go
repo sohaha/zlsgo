@@ -1,3 +1,4 @@
+// Package zjson json data read and write operations
 package zjson
 
 import (

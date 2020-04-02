@@ -67,23 +67,23 @@ func (c *Context) GetHeader(key string) string {
 
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
-	c.Info.Mutex.Lock()
+	c.Info.Lock()
 	if value == "" {
 		delete(c.Info.heades, key)
 	} else {
 		c.Info.heades[key] = value
 	}
-	c.Info.Mutex.Unlock()
+	c.Info.Unlock()
 }
 
 func (c *Context) done() {
 	data := c.PrevContent()
-	c.Info.Mutex.RLock()
+	c.Info.RLock()
 	r := c.Info.render
 	for key, value := range c.Info.heades {
 		c.Writer.Header().Set(key, value)
 	}
-	c.Info.Mutex.RUnlock()
+	c.Info.RUnlock()
 	if r != nil {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)
@@ -97,10 +97,10 @@ func (c *Context) done() {
 }
 
 func (c *Context) Next() (next HandlerFunc) {
-	c.Info.Mutex.RLock()
+	c.Info.RLock()
 	StopHandle := c.Info.StopHandle
 	middlewareLen := len(c.Info.middleware)
-	c.Info.Mutex.RUnlock()
+	c.Info.RUnlock()
 	if !StopHandle {
 		if middlewareLen > 0 {
 			next = c.Info.middleware[0]
@@ -162,19 +162,19 @@ func (c *Context) ContentType() string {
 
 // WithValue context sharing data
 func (c *Context) WithValue(key string, value interface{}) *Context {
-	c.Info.Mutex.Lock()
+	c.Info.Lock()
 	c.Info.customizeData[key] = value
-	c.Info.Mutex.Unlock()
+	c.Info.Unlock()
 	return c
 }
 
 // Value get context sharing data
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
-	c.Info.Mutex.RLock()
+	c.Info.RLock()
 	value, ok = c.Info.customizeData[key]
 	if !ok && (len(def) > 0) {
 		value = def[0]
 	}
-	c.Info.Mutex.RUnlock()
+	c.Info.RUnlock()
 	return
 }

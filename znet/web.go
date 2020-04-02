@@ -84,8 +84,8 @@ type (
 	}
 
 	info struct {
-		Code          int
-		Mutex         sync.RWMutex
+		Code int
+		sync.RWMutex
 		StartTime     time.Time
 		StopHandle    bool
 		handlerLen    int
@@ -144,7 +144,7 @@ func New(serverName ...string) *Engine {
 
 	log := zlog.New("[" + name + "] ")
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
-	log.SetLogLevel(zlog.LogWarn)
+	log.SetLogLevel(zlog.LogInfo)
 
 	route := &router{
 		trees: make(map[string]*Tree),
@@ -284,8 +284,8 @@ func Run() {
 				}
 				srvMap.Store(addr, &serverMap{e, srv})
 
-				wrap := fmt.Sprintf("%s %s  Pid: %d", e.Log.OpTextWrap(zlog.OpBold, "Listen:"), hostname, os.Getpid())
-				e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorLightGreen, zlog.ColorDefault, wrap))
+				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
+				e.Log.Successf("%s %s  %s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapPid)
 				var err error
 				if isTls {
 					if cfg.Config != nil {
@@ -335,7 +335,7 @@ func Run() {
 			if s, ok := value.(*serverMap); ok {
 				r := s.engine
 				if iskill {
-					r.Log.Warn("Shutdown server ...")
+					r.Log.Info("Shutdown server ...")
 				}
 				err := s.srv.Shutdown(ctx)
 				if err != nil {

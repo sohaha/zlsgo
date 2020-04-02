@@ -1,3 +1,4 @@
+// Package zlog provide daily log service
 package zlog
 
 import (

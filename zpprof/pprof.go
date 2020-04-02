@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-10 13:52:27
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-28 15:24:24
- */
-
 // Package zpprof provides a register for zweb framework to use net/http/pprof easily.
 package zpprof
 

@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 12:44:23
- * @Last Modified by:   seekwe
- * @Last Modified time: 2020-01-30 18:35:06
- */
-
 // Package zstring provides String related operations
 package zstring
 

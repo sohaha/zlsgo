@@ -1,3 +1,4 @@
+// Package zvalid data verification
 package zvalid
 
 import (
@@ -88,7 +89,7 @@ func (v *Engine) Customize(fn func(rawValue string, err error) (newValue string,
 	return pushQueue(v, func(v *Engine) *Engine {
 		v.value, v.err = fn(v.value, v.err)
 		return v
-	},true)
+	}, true)
 }
 
 func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) *Engine {

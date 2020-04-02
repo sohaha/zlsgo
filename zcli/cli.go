@@ -1,3 +1,4 @@
+// Package zcli quickly build cli applications
 package zcli
 
 import (

@@ -72,11 +72,11 @@ var (
 )
 
 func (c *Context) render(code int, r render) {
-	c.Info.Mutex.Lock()
+	c.Info.Lock()
 	c.Info.Code = code
 	c.Info.render = r
 	c.Info.StopHandle = true
-	c.Info.Mutex.Unlock()
+	c.Info.Unlock()
 }
 
 func (r *renderByte) Content(c *Context) []byte {
@@ -203,9 +203,9 @@ func (c *Context) Template(code int, name string, data ...interface{}) {
 
 // Abort Abort
 func (c *Context) Abort(code ...int) {
-	c.Info.Mutex.Lock()
+	c.Info.Lock()
 	c.Info.StopHandle = true
-	c.Info.Mutex.Unlock()
+	c.Info.Unlock()
 	if len(code) > 0 {
 		c.SetStatus(code[0])
 	}
@@ -222,9 +222,9 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 }
 
 func (c *Context) SetStatus(code int) *Context {
-	c.Info.Mutex.Lock()
+	c.Info.Lock()
 	c.Info.Code = code
-	c.Info.Mutex.Unlock()
+	c.Info.Unlock()
 	return c
 }
 
@@ -234,11 +234,11 @@ func (c *Context) SetContentType(contentType string) *Context {
 }
 
 func (c *Context) PrevContent() *PrevData {
-	c.Info.Mutex.RLock()
+	c.Info.RLock()
 	r := c.Info.render
 	code := c.Info.Code
 	ctype, hasType := c.Info.heades["Content-Type"]
-	c.Info.Mutex.RUnlock()
+	c.Info.RUnlock()
 	if !hasType {
 		ctype = ContentTypePlain
 	}

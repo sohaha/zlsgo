@@ -23,7 +23,7 @@ func (v *Engine) Default(value interface{}) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
 		v.defaultValue = value
 		return v
-	},true)
+	}, true)
 }
 
 // Separator specify the separator of the slice type

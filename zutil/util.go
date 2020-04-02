@@ -1,3 +1,4 @@
+// Package zutil daily development helper functions
 package zutil
 
 import (
