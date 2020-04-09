@@ -11,7 +11,7 @@ import (
 )
 
 func TestListenAndServe(t *testing.T) {
-	ListenAndServe("127.0.0.1:67890")
+	_ = ListenAndServe("127.0.0.1:67890")
 }
 
 func TestRegister(t *testing.T) {

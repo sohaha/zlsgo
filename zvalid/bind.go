@@ -55,8 +55,11 @@ func BatchVar(target interface{}, source *Engine) *ele {
 }
 
 // Var assign the filtered result to the specified variable
-func Var(target interface{}, source *Engine) error {
-	source.Result()
+func Var(target interface{}, source *Engine, name ...string) error {
+	_, _ = source.Result()
+	if len(name) > 0 {
+		source.name = name[0]
+	}
 	if source.err != nil && source.defaultValue == nil {
 		if source.silent {
 			return nil

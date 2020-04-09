@@ -2,6 +2,7 @@
 package zlog
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -73,7 +74,19 @@ func Debug(v ...interface{}) {
 
 // Dump Dump
 func Dump(v ...interface{}) {
-	Log.Dump(v...)
+	if Log.level < LogDump {
+		return
+	}
+	args := formatArgs(v...)
+	_, file, line, ok := callerName(1)
+	if ok {
+		names, err := argNames(file, line)
+		if err == nil {
+			args = prependArgName(names, args)
+		}
+	}
+
+	_ = Log.OutPut(LogDump, fmt.Sprintln(args...), true)
 }
 
 // Successf Successf

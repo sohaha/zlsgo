@@ -46,9 +46,38 @@ func TestValidNew(tt *testing.T) {
 	str, err = validObj.Verifi("", "测试4").Customize(func(rawValue string, err error) (newValue string, newErr error) {
 		newValue = "test4"
 		return
-	}).Result()
+	}).String()
 	t.Equal(nil, err)
 	tt.Log(str, err)
+
+}
+
+func TestInt(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	i, err := Int(64).MaxInt(60).Int()
+	tt.Equal(true, err != nil)
+	t.Log(i)
+
+	i, err = Int(6).MaxInt(60).Int()
+	tt.EqualNil(err)
+	t.Log(i)
+}
+
+func TestFloat64(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	i, err := Int(6).MaxInt(60).Float64()
+	tt.EqualNil(err)
+	t.Log(i)
+}
+
+func TestBool(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	b, err := Text("true").Bool()
+	tt.EqualNil(err)
+	tt.Equal(true, b)
+	b, err = Text("0").Bool()
+	tt.EqualNil(err)
+	tt.Equal(false, b)
 }
 
 func BenchmarkNew0(b *testing.B) {

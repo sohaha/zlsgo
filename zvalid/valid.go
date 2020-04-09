@@ -4,6 +4,7 @@ package zvalid
 import (
 	"container/list"
 	"errors"
+	"strconv"
 )
 
 type (
@@ -53,6 +54,10 @@ func clone(v *Engine) *Engine {
 		defaultValue: v.defaultValue,
 		queue:        queue,
 	}
+}
+
+func Int(value int, name ...string) *Engine {
+	return Text(strconv.Itoa(value), name...)
 }
 
 func Text(value string, name ...string) *Engine {

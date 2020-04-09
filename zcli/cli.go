@@ -114,7 +114,7 @@ func ShowFlags(fg *flag.FlagSet) {
 		} else {
 			s.WriteString("\n    \t")
 		}
-		s.WriteString(strings.ReplaceAll(usage, "\n", "\n    \t"))
+		s.WriteString(strings.Replace(usage, "\n", "\n    \t", -1))
 		defValue := ztype.ToString(f.DefValue)
 		if defValue != "" && defValue != "0" && defValue != "false" {
 			s.WriteString(fmt.Sprintf(" (default %v)", defValue))

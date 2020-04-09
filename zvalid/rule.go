@@ -141,7 +141,7 @@ func (v *Engine) IsChinese(customError ...string) *Engine {
 		}
 		for _, rv := range v.value {
 			if !unicode.Is(unicode.Scripts["Han"], rv) {
-				v.err = v.setError("必须是汉字", customError...)
+				v.err = v.setError("必须是中文", customError...)
 				return v
 			}
 		}
@@ -155,8 +155,8 @@ func (v *Engine) IsMobile(customError ...string) *Engine {
 		if ignore(v) {
 			return v
 		}
-		if zstring.RegexMatch(`^1[\d]{10}$`, v.value) {
-			v.err = v.setError("必须是手机号码", customError...)
+		if !zstring.RegexMatch(`^1[\d]{10}$`, v.value) {
+			v.err = v.setError("格式不正确", customError...)
 			return v
 		}
 
@@ -170,43 +170,43 @@ func (v *Engine) IsMail(customError ...string) *Engine {
 		if ignore(v) {
 			return v
 		}
+		errMsg := v.setError("格式不正确", customError...)
 		emailSlice := strings.Split(v.value, "@")
 		if len(emailSlice) != 2 {
-			v.err = v.setError("格式不正确", customError...)
+			v.err = errMsg
 			return v
 		}
 		if emailSlice[0] == "" || emailSlice[1] == "" {
-			v.err = v.setError("格式不正确", customError...)
+			v.err = errMsg
 			return v
 		}
 
 		for k, rv := range emailSlice[0] {
 			if k == 0 && !unicode.IsLetter(rv) && !unicode.IsDigit(rv) {
-				v.err = v.setError("格式不正确", customError...)
+				v.err = errMsg
 				return v
 			} else if !unicode.IsLetter(rv) && !unicode.IsDigit(rv) && rv != '@' && rv != '.' && rv != '_' && rv != '-' {
-				v.err = v.setError("格式不正确", customError...)
+				v.err = errMsg
 				return v
 			}
 		}
 
 		domainSlice := strings.Split(emailSlice[1], ".")
 		if len(domainSlice) < 2 {
-			v.err = v.setError("格式不正确", customError...)
+			v.err = errMsg
 			return v
 		}
 		domainSliceLen := len(domainSlice)
 		for i := 0; i < domainSliceLen; i++ {
 			for k, rv := range domainSlice[i] {
-				// nolint
 				if i != domainSliceLen-1 && k == 0 && !unicode.IsLetter(rv) && !unicode.IsDigit(rv) {
-					v.err = v.setError("格式不正确", customError...)
+					v.err = errMsg
 					return v
 				} else if !unicode.IsLetter(rv) && !unicode.IsDigit(rv) && rv != '.' && rv != '_' && rv != '-' {
-					v.err = v.setError("格式不正确", customError...)
+					v.err = errMsg
 					return v
 				} else if i == domainSliceLen-1 && !unicode.IsLetter(rv) {
-					v.err = v.setError("格式不正确", customError...)
+					v.err = errMsg
 					return v
 				}
 			}
@@ -251,7 +251,7 @@ func (v *Engine) IsJSON(customError ...string) *Engine {
 		if ignore(v) {
 			return v
 		}
-		if zjson.Valid(v.value) {
+		if !zjson.Valid(v.value) {
 			v.err = v.setError("格式不正确", customError...)
 			return v
 		}
@@ -266,6 +266,10 @@ func (v *Engine) IsChineseIDNumber(customError ...string) *Engine {
 			return v
 		}
 		var idV int
+		if len(v.value) < 18 {
+			v.err = v.setError("格式不正确", customError...)
+			return v
+		}
 		if v.value[17:] == "X" {
 			idV = 88
 		} else {
@@ -312,6 +316,9 @@ func (v *Engine) IsChineseIDNumber(customError ...string) *Engine {
 // MinLength minimum length
 func (v *Engine) MinLength(min int, customError ...string) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
+		if ignore(v) {
+			return v
+		}
 		if len(v.value) < min {
 			v.err = v.setError("长度不能小于"+strconv.Itoa(min)+"个字符", customError...)
 		}
@@ -322,7 +329,7 @@ func (v *Engine) MinLength(min int, customError ...string) *Engine {
 // MinUTF8Length utf8 encoding minimum length
 func (v *Engine) MinUTF8Length(min int, customError ...string) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
-		if zstring.Len(v.value) < min {
+		if !ignore(v) && zstring.Len(v.value) < min {
 			v.err = v.setError("长度不能小于"+strconv.Itoa(min)+"个字符", customError...)
 		}
 		return v
@@ -352,11 +359,7 @@ func (v *Engine) MaxUTF8Length(max int, customError ...string) *Engine {
 // MinInt minimum integer value
 func (v *Engine) MinInt(min int, customError ...string) *Engine {
 	return pushQueue(v, func(v *Engine) *Engine {
-		if v.err != nil {
-			return v
-		}
-		if v.value == "" {
-			v.err = v.setError("检查失败，不能小于"+strconv.Itoa(min), customError...)
+		if ignore(v) {
 			return v
 		}
 		if v.i == 0 {

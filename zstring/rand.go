@@ -32,3 +32,13 @@ func Rand(n int, tpl ...string) string {
 	}
 	return Bytes2String(b)
 }
+
+func UUID(workerid ...int64) int64 {
+	var wid int64 = 0
+	if len(workerid) > 0 {
+		wid = workerid[0]
+	}
+	w, _ := NewIdWorker(wid)
+	id, _ := w.Id()
+	return id
+}

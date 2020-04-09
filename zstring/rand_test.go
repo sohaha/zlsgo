@@ -11,6 +11,7 @@ func TestRand(T *testing.T) {
 	t.Log(Rand(10))
 	t.Log(Rand(4, "a1"))
 	t.Log(RandInt(4, 10))
+	t.Log(UUID())
 }
 
 func BenchmarkRandStr(b *testing.B) {

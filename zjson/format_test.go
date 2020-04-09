@@ -19,23 +19,23 @@ func TestDiscard(T *testing.T) {
 }`))
 }
 
-func TestFormat(T *testing.T) {
-	t := zlsgo.NewTest(T)
+func TestFormat(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	pretty := Format(zstring.String2Bytes(demo))
-	t.Log(zstring.Bytes2String(pretty))
+	tt.Log(zstring.Bytes2String(pretty))
 
 	str2 := Ugly(pretty)
-	t.Log(zstring.Bytes2String(str2))
+	tt.Log(zstring.Bytes2String(str2))
 
 	str3 := FormatOptions(str2, &StFormatOptions{Width: 5, Prefix: "", SortKeys: true})
-	t.Log(zstring.Bytes2String(str3))
+	tt.Log(zstring.Bytes2String(str3))
 
 	str4 := Ugly(str3)
-	t.Log(zstring.Bytes2String(str4))
+	tt.Log(zstring.Bytes2String(str4))
 
 	str5 := Format([]byte("1668"))
-	t.Log(zstring.Bytes2String(str5))
+	tt.Log(zstring.Bytes2String(str5))
 
 	str6 := Ugly(str5)
-	t.Log(zstring.Bytes2String(str6))
+	tt.Log(zstring.Bytes2String(str6))
 }
