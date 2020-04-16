@@ -38,6 +38,14 @@ func Get(key interface{}) (value interface{}, err error) {
 	return ite.Get(key)
 }
 
+func GetInt(key interface{}) (value int, err error) {
+	return ite.GetInt(key)
+}
+
+func GetString(key interface{}) (value string, err error) {
+	return ite.GetString(key)
+}
+
 func GetRaw(key interface{}) (*Item, error) {
 	return ite.GetRaw(key)
 }

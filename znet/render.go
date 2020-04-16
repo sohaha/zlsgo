@@ -51,6 +51,7 @@ type (
 		Name        string
 		Data        interface{}
 		ContentDate []byte
+		FuncMap     template.FuncMap
 	}
 	Api struct {
 		Code int         `json:"code" example:"200"`
@@ -129,14 +130,14 @@ func (r *renderHTML) Content(c *Context) []byte {
 	if r.Name != "" {
 		var t *template.Template
 		var err error
-		t, err = templateParse(r.Name)
+		t, err = templateParse(r.Name,r.FuncMap)
 		if err != nil {
-			return r.ContentDate
+			panic(err)
 		}
 		var buf bytes.Buffer
 		err = t.Execute(&buf, r.Data)
 		if err != nil {
-			return r.ContentDate
+			panic(err)
 		}
 		r.ContentDate = buf.Bytes()
 	} else {
@@ -190,14 +191,15 @@ func (c *Context) HTML(code int, html string) {
 }
 
 // Template export template
-func (c *Context) Template(code int, name string, data ...interface{}) {
-	var _data interface{}
-	if len(data) > 0 {
-		_data = data[0]
+func (c *Context) Template(code int, name string, data interface{}, funcMap ...map[string]interface{}) {
+	var fn template.FuncMap
+	if len(funcMap) > 0 {
+		fn = funcMap[0]
 	}
 	c.render(code, &renderHTML{
-		Name: name,
-		Data: _data,
+		Name:    name,
+		Data:    data,
+		FuncMap: fn,
 	})
 }
 

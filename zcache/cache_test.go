@@ -199,3 +199,17 @@ func TestGetLocked(t *testing.T) {
 	tt.Equal(true, set == nil)
 	tt.Equal("GetLocked ok", data)
 }
+
+func TestOther(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	zcache.Set("TestOther", "123", 1)
+	s, err := zcache.GetString("TestOther")
+	tt.EqualNil(err)
+	tt.Equal("123", s)
+
+	zcache.Set("TestOther", 123, 1)
+	i, err := zcache.GetInt("TestOther")
+	tt.EqualNil(err)
+	tt.Equal(123, i)
+}

@@ -1,10 +1,11 @@
 package znet
 
 import (
-	"github.com/sohaha/zlsgo/zfile"
-	"github.com/sohaha/zlsgo/zstring"
 	"net/http"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zstring"
 
 	"html/template"
 )
@@ -48,11 +49,18 @@ func resolveHostname(addrString string) string {
 	return addrString
 }
 
-func templateParse(file string) (t *template.Template, err error) {
+func templateParse(file string, funcMap template.FuncMap) (t *template.Template, err error) {
 	if zfile.FileExist(file) {
 		t, err = template.ParseFiles(file)
+		if err == nil && funcMap != nil {
+			t.Funcs(funcMap)
+		}
 	} else {
-		t, err = template.New(file).Parse(file)
+		t = template.New(file)
+		if funcMap != nil {
+			t.Funcs(funcMap)
+		}
+		t, err = t.Parse(file)
 	}
 	return
 }

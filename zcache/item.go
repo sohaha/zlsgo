@@ -18,8 +18,8 @@ type Item struct {
 	deleteCallback   func(item *Item) bool
 }
 
-// newCacheItem newCacheItem
-func newCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *Item {
+// NewCacheItem NewCacheItem
+func NewCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *Item {
 	t := time.Now()
 	return &Item{
 		key:              key,

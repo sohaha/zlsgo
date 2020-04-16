@@ -153,7 +153,7 @@ func (table *Table) addInternal(item *Item) {
 
 // SetRaw set cache
 func (table *Table) SetRaw(key, data interface{}, lifeSpan time.Duration, intervalLifeSpan ...bool) *Item {
-	item := newCacheItem(key, data, lifeSpan)
+	item := NewCacheItem(key, data, lifeSpan)
 	if len(intervalLifeSpan) > 0 {
 		item.intervalLifeSpan = intervalLifeSpan[0]
 	}
@@ -224,7 +224,7 @@ func (table *Table) Add(key interface{}, data interface{}, lifeSpan time.Duratio
 		return false
 	}
 
-	item := newCacheItem(key, data, lifeSpan)
+	item := NewCacheItem(key, data, lifeSpan)
 	if len(intervalLifeSpan) > 0 {
 		item.intervalLifeSpan = intervalLifeSpan[0]
 	}
@@ -246,7 +246,7 @@ func (table *Table) GetLocked(key interface{}) (interface{}, func(data interface
 	tmp.Lock()
 	return nil, func(data interface{}, lifeSpan uint, interval ...bool) {
 		tmp.Unlock()
-		item := newCacheItem(key, data, time.Duration(lifeSpan)*time.Second)
+		item := NewCacheItem(key, data, time.Duration(lifeSpan)*time.Second)
 		if len(interval) > 0 {
 			item.intervalLifeSpan = interval[0]
 		}
@@ -286,6 +286,25 @@ func (table *Table) Get(key interface{}, args ...interface{}) (value interface{}
 		return
 	}
 	value = data.Data()
+	return
+}
+
+func (table *Table) GetString(key interface{}, args ...interface{}) (value string, err error) {
+	data, err := table.Get(key, args...)
+	if err != nil {
+		return
+	}
+	value, _ = data.(string)
+	return
+}
+
+func (table *Table) GetInt(key interface{}, args ...interface{}) (value int, err error) {
+	data, err := table.Get(key, args...)
+	if err != nil {
+		return
+	}
+	value, _ = data.(int)
+
 	return
 }
 

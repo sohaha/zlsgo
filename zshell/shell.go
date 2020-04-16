@@ -44,7 +44,7 @@ func (s *shellStdBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
 
-func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
+func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
 
 	var (
@@ -53,7 +53,7 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 		stderr *shellStdBuffer
 	)
 
-	if strings.TrimSpace(command) == "" {
+	if len(command) == 0 {
 		return 1, "", "", errors.New("no such command")
 	}
 
@@ -61,9 +61,7 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 		fmt.Println(fmt.Sprintf("[Command]\n%s\n%s",
 			command, strings.Repeat("-", len(command))))
 	}
-
-	var arr = strings.Split(command, " ")
-	var cmd = exec.Command(arr[0], arr[1:]...)
+	var cmd = exec.Command(command[0], command[1:]...)
 
 	if Env == nil {
 		cmd.Env = os.Environ()
@@ -106,12 +104,12 @@ func execCommand(command string, stdIn io.Reader, stdOut io.Writer,
 }
 
 func Run(command string) (code int, outStr, errStr string, err error) {
-	return execCommand(command, nil, nil, nil)
+	return ExecCommand(strings.Split(command, " "), nil, nil, nil)
 }
 
 func OutRun(command string, stdIn io.Reader, stdOut io.Writer,
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
-	return execCommand(command, stdIn, stdOut, stdErr)
+	return ExecCommand(strings.Split(command, " "), stdIn, stdOut, stdErr)
 }
 
 func BgRun(command string) (err error) {

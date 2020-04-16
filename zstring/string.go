@@ -85,7 +85,7 @@ func Bytes2String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
-// String2Bytes string to bytes
+// String2Bytes string to bytes, remark: read only
 func String2Bytes(s string) []byte {
 	str := (*stringStruct)(unsafe.Pointer(&s))
 	ret := sliceT{array: str.str, len: str.len, cap: str.len}
