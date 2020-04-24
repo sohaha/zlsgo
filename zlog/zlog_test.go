@@ -32,7 +32,7 @@ func TestLog(T *testing.T) {
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()
 	t.Equal(LogFatal, level)
-	ResetFlags(BitLevel | BitShortFile | BitStdFlag)
+	ResetFlags(BitLevel | BitShortFile | BitTime)
 	flage := GetFlags()
 	t.Equal(BitDefault, flage)
 	DisableConsoleColor()
