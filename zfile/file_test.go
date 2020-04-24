@@ -6,6 +6,7 @@ import (
 	"time"
 
 	. "github.com/sohaha/zlsgo"
+	"sync"
 )
 
 func TestFile(T *testing.T) {
@@ -33,11 +34,23 @@ func TestFile(T *testing.T) {
 	t.Equal("ok", dirPath)
 
 	path := RealPathMkdir("../tmp")
-	RealPathMkdir(path + "/ooo")
-	t.Log(path)
+	path2 := RealPathMkdir(path + "/ooo")
+	T.Log(path, path2)
 	t.Equal(true, Rmdir(path, true))
 	t.Equal(true, Rmdir(path))
-	_ = ProgramPath(true)
+	ePath := ProgramPath(true)
+	T.Log(ePath)
+	SwitchRealPath2ProgramPath = true
+	path = RealPathMkdir("../../ppppp")
+	testPath := ePath + "../../ppppp"
+	t.EqualTrue(DirExist(testPath))
+	ok := Rmdir(testPath)
+
+	T.Log(path, testPath, ok)
+	var g sync.WaitGroup
+	g.Add(1)
+	//g.Wait()
+
 }
 
 func TestCopy(tt *testing.T) {

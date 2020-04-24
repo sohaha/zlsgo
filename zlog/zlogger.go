@@ -17,14 +17,14 @@ import (
 
 // Log header information tag bit, using bitmap mode
 const (
-	BitDate         = 1 << iota                            // Date marker  2019/01/23
-	BitTime                                                // Time Label Bit  01:23:12
-	BitMicroSeconds                                        // Microsecond label bit 01:23:12.111222
-	BitLongFile                                            // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
-	BitShortFile                                           // Final File name   doc.go
-	BitLevel                                               // Current log level
-	BitStdFlag      = BitDate | BitTime                    // Standard header log format
-	BitDefault      = BitLevel | BitShortFile | BitStdFlag // Default log header format
+	BitDate         = 1 << iota                         // Date marker  2019/01/23
+	BitTime                                             // Time Label Bit  01:23:12
+	BitMicroSeconds                                     // Microsecond label bit 01:23:12.111222
+	BitLongFile                                         // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
+	BitShortFile                                        // Final File name   doc.go
+	BitLevel                                            // Current log level
+	BitStdFlag      = BitDate | BitTime                 // Standard header log format
+	BitDefault      = BitLevel | BitShortFile | BitTime // Default log header format
 	// LogMaxBuf LogMaxBuf
 	LogMaxBuf = 1024 * 1024
 )
@@ -64,23 +64,23 @@ var LevelColous = []Color{
 	ColorCyan,
 }
 
-// Logger logger struct
-type Logger struct {
-	mu            sync.RWMutex
-	prefix        string
-	flag          int
-	out           io.Writer
-	buf           bytes.Buffer
-	file          *os.File
-	calldDepth    int
-	level         int
-	color         bool
-	FileMaxSize   int64
-	fileDir       string
-	fileName      string
-	fileAndStdout bool
-}
 type (
+	// Logger logger struct
+	Logger struct {
+		mu            sync.RWMutex
+		prefix        string
+		flag          int
+		out           io.Writer
+		buf           bytes.Buffer
+		file          *os.File
+		calldDepth    int
+		level         int
+		color         bool
+		FileMaxSize   int64
+		fileDir       string
+		fileName      string
+		fileAndStdout bool
+	}
 	formatter struct {
 		v     reflect.Value
 		force bool
@@ -97,6 +97,17 @@ type (
 		depth   int
 	}
 )
+
+type LoggerIfe interface {
+	Error(v ...interface{}) error
+	Warning(v ...interface{}) error
+	Info(v ...interface{}) error
+
+	Errorf(format string, a ...interface{}) error
+	Warningf(format string, a ...interface{}) error
+	Infof(format string, a ...interface{}) error
+}
+
 
 // New Initialize a log object
 func New(moduleName ...string) *Logger {

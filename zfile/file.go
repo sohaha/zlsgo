@@ -10,11 +10,15 @@ import (
 	"strings"
 )
 
-var RootPath = RealPath(".", true)
+var (
+	// The file path is redirected to the current execution file path
+	SwitchRealPath2ProgramPath = false
+)
 
 // PathExist PathExist
 // 1 exists and is a directory path, 2 exists and is a file path, 0 does not exist
 func PathExist(path string) (int, error) {
+	path = RealPath(path)
 	f, err := os.Stat(path)
 	if err == nil {
 		isFile := 2
@@ -41,6 +45,7 @@ func FileExist(path string) bool {
 
 // FileSize file size
 func FileSize(file string) (size string) {
+	file = RealPath(file)
 	fileInfo, err := os.Stat(file)
 	if err != nil {
 		size = FileSizeFormat(0)
@@ -73,14 +78,21 @@ func logSize(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
 }
 
+func RootPath() string {
+	return RealPath(".", true)
+}
+
 // SafePath get an safe absolute path
 func SafePath(path string, addSlash ...bool) string {
 	realPath := RealPath(path, addSlash...)
-	return strings.TrimPrefix(realPath, RootPath)
+	return strings.TrimPrefix(realPath, RootPath())
 }
 
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
+	if SwitchRealPath2ProgramPath && !filepath.IsAbs(path) {
+		path = ProgramPath(true) + path
+	}
 	realPath, _ = filepath.Abs(path)
 	realPath = pathAddSlash(filepath.ToSlash(realPath), addSlash...)
 
@@ -93,7 +105,7 @@ func RealPathMkdir(path string, addSlash ...bool) string {
 	if DirExist(realPath) {
 		return realPath
 	}
-	_ = os.MkdirAll(path, os.ModePerm)
+	_ = os.MkdirAll(realPath, os.ModePerm)
 	return realPath
 }
 
@@ -175,7 +187,7 @@ func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFileP
 func ProgramPath(addSlash ...bool) (path string) {
 	ePath, err := os.Executable()
 	if err != nil {
-		ePath = RealPath(".")
+		ePath, _ = filepath.Abs(".")
 	}
 	path = pathAddSlash(filepath.Dir(ePath), addSlash...)
 
@@ -192,6 +204,7 @@ func pathAddSlash(path string, addSlash ...bool) string {
 // PutOffset open the specified file and write data from the specified location
 func PutOffset(path string, b []byte, offset int64) (err error) {
 	var file *os.File
+	path = RealPath(path)
 	if FileExist(path) {
 		file, err = os.OpenFile(path, os.O_WRONLY, os.ModeAppend)
 	} else {
@@ -208,6 +221,7 @@ func PutOffset(path string, b []byte, offset int64) (err error) {
 // PutAppend open the specified file and write data at the end of the file
 func PutAppend(path string, b []byte) (err error) {
 	var file *os.File
+	path = RealPath(path)
 	if FileExist(path) {
 		file, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	} else {

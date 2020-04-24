@@ -3,10 +3,11 @@ package zcli
 import (
 	"flag"
 	"fmt"
+	"strings"
+
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
-	"strings"
 )
 
 func errorText(msg string) string {
@@ -72,7 +73,7 @@ func showSubcommandUsage(fs *flag.FlagSet, _ *cmdCont) {
 
 func showLogo() bool {
 	if Logo != "" {
-		Log.Printf("%s\n", strings.Replace(Logo, "\n", "", 1))
+		Log.Printf("%s\n", strings.Replace(Logo+"v."+Version, "\n", "", 1))
 		return true
 	}
 	return false
@@ -88,9 +89,14 @@ func showFlagsHelp() {
 	}
 }
 
-func showDescription() bool {
-	if Description != "" {
-		Log.Printf("%s\n", Description)
+func showDescription(logoOk bool) bool {
+	if Name != "" {
+		if !logoOk && Version != "" {
+			Log.Printf("%s v%s\n", Name, Version)
+		} else {
+			Log.Printf("%s\n", Name)
+		}
+
 		return true
 	}
 	return false
@@ -115,17 +121,25 @@ func showVersionNum(info bool) {
 		if BuildTime != "" {
 			Log.Printf("buildTime=%s\n", BuildTime)
 		}
+		//noinspection GoBoolExpressions
+		if BuildGitCommitID != "" {
+			Log.Printf("GitCommitID=%s\n", BuildGitCommitID)
+		}
 	} else {
 		Log.Println(Version)
 	}
-
-	return
 }
 
 func showHeadr() {
+	var (
+		versionOk     bool
+		descriptionOk bool
+	)
 	logoOk := showLogo()
-	descriptionOk := showDescription()
-	versionOk := showVersion()
+	descriptionOk = showDescription(logoOk)
+	if !logoOk && !descriptionOk {
+		versionOk = showVersion()
+	}
 	if logoOk || versionOk || descriptionOk {
 		Log.Println("")
 	}

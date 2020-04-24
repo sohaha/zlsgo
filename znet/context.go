@@ -51,6 +51,14 @@ func (c *Context) IsWebsocket() bool {
 	return false
 }
 
+// IsAjax IsAjax
+func (c *Context) IsAjax() bool {
+	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" {
+		return true
+	}
+	return false
+}
+
 // GetClientIP Client IP
 func (c *Context) GetClientIP() (IP string) {
 	IP = ClientPublicIP(c.Request)

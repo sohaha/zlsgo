@@ -198,12 +198,14 @@ func TestCustomMethod(t *testing.T) {
 	r.SetCustomMethodField("_m_")
 
 	r.PUT("/CustomMethod", func(c *Context) {
+		tt.EqualExit(true, c.IsAjax())
 		c.String(200, `put`)
 	})
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/CustomMethod", nil)
 
+	req.Header.Add("X-Requested-With", "XMLHttpRequest")
 	req.Header.Add("_m_", "put")
 	req.Host = host
 
@@ -368,6 +370,7 @@ func TestGetInput(T *testing.T) {
 	r := newServer()
 	getA := "abc"
 	w := newRequest(r, "GET", "/"+getA+"?a="+getA, "/:name", func(c *Context) {
+		t.EqualExit(false, c.IsAjax())
 		a, _ := c.GetQuery("a")
 		name := c.GetParam("name")
 		GetAllQueryst := c.GetAllQueryst()

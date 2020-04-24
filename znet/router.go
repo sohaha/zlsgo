@@ -200,7 +200,6 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 	engine = &Engine{
 		webMode:            e.webMode,
 		webModeName:        e.webModeName,
-		timeLocation:       e.timeLocation,
 		MaxMultipartMemory: e.MaxMultipartMemory,
 		customMethodType:   e.customMethodType,
 		router:             route,

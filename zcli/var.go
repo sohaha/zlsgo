@@ -2,17 +2,19 @@ package zcli
 
 import (
 	"flag"
-	"github.com/sohaha/zlsgo/zlog"
-	"github.com/sohaha/zlsgo/ztype"
 	"os"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 const cliPrefix = ""
 
 var (
-	BuildTime      = ""
-	BuildGoVersion = ""
+	BuildTime        = ""
+	BuildGoVersion   = ""
+	BuildGitCommitID = ""
 	// Log cli logger
 	Log              *zlog.Logger
 	FirstParameter   = os.Args[0]
@@ -32,7 +34,7 @@ var (
 	// Lang: defaultLang,
 	// }
 	Logo         string
-	Description  string
+	Name         string
 	Version      string
 	HideHelp     bool
 	HidePrompt   bool
@@ -43,13 +45,6 @@ var (
 )
 
 type (
-	// App struct {
-	// Logo       string
-	// Version    string
-	// HideHelp   bool
-	// HidePrompt bool
-	// Lang       string
-	// }
 	cmdCont struct {
 		name          string
 		desc          string
@@ -84,10 +79,6 @@ type (
 )
 
 func getLangs(key string) string {
-	// lang := appConfig.Lang
-	// if lang == "" {
-	// lang = defaultLang
-	// }
 	langs := map[string]map[string]string{
 		"en": {
 			"command_empty": "Command name cannot be empty",

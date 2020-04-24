@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zcache"
+	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zshell"
 	"github.com/sohaha/zlsgo/zstring"
-	"github.com/sohaha/zlsgo/ztime"
-
-	"github.com/sohaha/zlsgo/zlog"
 )
 
 const (
@@ -52,7 +51,6 @@ type (
 		writeTimeout       time.Duration
 		webModeName        string
 		webMode            int
-		timeLocation       *time.Location
 		ShowFavicon        bool
 		MaxMultipartMemory int64
 		customMethodType   string
@@ -157,7 +155,6 @@ func New(serverName ...string) *Engine {
 		writeTimeout:       0 * time.Second,
 		webModeName:        ReleaseMode,
 		webMode:            releaseCode,
-		timeLocation:       ztime.GetTimeZone(),
 		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 	}
@@ -201,11 +198,6 @@ func (e *Engine) AddAddr(addrString string, tlsConfig ...TlsCfg) {
 // GetMiddleware GetMiddleware
 func (e *Engine) GetMiddleware() []HandlerFunc {
 	return e.router.middleware
-}
-
-// SetTimeLocation timezone
-func (e *Engine) SetTimeZone(zone int) {
-	e.timeLocation = ztime.SetTimeZone(zone).GetTimeZone()
 }
 
 // SetCustomMethodField SetCustomMethodField
@@ -270,6 +262,9 @@ func Run() {
 				m.Add(1)
 				isTls := cfg.Cert != "" || cfg.Config != nil
 				addr := cfg.addr
+				if !strings.Contains(addr, ":") {
+					addr = ":" + addr
+				}
 				hostname := "http://"
 				if isTls {
 					hostname = "https://"
@@ -285,7 +280,9 @@ func Run() {
 				srvMap.Store(addr, &serverMap{e, srv})
 
 				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
-				e.Log.Successf("%s %s  %s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapPid)
+				time.AfterFunc(time.Millisecond*100, func() {
+					e.Log.Successf("%s %s  %s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapPid)
+				})
 				var err error
 				if isTls {
 					if cfg.Config != nil {

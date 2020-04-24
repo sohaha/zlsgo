@@ -26,8 +26,8 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 			flagMap.Push(flagName)
 		}
 		fs.Visit(func(f *flag.Flag) {
-			Log .Error(f.Name)
-			
+			Log.Error(f.Name)
+
 			_, _ = flagMap.RemoveValue(f.Name)
 		})
 		flagMapLen := flagMap.Length()
@@ -134,11 +134,11 @@ func parseSubcommand(Args []string) {
 		cont.command.Flags(subcommand)
 		fs.SetOutput(&errWrite{})
 		fs.Usage = func() {
-			Log.Printf("usage of %s:\n", subcommand.Parameter)
-			Log.Printf("\n  %s", subcommand.Desc)
+			Log.Printf("%s\n", subcommand.Desc)
 			if subcommand.Supplement != "" {
-				Log.Printf("\n%s", subcommand.Supplement)
+				Log.Printf("%s\n", subcommand.Supplement)
 			}
+			Log.Printf("\nusage of %s:\n", subcommand.Parameter)
 			ShowFlags(fs)
 			ShowRequired(fs, cont.requiredFlags)
 		}
@@ -165,5 +165,4 @@ func parseSubcommand(Args []string) {
 		unknownCommandFn(name)
 		osExit(1)
 	}
-	return
 }

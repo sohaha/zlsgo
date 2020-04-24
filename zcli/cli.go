@@ -4,10 +4,11 @@ package zcli
 import (
 	"flag"
 	"fmt"
+	"strings"
+
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
-	"strings"
 )
 
 func init() {
@@ -56,7 +57,7 @@ func usage() {
 		return
 	}
 	Log.Printf("usage: %s <command>\n\n", FirstParameter)
-	Log.Println("  where <command> is one of:")
+	Log.Println("where <command> is one of:")
 	for _, name := range cmdsKey {
 		if cont, ok := cmds[name]; ok {
 			// for name, cont := range cmds {
@@ -71,7 +72,7 @@ func usage() {
 }
 
 func ShowFlags(fg *flag.FlagSet) {
-	Log.Printf("\n  optional flags:\n")
+	Log.Printf("\noptional flags:\n")
 	max := 40
 	showFlagsHelp()
 	flagsItems := zstring.Buffer()
