@@ -16,20 +16,6 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-const (
-	defaultMultipartMemory = 32 << 20 // 32 MB
-	// DebugMode debug
-	DebugMode = "debug"
-	// ReleaseMode release
-	ReleaseMode = "release"
-	// TestMode test
-	TestMode          = "test"
-	defaultServerName = "Z"
-	releaseCode       = iota
-	debugCode
-	testCode
-)
-
 type (
 	// Context context
 	Context struct {
@@ -111,6 +97,20 @@ type (
 		engine *Engine
 		srv    *http.Server
 	}
+)
+
+const (
+	defaultMultipartMemory = 32 << 20 // 32 MB
+	// DebugMode debug
+	DebugMode = "debug"
+	// ReleaseMode release
+	ReleaseMode = "release"
+	// TestMode test
+	TestMode          = "test"
+	defaultServerName = "Z"
+	releaseCode       = iota
+	debugCode
+	testCode
 )
 
 var (

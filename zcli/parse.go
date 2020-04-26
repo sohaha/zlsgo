@@ -138,7 +138,7 @@ func parseSubcommand(Args []string) {
 			if subcommand.Supplement != "" {
 				Log.Printf("%s\n", subcommand.Supplement)
 			}
-			Log.Printf("\nusage of %s:\n", subcommand.Parameter)
+			Log.Printf("\nusage of %s\n", subcommand.Parameter)
 			ShowFlags(fs)
 			ShowRequired(fs, cont.requiredFlags)
 		}

@@ -11,9 +11,12 @@ import (
 )
 
 var (
-	// The file path is redirected to the current execution file path
-	SwitchRealPath2ProgramPath = false
+	ProjectPath                = "."
 )
+
+func init() {
+	ProjectPath, _ = filepath.Abs(".")
+}
 
 // PathExist PathExist
 // 1 exists and is a directory path, 2 exists and is a file path, 0 does not exist
@@ -90,8 +93,8 @@ func SafePath(path string, addSlash ...bool) string {
 
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
-	if SwitchRealPath2ProgramPath && !filepath.IsAbs(path) {
-		path = ProgramPath(true) + path
+	if !filepath.IsAbs(path) {
+		path = ProjectPath + "/" + path
 	}
 	realPath, _ = filepath.Abs(path)
 	realPath = pathAddSlash(filepath.ToSlash(realPath), addSlash...)
@@ -187,7 +190,7 @@ func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFileP
 func ProgramPath(addSlash ...bool) (path string) {
 	ePath, err := os.Executable()
 	if err != nil {
-		ePath, _ = filepath.Abs(".")
+		ePath = ProjectPath
 	}
 	path = pathAddSlash(filepath.Dir(ePath), addSlash...)
 

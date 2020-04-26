@@ -155,3 +155,14 @@ func argsIsHelp(args []string) {
 		}
 	}
 }
+
+func CheckErr(err error, exit ...bool) {
+	if err != nil {
+		if len(exit) > 0 && exit[0] {
+			Log.Error(err)
+			osExit(1)
+			return
+		}
+		Log.Fatal(err)
+	}
+}

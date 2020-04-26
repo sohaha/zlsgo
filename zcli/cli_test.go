@@ -2,9 +2,10 @@ package zcli
 
 import (
 	"flag"
-	"github.com/sohaha/zlsgo"
 	"os"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestCli(T *testing.T) {

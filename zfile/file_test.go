@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/sohaha/zlsgo"
 	"sync"
+
+	. "github.com/sohaha/zlsgo"
 )
 
 func TestFile(T *testing.T) {
@@ -39,17 +40,18 @@ func TestFile(T *testing.T) {
 	t.Equal(true, Rmdir(path, true))
 	t.Equal(true, Rmdir(path))
 	ePath := ProgramPath(true)
-	T.Log(ePath)
-	SwitchRealPath2ProgramPath = true
-	path = RealPathMkdir("../../ppppp")
-	testPath := ePath + "../../ppppp"
+	ProjectPath = ePath
+	path = RealPathMkdir("../ppppp")
+	testPath := ePath + "../ppppp"
+	T.Log(path, testPath)
+	t.EqualTrue(DirExist(path))
 	t.EqualTrue(DirExist(testPath))
 	ok := Rmdir(testPath)
 
 	T.Log(path, testPath, ok)
 	var g sync.WaitGroup
 	g.Add(1)
-	//g.Wait()
+	// g.Wait()
 
 }
 

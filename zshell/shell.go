@@ -20,19 +20,19 @@ var (
 	Dir   string
 )
 
-type shellStdBuffer struct {
+type ShellBuffer struct {
 	writer io.Writer
 	buf    *bytes.Buffer
 }
 
-func newShellStdBuffer(writer io.Writer) *shellStdBuffer {
-	return &shellStdBuffer{
+func newShellStdBuffer(writer io.Writer) *ShellBuffer {
+	return &ShellBuffer{
 		writer: writer,
 		buf:    bytes.NewBuffer([]byte{}),
 	}
 }
 
-func (s *shellStdBuffer) Write(p []byte) (n int, err error) {
+func (s *ShellBuffer) Write(p []byte) (n int, err error) {
 	n, err = s.buf.Write(p)
 	if s.writer != nil {
 		n, err = s.writer.Write(p)
@@ -40,7 +40,8 @@ func (s *shellStdBuffer) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (s *shellStdBuffer) String() string {
+
+func (s *ShellBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
 
@@ -49,8 +50,8 @@ func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 
 	var (
 		status syscall.WaitStatus
-		stdout *shellStdBuffer
-		stderr *shellStdBuffer
+		stdout *ShellBuffer
+		stderr *ShellBuffer
 	)
 
 	if len(command) == 0 {

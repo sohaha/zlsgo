@@ -1,6 +1,7 @@
 package zcli
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"testing"
@@ -24,6 +25,7 @@ func (cmd *testCmd) Flags(sub *Subcommand) {
 }
 
 func (cmd *testCmd) Run(args []string) {
+	Log.Debug("run")
 	cmd.run = true
 }
 
@@ -60,6 +62,20 @@ func TestUtil(T *testing.T) {
 	showVersionNum(true)
 	Version = ""
 	showVersion()
-	GetParentProcessName()
+	_, _ = GetParentProcessName()
 	IsDoubleClickStartUp()
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+	}
+	osExit = myExit
+	CheckErr(nil, true)
+	CheckErr(errors.New("err"), true)
+	Name = "Name"
+	Logo = "Logo"
+	showHeadr()
+	showFlagsHelp()
+	showLogo()
+	Error("%s","err")
+	argsIsHelp([]string{"-h"})
 }

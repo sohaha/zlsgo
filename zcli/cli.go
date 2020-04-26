@@ -52,7 +52,7 @@ func usage() {
 		}
 	}
 	if len(cmds) == 0 {
-		Log.Printf("usage of %s:\n", showText(FirstParameter))
+		Log.Printf("usage of %s\n", showText(FirstParameter))
 		showFlagsAndRequired()
 		return
 	}
@@ -98,7 +98,6 @@ func ShowFlags(fg *flag.FlagSet) {
 				flagsTitle += ", " + strings.Join(shorts, ", ")
 			}
 		}
-
 		// if name == "" {
 		// 	name = "bool"
 		// }

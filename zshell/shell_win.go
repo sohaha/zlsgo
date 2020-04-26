@@ -7,5 +7,5 @@ import (
 )
 
 func RunNewProcess(filemd5 string) (pid int, err error) {
-	return 0, errors.New("Windows does not support")
+	return 0, errors.New("windows does not support")
 }
