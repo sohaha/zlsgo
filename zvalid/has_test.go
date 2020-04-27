@@ -14,6 +14,7 @@ func TestRuleHas(t *testing.T) {
 	tt.EqualNil(err)
 	err = New().Verifi("1").HasLetter().Error()
 	tt.Equal(true, err != nil)
+	t.Log(err)
 	err = New().Verifi("").HasLetter().Error()
 	tt.Equal(true, err != nil)
 
@@ -68,10 +69,12 @@ func TestRuleHas(t *testing.T) {
 
 	err = New().Verifi("123aA.").Password().Error()
 	tt.EqualNil(err)
-	err = New().Verifi("a").Password().Error()
+	err = New().Verifi("a", "pass2").Password().Error()
 	tt.Equal(true, err != nil)
+	tt.Log(err)
 	err = New().Verifi("").Password().Error()
 	tt.Equal(true, err != nil)
+	tt.Log(err)
 
 	err = New().Verifi("123aA.").StrongPassword().Error()
 	tt.EqualNil(err)

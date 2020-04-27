@@ -9,25 +9,25 @@ import (
 
 type ele struct {
 	target interface{}
-	source *Engine
+	source Engine
 }
 
 // Silent an error occurred during filtering, no error is returned
-func (v *Engine) Silent() *Engine {
+func (v Engine) Silent() Engine {
 	v.silent = true
 	return v
 }
 
 // Default if a filtering error occurs, the default value is assigned to the variable
-func (v *Engine) Default(value interface{}) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) Default(value interface{}) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		v.defaultValue = value
 		return v
 	}, true)
 }
 
 // Separator specify the separator of the slice type
-func (v *Engine) Separator(sep string) *Engine {
+func (v Engine) Separator(sep string) Engine {
 	if v.err != nil || v.value == "" {
 		return v
 	}
@@ -47,7 +47,7 @@ func Batch(elements ...*ele) error {
 }
 
 // BatchVar assign the filtered result to the specified variable
-func BatchVar(target interface{}, source *Engine) *ele {
+func BatchVar(target interface{}, source Engine) *ele {
 	return &ele{
 		target: target,
 		source: source,
@@ -55,8 +55,8 @@ func BatchVar(target interface{}, source *Engine) *ele {
 }
 
 // Var assign the filtered result to the specified variable
-func Var(target interface{}, source *Engine, name ...string) error {
-	_, _ = source.Result()
+func Var(target interface{}, source Engine, name ...string) error {
+	source = source.Result()
 	if len(name) > 0 {
 		source.name = name[0]
 	}

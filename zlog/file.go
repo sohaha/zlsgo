@@ -1,47 +1,51 @@
 package zlog
 
 import (
-	"github.com/sohaha/zlsgo/zfile"
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
-func openFile(fileDir, fileName string) (file *os.File, err error) {
+func openFile(filepa string) (file *os.File, fileName, fileDir string, err error) {
+	fullPath := zfile.RealPath(filepa)
+	fileDir = filepath.Dir(filepa)+"/"
+	fileName = filepath.Base(filepa)
 	_ = mkdirLog(fileDir)
-	fullPath := fileDir + "/" + fileName
 	if zfile.FileExist(fullPath) {
 		file, err = os.OpenFile(fullPath, os.O_APPEND|os.O_RDWR, 0644)
 	} else {
 		file, err = os.OpenFile(fullPath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
 	return
 }
 
 // SetLogFile Setting log file output
-func (log *Logger) SetLogFile(fileDir string, fileName string) {
-	file, _ := openFile(fileDir, fileName)
+func (log *Logger) SetLogFile(filepath string) {
+	fileObj, fileName, fileDir, _ := openFile(filepath)
 	log.DisableConsoleColor()
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
 	log.CloseFile()
-	log.file = file
-	log.out = file
+	log.file = fileObj
+	log.out = fileObj
 	log.FileMaxSize = 0
 	log.fileDir = fileDir
 	log.fileName = fileName
 }
 
-func (log *Logger) SetSaveLogFile(fileDir string, fileName string) {
-	log.SetLogFile(fileDir, fileName)
+func (log *Logger) SetSaveLogFile(filepath string) {
+	log.SetLogFile(filepath)
 	log.fileAndStdout = true
 	log.out = io.MultiWriter(log.file, os.Stdout)
 }

@@ -108,7 +108,6 @@ type LoggerIfe interface {
 	Infof(format string, a ...interface{}) error
 }
 
-
 // New Initialize a log object
 func New(moduleName ...string) *Logger {
 	name := ""
@@ -262,7 +261,7 @@ func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string
 				oldFile := oldLogFile(log.fileDir, log.fileName)
 				log.CloseFile()
 				_ = os.Rename(logFile, oldFile)
-				file, _ := openFile(log.fileDir, log.fileName)
+				file, _, _, _ := openFile(log.fileDir+log.fileName)
 				log.file = file
 				if log.fileAndStdout {
 					log.out = io.MultiWriter(log.file, os.Stdout)

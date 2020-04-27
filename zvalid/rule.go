@@ -12,8 +12,8 @@ import (
 )
 
 // IsBool booleanValue
-func (v *Engine) IsBool(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsBool(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -25,8 +25,8 @@ func (v *Engine) IsBool(customError ...string) *Engine {
 }
 
 // IsLower lowerCase letters
-func (v *Engine) IsLower(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsLower(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -41,8 +41,8 @@ func (v *Engine) IsLower(customError ...string) *Engine {
 }
 
 // IsUpper uppercase letter
-func (v *Engine) IsUpper(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsUpper(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -57,8 +57,8 @@ func (v *Engine) IsUpper(customError ...string) *Engine {
 }
 
 // IsLetter uppercase and lowercase letters
-func (v *Engine) IsLetter(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsLetter(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -73,8 +73,8 @@ func (v *Engine) IsLetter(customError ...string) *Engine {
 }
 
 // IsNumber number
-func (v *Engine) IsNumber(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsNumber(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -86,8 +86,8 @@ func (v *Engine) IsNumber(customError ...string) *Engine {
 }
 
 // IsLowerOrDigit lowercase letters or numbers
-func (v *Engine) IsLowerOrDigit(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsLowerOrDigit(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -102,8 +102,8 @@ func (v *Engine) IsLowerOrDigit(customError ...string) *Engine {
 }
 
 // IsUpperOrDigit uppercase letters or numbers
-func (v *Engine) IsUpperOrDigit(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsUpperOrDigit(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -118,8 +118,8 @@ func (v *Engine) IsUpperOrDigit(customError ...string) *Engine {
 }
 
 // IsLetterOrDigit letters or numbers
-func (v *Engine) IsLetterOrDigit(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsLetterOrDigit(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -134,8 +134,8 @@ func (v *Engine) IsLetterOrDigit(customError ...string) *Engine {
 }
 
 // IsChinese chinese character
-func (v *Engine) IsChinese(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsChinese(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -150,8 +150,8 @@ func (v *Engine) IsChinese(customError ...string) *Engine {
 }
 
 // IsMobile chinese mobile
-func (v *Engine) IsMobile(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsMobile(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -165,8 +165,8 @@ func (v *Engine) IsMobile(customError ...string) *Engine {
 }
 
 // IsMail email address
-func (v *Engine) IsMail(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsMail(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -217,8 +217,8 @@ func (v *Engine) IsMail(customError ...string) *Engine {
 }
 
 // isURL links
-func (v *Engine) IsURL(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsURL(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -231,8 +231,8 @@ func (v *Engine) IsURL(customError ...string) *Engine {
 }
 
 // IsIP ipv4 v6 address
-func (v *Engine) IsIP(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsIP(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -246,8 +246,8 @@ func (v *Engine) IsIP(customError ...string) *Engine {
 }
 
 // IsJSON valid json format
-func (v *Engine) IsJSON(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsJSON(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -260,8 +260,8 @@ func (v *Engine) IsJSON(customError ...string) *Engine {
 }
 
 // IsChineseIDNumber mainland china id number
-func (v *Engine) IsChineseIDNumber(customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) IsChineseIDNumber(customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -314,8 +314,8 @@ func (v *Engine) IsChineseIDNumber(customError ...string) *Engine {
 }
 
 // MinLength minimum length
-func (v *Engine) MinLength(min int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MinLength(min int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -327,8 +327,8 @@ func (v *Engine) MinLength(min int, customError ...string) *Engine {
 }
 
 // MinUTF8Length utf8 encoding minimum length
-func (v *Engine) MinUTF8Length(min int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MinUTF8Length(min int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if !ignore(v) && zstring.Len(v.value) < min {
 			v.err = v.setError("长度不能小于"+strconv.Itoa(min)+"个字符", customError...)
 		}
@@ -337,8 +337,8 @@ func (v *Engine) MinUTF8Length(min int, customError ...string) *Engine {
 }
 
 // MaxLength the maximum length
-func (v *Engine) MaxLength(max int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MaxLength(max int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if !ignore(v) && len(v.value) > max {
 			v.err = v.setError("长度不能大于"+strconv.Itoa(max)+"个字符", customError...)
 		}
@@ -347,8 +347,8 @@ func (v *Engine) MaxLength(max int, customError ...string) *Engine {
 }
 
 // MaxUTF8Length utf8 encoding maximum length
-func (v *Engine) MaxUTF8Length(max int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MaxUTF8Length(max int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if !ignore(v) && zstring.Len(v.value) > max {
 			v.err = v.setError("长度不能大于"+strconv.Itoa(max)+"个字符", customError...)
 		}
@@ -357,8 +357,8 @@ func (v *Engine) MaxUTF8Length(max int, customError ...string) *Engine {
 }
 
 // MinInt minimum integer value
-func (v *Engine) MinInt(min int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MinInt(min int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -379,8 +379,8 @@ func (v *Engine) MinInt(min int, customError ...string) *Engine {
 }
 
 // MinInt maximum integer value
-func (v *Engine) MaxInt(max int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MaxInt(max int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -401,8 +401,8 @@ func (v *Engine) MaxInt(max int, customError ...string) *Engine {
 }
 
 // MinFloat minimum floating point value
-func (v *Engine) MinFloat(min float64, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MinFloat(min float64, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -424,8 +424,8 @@ func (v *Engine) MinFloat(min float64, customError ...string) *Engine {
 }
 
 // MinFloat maximum floating point value
-func (v *Engine) MaxFloat(max float64, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) MaxFloat(max float64, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -446,8 +446,8 @@ func (v *Engine) MaxFloat(max float64, customError ...string) *Engine {
 }
 
 // EnumString allow only values ​​in []string
-func (v *Engine) EnumString(slice []string, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) EnumString(slice []string, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -462,8 +462,8 @@ func (v *Engine) EnumString(slice []string, customError ...string) *Engine {
 }
 
 // EnumInt allow only values ​​in []int
-func (v *Engine) EnumInt(i []int, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) EnumInt(i []int, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}
@@ -484,8 +484,8 @@ func (v *Engine) EnumInt(i []int, customError ...string) *Engine {
 }
 
 // EnumFloat64 allow only values ​​in []float64
-func (v *Engine) EnumFloat64(f []float64, customError ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) EnumFloat64(f []float64, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if ignore(v) {
 			return v
 		}

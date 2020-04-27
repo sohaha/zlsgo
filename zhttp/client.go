@@ -104,7 +104,7 @@ func (r *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request
 	if len(fn) > 0 {
 		r.Client().CheckRedirect = fn[0]
 	} else {
-		r.Client().CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		r.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}

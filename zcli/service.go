@@ -92,31 +92,43 @@ func (*serviceRestart) Run(args []string) {
 	CheckErr(service.Restart(), true)
 }
 
-func LaunchService(name string, description string, fn func()) daemon.ServiceIfe {
-	// The file path is redirected to the current execution file path
-	zfile.ProjectPath = zfile.ProgramPath()
-	once.Do(func() {
-		service, serviceErr = daemon.New(&app{
-			run: fn,
-		}, &daemon.Config{
+func LaunchServiceRun(name string, description string, fn func(), config ...*daemon.Config) error {
+	_, _ = LaunchService(name, description, fn, config...)
+	Parse()
+	return service.Run()
+}
+
+func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIfe, error) {
+	var daemonConfig *daemon.Config
+	if len(config) > 0 {
+		daemonConfig = config[0]
+		daemonConfig.Name = name
+		daemonConfig.Description = description
+	} else {
+		daemonConfig = &daemon.Config{
 			Name:        name,
 			Description: description,
 			Option: daemon.OptionData{
 				// "UserService": true,
 			},
-		})
+		}
+	}
+	// The file path is redirected to the current execution file path
+	zfile.ProjectPath = zfile.ProgramPath()
+	once.Do(func() {
+		service, serviceErr = daemon.New(&app{
+			run: fn,
+		}, daemonConfig)
+		Add("install", "Install service", &serviceInstall{})
+		Add("uninstall", "Uninstall service", &serviceUnInstall{})
+		Add("status", "ServiceIfe status", &serviceStatus{})
+		Add("start", "Start service", &serviceStart{})
+		Add("stop", "Stop service", &serviceStop{})
+		Add("restart", "Restart service", &serviceRestart{})
+		if serviceErr == daemon.ErrNoServiceSystemDetected {
+			CheckErr(fmt.Errorf("%s does not support process daemon\n", zenv.GetOs()), true)
+		}
 	})
 
-	Add("install", "Install service", &serviceInstall{})
-	Add("uninstall", "Uninstall service", &serviceUnInstall{})
-	Add("status", "ServiceIfe status", &serviceStatus{})
-	Add("start", "Start service", &serviceStart{})
-	Add("stop", "Stop service", &serviceStop{})
-	Add("restart", "Restart service", &serviceRestart{})
-
-	if serviceErr == daemon.ErrNoServiceSystemDetected {
-		CheckErr(fmt.Errorf("%s does not support process daemon\n", zenv.GetOs()), true)
-	}
-
-	return service
+	return service, serviceErr
 }

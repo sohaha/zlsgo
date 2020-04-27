@@ -14,7 +14,7 @@ func TestLogFile(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	ResetFlags(BitLevel)
 	_ = os.RemoveAll("./tmp2/")
-	SetSaveLogFile("tmp2", "Log.log")
+	SetSaveLogFile("tmp2/Log.log")
 	Log.FileMaxSize = 1
 	Success("ok1")
 

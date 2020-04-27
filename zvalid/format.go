@@ -7,8 +7,8 @@ import (
 )
 
 // Trim remove leading and trailing spaces
-func (v *Engine) Trim() *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) Trim() Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = strings.TrimSpace(v.value)
 		}
@@ -18,8 +18,8 @@ func (v *Engine) Trim() *Engine {
 }
 
 // RemoveSpace remove all spaces
-func (v *Engine) RemoveSpace() *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) RemoveSpace() Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = strings.Replace(v.value, " ", "", -1)
 		}
@@ -28,8 +28,8 @@ func (v *Engine) RemoveSpace() *Engine {
 }
 
 // ReplaceAll replace
-func (v *Engine) Replace(old, new string, n int) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) Replace(old, new string, n int) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = strings.Replace(v.value, old, new, n)
 		}
@@ -38,13 +38,13 @@ func (v *Engine) Replace(old, new string, n int) *Engine {
 }
 
 // ReplaceAll replace all
-func (v *Engine) ReplaceAll(old, new string) *Engine {
+func (v Engine) ReplaceAll(old, new string) Engine {
 	return v.Replace(old, new, -1)
 }
 
 // XssClean clean html tag
-func (v *Engine) XssClean() *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) XssClean() Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = zstring.XssClean(v.value)
 		}
@@ -53,8 +53,8 @@ func (v *Engine) XssClean() *Engine {
 }
 
 // SnakeCaseToCamelCase snakeCase To CamelCase: hello_world => helloWorld
-func (v *Engine) SnakeCaseToCamelCase(ucfirst bool, delimiter ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) SnakeCaseToCamelCase(ucfirst bool, delimiter ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = zstring.SnakeCaseToCamelCase(v.value, ucfirst, delimiter...)
 		}
@@ -63,8 +63,8 @@ func (v *Engine) SnakeCaseToCamelCase(ucfirst bool, delimiter ...string) *Engine
 }
 
 // CamelCaseToSnakeCase camelCase To SnakeCase helloWorld/HelloWorld => hello_world
-func (v *Engine) CamelCaseToSnakeCase(delimiter ...string) *Engine {
-	return pushQueue(v, func(v *Engine) *Engine {
+func (v Engine) CamelCaseToSnakeCase(delimiter ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = zstring.CamelCaseToSnakeCase(v.value, delimiter...)
 		}

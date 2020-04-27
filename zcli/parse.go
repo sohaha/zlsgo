@@ -4,10 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/sohaha/zlsgo/zarray"
-	"github.com/sohaha/zlsgo/ztype"
 	"os"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zarray"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func parse(outHelp bool) {
@@ -68,13 +69,12 @@ func Parse(arg ...[]string) {
 			}
 		}
 	}
-	if len(argsData) > 0 {
-		if argsData[0][0] != '-' {
-			parseSubcommand(argsData)
-			matchingCmd.command.Run(args)
-			osExit(0)
-		}
+	if len(argsData) > 0 && argsData[0][0] != '-' {
+		parseSubcommand(argsData)
+		matchingCmd.command.Run(args)
+		osExit(0)
 	}
+
 	_ = flag.CommandLine.Parse(argsData)
 }
 
@@ -82,10 +82,8 @@ func parseCommand(outHelp bool) {
 	Parse()
 	var v *bool
 	var ok bool
-	if v, ok = ShortValues["V"].(*bool); ok {
-		if *v {
-			*flagVersion = *v
-		}
+	if v, ok = ShortValues["V"].(*bool); ok && *v {
+		*flagVersion = *v
 	}
 	if *flagVersion {
 		showVersionNum(*v)

@@ -1,38 +1,39 @@
 package zvalid
 
 import (
+	"container/list"
 	"strconv"
 	"strings"
 )
 
 // Ok not err
-func (v *Engine) Ok() bool {
+func (v Engine) Ok() bool {
 	return v.Error() == nil
 }
 
 // Error or whether the verification fails
-func (v *Engine) Error() (err error) {
-	if v.err != nil {
+func (v Engine) Error() error {
+	if v.result {
 		return v.err
 	}
-	_, err = v.Result()
-	return
+	return v.Result().err
 }
 
 // Value get the final value
-func (v *Engine) Value() (value string) {
-	value, _ = v.Result()
-	return
+func (v Engine) Value() (value string) {
+	v = v.Result()
+	return v.value
 }
 
 // String to string
-func (v *Engine) String() (string, error) {
-	return v.Result()
+func (v Engine) String() (string, error) {
+	v = v.Result()
+	return v.value, v.err
 }
 
 // Bool to bool
-func (v *Engine) Bool() (bool, error) {
-	_, _ = v.Result()
+func (v Engine) Bool() (bool, error) {
+	v = v.Result()
 	if ignore(v) {
 		return false, v.err
 	}
@@ -44,8 +45,8 @@ func (v *Engine) Bool() (bool, error) {
 }
 
 // Int convert to int
-func (v *Engine) Int() (int, error) {
-	_, _ = v.Result()
+func (v Engine) Int() (int, error) {
+	v = v.Result()
 	if ignore(v) {
 		return 0, v.err
 	}
@@ -61,8 +62,8 @@ func (v *Engine) Int() (int, error) {
 }
 
 // Float64 convert to float64
-func (v *Engine) Float64() (float64, error) {
-	_, _ = v.Result()
+func (v Engine) Float64() (float64, error) {
+	v = v.Result()
 	if ignore(v) {
 		return 0, v.err
 	}
@@ -78,8 +79,8 @@ func (v *Engine) Float64() (float64, error) {
 }
 
 // Split converted to [] string
-func (v *Engine) Split(sep string) ([]string, error) {
-	_, _ = v.Result()
+func (v Engine) Split(sep string) ([]string, error) {
+	v = v.Result()
 	if ignore(v) {
 		return []string{}, v.err
 	}
@@ -91,34 +92,35 @@ func (v *Engine) Split(sep string) ([]string, error) {
 }
 
 // Result get the final value, or an notEmpty string if an error occurs
-func (v *Engine) Result() (string, error) {
+func (v Engine) Result() Engine {
+	v.result = true
 	if v.err == nil && !v.setRawValue {
 		v.err = ErrNoValidationValueSet
+		return v
 	}
-	l := v.queue.Len()
+	queues := list.New()
+	queues.PushBackList(v.queue)
+	l := queues.Len()
 	if l > 0 {
 		for i := 0; i < l; i++ {
-			queue := v.queue.Front()
+			queue := queues.Front()
 			if q, ok := queue.Value.(queueT); ok {
-				q(v)
+				nv := q(v)
+				v.value = nv.value
+					v.err = nv.err
 			}
-			v.queue.Remove(queue)
-
+			queues.Remove(queue)
 		}
 	}
-	if v.err != nil {
-		return "", v.err
-	}
-	return v.value, nil
+	return v
 }
 
 // Verifi validate specified data
-func (v *Engine) Verifi(value string, name ...string) *Engine {
-	vc := clone(v)
-	vc.value = value
-	vc.setRawValue = true
+func (v Engine) Verifi(value string, name ...string) Engine {
+	v.value = value
+	v.setRawValue = true
 	if len(name) > 0 {
-		vc.name = name[0]
+		v.name = name[0]
 	}
-	return vc
+	return v
 }

@@ -43,13 +43,13 @@ func SetPrefix(prefix string) {
 }
 
 // SetLogFile Setting up log files
-func SetLogFile(fileDir string, fileName string) {
-	Log.SetLogFile(fileDir, fileName)
+func SetLogFile(filepath string) {
+	Log.SetLogFile(filepath)
 }
 
 // SetSaveLogFile SetSaveLogFile
-func SetSaveLogFile(fileDir string, fileName string) {
-	Log.SetSaveLogFile(fileDir, fileName)
+func SetSaveLogFile(filepath string) {
+	Log.SetSaveLogFile(filepath)
 }
 
 // SetLogLevel Setting log display level
