@@ -1,4 +1,4 @@
-// Package zarray 数组操作
+// Package zarray provides array operations
 package zarray
 
 import (

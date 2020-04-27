@@ -125,7 +125,7 @@ func (w *windowsService) Install() error {
 		Description:      w.Description,
 		StartType:        mgr.StartAutomatic,
 		ServiceStartName: w.UserName,
-		Password:         w.Option.string("Password", ""),
+		Password:         w.Option.String("Password", ""),
 	}, w.Arguments...)
 	if err != nil {
 		return err
@@ -133,9 +133,18 @@ func (w *windowsService) Install() error {
 	defer s.Close()
 	err = eventlog.InstallAsEventCreate(w.Name, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
-		s.Delete()
+		_ = s.Delete()
 		return fmt.Errorf("installAsEventCreate() failed: %s", err)
 	}
+	if w.Option.Bool(optionRunAtLoad, optionRunAtLoadDefault) {
+		_ = s.SetRecoveryActions([]mgr.RecoveryAction{
+			{
+				Type:  mgr.ServiceRestart,
+				Delay: 0,
+			},
+		}, 0)
+	}
+
 	return nil
 }
 
@@ -234,7 +243,7 @@ func (w *windowsService) Restart() error {
 func (w *windowsService) Status() string {
 	m, err := connect()
 	if err != nil {
-		return err
+		return "Unknown"
 	}
 	defer m.Disconnect()
 	s, err := m.OpenService(w.Name)

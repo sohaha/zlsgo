@@ -41,7 +41,7 @@ func (darwinSystem) Interactive() bool {
 }
 
 func (darwinSystem) New(i Ife, c *Config) (s ServiceIfe, err error) {
-	userService := c.Option.bool(optionUserService, optionUserServiceDefault)
+	userService := c.Option.Bool(optionUserService, optionUserServiceDefault)
 	s = &darwinLaunchdService{
 		i:           i,
 		Config:      c,
@@ -128,9 +128,9 @@ func (s *darwinLaunchdService) Install() error {
 	}{
 		Config:        s.Config,
 		Path:          path,
-		KeepAlive:     s.Option.bool(optionKeepAlive, optionKeepAliveDefault),
-		RunAtLoad:     s.Option.bool(optionRunAtLoad, optionRunAtLoadDefault),
-		SessionCreate: s.Option.bool(optionSessionCreate, optionSessionCreateDefault),
+		KeepAlive:     s.Option.Bool(optionKeepAlive, optionKeepAliveDefault),
+		RunAtLoad:     s.Option.Bool(optionRunAtLoad, optionRunAtLoadDefault),
+		SessionCreate: s.Option.Bool(optionSessionCreate, optionSessionCreateDefault),
 	}
 
 	functions := template.FuncMap{
@@ -214,7 +214,7 @@ func (s *darwinLaunchdService) Run() error {
 		return err
 	}
 
-	s.Option.funcSingle(optionRunWait, func() {
+	s.Option.FuncSingle(optionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan

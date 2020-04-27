@@ -1,7 +1,10 @@
+// Package daemon program is installed as a system service to achieve process daemon
 package daemon
 
 import (
 	"errors"
+
+	"github.com/sohaha/zlsgo/zarray"
 )
 
 const (
@@ -54,16 +57,15 @@ type (
 		// System specific options
 		//  * OS X
 		//    - KeepAlive     bool (true)
-		//    - RunAtLoad     bool (false)
+		//    - RunAtLoad     bool (true)
 		//    - UserService   bool (false) - Install as a current user service.
 		//    - SessionCreate bool (false) - Create a full user session.
 		//  * POSIX
 		//    - RunWait      func() (wait for SIGNAL) - Do not install signal but wait for this function to return.
 		//    - ReloadSignal string () [USR1, ...] - Signal to send on reaload.
 		//    - PIDFile     string () [/run/prog.pid] - Location of the PID file.
-		Option OptionData
+		Option zarray.DefData
 	}
-	OptionData map[string]interface{}
 )
 
 var (
@@ -84,51 +86,6 @@ func New(i Ife, c *Config) (ServiceIfe, error) {
 		return nil, ErrNoServiceSystemDetected
 	}
 	return system.New(i, c)
-}
-
-func (kv OptionData) bool(name string, defaultValue bool) bool {
-	if v, found := kv[name]; found {
-		if castValue, is := v.(bool); is {
-			return castValue
-		}
-	}
-	return defaultValue
-}
-
-func (kv OptionData) int(name string, defaultValue int) int {
-	if v, found := kv[name]; found {
-		if castValue, is := v.(int); is {
-			return castValue
-		}
-	}
-	return defaultValue
-}
-
-func (kv OptionData) string(name string, defaultValue string) string {
-	if v, found := kv[name]; found {
-		if castValue, is := v.(string); is {
-			return castValue
-		}
-	}
-	return defaultValue
-}
-
-func (kv OptionData) float64(name string, defaultValue float64) float64 {
-	if v, found := kv[name]; found {
-		if castValue, is := v.(float64); is {
-			return castValue
-		}
-	}
-	return defaultValue
-}
-
-func (kv OptionData) funcSingle(name string, defaultValue func()) func() {
-	if v, found := kv[name]; found {
-		if castValue, is := v.(func()); is {
-			return castValue
-		}
-	}
-	return defaultValue
 }
 
 func newSystem() SystemIfe {

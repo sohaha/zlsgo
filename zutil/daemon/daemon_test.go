@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zarray"
 )
 
 type ss struct {
@@ -32,7 +33,7 @@ func TestDaemon(t *testing.T) {
 	}
 	s, err := New(o, &Config{
 		Name:   "zlsgo_daemon_test",
-		Option: OptionData{"UserService": false},
+		Option: zarray.DefData{"UserService": false},
 	})
 	if err != nil {
 		return
@@ -54,32 +55,4 @@ func TestUtil(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	tt.Equal(IsPermissionError(ErrNotAnAdministrator), IsPermissionError(ErrNotAnRootUser))
 	_ = isSudo()
-}
-
-func TestOptionData(t *testing.T) {
-	tt := zlsgo.NewTest(t)
-	option := &OptionData{
-		"string":     nil,
-		"int":        nil,
-		"bool":       nil,
-		"float64":    nil,
-		"funcSingle": nil,
-	}
-	tt.Equal("ss", option.string("string", "ss"))
-	tt.Equal(11, option.int("int", 11))
-	tt.Equal(true, option.bool("bool", true))
-	tt.Equal(1.2, option.float64("float64", 1.2))
-	option.funcSingle("funcSingle", func() {})
-	option = &OptionData{
-		"string":     "s",
-		"int":        1,
-		"bool":       true,
-		"float64":    1.2,
-		"funcSingle": func() {},
-	}
-	tt.Equal("s", option.string("string", "ss"))
-	tt.Equal(1, option.int("int", 11))
-	tt.Equal(true, option.bool("bool", true))
-	tt.Equal(1.2, option.float64("float64", 1.1))
-	option.funcSingle("funcSingle", func() {})
 }

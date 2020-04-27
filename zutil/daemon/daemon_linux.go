@@ -95,7 +95,7 @@ func (s *systemd) String() string {
 }
 
 func (s *systemd) configPath() (cp string, err error) {
-	if s.Option.bool(optionUserService, optionUserServiceDefault) {
+	if s.Option.Bool(optionUserService, optionUserServiceDefault) {
 		err = errNoUserServiceSystemd
 		return
 	}
@@ -131,8 +131,8 @@ func (s *systemd) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.string(optionReloadSignal, ""),
-		s.Option.string(optionPIDFile, ""),
+		s.Option.String(optionReloadSignal, ""),
+		s.Option.String(optionPIDFile, ""),
 	}
 
 	err = s.template().Execute(f, to)
@@ -169,7 +169,7 @@ func (s *systemd) Run() (err error) {
 		return err
 	}
 
-	s.Option.funcSingle(optionRunWait, func() {
+	s.Option.FuncSingle(optionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan
