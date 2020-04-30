@@ -26,7 +26,6 @@ type (
 		Info    *info
 		Log     *zlog.Logger
 		Cache   *zcache.Table
-		next    HandlerFunc
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
@@ -258,8 +257,8 @@ func Run() {
 
 	for _, e := range zservers {
 		for _, cfg := range e.addr {
+			m.Add(1)
 			go func(cfg addrSt, e *Engine) {
-				m.Add(1)
 				isTls := cfg.Cert != "" || cfg.Config != nil
 				addr := cfg.addr
 				if !strings.Contains(addr, ":") {
@@ -355,6 +354,7 @@ func Run() {
 	if ShutdownDone != nil {
 		ShutdownDone()
 	}
+	time.Sleep(100 * time.Millisecond)
 }
 
 func runNewProcess() {

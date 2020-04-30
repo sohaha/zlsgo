@@ -9,6 +9,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // IsBool booleanValue
@@ -503,6 +504,16 @@ func (v Engine) EnumFloat64(f []float64, customError ...string) Engine {
 			}
 		}
 		v.err = v.setError("不在允许的范围", customError...)
+		return v
+	})
+}
+
+// CheckPassword check encrypt password
+func (v Engine) CheckPassword(password string, customError ...string) Engine {
+	return pushQueue(v, func(v Engine) Engine {
+		if err := bcrypt.CompareHashAndPassword(zstring.String2Bytes(password), zstring.String2Bytes(v.value)); err != nil {
+			v.err = v.setError("不匹配", customError...)
+		}
 		return v
 	})
 }

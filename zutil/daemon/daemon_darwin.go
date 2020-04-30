@@ -207,9 +207,7 @@ func (s *darwinLaunchdService) Restart() error {
 }
 
 func (s *darwinLaunchdService) Run() error {
-	var err error
-
-	err = s.i.Start(s)
+	err := s.i.Start(s)
 	if err != nil {
 		return err
 	}

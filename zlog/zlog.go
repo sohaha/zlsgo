@@ -42,14 +42,14 @@ func SetPrefix(prefix string) {
 	Log.SetPrefix(prefix)
 }
 
-// SetLogFile Setting up log files
-func SetLogFile(filepath string) {
-	Log.SetLogFile(filepath)
+// SetFile Setting up log files
+func SetLogFile(filepath string, archive ...bool) {
+	Log.SetFile(filepath, archive...)
 }
 
-// SetSaveLogFile SetSaveLogFile
-func SetSaveLogFile(filepath string) {
-	Log.SetSaveLogFile(filepath)
+// SetSaveFile SetSaveFile
+func SetSaveLogFile(filepath string, archive ...bool) {
+	Log.SetSaveFile(filepath, archive...)
 }
 
 // SetLogLevel Setting log display level
@@ -173,6 +173,11 @@ func Track(logTip string, v ...int) {
 // Stack Stack
 func Stack(v ...interface{}) {
 	Log.Stack(v...)
+}
+
+// Discard Discard
+func Discard() {
+	Log.Discard()
 }
 
 func init() {

@@ -814,7 +814,7 @@ func (expr *Expression) calculateActualDaysOfMonth(year, month int) []int {
 	//  "either field matches the current time"
 
 	// If both fields are not restricted, all days of the month are a hit
-	if expr.daysOfMonthRestricted == false && expr.daysOfWeekRestricted == false {
+	if !expr.daysOfMonthRestricted && !expr.daysOfWeekRestricted {
 		return genericDefaultList[1 : lastDayOfMonth.Day()+1]
 	}
 

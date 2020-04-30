@@ -210,5 +210,4 @@ func TestRuleIs(t *testing.T) {
 	tt.Equal(true, err != nil)
 	err = New().Verifi("").EnumFloat64([]float64{1}).Error()
 	tt.EqualNil(err)
-
 }

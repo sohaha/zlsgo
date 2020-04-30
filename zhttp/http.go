@@ -568,18 +568,18 @@ func (m *multipartHelper) Upload(req *http.Request) {
 			}
 
 			if upload == nil {
-				io.Copy(fileWriter, up.File)
+				_, _ = io.Copy(fileWriter, up.File)
 			} else {
 				if _, ok := up.File.(*os.File); ok {
-					upload(fileWriter, up.File)
+					_ = upload(fileWriter, up.File)
 				} else {
-					io.Copy(fileWriter, up.File)
+					_, _ = io.Copy(fileWriter, up.File)
 				}
 			}
-			up.File.Close()
+			_ = up.File.Close()
 		}
-		bodyWriter.Close()
-		pw.Close()
+		_ = bodyWriter.Close()
+		_ = pw.Close()
 	}()
 	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
 	req.Body = ioutil.NopCloser(pr)
@@ -593,13 +593,13 @@ func (m *multipartHelper) Dump() []byte {
 	bodyWriter := multipart.NewWriter(&buf)
 	for key, values := range m.form {
 		for _, value := range values {
-			m.writeField(bodyWriter, key, value)
+			_ = m.writeField(bodyWriter, key, value)
 		}
 	}
 	for _, up := range m.uploads {
-		m.writeFile(bodyWriter, up.FieldName, up.FileName)
+		_ = m.writeFile(bodyWriter, up.FieldName, up.FileName)
 	}
-	bodyWriter.Close()
+	_ = bodyWriter.Close()
 	m.dump = buf.Bytes()
 	return m.dump
 }

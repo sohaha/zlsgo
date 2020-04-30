@@ -53,10 +53,7 @@ func (c *Context) IsWebsocket() bool {
 
 // IsAjax IsAjax
 func (c *Context) IsAjax() bool {
-	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" {
-		return true
-	}
-	return false
+	return c.GetHeader("X-Requested-With") == "XMLHttpRequest"
 }
 
 // GetClientIP Client IP
@@ -109,13 +106,11 @@ func (c *Context) Next() (next HandlerFunc) {
 	StopHandle := c.Info.StopHandle
 	middlewareLen := len(c.Info.middleware)
 	c.Info.RUnlock()
-	if !StopHandle {
-		if middlewareLen > 0 {
-			next = c.Info.middleware[0]
-			c.Info.middleware = c.Info.middleware[1:]
-			next(c)
-			c.PrevContent()
-		}
+	if !StopHandle && middlewareLen > 0 {
+		next = c.Info.middleware[0]
+		c.Info.middleware = c.Info.middleware[1:]
+		next(c)
+		// c.PrevContent()
 	}
 
 	return

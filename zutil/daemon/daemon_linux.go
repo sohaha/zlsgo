@@ -24,6 +24,11 @@ type (
 	}
 )
 
+const (
+	optionReloadSignal = "ReloadSignal"
+	optionPIDFile      = "PIDFile"
+)
+
 var errNoUserServiceSystemd = errors.New("user services are not supported on systemd")
 
 func init() {

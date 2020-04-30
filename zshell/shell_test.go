@@ -1,9 +1,10 @@
 package zshell
 
 import (
-	"github.com/sohaha/zlsgo"
 	"os"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func Test_bash(T *testing.T) {
@@ -25,15 +26,20 @@ func Test_bash(T *testing.T) {
 	t.EqualExit(true, err != nil)
 	t.Log(err)
 
-	code, res, errRes, err = Run("ls")
+	code, _, errRes, err = Run("ls")
 	t.EqualExit(0, code)
 	t.EqualExit(true, err == nil)
 	t.Log(err)
 
-	code, res, errRes, err = Run("curl b.c")
-	t.EqualExit(6, code)
-	t.EqualExit(true, err == nil)
+	code, _, errRes, err = Run("curl b.c")
 	t.Log(err)
+	t.EqualExit(6, code)
+	t.EqualExit(true, err != nil)
+
+	code, _, errRes, err = Run("curl qq.com")
+	t.Log(err)
+	t.EqualExit(0, code)
+	t.EqualExit(true, err == nil)
 
 	err = BgRun("")
 	t.EqualExit(true, err != nil)

@@ -366,12 +366,12 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	rw.Info.StopHandle = false
 	if _, ok := e.router.trees[req.Method]; !ok {
-		e.HandleNotFound(rw, e.router.middleware)
+		e.HandleNotFound(rw)
 		return
 	}
 
 	if e.FindHandle(rw, req, req.URL.Path, true) {
-		e.HandleNotFound(rw, e.router.middleware)
+		e.HandleNotFound(rw)
 	}
 }
 
@@ -428,7 +428,8 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 	}
 }
 
-func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
+func (e *Engine) HandleNotFound(c *Context) {
+	middleware := make([]HandlerFunc, 0)
 	c.Info.Code = http.StatusNotFound
 	if e.IsDebug() {
 		middleware = []HandlerFunc{
@@ -437,8 +438,6 @@ func (e *Engine) HandleNotFound(c *Context, middleware []HandlerFunc) {
 				requestLog(c)
 			},
 		}
-	} else {
-		middleware = []HandlerFunc{}
 	}
 	if e.router.notFound != nil {
 		handle(c, e.router.notFound, middleware)

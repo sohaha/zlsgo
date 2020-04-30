@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ProjectPath                = "."
+	ProjectPath = "."
 )
 
 func init() {

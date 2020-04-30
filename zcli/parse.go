@@ -1,7 +1,6 @@
 package zcli
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -38,7 +37,7 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 				value, _ := flagMap.Get(i)
 				arr[i] = "-" + ztype.ToString(value)
 			}
-			err = errors.New(fmt.Sprintf("required flags: %s", strings.Join(arr, ", ")))
+			err = fmt.Errorf("required flags: %s", strings.Join(arr, ", "))
 		}
 	}
 	return

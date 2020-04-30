@@ -2,6 +2,7 @@ package zvalid
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -89,4 +90,54 @@ func TestBool(t *testing.T) {
 	b, err = Text("0").Bool()
 	tt.EqualNil(err)
 	tt.Equal(false, b)
+}
+
+func TestPassword(t *testing.T) {
+	var err error
+	tt := zlsgo.NewTest(t)
+
+	err = New().Verifi("123aA.").Password().Error()
+	tt.EqualNil(err)
+	err = New().Verifi("a", "pass2").Password().Error()
+	tt.Equal(true, err != nil)
+	tt.Log(err)
+	err = New().Verifi("").Password().Error()
+	tt.Equal(true, err != nil)
+	tt.Log(err)
+
+	err = New().Verifi("123aA.").StrongPassword().Error()
+	tt.EqualNil(err)
+	err = New().Verifi("123aA").StrongPassword().Error()
+	tt.Equal(true, err != nil)
+	err = New().Verifi("").StrongPassword().Error()
+	tt.Equal(true, err != nil)
+
+	now := time.Now()
+	str, err := New().Verifi(`123`).EncryptPassword().String()
+	tt.EqualNil(err)
+	t.Log(str)
+	t.Log("time", time.Now().Sub(now).Seconds())
+
+	now = time.Now()
+	str, err = New().Verifi(`123`).CheckPassword(str).String()
+	tt.EqualNil(err)
+	t.Log(str)
+	t.Log("time", time.Now().Sub(now).Seconds())
+
+	now = time.Now()
+	str, err = New().Verifi(`1231`).CheckPassword(str).String()
+	t.Log(str, err)
+	t.Log("time", time.Now().Sub(now).Seconds())
+
+	now = time.Now()
+	str, err = New().Verifi(`123`).EncryptPassword(14).String()
+	tt.EqualNil(err)
+	t.Log(str)
+	t.Log("time", time.Now().Sub(now).Seconds())
+
+	now = time.Now()
+	str, err = New().Verifi(`123`).EncryptPassword(4).String()
+	tt.EqualNil(err)
+	t.Log(str)
+	t.Log("time", time.Now().Sub(now).Seconds())
 }

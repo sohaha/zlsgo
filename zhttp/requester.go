@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-30 12:43:26
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-30 12:46:39
- */
-
 package zhttp
 
 func Get(url string, v ...interface{}) (*Res, error) {

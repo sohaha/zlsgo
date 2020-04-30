@@ -3,9 +3,10 @@ package cron
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 type (
@@ -47,20 +48,19 @@ func (c *CronJobTable) Run() {
 	go func() {
 		for {
 			now := time.Now()
+			// todo there is a sequence problem
 			c.table.Range(func(key, value interface{}) bool {
 				cronjob, ok := value.(*Job)
 				if ok {
 					if cronjob.NextTime.Before(now) || cronjob.NextTime.Equal(now) {
-						cronjob.run()
+						go cronjob.run()
 					}
 					cronjob.NextTime = cronjob.expr.Next(now)
 				}
 
 				return true
 			})
-			select {
-			case <-time.NewTimer(200 * time.Millisecond).C:
-			}
+			<-time.NewTimer(200 * time.Millisecond).C
 		}
 	}()
 }

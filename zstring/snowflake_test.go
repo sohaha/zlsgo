@@ -1,6 +1,7 @@
 package zstring
 
 import (
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -24,17 +25,18 @@ func TestId(t *testing.T) {
 
 	g.Add(testSum)
 	for i := 0; i < testSum; i++ {
-		go func() {
+		go func(t *testing.T) {
 			id, err := w.Id()
 			tt.EqualNil(err)
 			ids.Lock()
 			if _, ok := ids.data[id]; ok {
-				t.Fatal("repeated")
+				t.Error("repeated")
+				os.Exit(1)
 			}
 			ids.data[id] = new(interface{})
 			ids.Unlock()
 			g.Done()
-		}()
+		}(t)
 	}
 	g.Wait()
 
@@ -57,12 +59,12 @@ func TestIdWorker_timeReGen(t *testing.T) {
 	now := time.Now()
 	reG := w.timeReGen(g + 1)
 	t.Log(g, reG)
-	v := time.Now().Sub(now).Nanoseconds()
+	v := time.Since(now).Nanoseconds()
 
 	g = w.timeGen()
 	now = time.Now()
 	reG = w.timeReGen(g)
 	t.Log(g, reG)
 
-	t.Log(v, time.Now().Sub(now).Nanoseconds())
+	t.Log(v, time.Since(now).Nanoseconds())
 }

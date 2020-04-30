@@ -107,7 +107,7 @@ func (v Engine) Result() Engine {
 			if q, ok := queue.Value.(queueT); ok {
 				nv := q(v)
 				v.value = nv.value
-					v.err = nv.err
+				v.err = nv.err
 			}
 			queues.Remove(queue)
 		}

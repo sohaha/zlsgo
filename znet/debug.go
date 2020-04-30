@@ -14,13 +14,13 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-func debugShowRequest(c *Context) {
-	method := zstring.Buffer()
-	method.WriteString("{")
-	method.WriteString(c.Request.Method)
-	method.WriteString("}")
-	c.Log.Debugf("Visit: [%d] %s %s\n", c.Info.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
-}
+// func debugShowRequest(c *Context) {
+// 	method := zstring.Buffer()
+// 	method.WriteString("{")
+// 	method.WriteString(c.Request.Method)
+// 	method.WriteString("}")
+// 	c.Log.Debugf("Visit: [%d] %s %s\n", c.Info.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
+// }
 
 func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 	mLen := zstring.Len(method)

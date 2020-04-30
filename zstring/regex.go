@@ -12,8 +12,6 @@ type regexMapStruct struct {
 }
 
 var (
-	regexMu         = sync.RWMutex{}
-	regexMap        = make(map[string]*regexp.Regexp)
 	regexs          sync.Map
 	clearRegexCache = time.Now().Unix()
 )

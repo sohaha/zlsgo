@@ -94,7 +94,6 @@ func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 }
 
 func (c *Context) GetPostFormAll() (value url.Values, err error) {
-	value = url.Values{}
 	req := c.Request
 	if req.PostForm == nil {
 		if c.ContentType() == MIMEMultipartPOSTForm {

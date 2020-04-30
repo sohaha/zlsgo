@@ -30,7 +30,7 @@ func runGrep(grep, command string, args ...string) (res string, err error) {
 		return
 	}
 	commands = []string{"grep", grep}
-	err = runcmd(commands, bytes.NewReader([]byte(out.String())), &grepout, &outErr)
+	err = runcmd(commands, bytes.NewReader(out.Bytes()), &grepout, &outErr)
 	if err != nil {
 		return
 	}

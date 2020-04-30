@@ -16,7 +16,7 @@ Recommended to use with the `zzz watch` command of [zzz](https://github.com/soha
 
 ## Why Zara
 
-- Easy to use, lightweight enough
+Simple to use and light enough to avoid excessive external dependence
 
 ## QuickStart
 

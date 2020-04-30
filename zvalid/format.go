@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Trim remove leading and trailing spaces
@@ -67,6 +68,23 @@ func (v Engine) CamelCaseToSnakeCase(delimiter ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(v) {
 			v.value = zstring.CamelCaseToSnakeCase(v.value, delimiter...)
+		}
+		return v
+	})
+}
+
+func (v Engine) EncryptPassword(cost ...int) Engine {
+	return pushQueue(v, func(v Engine) Engine {
+		if notEmpty(v) {
+			bcost := bcrypt.DefaultCost
+			if len(cost) > 0 {
+				bcost = cost[0]
+			}
+			if bytes, err := bcrypt.GenerateFromPassword(zstring.String2Bytes(v.value), bcost); err == nil {
+				v.value = zstring.Bytes2String(bytes)
+			} else {
+				v.err = err
+			}
 		}
 		return v
 	})

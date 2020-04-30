@@ -61,7 +61,6 @@ type (
 		Run(args []string)
 	}
 	errWrite struct {
-		id int
 	}
 	Var struct {
 		name   string

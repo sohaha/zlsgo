@@ -29,7 +29,6 @@ type Res struct {
 	*multipartHelper
 	requesterBody    []byte
 	responseBody     []byte
-	responseRawBody  io.ReadCloser
 	downloadProgress DownloadProgress
 	err              error
 }

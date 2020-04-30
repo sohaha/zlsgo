@@ -9,18 +9,18 @@ import (
 
 type (
 	Engine struct {
-	queue        *list.List
-	setRawValue  bool
-	err          error
-	name         string
-	value        string
-	i            int
-	f            float64
-	sep          string
-	silent       bool
-	defaultValue interface{}
-	result       bool
-}
+		queue        *list.List
+		setRawValue  bool
+		err          error
+		name         string
+		value        string
+		i            int
+		f            float64
+		sep          string
+		silent       bool
+		defaultValue interface{}
+		result       bool
+	}
 	queueT func(v Engine) Engine
 )
 

@@ -76,6 +76,6 @@ func TestUtil(T *testing.T) {
 	showHeadr()
 	showFlagsHelp()
 	showLogo()
-	Error("%s","err")
+	Error("%s", "err")
 	argsIsHelp([]string{"-h"})
 }

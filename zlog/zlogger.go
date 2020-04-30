@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -76,7 +77,6 @@ type (
 		calldDepth    int
 		level         int
 		color         bool
-		FileMaxSize   int64
 		fileDir       string
 		fileName      string
 		fileAndStdout bool
@@ -227,6 +227,9 @@ func (log *Logger) Writer() io.Writer {
 func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string) error {
 	log.mu.Lock()
 	defer log.mu.Unlock()
+	if log.out == ioutil.Discard {
+		return nil
+	}
 	isNotLevel := level == LogNot
 	if log.level < level {
 		return nil
@@ -253,24 +256,24 @@ func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string
 		log.buf.WriteByte('\n')
 	}
 	_, err := log.out.Write(log.buf.Bytes())
-	if log.file != nil && log.FileMaxSize > 0 {
-		if fileInfo, err := log.file.Stat(); err == nil {
-			logSize := fileInfo.Size()
-			if logSize > log.FileMaxSize {
-				logFile := log.fileDir + "/" + log.fileName
-				oldFile := oldLogFile(log.fileDir, log.fileName)
-				log.CloseFile()
-				_ = os.Rename(logFile, oldFile)
-				file, _, _, _ := openFile(log.fileDir+log.fileName)
-				log.file = file
-				if log.fileAndStdout {
-					log.out = io.MultiWriter(log.file, os.Stdout)
-				} else {
-					log.out = file
-				}
-			}
-		}
-	}
+	// if log.file != nil && log.FileMaxSize > 0 {
+	// 	if fileInfo, err := log.file.Stat(); err == nil {
+	// 		logSize := fileInfo.Size()
+	// 		if logSize > log.FileMaxSize {
+	// 			logFile := log.fileDir + "/" + log.fileName
+	// 			oldFile := oldLogFile(log.fileDir, log.fileName)
+	// 			log.CloseFile()
+	// 			_ = os.Rename(logFile, oldFile)
+	// 			file, _, _, _ := openFile(log.fileDir + log.fileName)
+	// 			log.file = file
+	// 			if log.fileAndStdout {
+	// 				log.out = io.MultiWriter(log.file, os.Stdout)
+	// 			} else {
+	// 				log.out = file
+	// 			}
+	// 		}
+	// 	}
+	// }
 	return err
 }
 

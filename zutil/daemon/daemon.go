@@ -16,10 +16,7 @@ const (
 	optionUserServiceDefault   = false
 	optionSessionCreate        = "SessionCreate"
 	optionSessionCreateDefault = false
-
-	optionRunWait      = "RunWait"
-	optionReloadSignal = "ReloadSignal"
-	optionPIDFile      = "PIDFile"
+	optionRunWait              = "RunWait"
 )
 
 type (
@@ -90,7 +87,7 @@ func New(i Ife, c *Config) (ServiceIfe, error) {
 
 func newSystem() SystemIfe {
 	for _, choice := range systemRegistry {
-		if choice.Detect() == false {
+		if !choice.Detect() {
 			continue
 		}
 		return choice

@@ -5,5 +5,6 @@ import (
 )
 
 func TestService(t *testing.T) {
-
+	_ = LaunchServiceRun("test", "", func() {
+	})
 }

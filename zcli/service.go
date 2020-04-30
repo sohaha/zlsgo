@@ -1,12 +1,10 @@
 package zcli
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
 	"github.com/sohaha/zlsgo/zarray"
-	"github.com/sohaha/zlsgo/zenv"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zutil/daemon"
 )
@@ -96,6 +94,13 @@ func (*serviceRestart) Run(args []string) {
 func LaunchServiceRun(name string, description string, fn func(), config ...*daemon.Config) error {
 	_, _ = LaunchService(name, description, fn, config...)
 	Parse()
+	if serviceErr != nil && (serviceErr != daemon.ErrNoServiceSystemDetected && !daemon.IsPermissionError(serviceErr)) {
+		return serviceErr
+	}
+	if service == nil {
+		fn()
+		return nil
+	}
 	return service.Run()
 }
 
@@ -109,7 +114,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 		daemonConfig = &daemon.Config{
 			Name:        name,
 			Description: description,
-			Option: zarray.DefData{
+			Option:      zarray.DefData{
 				// "UserService": true,
 			},
 		}
@@ -126,9 +131,6 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 		Add("start", "Start service", &serviceStart{})
 		Add("stop", "Stop service", &serviceStop{})
 		Add("restart", "Restart service", &serviceRestart{})
-		if serviceErr == daemon.ErrNoServiceSystemDetected {
-			CheckErr(fmt.Errorf("%s does not support process daemon\n", zenv.GetOs()), true)
-		}
 	})
 
 	return service, serviceErr

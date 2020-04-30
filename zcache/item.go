@@ -64,7 +64,7 @@ func (item *Item) CreatedTime() time.Time {
 
 // RemainingLife RemainingLife
 func (item *Item) RemainingLife() time.Duration {
-	return item.createdTime.Add(item.lifeSpan).Sub(time.Now())
+	return time.Until(item.createdTime.Add(item.lifeSpan))
 }
 
 // AccessCount AccessCount

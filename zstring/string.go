@@ -85,7 +85,8 @@ func Bytes2String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
-// String2Bytes string to bytes, remark: read only
+// String2Bytes string to bytes
+// remark: read only, the structure of runtime changes will be affected, the role of unsafe.Pointer will be changed, and it will also be affected
 func String2Bytes(s string) []byte {
 	str := (*stringStruct)(unsafe.Pointer(&s))
 	ret := sliceT{array: str.str, len: str.len, cap: str.len}

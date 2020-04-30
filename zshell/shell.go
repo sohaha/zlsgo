@@ -40,7 +40,6 @@ func (s *ShellBuffer) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-
 func (s *ShellBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
@@ -85,7 +84,6 @@ func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 	if err != nil {
 		return 1, "", "", err
 	}
-
 	err = cmd.Wait()
 	status = cmd.ProcessState.Sys().(syscall.WaitStatus)
 	isSuccess := cmd.ProcessState.Success()
@@ -101,7 +99,7 @@ func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 	outStr = stdout.String()
 	errStr = stderr.String()
 
-	return status.ExitStatus(), outStr, outStr, nil
+	return status.ExitStatus(), outStr, errStr, err
 }
 
 func Run(command string) (code int, outStr, errStr string, err error) {

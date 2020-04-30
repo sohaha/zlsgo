@@ -130,7 +130,7 @@ func (r *renderHTML) Content(c *Context) []byte {
 	if r.Name != "" {
 		var t *template.Template
 		var err error
-		t, err = templateParse(r.Name,r.FuncMap)
+		t, err = templateParse(r.Name, r.FuncMap)
 		if err != nil {
 			panic(err)
 		}

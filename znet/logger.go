@@ -9,9 +9,10 @@ package znet
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 
 	"github.com/sohaha/zlsgo/zlog"
 )
@@ -21,12 +22,14 @@ func withRequestLog(c *Context) {
 		return
 	}
 	c.Next()
-	requestLog(c)
+	if c.Engine.IsDebug() {
+		requestLog(c)
+	}
 }
 
 func requestLog(c *Context) {
-	var status string
 	if c.Engine.IsDebug() {
+		var status string
 		end := time.Now()
 		latency := end.Sub(c.Info.StartTime)
 		code := c.Info.Code

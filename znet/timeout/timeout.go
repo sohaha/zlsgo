@@ -8,7 +8,6 @@
 package timeout
 
 import (
-	"bytes"
 	"context"
 	"net/http"
 	"time"
@@ -16,20 +15,21 @@ import (
 	"github.com/sohaha/zlsgo/znet"
 )
 
-type (
-	bodyWriter struct {
-		http.ResponseWriter
-		body *bytes.Buffer
-	}
-)
-
-func (w bodyWriter) Write(b []byte) (int, error) {
-	return w.body.Write(b)
-}
+// type (
+// 	bodyWriter struct {
+// 		http.ResponseWriter
+// 		body *bytes.Buffer
+// 	}
+// )
+//
+// func (w bodyWriter) Write(b []byte) (int, error) {
+// 	return w.body.Write(b)
+// }
 
 func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc {
 	return func(c *znet.Context) {
-		ctx, _ := context.WithTimeout(c.Request.Context(), waitingTime)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), waitingTime)
+		defer cancel()
 		finish := make(chan struct{}, 1)
 		go func(c *znet.Context) {
 			c.Next()

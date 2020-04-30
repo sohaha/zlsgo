@@ -3,8 +3,6 @@ package zvalid
 import (
 	"strings"
 	"unicode"
-
-	"github.com/sohaha/zlsgo/zlog"
 )
 
 // HasLetter must contain letters not case sensitive
@@ -83,7 +81,6 @@ func (v Engine) HasSymbol(customError ...string) Engine {
 				return v
 			}
 		}
-zlog.Error(v.value)
 		v.err = v.setError("必须包含符号", customError...)
 		return v
 	})
@@ -125,7 +122,6 @@ func (v Engine) HasSuffix(sub string, customError ...string) Engine {
 // Password Universal password (any visible character, length between 6 ~ 20)
 func (v Engine) Password(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
-		zlog.Dump("Password", v.value, v.name)
 		err := New().Verifi(v.value, v.name).Required().MinLength(6).MaxLength(20).Error()
 		if err != nil {
 			v.err = v.setError("不合法的值", customError...)

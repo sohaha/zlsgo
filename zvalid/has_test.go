@@ -66,21 +66,4 @@ func TestRuleHas(t *testing.T) {
 	tt.Equal(true, err != nil)
 	err = New().Verifi("").HasSuffix("a").Error()
 	tt.Equal(true, err != nil)
-
-	err = New().Verifi("123aA.").Password().Error()
-	tt.EqualNil(err)
-	err = New().Verifi("a", "pass2").Password().Error()
-	tt.Equal(true, err != nil)
-	tt.Log(err)
-	err = New().Verifi("").Password().Error()
-	tt.Equal(true, err != nil)
-	tt.Log(err)
-
-	err = New().Verifi("123aA.").StrongPassword().Error()
-	tt.EqualNil(err)
-	err = New().Verifi("123aA").StrongPassword().Error()
-	tt.Equal(true, err != nil)
-	err = New().Verifi("").StrongPassword().Error()
-	tt.Equal(true, err != nil)
-
 }

@@ -47,7 +47,7 @@ func TestLog(T *testing.T) {
 	log := New(text)
 	log.SetPrefix(text)
 	log.GetLogLevel()
-	log.SetSaveLogFile("tmp/Log.log")
+	log.SetSaveFile("tmp/Log.log")
 	log.ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
 	log.OpTextWrap(OpBold, text)
 	CleanLog(log)
@@ -70,6 +70,7 @@ func TestLogFatal(T *testing.T) {
 func TestLogPanic(T *testing.T) {
 	defer func() {
 		if err := recover(); err != nil {
+			T.Log(err)
 		}
 	}()
 	Panic("log with Panicf")
@@ -78,6 +79,7 @@ func TestLogPanic(T *testing.T) {
 func TestLogPanicf(T *testing.T) {
 	defer func() {
 		if err := recover(); err != nil {
+			T.Log(err)
 		}
 	}()
 	Panicf("%s", "log with Panicf")
