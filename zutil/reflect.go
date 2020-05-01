@@ -17,7 +17,8 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 	case reflect.String:
 		vValueOf.SetString(vString)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v, err := strconv.ParseInt(vString, 10, 64)
+		var v int64
+		v, err = strconv.ParseInt(vString, 10, 64)
 		if err != nil {
 			err = errors.New("must be an integer")
 		} else if vValueOf.OverflowInt(v) {
@@ -25,7 +26,8 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 		}
 		vValueOf.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v, err := strconv.ParseUint(vString, 10, 64)
+		var v uint64
+		v, err = strconv.ParseUint(vString, 10, 64)
 		if err != nil {
 			err = errors.New("must be an unsigned integer")
 		} else if vValueOf.OverflowUint(v) {
@@ -33,14 +35,16 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 		}
 		vValueOf.SetUint(v)
 	case reflect.Float32, reflect.Float64:
-		v, err := strconv.ParseFloat(vString, 10)
+		var v float64
+		v, err = strconv.ParseFloat(vString, 10)
 		if err != nil {
 			err = errors.New("must be decimal")
 		} else if vValueOf.OverflowFloat(v) {
 			err = typeErr
 		}
 	case reflect.Bool:
-		v, err := strconv.ParseBool(vString)
+		var v bool
+		v, err = strconv.ParseBool(vString)
 		if err != nil {
 			err = errors.New("must be boolean")
 		}

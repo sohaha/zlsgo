@@ -72,12 +72,12 @@ var (
 	ContentTypeJSON  = "application/json; charset=utf-8"
 )
 
-func (c *Context) render(code int, r render) {
-	c.Info.Lock()
-	c.Info.Code = code
-	c.Info.render = r
-	c.Info.StopHandle = true
-	c.Info.Unlock()
+func (c *Context) renderProcessing(code int, r render) {
+	c.Lock()
+	c.Code = code
+	c.render = r
+	c.StopHandle = true
+	c.Unlock()
 }
 
 func (r *renderByte) Content(c *Context) []byte {
@@ -147,15 +147,15 @@ func (r *renderHTML) Content(c *Context) []byte {
 }
 
 func (c *Context) Byte(code int, value []byte) {
-	c.render(code, &renderByte{Data: value})
+	c.renderProcessing(code, &renderByte{Data: value})
 }
 
 func (c *Context) String(code int, format string, values ...interface{}) {
-	c.render(code, &renderString{Format: format, Data: values})
+	c.renderProcessing(code, &renderString{Format: format, Data: values})
 }
 
 func (c *Context) SetContent(data *PrevData) {
-	c.render(data.Code, &renderByte{Data: data.Content, Type: data.Type})
+	c.renderProcessing(data.Code, &renderByte{Data: data.Content, Type: data.Type})
 }
 
 func (c *Context) File(path string) {
@@ -166,11 +166,11 @@ func (c *Context) File(path string) {
 			c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
 		}
 	}
-	c.render(code, &renderFile{Data: path, FileExist: fileExist})
+	c.renderProcessing(code, &renderFile{Data: path, FileExist: fileExist})
 }
 
 func (c *Context) JSON(code int, values interface{}) {
-	c.render(code, &renderJSON{Data: values})
+	c.renderProcessing(code, &renderJSON{Data: values})
 }
 
 // ResJSON ResJSON
@@ -179,12 +179,12 @@ func (c *Context) ResJSON(code int, msg string, data interface{}) {
 	if code < 300 && code >= 200 {
 		httpState = http.StatusOK
 	}
-	c.render(httpState, &renderJSON{Data: Api{Code: code, Data: data, Msg: msg}})
+	c.renderProcessing(httpState, &renderJSON{Data: Api{Code: code, Data: data, Msg: msg}})
 }
 
 // HTML export html
 func (c *Context) HTML(code int, html string) {
-	c.render(code, &renderHTML{
+	c.renderProcessing(code, &renderHTML{
 		Name: "",
 		Data: html,
 	})
@@ -196,7 +196,7 @@ func (c *Context) Template(code int, name string, data interface{}, funcMap ...m
 	if len(funcMap) > 0 {
 		fn = funcMap[0]
 	}
-	c.render(code, &renderHTML{
+	c.renderProcessing(code, &renderHTML{
 		Name:    name,
 		Data:    data,
 		FuncMap: fn,
@@ -205,9 +205,9 @@ func (c *Context) Template(code int, name string, data interface{}, funcMap ...m
 
 // Abort Abort
 func (c *Context) Abort(code ...int) {
-	c.Info.Lock()
-	c.Info.StopHandle = true
-	c.Info.Unlock()
+	c.Lock()
+	c.StopHandle = true
+	c.Unlock()
 	if len(code) > 0 {
 		c.SetStatus(code[0])
 	}
@@ -224,9 +224,9 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 }
 
 func (c *Context) SetStatus(code int) *Context {
-	c.Info.Lock()
-	c.Info.Code = code
-	c.Info.Unlock()
+	c.Lock()
+	c.Code = code
+	c.Unlock()
 	return c
 }
 
@@ -236,11 +236,11 @@ func (c *Context) SetContentType(contentType string) *Context {
 }
 
 func (c *Context) PrevContent() *PrevData {
-	c.Info.RLock()
-	r := c.Info.render
-	code := c.Info.Code
-	ctype, hasType := c.Info.heades["Content-Type"]
-	c.Info.RUnlock()
+	c.RLock()
+	r := c.render
+	code := c.Code
+	ctype, hasType := c.heades["Content-Type"]
+	c.RUnlock()
 	if !hasType {
 		ctype = ContentTypePlain
 	}

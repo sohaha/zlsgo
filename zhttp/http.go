@@ -197,14 +197,6 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	if rawurl == "" {
 		return nil, ErrUrlNotSpecified
 	}
-	req := &http.Request{
-		Method:     method,
-		Header:     make(http.Header),
-		Proto:      "Engine/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-	}
-	resp = &Res{req: req, r: r}
 
 	var (
 		queryParam     param
@@ -215,6 +207,15 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		delayedFunc    []func()
 		lastFunc       []func()
 	)
+
+	req := &http.Request{
+		Method:     method,
+		Header:     make(http.Header),
+		Proto:      "Engine/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+	}
+	resp = &Res{req: req, r: r}
 
 	for _, v := range vs {
 		switch vv := v.(type) {

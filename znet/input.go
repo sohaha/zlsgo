@@ -9,14 +9,15 @@ package znet
 
 import (
 	"errors"
-	"github.com/sohaha/zlsgo/zjson"
-	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 // GetParam Get the value of the param inside the route
@@ -115,7 +116,6 @@ func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	req := c.Request
 	postForm, _ := c.GetPostFormAll()
 	dicts, exist := c.get(postForm, key)
-
 	if !exist && req.MultipartForm != nil && req.MultipartForm.File != nil {
 		dicts, exist = c.get(req.MultipartForm.Value, key)
 	}

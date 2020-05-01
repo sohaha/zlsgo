@@ -13,7 +13,7 @@ func TestContext_Valid(tt *testing.T) {
 		"/TestContext_Valid?body2=b2",
 		"body=1 &b3=999", "application/x-www-form-urlencoded",
 	}, "/TestContext_Valid", func(c *Context) {
-		rbool := false
+		var rbool bool
 		rule := c.ValidRule().HasNumber()
 
 		v := c.Valid(rule, "body", "内容").MinLength(5).IsNumber().Result()
@@ -60,7 +60,7 @@ func TestContext_BatchValid(tt *testing.T) {
 		// tt.Log(fmt.Sprintf("%#v", c.Request.Response))
 		// tt.Log(fmt.Sprintf("%#v", c.Writer))
 		// tt.Log(c.Request)
-		// tt.Log(c.Info.Code)
+		// tt.Log(c.Code)
 	}, func(c *Context) {
 		tt.Log("--前置2")
 		c.Abort()

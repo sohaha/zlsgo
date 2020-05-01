@@ -3,6 +3,7 @@ package znet
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -64,6 +65,7 @@ func templateParse(file string, funcMap template.FuncMap) (t *template.Template,
 	}
 	return
 }
+
 func parsPattern(res []string) (string, []string) {
 	var (
 		matchName []string
@@ -120,4 +122,38 @@ type tlsRedirectHandler struct {
 
 func (t *tlsRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, t.Domain+r.URL.String(), 301)
+}
+
+func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
+	return &Context{
+		Writer:        w,
+		Request:       req,
+		Engine:        e,
+		Log:           e.Log,
+		Cache:         Cache,
+		Code:          http.StatusOK,
+		StartTime:     time.Time{},
+		heades:        map[string]string{},
+		customizeData: map[string]interface{}{},
+	}
+}
+
+func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
+	c.Request = r
+	c.Writer = w
+	c.Code = http.StatusOK
+	c.StartTime = time.Now()
+	c.StopHandle = false
+	c.middleware = []HandlerFunc{}[:0]
+	c.customizeData = map[string]interface{}{}
+	c.heades = map[string]string{}
+	c.render = nil
+}
+
+func (e *Engine) acquireContext() *Context {
+	return e.pool.Get().(*Context)
+}
+
+func (e *Engine) releaseContext(c *Context) {
+	e.pool.Put(c)
 }

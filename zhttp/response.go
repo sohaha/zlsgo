@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-15 19:37:01
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-30 13:31:47
- */
-
 package zhttp
 
 import (

@@ -54,6 +54,7 @@ func (log *Logger) SetFile(filepath string, archive ...bool) {
 func (log *Logger) setLogfile(filepath string, archive bool) {
 	fileObj, fileName, fileDir, _ := openFile(filepath, archive)
 	log.mu.Lock()
+	defer log.mu.Unlock()
 	log.CloseFile()
 	log.file = fileObj
 	log.fileDir = fileDir
@@ -63,7 +64,6 @@ func (log *Logger) setLogfile(filepath string, archive bool) {
 	} else {
 		log.out = fileObj
 	}
-	log.mu.Unlock()
 }
 
 func (log *Logger) Discard() {

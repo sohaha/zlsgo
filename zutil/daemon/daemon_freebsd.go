@@ -125,9 +125,8 @@ func (s *freebsdRcdService) Install() error {
 		},
 	}
 
-	var rcdScript = ``
+	rcdScript := ""
 	if s.Name == "opsramp-agent" {
-
 		rcdScript = rcdScriptOpsrampAgent
 		file, err := os.OpenFile("/etc/rc.conf", os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {

@@ -15,7 +15,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
 )
@@ -319,30 +318,17 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !e.ShowFavicon && req.URL.Path == "/favicon.ico" {
 		return
 	}
-	rw := &Context{
-		Writer:  w,
-		Request: req,
-		Engine:  e,
-		Log:     e.Log,
-		Cache:   Cache,
-		Info: &info{
-			Code:          http.StatusOK,
-			StartTime:     time.Now(),
-			heades:        map[string]string{},
-			customizeData: map[string]interface{}{},
-		},
-	}
-	if e.router.panic != nil {
-		defer func() {
+	rw := e.acquireContext()
+	rw.Reset(w, req)
+	defer func() {
+		if e.router.panic != nil {
 			if err := recover(); err != nil {
-				rw.Info.Code = http.StatusInternalServerError
+				rw.Code = http.StatusInternalServerError
 				errMsg, ok := err.(error)
 				if !ok {
 					errMsg = errors.New(fmt.Sprint(err))
 				}
 				e.router.panic(rw, errMsg)
-				rw.done()
-				requestLog(rw)
 				// e.Log.Error(errMsg)
 				// e.Log.Track("Track Panic: ", 0, 2)
 				// Log.Stack()
@@ -350,8 +336,13 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				// n := runtime.Stack(trace, true)
 				// Log.Errorf("panic: '%v'\n, Stack Trace:\n %s", err, string(trace[:int(math.Min(float64(n), float64(7000)))]))
 			}
-		}()
-	}
+		}
+		rw.done()
+		if e.IsDebug() {
+			requestLog(rw)
+		}
+		e.releaseContext(rw)
+	}()
 
 	// custom method type
 	if req.Method == "POST" && e.customMethodType != "" {
@@ -360,11 +351,9 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if e.preHandle != nil && e.preHandle(rw) {
-		rw.done()
-		requestLog(rw)
 		return
 	}
-	rw.Info.StopHandle = false
+	rw.StopHandle = false
 	if _, ok := e.router.trees[req.Method]; !ok {
 		e.HandleNotFound(rw)
 		return
@@ -430,15 +419,7 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 
 func (e *Engine) HandleNotFound(c *Context) {
 	middleware := make([]HandlerFunc, 0)
-	c.Info.Code = http.StatusNotFound
-	if e.IsDebug() {
-		middleware = []HandlerFunc{
-			func(c *Context) {
-				c.Next()
-				requestLog(c)
-			},
-		}
-	}
+	c.Code = http.StatusNotFound
 	if e.router.notFound != nil {
 		handle(c, e.router.notFound, middleware)
 		return
@@ -450,10 +431,9 @@ func (e *Engine) HandleNotFound(c *Context) {
 }
 
 func handle(c *Context, handler HandlerFunc, middleware []HandlerFunc) {
-	c.Info.middleware = append(middleware, handler)
-	c.Info.handlerLen = len(c.Info.middleware)
+	c.middleware = append(middleware, handler)
+	// c.handlerLen = len(c.middleware)
 	c.Next()
-	c.done()
 }
 
 // Match checks if the request matches the route pattern

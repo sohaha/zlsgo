@@ -19,13 +19,20 @@ import (
 type (
 	// Context context
 	Context struct {
-		Writer  http.ResponseWriter
-		Request *http.Request
-		rawData string
-		Engine  *Engine
-		Info    *info
-		Log     *zlog.Logger
-		Cache   *zcache.Table
+		Code int
+		sync.RWMutex
+		StartTime     time.Time
+		StopHandle    bool
+		middleware    []HandlerFunc
+		customizeData map[string]interface{}
+		heades        map[string]string
+		render        render
+		Writer        http.ResponseWriter
+		Request       *http.Request
+		rawData       string
+		Engine        *Engine
+		Log           *zlog.Logger
+		Cache         *zcache.Table
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
@@ -42,6 +49,7 @@ type (
 		addr               []addrSt
 		router             *router
 		preHandle          func(context *Context) bool
+		pool               sync.Pool
 	}
 
 	TlsCfg struct {
@@ -64,18 +72,6 @@ type (
 		parameters Parameters
 		notFound   HandlerFunc
 		panic      PanicFunc
-	}
-
-	info struct {
-		Code int
-		sync.RWMutex
-		StartTime     time.Time
-		StopHandle    bool
-		handlerLen    int
-		middleware    []HandlerFunc
-		customizeData map[string]interface{}
-		heades        map[string]string
-		render        render
 	}
 
 	// HandlerFunc HandlerFunc
@@ -157,15 +153,14 @@ func New(serverName ...string) *Engine {
 		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 	}
-
+	r.pool.New = func() interface{} {
+		return r.NewContext(nil, nil)
+	}
 	if _, ok := zservers[name]; ok {
 		Log.Fatalf("serverName: %s is has", name)
 	}
-
 	zservers[name] = r
-
-	r.Use(withRequestLog)
-
+	// r.Use(withRequestLog)
 	return r
 }
 

@@ -19,7 +19,7 @@ import (
 // 	method.WriteString("{")
 // 	method.WriteString(c.Request.Method)
 // 	method.WriteString("}")
-// 	c.Log.Debugf("Visit: [%d] %s %s\n", c.Info.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
+// 	c.Log.Debugf("Visit: [%d] %s %s\n", c.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
 // }
 
 func showRouteDebug(log *zlog.Logger, tf, method, path string) string {

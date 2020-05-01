@@ -28,7 +28,7 @@ func TestNew(tt *testing.T) {
 	t.Log(next.String())
 
 	_, _ = cron.Add("* * * * * * *", func() {
-		fmt.Println("runing", time.Now().Unix())
+		fmt.Println("running", time.Now().Unix())
 		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
 		// g.Done()
 	})

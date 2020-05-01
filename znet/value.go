@@ -22,8 +22,10 @@ func (c *Context) Bind(obj interface{}) (err error) {
 	}
 	vv := v.Elem()
 	zutil.ReflectForNumField(vv, func(fieldTag string, kind reflect.Kind, field reflect.Value) bool {
-		var value interface{}
-		ok := false
+		var (
+			value interface{}
+			ok    bool
+		)
 		if kind == reflect.Slice {
 			value, ok = c.GetPostFormArray(fieldTag)
 		} else if kind == reflect.Struct {

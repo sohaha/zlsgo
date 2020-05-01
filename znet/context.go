@@ -72,23 +72,21 @@ func (c *Context) GetHeader(key string) string {
 
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
-	c.Info.Lock()
+	c.Lock()
 	if value == "" {
-		delete(c.Info.heades, key)
+		delete(c.heades, key)
 	} else {
-		c.Info.heades[key] = value
+		c.heades[key] = value
 	}
-	c.Info.Unlock()
+	c.Unlock()
 }
 
 func (c *Context) done() {
 	data := c.PrevContent()
-	c.Info.RLock()
-	r := c.Info.render
-	for key, value := range c.Info.heades {
+	r := c.render
+	for key, value := range c.heades {
 		c.Writer.Header().Set(key, value)
 	}
-	c.Info.RUnlock()
 	if r != nil {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)
@@ -102,15 +100,15 @@ func (c *Context) done() {
 }
 
 func (c *Context) Next() (next HandlerFunc) {
-	c.Info.RLock()
-	StopHandle := c.Info.StopHandle
-	middlewareLen := len(c.Info.middleware)
-	c.Info.RUnlock()
-	if !StopHandle && middlewareLen > 0 {
-		next = c.Info.middleware[0]
-		c.Info.middleware = c.Info.middleware[1:]
+	c.RLock()
+	if !c.StopHandle && len(c.middleware) > 0 {
+		next = c.middleware[0]
+		c.middleware = c.middleware[1:]
+		c.RUnlock()
 		next(c)
 		// c.PrevContent()
+	} else {
+		c.RUnlock()
 	}
 
 	return
@@ -165,19 +163,19 @@ func (c *Context) ContentType() string {
 
 // WithValue context sharing data
 func (c *Context) WithValue(key string, value interface{}) *Context {
-	c.Info.Lock()
-	c.Info.customizeData[key] = value
-	c.Info.Unlock()
+	c.Lock()
+	c.customizeData[key] = value
+	c.Unlock()
 	return c
 }
 
 // Value get context sharing data
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
-	c.Info.RLock()
-	value, ok = c.Info.customizeData[key]
+	c.RLock()
+	value, ok = c.customizeData[key]
 	if !ok && (len(def) > 0) {
 		value = def[0]
 	}
-	c.Info.RUnlock()
+	c.RUnlock()
 	return
 }

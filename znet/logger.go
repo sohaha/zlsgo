@@ -12,28 +12,23 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 
 	"github.com/sohaha/zlsgo/zlog"
 )
-
-func withRequestLog(c *Context) {
-	if c.Request.RequestURI == "/favicon.ico" {
-		return
-	}
-	c.Next()
-	if c.Engine.IsDebug() {
-		requestLog(c)
-	}
-}
 
 func requestLog(c *Context) {
 	if c.Engine.IsDebug() {
 		var status string
 		end := time.Now()
-		latency := end.Sub(c.Info.StartTime)
-		code := c.Info.Code
-		statusCode := zstring.Buffer()
+		c.RLock()
+		statusCode := zutil.GetBuff()
+		defer func() {
+			c.RUnlock()
+			zutil.PutBuff(statusCode)
+		}()
+		latency := end.Sub(c.StartTime)
+		code := c.Code
 		statusCode.WriteString(" ")
 		statusCode.WriteString(strconv.Itoa(code))
 		statusCode.WriteString(" ")

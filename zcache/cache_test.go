@@ -133,7 +133,7 @@ func TestDefCache(tt *testing.T) {
 	a, e = zcache.Get(key)
 	tt.Log(key, a, e)
 
-	a, e = zcache.Get(key2)
+	_, e = zcache.Get(key2)
 	t.EqualExit(true, e != nil)
 
 	a, e = zcache.Get(key3)

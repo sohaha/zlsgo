@@ -26,17 +26,17 @@ func Test_bash(T *testing.T) {
 	t.EqualExit(true, err != nil)
 	t.Log(err)
 
-	code, _, errRes, err = Run("ls")
+	code, _, _, err = Run("ls")
 	t.EqualExit(0, code)
 	t.EqualExit(true, err == nil)
 	t.Log(err)
 
-	code, _, errRes, err = Run("curl b.c")
+	code, _, _, err = Run("curl b.c")
 	t.Log(err)
 	t.EqualExit(6, code)
 	t.EqualExit(true, err != nil)
 
-	code, _, errRes, err = Run("curl qq.com")
+	code, _, _, err = Run("curl qq.com")
 	t.Log(err)
 	t.EqualExit(0, code)
 	t.EqualExit(true, err == nil)

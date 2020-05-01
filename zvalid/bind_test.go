@@ -24,6 +24,7 @@ func TestVar(t *testing.T) {
 
 	var sts []string
 	err = Var(&sts, Text("1,2,3,go").Separator(","))
+	tt.EqualNil(err)
 	tt.Equal([]string{"1", "2", "3", "go"}, sts)
 
 	var data struct {
