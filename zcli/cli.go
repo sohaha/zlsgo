@@ -21,13 +21,13 @@ func init() {
 	}
 }
 
-// Add Registers a Cmd for the provided subCommand name
-func Add(name, description string, command Cmd) (cmd *cmdCont) {
+// Add registers a cmd for the provided subCommand name
+func Add(name, description string, command Cmd) *cmdCont {
 	if name == "" {
 		Log.Error(getLangs("command_empty"))
-		return
+		return nil
 	}
-	cmd = &cmdCont{
+	cmd := &cmdCont{
 		name:          name,
 		desc:          description,
 		command:       command,
@@ -36,9 +36,10 @@ func Add(name, description string, command Cmd) (cmd *cmdCont) {
 	cmds[name] = cmd
 
 	cmdsKey = append(cmdsKey, name)
-	return
+	return cmd
 }
 
+// SetUnknownCommand set unknown command handle
 func SetUnknownCommand(fn func(_ string)) {
 	unknownCommandFn = fn
 }
@@ -71,6 +72,7 @@ func usage() {
 	}
 }
 
+// ShowFlags ShowFlags
 func ShowFlags(fg *flag.FlagSet) {
 	Log.Printf("\noptional flags:\n")
 	max := 40

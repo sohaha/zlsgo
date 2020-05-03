@@ -20,13 +20,13 @@ func TestId(t *testing.T) {
 	}
 
 	tt := zlsgo.NewTest(t)
-	w, err := NewIdWorker(0)
+	w, err := NewIDWorker(0)
 	tt.EqualNil(err)
 
 	g.Add(testSum)
 	for i := 0; i < testSum; i++ {
 		go func(t *testing.T) {
-			id, err := w.Id()
+			id, err := w.ID()
 			tt.EqualNil(err)
 			ids.Lock()
 			if _, ok := ids.data[id]; ok {
@@ -40,20 +40,20 @@ func TestId(t *testing.T) {
 	}
 	g.Wait()
 
-	w, err = NewIdWorker(2)
+	w, err = NewIDWorker(2)
 	tt.EqualNil(err)
-	id, _ := w.Id()
-	tim, ts, workerId, seq := ParseId(id)
+	id, _ := w.ID()
+	tim, ts, workerId, seq := ParseID(id)
 	tt.EqualNil(err)
 	t.Log(id, tim, ts, workerId, seq)
 }
 
 func TestIdWorker_timeReGen(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	w, err := NewIdWorker(0)
+	w, err := NewIDWorker(0)
 	tt.EqualNil(err)
 
-	t.Log(w.Id())
+	t.Log(w.ID())
 
 	g := w.timeGen()
 	now := time.Now()

@@ -1,14 +1,15 @@
 package timeout
 
 import (
-	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/znet"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/znet"
 )
 
 func TestWebTimeout(tt *testing.T) {

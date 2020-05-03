@@ -2,10 +2,12 @@ package zcli
 
 import (
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zshell"
 	"github.com/sohaha/zlsgo/zutil/daemon"
 )
 
@@ -46,7 +48,7 @@ func (*serviceStatus) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceStatus) Run(args []string) {
+func (*serviceStatus) Run(_ []string) {
 	log.Printf("%s: %s\n", service.String(), service.Status())
 }
 
@@ -54,7 +56,7 @@ func (*serviceInstall) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceInstall) Run(args []string) {
+func (*serviceInstall) Run(_ []string) {
 	CheckErr(service.Install(), true)
 	CheckErr(service.Start(), true)
 }
@@ -63,7 +65,7 @@ func (*serviceUnInstall) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceUnInstall) Run(args []string) {
+func (*serviceUnInstall) Run(_ []string) {
 	CheckErr(service.Uninstall(), true)
 }
 
@@ -71,7 +73,7 @@ func (*serviceStart) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceStart) Run(args []string) {
+func (*serviceStart) Run(_ []string) {
 	CheckErr(service.Start(), true)
 }
 
@@ -79,7 +81,7 @@ func (*serviceStop) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceStop) Run(args []string) {
+func (*serviceStop) Run(_ []string) {
 	CheckErr(service.Stop(), true)
 }
 
@@ -87,7 +89,7 @@ func (*serviceRestart) Flags(_ *Subcommand) {
 	CheckErr(serviceErr, true)
 }
 
-func (*serviceRestart) Run(args []string) {
+func (*serviceRestart) Run(_ []string) {
 	CheckErr(service.Restart(), true)
 }
 
@@ -105,23 +107,29 @@ func LaunchServiceRun(name string, description string, fn func(), config ...*dae
 }
 
 func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIfe, error) {
-	var daemonConfig *daemon.Config
-	if len(config) > 0 {
-		daemonConfig = config[0]
-		daemonConfig.Name = name
-		daemonConfig.Description = description
-	} else {
-		daemonConfig = &daemon.Config{
-			Name:        name,
-			Description: description,
-			Option:      zarray.DefData{
-				// "UserService": true,
-			},
-		}
-	}
-	// The file path is redirected to the current execution file path
-	zfile.ProjectPath = zfile.ProgramPath()
+
 	once.Do(func() {
+		var daemonConfig *daemon.Config
+		if len(config) > 0 {
+			daemonConfig = config[0]
+			daemonConfig.Name = name
+			daemonConfig.Description = description
+		} else {
+			daemonConfig = &daemon.Config{
+				Name:        name,
+				Description: description,
+				Option: zarray.DefData{
+					// "UserService": true,
+				},
+			}
+		}
+
+		// The file path is redirected to the current execution file path
+		_, gogccflags, _, _ := zshell.Run("go env GOGCCFLAGS")
+		if !strings.Contains(
+			gogccflags, zfile.RealPath(zfile.ProgramPath()+"../../../..")) {
+			zfile.ProjectPath = zfile.ProgramPath()
+		}
 		service, serviceErr = daemon.New(&app{
 			run: fn,
 		}, daemonConfig)

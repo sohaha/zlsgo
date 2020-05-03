@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type ele struct {
+type ValidEle struct {
 	target interface{}
 	source Engine
 }
@@ -36,7 +36,7 @@ func (v Engine) Separator(sep string) Engine {
 }
 
 // Batch assign multiple filtered results to the specified object
-func Batch(elements ...*ele) error {
+func Batch(elements ...*ValidEle) error {
 	for k := range elements {
 		err := Var(elements[k].target, elements[k].source)
 		if err != nil {
@@ -47,8 +47,8 @@ func Batch(elements ...*ele) error {
 }
 
 // BatchVar assign the filtered result to the specified variable
-func BatchVar(target interface{}, source Engine) *ele {
-	return &ele{
+func BatchVar(target interface{}, source Engine) *ValidEle {
+	return &ValidEle{
 		target: target,
 		source: source,
 	}
@@ -56,7 +56,7 @@ func BatchVar(target interface{}, source Engine) *ele {
 
 // Var assign the filtered result to the specified variable
 func Var(target interface{}, source Engine, name ...string) error {
-	source = source.Result()
+	source = source.valid()
 	if len(name) > 0 {
 		source.name = name[0]
 	}

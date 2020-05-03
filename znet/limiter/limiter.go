@@ -1,8 +1,9 @@
 package limiter
 
 import (
-	"github.com/sohaha/zlsgo/znet"
 	"sync/atomic"
+
+	"github.com/sohaha/zlsgo/znet"
 )
 
 func New(maxClients uint64, overflowFn func(c *znet.Context)) znet.HandlerFunc {

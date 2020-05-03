@@ -8,14 +8,15 @@ import (
 )
 
 type (
+	// Engine valid engine
 	Engine struct {
 		queue        *list.List
 		setRawValue  bool
 		err          error
 		name         string
 		value        string
-		i            int
-		f            float64
+		valueInt     int
+		valueFloat   float64
 		sep          string
 		silent       bool
 		defaultValue interface{}
@@ -25,19 +26,23 @@ type (
 )
 
 var (
+	// ErrNoValidationValueSet no verification value set
 	ErrNoValidationValueSet = errors.New("未设置验证值")
 )
 
+// New new valid
 func New() Engine {
 	return Engine{
 		queue: list.New(),
 	}
 }
 
+// Int use int new valid
 func Int(value int, name ...string) Engine {
-	return Text(strconv.Itoa(value), name...)
+	return Text(strconv.FormatInt(int64(value), 10), name...)
 }
 
+// Text use int new valid
 func Text(value string, name ...string) Engine {
 	var obj Engine
 	obj.value = value
@@ -49,18 +54,11 @@ func Text(value string, name ...string) Engine {
 	return obj
 }
 
-func (v Engine) setError(msg string, customError ...string) error {
-	if len(customError) > 0 {
-		return errors.New(customError[0])
-	}
-	return errors.New(v.name + msg)
-}
-
 // Required Must have a value (zero values ​​other than "" are allowed). If this rule is not used, when the parameter value is "", data validation does not take effect by default
 func (v Engine) Required(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if v.value == "" {
-			v.err = v.setError("不能为空", customError...)
+			v.err = setError(&v, "不能为空", customError...)
 		}
 		return v
 	}, true)
@@ -91,10 +89,17 @@ func pushQueue(v Engine, fn queueT, DisableCheckErr ...bool) Engine {
 	return v
 }
 
-func ignore(v Engine) bool {
+func ignore(v *Engine) bool {
 	return v.err != nil || v.value == ""
 }
 
-func notEmpty(v Engine) bool {
+func notEmpty(v *Engine) bool {
 	return v.value != ""
+}
+
+func setError(v *Engine, msg string, customError ...string) error {
+	if len(customError) > 0 {
+		return errors.New(customError[0])
+	}
+	return errors.New(v.name + msg)
 }

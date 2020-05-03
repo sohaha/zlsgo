@@ -16,22 +16,22 @@ func TestContext_Valid(tt *testing.T) {
 		var rbool bool
 		rule := c.ValidRule().HasNumber()
 
-		v := c.Valid(rule, "body", "内容").MinLength(5).IsNumber().Result()
+		v, err := c.Valid(rule, "body", "内容").MinLength(5).IsNumber().String()
 
-		t.Equal(true, v.Error() != nil)
-		tt.Log(v.Value(), v.Error())
+		t.Equal(true, err != nil)
+		tt.Log(v, err)
 
-		v = c.Valid(rule, "body2", "内容2").Required().MinLength(5).Result()
-		t.Equal(true, v.Error() != nil)
-		tt.Log(v.Value(), v.Error())
+		v, err = c.Valid(rule, "body2", "内容2").Required().MinLength(5).String()
+		t.Equal(true, err != nil)
+		tt.Log(v, err)
 
-		_ = c.ValidParam(rule, "body2").Required().Result()
+		_, _ = c.ValidParam(rule, "body2").Required().String()
 
-		v = c.ValidQuery(rule, "body2", "内容2-2").Required().Result()
-		t.Equal(true, v.Error() == nil)
-		tt.Log(v.Value(), v.Error())
+		err = c.ValidQuery(rule, "body2", "内容2-2").Required().Error()
+		t.Equal(true, err == nil)
+		tt.Log(err)
 
-		rbool, err := c.ValidForm(rule, "body", "内容1-2").Required().Trim().Bool()
+		rbool, err = c.ValidForm(rule, "body", "内容1-2").Required().Trim().Bool()
 		t.Equal(true, err == nil)
 		t.Equal(true, rbool)
 		tt.Log(rbool, err)
@@ -80,9 +80,9 @@ func TestContext_BatchValid(tt *testing.T) {
 
 		tt.Log(c.GetJSON("title"))
 
-		v := c.ValidJSON(c.ValidRule(), "title", "内容2-2").Required().Result()
-		t.Equal(true, v.Error() == nil)
-		tt.Log(v.Value(), err)
+		v, err := c.ValidJSON(c.ValidRule(), "title", "内容2-2").Required().String()
+		t.Equal(true, err == nil)
+		tt.Log(v, err)
 
 		c.String(200, "")
 	})

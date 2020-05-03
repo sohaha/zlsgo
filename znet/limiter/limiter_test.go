@@ -1,9 +1,10 @@
 package limiter
 
 import (
-	"github.com/sohaha/zlsgo"
 	"testing"
 	"time"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestProcess(T *testing.T) {

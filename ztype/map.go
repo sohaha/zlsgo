@@ -1,9 +1,10 @@
 package ztype
 
 import (
-	"github.com/sohaha/zlsgo/zstring"
 	"reflect"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (

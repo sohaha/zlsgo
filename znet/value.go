@@ -2,8 +2,9 @@ package znet
 
 import (
 	"errors"
-	"github.com/sohaha/zlsgo/zutil"
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 // Content-Type MIME of the most common data formats

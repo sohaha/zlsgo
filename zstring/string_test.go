@@ -99,7 +99,7 @@ func TestXss(T *testing.T) {
 		{`<script>foo()</script>`, ``},
 	}
 	for _, v := range htmls {
-		t.Equal(v[1], XssClean(v[0]))
+		t.Equal(v[1], XSSClean(v[0]))
 	}
 }
 

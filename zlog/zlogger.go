@@ -218,11 +218,6 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 	}
 }
 
-// Writer Writer
-func (log *Logger) Writer() io.Writer {
-	return log.out
-}
-
 // OutPut Output log
 func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string) error {
 	log.mu.Lock()

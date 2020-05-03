@@ -1,14 +1,13 @@
 package znet
 
 import (
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
-
-	"html/template"
 )
 
 func completionPath(path, prefix string) string {

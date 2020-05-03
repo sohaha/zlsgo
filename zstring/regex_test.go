@@ -1,9 +1,10 @@
 package zstring
 
 import (
-	"github.com/sohaha/zlsgo"
 	"regexp"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestExtract(T *testing.T) {

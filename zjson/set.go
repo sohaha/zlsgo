@@ -3,22 +3,25 @@ package zjson
 import (
 	jsong "encoding/json"
 	"errors"
-	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
-type StSetOptions struct {
-	Optimistic     bool
-	ReplaceInPlace bool
-}
-
-type pathResult struct {
-	part  string
-	gpart string
-	path  string
-	force bool
-	more  bool
-}
+type (
+	StSetOptions struct {
+		Optimistic     bool
+		ReplaceInPlace bool
+	}
+	dtype      struct{}
+	pathResult struct {
+		part  string
+		gpart string
+		path  string
+		force bool
+		more  bool
+	}
+)
 
 func Stringify(value interface{}) (json string) {
 	if jsonByte, err := jsong.Marshal(value); err != nil {
@@ -393,8 +396,6 @@ func SetRawOptions(json, path, value string, opts *StSetOptions) (string, error)
 func SetRawBytes(json []byte, path string, value []byte) ([]byte, error) {
 	return SetRawBytesOptions(json, path, value, nil)
 }
-
-type dtype struct{}
 
 func Delete(json, path string) (string, error) {
 	return Set(json, path, dtype{})

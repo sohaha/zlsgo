@@ -1,6 +1,7 @@
 package zvalid
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -26,23 +27,23 @@ func TestValidNew(tt *testing.T) {
 	t.Equal(ErrNoValidationValueSet, err)
 	tt.Log(str, err)
 
-	v := validObj.Verifi("test1", "测试1").Result()
+	v := validObj.Verifi("test1", "测试1").valid()
 
 	t.Equal(nil, v.err)
 	tt.Log(v.value, v.err)
 
 	test2 := validObj.Verifi("", "测试2").Required("Test2")
 	tt.Log("test2 queue", test2.queue.Len())
-	v = test2.Result()
+	v = test2.valid()
 	t.Equal(true, v.Error() != nil)
 	tt.Log(v.Value(), err)
 
-	v = valid.Result()
+	v = valid.valid()
 	t.Equal(ErrNoValidationValueSet, v.Error())
 	tt.Log(v.value, v.err, v.setRawValue)
 
 	test3 := validObj.IsNumber().Verifi("test3", "测试3")
-	v = test3.Result()
+	v = test3.valid()
 	tt.Log("test3 queue", test3.queue.Len())
 	t.Equal(true, v.Error() != nil)
 	t.Equal(v.value, test3.Value())
@@ -140,4 +141,32 @@ func TestPassword(t *testing.T) {
 	tt.EqualNil(err)
 	t.Log(str)
 	t.Log("time", time.Now().Sub(now).Seconds())
+}
+
+func BenchmarkStr(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		s := "test"
+		if strings.HasPrefix(s, "t") {
+			if strings.Contains(s, "e") {
+				if strings.Contains(s, "s") {
+					if strings.Contains(s, "t") {
+						b.Log(true)
+					}
+				}
+			}
+		} else {
+			b.Log(false)
+		}
+	}
+}
+
+func BenchmarkStr2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		s := "test"
+		if ok := Text(s).HasPrefix("t").Ok(); ok {
+			b.Log(true)
+		} else {
+			b.Log(false)
+		}
+	}
 }

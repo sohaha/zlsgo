@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/sohaha/zlsgo/zstring"
 	"io"
 	"io/ioutil"
 	"net"
@@ -13,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 const (

@@ -176,8 +176,8 @@ func CamelCaseToSnakeCase(str string, delimiter ...string) string {
 	return strings.ToLower(string(result))
 }
 
-// XssClean clean html tag
-func XssClean(str string) string {
+// XSSClean clean html tag
+func XSSClean(str string) string {
 	str, _ = RegexReplaceFunc("<[\\S\\s]+?>", str, strings.ToLower)
 	str, _ = RegexReplace("<style[\\S\\s]+?</style>", str, "")
 	str, _ = RegexReplace("<script[\\S\\s]+?</script>", str, "")

@@ -38,7 +38,7 @@ func UUID(workerid ...int64) int64 {
 	if len(workerid) > 0 {
 		wid = workerid[0]
 	}
-	w, _ := NewIdWorker(wid)
-	id, _ := w.Id()
+	w, _ := NewIDWorker(wid)
+	id, _ := w.ID()
 	return id
 }

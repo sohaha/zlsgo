@@ -11,48 +11,50 @@ import (
 // timestamp(ms)42  | worker id(10) | sequence(12)
 
 const (
-	SEpoch          = 1474802888000
-	SWorkerIdBits   = 10
-	SWorkerIdShift  = 12
-	STimeStampShift = 22
-	SequenceMask    = 0xfff
-	SMaxWorker      = 0x3ff
+	sEpoch = 1474802888000
+	// sWorkerIDBits Num of WorkerId Bits
+	sWorkerIDBits   = 10
+	sWorkerIDShift  = 12
+	sTimeStampShift = 22
+	// sequenceMask equal as getSequenceMask()
+	sequenceMask = 0xfff
+	sMaxWorker   = 0x3ff
 )
 
-// IdWorker Struct
-type IdWorker struct {
-	workerId      int64
+// IDWorker Struct
+type IDWorker struct {
+	workerID      int64
 	lastTimeStamp int64
 	sequence      int64
-	maxWorkerId   int64
+	maxWorkerID   int64
 	sync.RWMutex
 }
 
-// NewIdWorker Generate NewIdWorker with Given workerid
-func NewIdWorker(workerid int64) (iw *IdWorker, err error) {
-	iw = new(IdWorker)
+// NewIDWorker Generate NewIDWorker with Given workerid
+func NewIDWorker(workerid int64) (iw *IDWorker, err error) {
+	iw = new(IDWorker)
 
-	iw.maxWorkerId = getMaxWorkerId()
+	iw.maxWorkerID = getMaxWorkerID()
 
-	if workerid > iw.maxWorkerId || workerid < 0 {
+	if workerid > iw.maxWorkerID || workerid < 0 {
 		return nil, errors.New("worker not fit")
 	}
-	iw.workerId = workerid
+	iw.workerID = workerid
 	iw.lastTimeStamp = -1
 	iw.sequence = 0
 	// iw.lock = new(sync.RWMutex)
 	return iw, nil
 }
 
-func getMaxWorkerId() int64 {
-	return -1 ^ -1<<SWorkerIdBits
+func getMaxWorkerID() int64 {
+	return -1 ^ -1<<sWorkerIDBits
 }
 
-func (iw *IdWorker) timeGen() int64 {
+func (iw *IDWorker) timeGen() int64 {
 	return time.Now().UnixNano() / 1000 / 1000
 }
 
-func (iw *IdWorker) timeReGen(last int64) int64 {
+func (iw *IDWorker) timeReGen(last int64) int64 {
 	ts := iw.timeGen()
 	println(ts, last, last-ts)
 	for {
@@ -65,13 +67,13 @@ func (iw *IdWorker) timeReGen(last int64) int64 {
 	return ts
 }
 
-// Id Generate next id
-func (iw *IdWorker) Id() (ts int64, err error) {
+// ID Generate next id
+func (iw *IDWorker) ID() (ts int64, err error) {
 	iw.Lock()
 	defer iw.Unlock()
 	ts = iw.timeGen()
 	if ts == iw.lastTimeStamp {
-		iw.sequence = (iw.sequence + 1) & SequenceMask
+		iw.sequence = (iw.sequence + 1) & sequenceMask
 		if iw.sequence == 0 {
 			ts = iw.timeReGen(ts)
 		}
@@ -84,15 +86,15 @@ func (iw *IdWorker) Id() (ts int64, err error) {
 		return 0, err
 	}
 	iw.lastTimeStamp = ts
-	ts = (ts-SEpoch)<<STimeStampShift | iw.workerId<<SWorkerIdShift | iw.sequence
+	ts = (ts-sEpoch)<<sTimeStampShift | iw.workerID<<sWorkerIDShift | iw.sequence
 	return ts, nil
 }
 
-// ParseId reverse uid to timestamp, workid, seq
-func ParseId(id int64) (t time.Time, ts int64, workerId int64, seq int64) {
-	seq = id & SequenceMask
-	workerId = (id >> SWorkerIdShift) & SMaxWorker
-	ts = (id >> STimeStampShift) + SEpoch
+// ParseID reverse uid to timestamp, workid, seq
+func ParseID(id int64) (t time.Time, ts int64, workerId int64, seq int64) {
+	seq = id & sequenceMask
+	workerId = (id >> sWorkerIDShift) & sMaxWorker
+	ts = (id >> sTimeStampShift) + sEpoch
 	t = time.Unix(ts/1000, (ts%1000)*1000000)
 	return
 }

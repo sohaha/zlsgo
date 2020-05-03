@@ -2,18 +2,27 @@ package zjson
 
 import (
 	"bytes"
-	"github.com/sohaha/zlsgo/zstring"
 	"sort"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 type (
 	Map             map[string]string
-	rMap            map[rune]interface{}
 	StFormatOptions struct {
 		Width    int
 		Prefix   string
 		Indent   string
 		SortKeys bool
+	}
+	pair struct {
+		kstart, kend int
+		vstart, vend int
+	}
+	byKey struct {
+		sorted bool
+		json   []byte
+		pairs  []pair
 	}
 )
 
@@ -106,17 +115,6 @@ func appendAny(buf, json []byte, i int, pretty bool, width int, prefix, indent s
 		}
 	}
 	return buf, i, nl, true
-}
-
-type pair struct {
-	kstart, kend int
-	vstart, vend int
-}
-
-type byKey struct {
-	sorted bool
-	json   []byte
-	pairs  []pair
 }
 
 func (arr *byKey) Len() int {

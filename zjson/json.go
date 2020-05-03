@@ -4,10 +4,11 @@ package zjson
 import (
 	jsongo "encoding/json"
 	"errors"
-	"github.com/sohaha/zlsgo/zstring"
 	"reflect"
 	"strconv"
 	"unsafe"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (

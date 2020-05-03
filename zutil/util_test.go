@@ -2,9 +2,10 @@ package zutil
 
 import (
 	"errors"
-	"github.com/sohaha/zlsgo"
 	"testing"
 	"time"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestWithLockContext(T *testing.T) {

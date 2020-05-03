@@ -2,10 +2,9 @@ package zfile
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
-
-	"sync"
 
 	. "github.com/sohaha/zlsgo"
 )

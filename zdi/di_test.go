@@ -1,8 +1,9 @@
 package zdi
 
 import (
-	"github.com/sohaha/zlsgo"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestDI(T *testing.T) {

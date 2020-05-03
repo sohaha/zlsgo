@@ -14,7 +14,7 @@ func (v Engine) HasLetter(customError ...string) Engine {
 			}
 		}
 
-		v.err = v.setError("必须包含字母", customError...)
+		v.err = setError(&v, "必须包含字母", customError...)
 		return v
 	})
 }
@@ -28,7 +28,7 @@ func (v Engine) HasLower(customError ...string) Engine {
 			}
 		}
 
-		v.err = v.setError("必须包含小写字母", customError...)
+		v.err = setError(&v, "必须包含小写字母", customError...)
 		return v
 	})
 }
@@ -42,7 +42,7 @@ func (v Engine) HasUpper(customError ...string) Engine {
 			}
 		}
 
-		v.err = v.setError("必须包含大写字母", customError...)
+		v.err = setError(&v, "必须包含大写字母", customError...)
 		return v
 	})
 }
@@ -56,21 +56,9 @@ func (v Engine) HasNumber(customError ...string) Engine {
 			}
 		}
 
-		v.err = v.setError("必须包含数字", customError...)
+		v.err = setError(&v, "必须包含数字", customError...)
 		return v
 	})
-}
-
-// HasNumber must contain numbers
-func (v Engine) HasNumber2(customError ...string) Engine {
-	for _, rv := range v.value {
-		if unicode.IsDigit(rv) {
-			return v
-		}
-	}
-
-	v.err = v.setError("必须包含数字", customError...)
-	return v
 }
 
 // HasSymbol must contain symbols
@@ -81,7 +69,7 @@ func (v Engine) HasSymbol(customError ...string) Engine {
 				return v
 			}
 		}
-		v.err = v.setError("必须包含符号", customError...)
+		v.err = setError(&v, "必须包含符号", customError...)
 		return v
 	})
 }
@@ -90,7 +78,7 @@ func (v Engine) HasSymbol(customError ...string) Engine {
 func (v Engine) HasString(sub string, customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if !strings.Contains(v.value, sub) {
-			v.err = v.setError("必须包含特定的字符串", customError...)
+			v.err = setError(&v, "必须包含特定的字符串", customError...)
 			return v
 		}
 		return v
@@ -101,7 +89,7 @@ func (v Engine) HasString(sub string, customError ...string) Engine {
 func (v Engine) HasPrefix(sub string, customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if !strings.HasPrefix(v.value, sub) {
-			v.err = v.setError("不允许的值", customError...)
+			v.err = setError(&v, "不允许的值", customError...)
 			return v
 		}
 		return v
@@ -112,7 +100,7 @@ func (v Engine) HasPrefix(sub string, customError ...string) Engine {
 func (v Engine) HasSuffix(sub string, customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if !strings.HasSuffix(v.value, sub) {
-			v.err = v.setError("不允许的值", customError...)
+			v.err = setError(&v, "不允许的值", customError...)
 			return v
 		}
 		return v
@@ -124,7 +112,7 @@ func (v Engine) Password(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		err := New().Verifi(v.value, v.name).Required().MinLength(6).MaxLength(20).Error()
 		if err != nil {
-			v.err = v.setError("不合法的值", customError...)
+			v.err = setError(&v, "不合法的值", customError...)
 		}
 		return v
 	})
@@ -135,7 +123,7 @@ func (v Engine) StrongPassword(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		err := New().Verifi(v.value).Required().MinLength(6).MaxLength(20).HasSymbol().HasNumber().HasLetter().HasLower().Error()
 		if err != nil {
-			v.err = v.setError("不合法的值", customError...)
+			v.err = setError(&v, "不合法的值", customError...)
 		}
 		return v
 	})

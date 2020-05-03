@@ -16,16 +16,16 @@ type (
 		NextTime time.Time
 		run      func()
 	}
-	CronJobTable struct {
+	JobTable struct {
 		table sync.Map
 	}
 )
 
-func New() *CronJobTable {
-	return &CronJobTable{}
+func New() *JobTable {
+	return &JobTable{}
 }
 
-func (c *CronJobTable) Add(cronLine string, fn func()) (remove func(), err error) {
+func (c *JobTable) Add(cronLine string, fn func()) (remove func(), err error) {
 	var expr *Expression
 	expr, err = Parse(cronLine)
 	if err != nil {
@@ -44,11 +44,12 @@ func (c *CronJobTable) Add(cronLine string, fn func()) (remove func(), err error
 	return
 }
 
-func (c *CronJobTable) Run() {
+func (c *JobTable) Run() {
 	go func() {
 		for {
 			now := time.Now()
 			// todo there is a sequence problem
+			// todo later optimization directly obtains the next execution time
 			c.table.Range(func(key, value interface{}) bool {
 				cronjob, ok := value.(*Job)
 				if ok {

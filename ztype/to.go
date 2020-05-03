@@ -4,9 +4,10 @@ package ztype
 import (
 	// "encoding/json"
 	"encoding/json"
-	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 type appString interface {

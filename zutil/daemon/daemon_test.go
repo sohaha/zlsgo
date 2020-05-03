@@ -1,9 +1,8 @@
 package daemon
 
 import (
-	"testing"
-
 	"fmt"
+	"testing"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zarray"

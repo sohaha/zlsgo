@@ -1,9 +1,10 @@
 package zjson
 
 import (
+	"testing"
+
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zstring"
-	"testing"
 )
 
 var demo = `{

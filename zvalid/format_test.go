@@ -20,7 +20,7 @@ func TestFormat(t *testing.T) {
 	str = Text("is test is").ReplaceAll("is", "yes").Value()
 	tt.Equal("yes test yes", str)
 
-	str = Text("is <script> alert(666); </script> js").XssClean().Value()
+	str = Text("is <script> alert(666); </script> js").XSSClean().Value()
 	tt.Equal("is js", str)
 
 	str = Text("hello_world").SnakeCaseToCamelCase(false).Value()

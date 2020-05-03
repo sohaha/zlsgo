@@ -1,10 +1,10 @@
 package zenv
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
-	"runtime"
 )
 
 func TestOs(T *testing.T) {

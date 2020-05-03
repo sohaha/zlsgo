@@ -1,8 +1,9 @@
 package ztype
 
 import (
-	"github.com/sohaha/zlsgo"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 type T1 struct {

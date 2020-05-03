@@ -2,8 +2,9 @@ package zjson
 
 import (
 	"encoding/json"
-	"github.com/sohaha/zlsgo/zstring"
 	"testing"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 func BenchmarkUnmarshal(b *testing.B) {

@@ -1,11 +1,12 @@
 package zjson
 
 import (
-	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/zstring"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 type Demo struct {

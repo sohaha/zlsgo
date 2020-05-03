@@ -1,8 +1,9 @@
 package zjson
 
 import (
-	"github.com/sohaha/zlsgo"
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 func TestSet(t *testing.T) {

@@ -3,7 +3,6 @@ package zjson
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/sohaha/zlsgo/zstring"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,17 +11,20 @@ import (
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
-type Type int
-
-type Res struct {
-	Type  Type
-	Raw   string
-	Str   string
-	Num   float64
-	Index int
-}
+type (
+	Type int
+	Res  struct {
+		Type  Type
+		Raw   string
+		Str   string
+		Num   float64
+		Index int
+	}
+)
 
 const (
 	Null Type = iota

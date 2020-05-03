@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"github.com/sohaha/zlsgo/zfile"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 type Res struct {

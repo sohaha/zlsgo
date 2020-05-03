@@ -1,11 +1,11 @@
 package ztype
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 
-	"fmt"
 	zls "github.com/sohaha/zlsgo"
-	"strconv"
 )
 
 type st interface {
@@ -150,42 +150,42 @@ func TestTo(t *testing.T) {
 
 }
 
-//func BenchmarkToString0(b *testing.B) {
-//s := 123
-//for i := 0; i < b.N; i++ {
-//_ = strconv.Itoa(s)
-//}
-//}
+// func BenchmarkToString0(b *testing.B) {
+// s := 123
+// for i := 0; i < b.N; i++ {
+// _ = strconv.Itoa(s)
+// }
+// }
 
 func BenchmarkToString1(b *testing.B) {
 	s := true
 	for i := 0; i < b.N; i++ {
 		_ = ToString(s)
 	}
-	//type a struct {
-	//Na string `json:"n"`
-	//}
+	// type a struct {
+	// Na string `json:"n"`
+	// }
 
-	//n := &a{
-	//Na: "hi",
-	//}
-	//b.Log(ToString(n))
-	//b.Log(ToString(*n))
+	// n := &a{
+	// Na: "hi",
+	// }
+	// b.Log(ToString(n))
+	// b.Log(ToString(*n))
 }
 func BenchmarkToString2(b *testing.B) {
 	s := true
 	for i := 0; i < b.N; i++ {
 		_ = String(s)
 	}
-	//type a struct {
-	//Na string `json:"n"`
-	//}
+	// type a struct {
+	// Na string `json:"n"`
+	// }
 
-	//n := &a{
-	//Na: "hi",
-	//}
-	//b.Log(String(n))
-	//b.Log(String(*n))
+	// n := &a{
+	// Na: "hi",
+	// }
+	// b.Log(String(n))
+	// b.Log(String(*n))
 }
 func String(val interface{}) string {
 	if val == nil {

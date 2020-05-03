@@ -1,10 +1,11 @@
 package znet
 
 import (
-	"github.com/sohaha/zlsgo/ztype"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/sohaha/zlsgo/ztype"
 
 	"github.com/sohaha/zlsgo"
 )

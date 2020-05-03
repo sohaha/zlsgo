@@ -2,10 +2,9 @@ package zpprof
 
 import (
 	"fmt"
-	"time"
-
 	"net/http"
 	"net/http/pprof"
+	"time"
 
 	"github.com/sohaha/zlsgo/znet"
 )
