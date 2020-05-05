@@ -53,7 +53,7 @@ type (
 		ContentDate []byte
 		FuncMap     template.FuncMap
 	}
-	Api struct {
+	ApiData struct {
 		Code int         `json:"code" example:"200"`
 		Msg  string      `json:"msg"`
 		Data interface{} `json:"data"`
@@ -173,13 +173,13 @@ func (c *Context) JSON(code int, values interface{}) {
 	c.renderProcessing(code, &renderJSON{Data: values})
 }
 
-// ResJSON ResJSON
-func (c *Context) ResJSON(code int, msg string, data interface{}) {
+// ApiJSON ApiJSON
+func (c *Context) ApiJSON(code int, msg string, data interface{}) {
 	httpState := code
 	if code < 300 && code >= 200 {
 		httpState = http.StatusOK
 	}
-	c.renderProcessing(httpState, &renderJSON{Data: Api{Code: code, Data: data, Msg: msg}})
+	c.renderProcessing(httpState, &renderJSON{Data: ApiData{Code: code, Data: data, Msg: msg}})
 }
 
 // HTML export html

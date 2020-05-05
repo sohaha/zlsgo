@@ -144,7 +144,7 @@ func TestPost(tt *testing.T) {
 		tt.Log("PrevContent2", zstring.Bytes2String(c.PrevContent().Content))
 		tt.Log("PrevStatus", c.PrevContent().Code)
 		c.SetStatus(211)
-		c.JSON(211, &Api{
+		c.JSON(211, &ApiData{
 			Code: 0,
 			Msg:  "replace",
 			Data: nil,
@@ -167,7 +167,7 @@ func TestPost(tt *testing.T) {
 		tt.Log("TestWeb")
 		c.WithValue("k3", "k3-data")
 		_, _ = c.GetDataRaw()
-		c.JSON(201, Api{
+		c.JSON(201, ApiData{
 			Code: 200,
 			Msg:  expected,
 			Data: nil,
