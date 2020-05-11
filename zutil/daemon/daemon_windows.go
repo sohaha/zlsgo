@@ -189,7 +189,7 @@ func (w *windowsService) Run() error {
 		return err
 	}
 	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Interrupt, os.Kill)
+	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	<-sigChan
 	return w.i.Stop(w)
 }

@@ -1,6 +1,9 @@
 package zcache_test
 
 import (
+	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -34,9 +37,11 @@ func TestCache(tt *testing.T) {
 
 	// 如果缓存不存在则添加反之不生效
 	t.EqualExit(false, c.Add("name", 999, 5*time.Second))
-
 	t.EqualExit(data+10, name.(int)+10)
-
+	c.SetAddCallback(func(item *zcache.Item) {
+		t.Log("SetAddCallback", item.Data())
+	})
+	c.Add("name", 999, 5*time.Second)
 	// 删除缓存
 	_, _ = c.Delete(key)
 	t.EqualExit(false, c.Exists(key))
@@ -46,7 +51,7 @@ func TestCache(tt *testing.T) {
 
 	t.EqualExit(true, c.Add("name", 999, 5*time.Second))
 
-	c.SetLoadNotCallback(func(key interface{}, args ...interface{}) *zcache.Item {
+	c.SetLoadNotCallback(func(key string, args ...interface{}) *zcache.Item {
 		return c.Set(key, "88", 10)
 	})
 
@@ -58,24 +63,25 @@ func TestCache(tt *testing.T) {
 func TestDefCache(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 
-	key := "test_cache_key"
-	key2 := "test_cache_key_2"
-	key3 := "test_cache_key_3"
+	key := "test_cache_def_key"
+	key2 := "test_cache_def_key_2"
+	key3 := "test_cache_def_key_3"
 
-	zcache.SetLogger(zlog.Log)
-	zcache.SetDeleteCallback(func(item *zcache.Item) bool {
-		tt.Log("删除", item.Key())
+	tt.Log("TestDefCache")
+	zcache.SetDeleteCallback(func(key string) bool {
+		fmt.Println("删除", key)
 		return true
 	})
 
-	data := "cache_data"
+	data := "cache_def_data"
+	tt.Log(data)
 	zcache.Set(key, data, 1)
 	zcache.Set(key2, data, 1)
 
 	a, e := zcache.Get(key)
 	tt.Log(a, e)
 
-	ar, err := zcache.GetRaw(key)
+	ar, err := zcache.GetT(key)
 	t.EqualExit(nil, err)
 	tt.Log(ar.AccessCount())
 	tt.Log(ar.RemainingLife())
@@ -87,8 +93,8 @@ func TestDefCache(tt *testing.T) {
 	ar.Key()
 	ar.CreatedTime()
 
-	ar.SetDeleteCallback(func(item *zcache.Item) bool {
-		tt.Log("拦截不删除", item.Key(), item.AccessCount())
+	ar.SetDeleteCallback(func(key string) bool {
+		tt.Log("拦截不删除", key)
 		return false
 	})
 
@@ -171,7 +177,7 @@ func TestDefCache(tt *testing.T) {
 
 func TestCacheForEach(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
-	c := zcache.New("demo2")
+	c := zcache.New("CacheForEach")
 	c.SetLogger(zlog.Log)
 
 	data := 666
@@ -179,30 +185,29 @@ func TestCacheForEach(tt *testing.T) {
 	c.Set("name1", data, 1)
 	c.Set("name2", "name--2", 1)
 
-	c.ForEach(func(key, value interface{}) {
-		data, _ := c.GetRaw(key)
+	tt.Log("ForEach:")
+	c.ForEach(func(key string, value interface{}) bool {
+		data, _ := c.GetT(key)
+		tt.Log("ForEach", key)
 		tt.Log(data.Key(), data.Data(), data.LifeSpan())
+		return true
 	})
 
+	i := 0
+	c.ForEach(func(key string, value interface{}) bool {
+		i++
+		return false
+	})
+
+	t.Equal(1, i)
 	time.Sleep(time.Millisecond * 1100)
 	t.EqualExit(0, c.Count())
-}
-
-func TestGetLocked(t *testing.T) {
-	tt := zlsgo.NewTest(t)
-	data, set := zcache.GetLocked("GetLocked")
-	tt.Equal(nil, data)
-	if set != nil {
-		set("GetLocked ok", 1)
-	}
-	data, set = zcache.GetLocked("GetLocked")
-	tt.Equal(true, set == nil)
-	tt.Equal("GetLocked ok", data)
 }
 
 func TestOther(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
+	zcache.SetLogger(zlog.Log)
 	zcache.Set("TestOther", "123", 1)
 	s, err := zcache.GetString("TestOther")
 	tt.EqualNil(err)
@@ -212,4 +217,30 @@ func TestOther(t *testing.T) {
 	i, err := zcache.GetInt("TestOther")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
+}
+
+func TestDo(t *testing.T) {
+	var g sync.WaitGroup
+	for i := 1; i <= 10; i++ {
+		g.Add(1)
+		go func(ii int) {
+			if ii > 8 {
+				time.Sleep(time.Duration(210*(ii-8)) * time.Millisecond)
+			}
+			v, o := zcache.MustGet("do", func(set func(data interface{},
+				lifeSpan time.Duration, interval ...bool)) (err error) {
+				if ii < 9 {
+					set(ii, 200*time.Millisecond)
+					return nil
+				} else if ii == 9 {
+					set("ok", 200*time.Millisecond)
+					return nil
+				}
+				return errors.New("不设置")
+			})
+			t.Log(ii, o, v)
+			g.Done()
+		}(i)
+	}
+	g.Wait()
 }

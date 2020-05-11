@@ -10,6 +10,7 @@ package zhttp
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 func newClient() *http.Client {
@@ -114,7 +116,15 @@ func (r *Engine) SetTimeout(d time.Duration) {
 	r.Client().Timeout = d
 }
 
-func (r *Engine) SetProxyUrl(rawurl string) error {
+func (r *Engine) SetProxyUrl(proxyUrl ...string) error {
+	proxylen := len(proxyUrl)
+	if proxylen == 0 {
+		return errors.New("proxyurl cannot be empty")
+	}
+	rawurl := proxyUrl[0]
+	if proxylen > 1 {
+		rawurl = proxyUrl[zstring.RandInt(0, proxylen-1)]
+	}
 	trans := r.getTransport()
 	if trans == nil {
 		return ErrNoTransport

@@ -207,7 +207,7 @@ func (s *freebsdRcdService) Run() error {
 
 	s.Option.FuncSingle(optionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
-		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
+		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		<-sigChan
 	})()
 

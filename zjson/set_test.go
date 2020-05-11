@@ -24,7 +24,11 @@ func TestSet(t *testing.T) {
 	tt.EqualExit(true, err == nil)
 	t.Log(str, err)
 
-	str, err = SetRaw(str, "arr2", "[1,2,3]")
+	str, err = SetRaw("", "arr2", "[1,2,3]")
+	tt.EqualExit(true, err == nil)
+	t.Log(str, err)
+
+	str, err = Set("", "arr2", "[1,2,3]")
 	tt.EqualExit(true, err == nil)
 	t.Log(str, err)
 

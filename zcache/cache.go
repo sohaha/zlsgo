@@ -4,6 +4,7 @@ package zcache
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/sohaha/zlsgo/zlog"
 )
@@ -22,11 +23,11 @@ func SetLogger(logger *zlog.Logger) {
 	ite.SetLogger(logger)
 }
 
-func Set(key, data interface{}, lifeSpan uint, interval ...bool) {
+func Set(key string, data interface{}, lifeSpan uint, interval ...bool) {
 	ite.Set(key, data, lifeSpan, interval...)
 }
 
-func Delete(key interface{}) (*Item, error) {
+func Delete(key string) (*Item, error) {
 	return ite.Delete(key)
 }
 
@@ -34,28 +35,31 @@ func Clear() {
 	ite.Clear()
 }
 
-func Get(key interface{}) (value interface{}, err error) {
+func Get(key string) (value interface{}, err error) {
 	return ite.Get(key)
 }
 
-func GetInt(key interface{}) (value int, err error) {
+func GetInt(key string) (value int, err error) {
 	return ite.GetInt(key)
 }
 
-func GetString(key interface{}) (value string, err error) {
+func GetString(key string) (value string, err error) {
 	return ite.GetString(key)
 }
 
-func GetRaw(key interface{}) (*Item, error) {
-	return ite.GetRaw(key)
+func GetT(key string) (*Item, error) {
+	return ite.GetT(key)
 }
 
-func GetLocked(key interface{}) (interface{}, func(data interface{}, lifeSpan uint, interval ...bool)) {
-	return ite.GetLocked(key)
+// MustGet get the data of the specified key, set if it does not exist
+func MustGet(key string, do func(set func(data interface{},
+	lifeSpan time.Duration, interval ...bool)) (
+	err error)) (data interface{}, err error) {
+	return ite.MustGet(key, do)
 }
 
-func SetDeleteCallback(f func(*Item) bool) {
-	ite.SetDeleteCallback(f)
+func SetDeleteCallback(fn func(key string) bool) {
+	ite.SetDeleteCallback(fn)
 }
 
 // New new cache
@@ -70,7 +74,7 @@ func New(table string) *Table {
 		if !ok {
 			t = &Table{
 				name:  table,
-				items: make(map[interface{}]*Item),
+				items: make(map[string]*Item),
 			}
 			cache[table] = t
 		}

@@ -329,6 +329,8 @@ func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
 	w := newRequest(r, "GET", "/?id="+randString, "/", func(c *Context) {
 		id := c.DefaultQuery("id", "not")
 		host := c.Host()
+		u := c.Host(true)
+		t.Equal(true, host != u)
 		c.String(200, host+"|"+id)
 	})
 

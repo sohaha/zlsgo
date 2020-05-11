@@ -103,7 +103,16 @@ func (r *renderJSON) Content(c *Context) []byte {
 		return r.ContentDate
 	}
 	c.SetContentType(ContentTypeJSON)
-	r.ContentDate, _ = json.Marshal(r.Data)
+	bf := zutil.GetBuff()
+	defer zutil.PutBuff(bf)
+	jsonEncoder := json.NewEncoder(bf)
+	jsonEncoder.SetEscapeHTML(false)
+	if err := jsonEncoder.Encode(r.Data); err != nil {
+		r.ContentDate, _ = json.Marshal(r.Data)
+	} else {
+		r.ContentDate = bf.Bytes()
+	}
+
 	return r.ContentDate
 }
 
@@ -175,11 +184,8 @@ func (c *Context) JSON(code int, values interface{}) {
 
 // ApiJSON ApiJSON
 func (c *Context) ApiJSON(code int, msg string, data interface{}) {
-	httpState := code
-	if code < 300 && code >= 200 {
-		httpState = http.StatusOK
-	}
-	c.renderProcessing(httpState, &renderJSON{Data: ApiData{Code: code, Data: data, Msg: msg}})
+	c.renderProcessing(http.StatusOK, &renderJSON{Data: ApiData{Code: code, Data: data,
+		Msg: msg}})
 }
 
 // HTML export html

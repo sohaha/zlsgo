@@ -35,12 +35,18 @@ var (
 	once       sync.Once
 )
 
+var s = make(chan struct{})
+
 func (a *app) Start(daemon.ServiceIfe) error {
-	go a.run()
+	go func() {
+		a.run()
+		s <- struct{}{}
+	}()
 	return nil
 }
 
 func (*app) Stop(daemon.ServiceIfe) error {
+	<-s
 	return nil
 }
 

@@ -8,18 +8,18 @@ import (
 // Item Item
 type Item struct {
 	sync.RWMutex
-	key              interface{}
+	key              string
 	data             interface{}
 	lifeSpan         time.Duration
 	createdTime      time.Time
 	accessedTime     time.Time
 	accessCount      int64
 	intervalLifeSpan bool
-	deleteCallback   func(item *Item) bool
+	deleteCallback   func(key string) bool
 }
 
 // NewCacheItem NewCacheItem
-func NewCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *Item {
+func NewCacheItem(key string, data interface{}, lifeSpan time.Duration) *Item {
 	t := time.Now()
 	return &Item{
 		key:              key,
@@ -64,6 +64,9 @@ func (item *Item) CreatedTime() time.Time {
 
 // RemainingLife RemainingLife
 func (item *Item) RemainingLife() time.Duration {
+	if item.lifeSpan == 0 {
+		return -1
+	}
 	return time.Until(item.createdTime.Add(item.lifeSpan))
 }
 
@@ -81,11 +84,13 @@ func (item *Item) Key() interface{} {
 
 // Data data
 func (item *Item) Data() interface{} {
+	item.RLock()
+	defer item.RUnlock()
 	return item.data
 }
 
 // SetDeleteCallback SetDeleteCallback
-func (item *Item) SetDeleteCallback(fn func(item *Item) bool) {
+func (item *Item) SetDeleteCallback(fn func(key string) bool) {
 	item.Lock()
 	item.deleteCallback = fn
 	item.Unlock()

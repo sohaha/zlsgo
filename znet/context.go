@@ -16,7 +16,7 @@ import (
 )
 
 // Host Get the current Host
-func (c *Context) Host() string {
+func (c *Context) Host(full ...bool) string {
 	scheme := c.Request.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
 		scheme = "http"
@@ -24,8 +24,11 @@ func (c *Context) Host() string {
 			scheme = "https"
 		}
 	}
-
-	return scheme + "://" + c.Request.Host
+	host := c.Request.Host
+	if len(full) > 0 && full[0] {
+		host += c.Request.URL.String()
+	}
+	return scheme + "://" + host
 }
 
 // CompletionLink Complete the link and add the current domain name if it is not linked

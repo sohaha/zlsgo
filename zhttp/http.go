@@ -16,7 +16,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -115,44 +114,6 @@ func (h Header) Clone() Header {
 		hh[k] = v
 	}
 	return hh
-}
-
-func File(patterns ...string) interface{} {
-	matches := []string{}
-	for _, pattern := range patterns {
-		m, err := filepath.Glob(pattern)
-		if err != nil {
-			return err
-		}
-		matches = append(matches, m...)
-	}
-	if len(matches) == 0 {
-		return ErrNoMatched
-	}
-	uploads := []FileUpload{}
-	for _, match := range matches {
-		if s, e := os.Stat(match); e != nil || s.IsDir() {
-			continue
-		}
-		file, _ := os.Open(match)
-		uploads = append(uploads, FileUpload{
-			File:      file,
-			FileName:  filepath.Base(match),
-			FieldName: "media",
-		})
-	}
-
-	return uploads
-}
-
-// BodyJSON make the object be encoded in json format and set it to the request body
-func BodyJSON(v interface{}) *bodyJson {
-	return &bodyJson{v: v}
-}
-
-// BodyXML make the object be encoded in xml format and set it to the request body
-func BodyXML(v interface{}) *bodyXml {
-	return &bodyXml{v: v}
 }
 
 // New create a new *Engine
@@ -671,8 +632,8 @@ func RemoveProxy() error {
 	return std.RemoveProxy()
 }
 
-func SetProxyUrl(rawurl string) error {
-	return std.SetProxyUrl(rawurl)
+func SetProxyUrl(proxyUrl ...string) error {
+	return std.SetProxyUrl(proxyUrl...)
 }
 
 func SetProxy(proxy func(*http.Request) (*url.URL, error)) error {

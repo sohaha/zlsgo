@@ -207,7 +207,7 @@ func TestHttpProxy(t *testing.T) {
 }
 
 func TestHttpProxyUrl(t *testing.T) {
-	err := SetProxyUrl("http://127.0.0.1:6666")
+	err := SetProxyUrl("http://127.0.0.1:6666", "http://127.0.0.1:7777")
 	tt := zls.NewTest(t)
 	if err != nil {
 		tt.T.Fatal(err)
@@ -225,9 +225,20 @@ func TestToFile(t *testing.T) {
 	SetTimeout(20 * time.Second)
 	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json")
 	tt.EqualNil(err)
-	if err != nil {
+	if err == nil {
 		err = res.ToFile("../zhttp/package.json")
 		tt.EqualNil(err)
 	}
+
+	f := File("../zhttp/package.json")
+	_, _ = Post("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json", f)
+
 	zfile.Rmdir("../zhttp/package.json")
+}
+
+func TestRandomUserAgent(T *testing.T) {
+	tt := zls.NewTest(T)
+	for i := 0; i < 10; i++ {
+		tt.Log(RandomUserAgent())
+	}
 }

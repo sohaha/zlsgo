@@ -31,10 +31,10 @@ func New(capacity ...int) (array *Array) {
 
 // Copy 复制一个数组
 func Copy(arr interface{}) (array *Array, err error) {
-	array = New()
 	data, ok := arr.([]interface{})
 	if ok {
 		l := len(data)
+		array = New(l)
 		for i := 0; i < l; i++ {
 			array.Push(data[i])
 		}

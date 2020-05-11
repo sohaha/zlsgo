@@ -9,41 +9,6 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
-const cliPrefix = ""
-
-var (
-	BuildTime        = ""
-	BuildGoVersion   = ""
-	BuildGitCommitID = ""
-	// Log cli logger
-	Log              *zlog.Logger
-	FirstParameter   = os.Args[0]
-	flagHelp         = new(bool)
-	flagVersion      = new(bool)
-	osExit           = os.Exit
-	cmds             = make(map[string]*cmdCont)
-	cmdsKey          []string
-	matchingCmd      *cmdCont
-	args             []string
-	requiredFlags    = RequiredFlags{}
-	defaultLang      = "en"
-	unknownCommandFn = func(name string) {
-		Error("unknown Command: %s", errorText(name))
-	}
-	// appConfig      = &App{
-	// Lang: defaultLang,
-	// }
-	Logo         string
-	Name         string
-	Version      string
-	HideHelp     bool
-	HidePrompt   bool
-	Lang         = defaultLang
-	varsKey      = map[string]*Var{}
-	varShortsKey = make([]string, 0)
-	ShortValues  = map[string]interface{}{}
-)
-
 type (
 	cmdCont struct {
 		name          string
@@ -77,20 +42,64 @@ type (
 	}
 )
 
-func getLangs(key string) string {
-	langs := map[string]map[string]string{
+const cliPrefix = ""
+
+var (
+	BuildTime        = ""
+	BuildGoVersion   = ""
+	BuildGitCommitID = ""
+	// Log cli logger
+	Log              *zlog.Logger
+	FirstParameter   = os.Args[0]
+	flagHelp         = new(bool)
+	flagVersion      = new(bool)
+	osExit           = os.Exit
+	cmds             = make(map[string]*cmdCont)
+	cmdsKey          []string
+	matchingCmd      *cmdCont
+	args             []string
+	requiredFlags    = RequiredFlags{}
+	defaultLang      = "en"
+	unknownCommandFn = func(name string) {
+		Error("unknown Command: %s", errorText(name))
+	}
+	Logo         string
+	Name         string
+	Version      string
+	HideHelp     bool
+	HidePrompt   bool
+	Lang         = defaultLang
+	varsKey      = map[string]*Var{}
+	varShortsKey = make([]string, 0)
+	ShortValues  = map[string]interface{}{}
+	langs        = map[string]map[string]string{
 		"en": {
 			"command_empty": "Command name cannot be empty",
 			"help":          "Show Command help",
 			"version":       "View version",
 			"test":          "Test",
+			"restart":       "Restart service",
+			"stop":          "Stop service",
+			"start":         "Start service",
+			"status":        "ServiceIfe status",
+			"uninstall":     "Uninstall service",
+			"install":       "Install service",
 		},
 		"zh": {
 			"command_empty": "命令名不能为空",
 			"help":          "显示帮助信息",
 			"version":       "查看版本信息",
+			"restart":       "重启服务",
+			"stop":          "停止服务",
+			"start":         "开始服务",
+			"status":        "服务状态",
+			"uninstall":     "卸载服务",
+			"install":       "安装服务",
 		},
 	}
+)
+
+func getLangs(key string) string {
 	if lang, ok := langs[Lang][key]; ok {
 		return lang
 	}
