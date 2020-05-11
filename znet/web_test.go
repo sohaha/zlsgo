@@ -385,4 +385,21 @@ func TestGetInput(T *testing.T) {
 
 	t.Equal(200, w.Code)
 	t.Equal(expected, w.Body.String())
+	r.GetPanicHandler()
+}
+
+func TestRecovery(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := New()
+	r.Use(Recovery(r, func(c *Context, err error) {
+		c.String(200, "ok")
+	}))
+	r.GET("/", func(c *Context) {
+		panic("xxx")
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	r.ServeHTTP(w, req)
+	tt.Equal("ok", w.Body.String())
+	tt.Equal(200, w.Code)
 }

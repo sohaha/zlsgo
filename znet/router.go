@@ -272,7 +272,7 @@ func (e *Engine) NotFoundHandler(handler HandlerFunc) {
 }
 
 func (e *Engine) PanicHandler(handler PanicFunc) {
-	e.router.panic = handler
+	e.Use(Recovery(e, handler))
 }
 
 // GetTrees Get Trees
@@ -312,6 +312,10 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
+}
+
+func (e *Engine) GetPanicHandler() PanicFunc {
+	return e.router.panic
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
