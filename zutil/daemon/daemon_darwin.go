@@ -150,9 +150,6 @@ func (s *darwinLaunchdService) Uninstall() error {
 		err      error
 		confPath string
 	)
-	if err = s.i.Stop(s); err != nil {
-		return err
-	}
 	if err = s.Stop(); err != nil {
 		return err
 	}

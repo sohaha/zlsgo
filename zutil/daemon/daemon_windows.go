@@ -14,6 +14,8 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
+
+	"github.com/sohaha/zlsgo/zshell"
 )
 
 type (
@@ -160,6 +162,13 @@ func (w *windowsService) Uninstall() error {
 		return fmt.Errorf("service %s is not installed", w.Name)
 	}
 	defer s.Close()
+	_ = s.SetRecoveryActions([]mgr.RecoveryAction{
+		{
+			Type:  mgr.NoAction,
+			Delay: 0,
+		},
+	}, 0)
+	_ = zshell.BgRun("taskkill /F /pid " + strconv.Itoa(os.Getpid()))
 	_ = w.Stop()
 	if err = s.Delete(); err != nil {
 		return err
@@ -259,6 +268,8 @@ func (w *windowsService) Status() string {
 	switch q.State {
 	case svc.Running:
 		return "Running"
+	case svc.StopPending:
+		return "StopPending"
 	}
 	return strconv.Itoa(int(q.State))
 }

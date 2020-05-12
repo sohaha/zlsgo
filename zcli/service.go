@@ -1,9 +1,11 @@
 package zcli
 
 import (
+	"context"
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/zfile"
@@ -13,7 +15,8 @@ import (
 
 type (
 	app struct {
-		run func()
+		run    func()
+		status bool
 	}
 	serviceStop struct {
 	}
@@ -38,6 +41,7 @@ var (
 var s = make(chan struct{})
 
 func (a *app) Start(daemon.ServiceIfe) error {
+	a.status = true
 	go func() {
 		a.run()
 		s <- struct{}{}
@@ -45,8 +49,17 @@ func (a *app) Start(daemon.ServiceIfe) error {
 	return nil
 }
 
-func (*app) Stop(daemon.ServiceIfe) error {
-	<-s
+func (a *app) Stop(daemon.ServiceIfe) error {
+	if !a.status {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	select {
+	case <-s:
+	case <-ctx.Done():
+		// return errors.New("forced timeout")
+	}
 	return nil
 }
 
@@ -124,7 +137,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			daemonConfig = &daemon.Config{
 				Name:        name,
 				Description: description,
-				Option: zarray.DefData{
+				Option:      zarray.DefData{
 					// "UserService": true,
 				},
 			}
