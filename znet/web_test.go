@@ -243,6 +243,8 @@ func TestMore(t *testing.T) {
 	w := newRequest(r, "delete", "/", "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
+		c.GetAllQuerystMaps()
+		c.GetAllQueryst()
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())

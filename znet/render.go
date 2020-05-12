@@ -245,15 +245,17 @@ func (c *Context) PrevContent() *PrevData {
 	c.RLock()
 	r := c.render
 	code := c.Code
-	ctype, hasType := c.heades["Content-Type"]
 	c.RUnlock()
-	if !hasType {
-		ctype = ContentTypePlain
-	}
 	var content []byte
 	if r != nil {
 		content = r.Content(c)
 	}
+	c.RLock()
+	ctype, hasType := c.heades["Content-Type"]
+	if !hasType {
+		ctype = ContentTypePlain
+	}
+	c.RUnlock()
 	return &PrevData{
 		Code:    code,
 		Type:    ctype,

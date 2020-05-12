@@ -38,6 +38,14 @@ func (c *Context) GetAllQueryst() url.Values {
 	return c.Request.URL.Query()
 }
 
+func (c *Context) GetAllQuerystMaps() map[string]string {
+	arr := map[string]string{}
+	for key, v := range c.Request.URL.Query() {
+		arr[key] = v[0]
+	}
+	return arr
+}
+
 func (c *Context) GetQueryArray(key string) ([]string, bool) {
 	if values, ok := c.Request.URL.Query()[key]; ok && len(values) > 0 {
 		return values, true
