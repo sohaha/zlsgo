@@ -24,10 +24,8 @@
 $ go get github.com/sohaha/zlsgo
 ```
 
-### 示例
+### HTTP 服务
 
-<details>
-<summary>HTTP 服务</summary>
 ```go
 // main.go
 package main
@@ -49,7 +47,7 @@ func main(){
     znet.Run()
 }
 ```
-</details>
+
 ![znet](https://www.notion.so/signed/https:%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png)
 
 ### 日志工具
