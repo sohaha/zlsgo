@@ -74,11 +74,12 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 	}
 
 	if values, ok := value.(map[string]string); ok {
-		ReflectForNumField(v, func(fieldTag string, kind reflect.Kind, field reflect.Value) bool {
+		err = ReflectForNumField(v, func(fieldTag string, kind reflect.Kind,
+			field reflect.Value) error {
 			if v, ok := values[fieldTag]; ok {
-				err = SetValue(kind, field, v)
+				return SetValue(kind, field, v)
 			}
-			return err == nil
+			return nil
 		})
 	} else {
 		err = errors.New("not supported")
@@ -87,7 +88,9 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 	return
 }
 
-func ReflectForNumField(v reflect.Value, fn func(fieldTag string, kind reflect.Kind, field reflect.Value) bool, tag ...string) {
+func ReflectForNumField(v reflect.Value, fn func(fieldTag string,
+	kind reflect.Kind, field reflect.Value) error, tag ...string) error {
+	var err error
 	tagKey := "z"
 	if len(tag) > 0 {
 		tagKey = tag[0]
@@ -95,7 +98,10 @@ func ReflectForNumField(v reflect.Value, fn func(fieldTag string, kind reflect.K
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 		tfield := v.Type().Field(i)
-		fieldTag := tfield.Tag.Get(tagKey)
+		fieldTag := ""
+		if tagKey != "" {
+			fieldTag = tfield.Tag.Get(tagKey)
+		}
 		if fieldTag == "-" || !field.CanSet() {
 			continue
 		}
@@ -105,10 +111,12 @@ func ReflectForNumField(v reflect.Value, fn func(fieldTag string, kind reflect.K
 		if fieldTag == "" {
 			fieldTag = fieldName
 		}
-		if !fn(fieldTag, kind, field) {
-			break
+		err = fn(fieldTag, kind, field)
+		if err != nil {
+			return err
 		}
 	}
+	return err
 }
 
 func Nonzero(v reflect.Value) bool {

@@ -151,21 +151,21 @@ func (c *Context) GetJSONs() (json zjson.Res, err error) {
 	return
 }
 
-func (c *Context) GetDataRaw() (result string, err error) {
+func (c *Context) GetDataRaw() (string, error) {
 	if c.rawData != "" {
 		return c.rawData, nil
 	}
+	var err error
 	if c.Request.Body == nil {
 		err = errors.New("request.Body is nil")
-		return
+		return "", err
 	}
 	var body []byte
 	body, err = ioutil.ReadAll(c.Request.Body)
 	if err == nil {
-		result = zstring.Bytes2String(body)
+		c.rawData = zstring.Bytes2String(body)
 	}
-	c.rawData = result
-	return
+	return c.rawData, err
 }
 
 func (c *Context) get(m map[string][]string, key string) (map[string]string, bool) {

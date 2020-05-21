@@ -147,6 +147,7 @@ func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
 	c.customizeData = map[string]interface{}{}
 	c.heades = map[string]string{}
 	c.render = nil
+	c.rawData = c.rawData[:0]
 }
 
 func (e *Engine) acquireContext() *Context {

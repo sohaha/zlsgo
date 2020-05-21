@@ -117,6 +117,11 @@ func (v Engine) valid() Engine {
 	return v
 }
 
+func (v Engine) SetName(name string) Engine {
+	v.name = name
+	return v
+}
+
 // Verifi validate specified data
 func (v Engine) Verifi(value string, name ...string) Engine {
 	v.value = value

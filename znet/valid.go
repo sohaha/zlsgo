@@ -38,6 +38,5 @@ func (c *Context) Valid(defRule zvalid.Engine, key string, name ...string) zvali
 }
 
 func valid(defRule zvalid.Engine, value, key string, name ...string) (valid zvalid.Engine) {
-
 	return defRule.Verifi(value, name...)
 }

@@ -1,9 +1,9 @@
 [English](./README.EN.md) | 简体中文
 
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/sohaha/zlsgo?tab=subdirectories)
+![flat](https://img.shields.io/github/languages/top/sohaha/zlsgo.svg?style=flat)
 [![Build Status](https://www.travis-ci.org/sohaha/zlsgo.svg?branch=master)](https://www.travis-ci.org/sohaha/zlsgo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sohaha/zlsgo)](https://goreportcard.com/report/github.com/sohaha/zlsgo)
-[![GoDoc](https://godoc.org/github.com/sohaha/zlsgo?status.svg)](https://godoc.org/github.com/sohaha/zlsgo)
-![flat](https://img.shields.io/github/languages/top/sohaha/zlsgo.svg?style=flat)
 [![codecov](https://codecov.io/gh/sohaha/zlsgo/branch/master/graph/badge.svg)](https://codecov.io/gh/sohaha/zlsgo)
 
 ## 文档
@@ -24,10 +24,10 @@
 $ go get github.com/sohaha/zlsgo
 ```
 
-### HTTP 服务
+### 示例
 
-![znet](https://www.notion.so/signed/https:%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png)
-
+<details>
+<summary>HTTP 服务</summary>
 ```go
 // main.go
 package main
@@ -49,6 +49,8 @@ func main(){
     znet.Run()
 }
 ```
+</details>
+![znet](https://www.notion.so/signed/https:%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png)
 
 ### 日志工具
 

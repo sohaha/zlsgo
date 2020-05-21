@@ -13,6 +13,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zvalid"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -253,7 +254,10 @@ func TestMore(t *testing.T) {
 func TestShouldBind(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	r := newServer()
-	w := newRequest(r, "POST", []string{"/?c=999", "d[C][Cc]=88&arr=1&arr=2&d[a]=1&a=123&b=abc&name=seekwe&s=true&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
+	w := newRequest(r, "POST", []string{"/?c=999",
+		"d[C][Cc]=88&d.z=566&arr=1&arr=2&d[a]=1&d[A]=1a&a=123a&b=abc&name=seekwe" +
+			"&s=true" +
+			"&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
 		ct := c.ContentType()
 		t.Equal(MIMEPOSTForm, ct)
 		_ = c.DefaultFormOrQuery("ok", "yes")
@@ -272,25 +276,72 @@ func TestShouldBind(T *testing.T) {
 
 		ss := struct {
 			Abc int
-			d   int
+			d1  int
 			Arr struct {
-				A int    `z:"a"`
-				B string `z:"b"`
-				C struct {
-					Cc string `z:"cc"`
-				} `z:"C"`
-			} `z:"d"`
-			Arr2   []string `z:"arr"`
-			Status bool     `z:"s"`
-			Name   string   `z:"name"`
+				A string `json:"a"`
+				B string `json:"b"`
+				C int    `json:"C"`
+				Z string `json:"A"`
+			} `json:"d"`
+			Arr2   []string `json:"arr"`
+			Status bool     `json:"s"`
+			Name   string   `json:"name"`
 		}{
-			d:    99,
+			d1:   99,
 			Name: "是我",
 		}
 		err = c.Bind(&ss)
 		T.Log(fmt.Sprintf("%v", ss), err)
-		// err = Request(c.Request).Field(&ss,"")
-		// t.Log(1, ss, err)
+		t.EqualExit(123, ss.Abc)
+		t.EqualExit(88, ss.Arr.C)
+		t.EqualExit("1a", ss.Arr.A)
+		t.EqualExit([]string{"1", "2"}, ss.Arr2)
+		t.EqualExit(true, ss.Status)
+		T.Log(ss.Arr)
+
+		var bind struct {
+			Name string `json:"name"`
+			Abc  int
+			A    string `json:"a"`
+		}
+
+		rule := c.ValidRule().Required()
+		err = c.BindValid(&bind, map[string]zvalid.Engine{
+			"name": rule,
+			"Abc":  rule.IsNumber(),
+		})
+		T.Log(bind, err)
+		t.EqualNil(err)
+		t.Equal(bind.Name, "seekwe")
+
+		var bind2 struct {
+			Name string
+			Abc  int
+			A    string
+		}
+
+		err = c.BindValid(&bind2, map[string]zvalid.Engine{
+			"name": rule,
+			"Abc":  rule.IsNumber(),
+		})
+		T.Log(bind2, err)
+		t.EqualNil(err)
+		t.Equal(bind2.Name, "")
+
+		var bind3 struct {
+			Name string
+			Abc  int
+			A    string
+		}
+
+		err = c.BindValid(&bind3, map[string]zvalid.Engine{
+			"name": rule,
+			"Abc":  rule.IsNumber(),
+		}, true)
+		T.Log(bind3, err)
+		t.EqualNil(err)
+		t.Equal(bind3.Name, "seekwe")
+
 		c.String(210, expected)
 	})
 	t.EqualExit(210, w.Code)
