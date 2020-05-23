@@ -27,7 +27,7 @@ func TestValidNew(tt *testing.T) {
 	t.Equal(ErrNoValidationValueSet, err)
 	tt.Log(str, err)
 
-	validObj.SetName("测试 1")
+	validObj.SetAlias("测试 1")
 	v := validObj.Verifi("test1", "测试1").valid()
 
 	t.Equal(nil, v.err)

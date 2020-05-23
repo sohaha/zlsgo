@@ -45,6 +45,7 @@ type (
 		webMode            int
 		ShowFavicon        bool
 		MaxMultipartMemory int64
+		BindTag            string
 		customMethodType   string
 		addr               []addrSt
 		router             *router
@@ -103,6 +104,7 @@ const (
 	// TestMode test
 	TestMode          = "test"
 	defaultServerName = "Z"
+	defaultBindTag    = "json"
 	releaseCode       = iota
 	debugCode
 	testCode
@@ -152,6 +154,7 @@ func New(serverName ...string) *Engine {
 		webMode:            releaseCode,
 		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
+		BindTag:            defaultBindTag,
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)

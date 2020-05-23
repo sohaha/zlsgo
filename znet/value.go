@@ -2,7 +2,6 @@ package znet
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 
 	"github.com/sohaha/zlsgo/zstring"
@@ -26,13 +25,14 @@ func (c *Context) Bind(obj interface{}) (err error) {
 }
 
 func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
-	Engine, discardTag ...bool) (
+Engine) (
 	err error) {
-	return c.bind(obj, func(kind reflect.Kind, field reflect.Value,
+	err = c.bind(obj, func(kind reflect.Kind, field reflect.Value,
 		fieldTag string,
 		value interface{}) error {
 		validRule, ok := elements[fieldTag]
 		if ok {
+			delete(elements, fieldTag)
 			var validValue string
 			switch v := value.(type) {
 			case string:
@@ -44,21 +44,27 @@ func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
 			}
 		}
 		return zutil.SetValue(kind, field, value)
-	}, discardTag...)
+	})
+	if err == nil {
+		for _, v := range elements {
+			err = v.Verifi("").Error()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return err
 }
 
 func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
-	field reflect.Value, fieldTag string, value interface{}) error, discardTag ...bool) (err error) {
+	field reflect.Value, fieldTag string, value interface{}) error) (err error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr {
 		err = errors.New("assignment requires the use of pointers")
 		return
 	}
 	vv := v.Elem()
-	tag := "json"
-	if len(discardTag) > 0 && discardTag[0] {
-		tag = ""
-	}
+	tag := c.Engine.BindTag
 	err = zutil.ReflectForNumField(vv, func(fieldTag string, kind reflect.Kind,
 		field reflect.Value) error {
 		var (
@@ -66,7 +72,6 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 			ok    bool
 			err   error
 		)
-
 		// If you close the tag, the parameters will be transferred to SnakeCase by default
 		if tag == "" {
 			fieldTag = zstring.CamelCaseToSnakeCase(fieldTag)
@@ -87,9 +92,9 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 		if ok {
 			err = set(kind, field, fieldTag, value)
 		}
-		if err != nil {
-			err = fmt.Errorf("key: %s, %v", fieldTag, err)
-		}
+		// if err != nil {
+		// 	err = fmt.Errorf("key: %s, %v", fieldTag, err)
+		// }
 		return err
 	}, tag)
 	return

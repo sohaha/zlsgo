@@ -47,8 +47,9 @@ func (table *Table) ForEach(trans func(key string, value interface{}) bool) {
 
 // ForEachRaw traversing the cache
 func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
+	count := table.Count()
 	table.RLock()
-	items := make(map[string]*Item, table.Count())
+	items := make(map[string]*Item, count)
 	for k, v := range table.items {
 		items[k] = v
 	}

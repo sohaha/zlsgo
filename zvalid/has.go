@@ -112,7 +112,7 @@ func (v Engine) Password(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		err := New().Verifi(v.value, v.name).Required().MinLength(6).MaxLength(20).Error()
 		if err != nil {
-			v.err = setError(&v, "不合法的值", customError...)
+			v.err = setError(&v, "值不合法", customError...)
 		}
 		return v
 	})
@@ -123,7 +123,7 @@ func (v Engine) StrongPassword(customError ...string) Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		err := New().Verifi(v.value).Required().MinLength(6).MaxLength(20).HasSymbol().HasNumber().HasLetter().HasLower().Error()
 		if err != nil {
-			v.err = setError(&v, "不合法的值", customError...)
+			v.err = setError(&v, "值不合法", customError...)
 		}
 		return v
 	})

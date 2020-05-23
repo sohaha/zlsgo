@@ -117,7 +117,7 @@ func (v Engine) valid() Engine {
 	return v
 }
 
-func (v Engine) SetName(name string) Engine {
+func (v Engine) SetAlias(name string) Engine {
 	v.name = name
 	return v
 }
