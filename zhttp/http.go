@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 const (
@@ -61,11 +62,12 @@ type (
 	DownloadProgress func(current, total int64)
 	UploadProgress   func(current, total int64)
 	Engine           struct {
-		client      *http.Client
-		jsonEncOpts *jsonEncOpts
-		xmlEncOpts  *xmlEncOpts
-		flag        int
-		debug       bool
+		client       *http.Client
+		jsonEncOpts  *jsonEncOpts
+		xmlEncOpts   *xmlEncOpts
+		flag         int
+		debug        bool
+		getUserAgent func() string
 	}
 
 	bodyJson struct {
@@ -177,7 +179,13 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		ProtoMinor: 1,
 	}
 	resp = &Res{req: req, r: r}
-
+	if r.getUserAgent != nil {
+		ua := r.getUserAgent()
+		if ua == "" {
+			ua = uaList[zstring.RandInt(0, len(uaList)-1)]
+		}
+		req.Header.Add("User-Agent", ua)
+	}
 	for _, v := range vs {
 		switch vv := v.(type) {
 		case Header:
@@ -604,12 +612,16 @@ func (r *Engine) SetFlags(flags int) {
 	r.flag = flags
 }
 
-func SetFlags(flags int) {
-	std.SetFlags(flags)
-}
-
 func (r *Engine) GetFlags() int {
 	return r.flag
+}
+
+func (r *Engine) SetUserAgent(fn func() string) {
+	r.getUserAgent = fn
+}
+
+func SetFlags(flags int) {
+	std.SetFlags(flags)
 }
 
 func Flags() int {
@@ -630,6 +642,11 @@ func SetTimeout(d time.Duration) {
 
 func RemoveProxy() error {
 	return std.RemoveProxy()
+}
+
+// SetUserAgent returning an empty array means random built-in User Agent
+func SetUserAgent(fn func() string) {
+	std.SetUserAgent(fn)
 }
 
 func SetProxyUrl(proxyUrl ...string) error {

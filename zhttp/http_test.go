@@ -241,4 +241,7 @@ func TestRandomUserAgent(T *testing.T) {
 	for i := 0; i < 10; i++ {
 		tt.Log(RandomUserAgent())
 	}
+	SetUserAgent(func() string {
+		return ""
+	})
 }

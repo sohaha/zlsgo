@@ -2,6 +2,7 @@ package zutil
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 )
@@ -204,20 +205,55 @@ func LabelType(t reflect.Type) bool {
 	return false
 }
 
-func RunAllMethod(st interface{}, args ...interface{}) (err error) {
-	object := reflect.ValueOf(st)
-	kind := object.Kind()
-	if kind != reflect.Ptr && kind != reflect.Struct {
-		err = errors.New("must be struct")
-		return
+// GetAllMethod get all methods of struct
+func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.
+Method) error) error {
+	if st == nil || fn == nil {
+		return nil
 	}
-	for i := 0; i < object.NumMethod(); i++ {
-		v := object.Method(i)
+	typeOf := reflect.TypeOf(st)
+	if typeOf.Kind() != reflect.Ptr {
+		return errors.New("please use pointer")
+	}
+	if typeOf.Elem().Kind() != reflect.Struct {
+		return errors.New("must be struct")
+	}
+
+	// valueOf := reflect.ValueOf(st)
+	numMethod := typeOf.NumMethod()
+	if numMethod == 0 {
+		return errors.New("method cannot be obtained")
+	}
+	var err error
+	for i := 0; i < numMethod; i++ {
+		Try(func() {
+			err = fn(i, typeOf.Method(i)) // valueOf.Method(i)
+		}, func(e interface{}) {
+			var ok bool
+			err, ok = e.(error)
+			if !ok {
+				err = fmt.Errorf("%v", e)
+			}
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RunAllMethod run all methods of struct
+func RunAllMethod(st interface{}, args ...interface{}) (err error) {
+	valueOf := reflect.ValueOf(st)
+	err = GetAllMethod(st, func(numMethod int, m reflect.Method) error {
 		var values []reflect.Value
 		for _, v := range args {
 			values = append(values, reflect.ValueOf(v))
 		}
-		v.Call(values)
-	}
+		valueOf.Method(numMethod).Call(values)
+		// m.Func.Call(values)
+		return nil
+	})
+
 	return
 }

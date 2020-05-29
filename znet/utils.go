@@ -138,6 +138,7 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 }
 
 func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
+	c.Lock()
 	c.Request = r
 	c.Writer = w
 	c.Code = http.StatusOK
@@ -148,6 +149,7 @@ func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
 	c.heades = map[string]string{}
 	c.render = nil
 	c.rawData = c.rawData[:0]
+	c.Unlock()
 }
 
 func (e *Engine) acquireContext() *Context {

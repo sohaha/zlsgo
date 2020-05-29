@@ -228,6 +228,7 @@ func PutAppend(path string, b []byte) (err error) {
 	if FileExist(path) {
 		file, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	} else {
+		_ = RealPathMkdir(filepath.Dir(path))
 		file, err = os.Create(path)
 	}
 	if err != nil {

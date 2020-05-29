@@ -73,10 +73,23 @@ func RegexExtract(pattern string, str string) ([]string, error) {
 	return nil, err
 }
 
+// RegexExtractAll extract matching all text
+func RegexExtractAll(pattern string, str string, count ...int) ([][]string, error) {
+	r, err := getRegexpCompile(pattern)
+	if err == nil {
+		n := -1
+		if len(count) > 0 {
+			n = count[0]
+		}
+		return r.FindAllStringSubmatch(str, n), nil
+	}
+	return nil, err
+}
+
 // RegexFind return matching position
-func RegexFind(pattern string, str string, n int) [][]int {
+func RegexFind(pattern string, str string, count int) [][]int {
 	if r, err := getRegexpCompile(pattern); err == nil {
-		return r.FindAllIndex(String2Bytes(str), n)
+		return r.FindAllIndex(String2Bytes(str), count)
 	}
 	return [][]int{}
 }

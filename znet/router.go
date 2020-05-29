@@ -64,12 +64,22 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 }
 
 func (e *Engine) StaticFS(relativePath string, fs http.FileSystem) {
-	urlPattern := path.Join(relativePath, "/{file:.*}")
+	var urlPattern string
+	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, fmt.Sprintf("%%s --> %%s ->> %s", fs), "Static", relativePath))
 	fileServer := http.StripPrefix(relativePath, http.FileServer(fs))
 	handler := func(c *Context) {
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
-	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, fmt.Sprintf("%%s --> %%s ->> %s", fs), "Static", relativePath))
+	if strings.HasSuffix(relativePath, "/") {
+		urlPattern = path.Join(relativePath, "*")
+		e.GET(relativePath, handler)
+	} else {
+		urlPattern = path.Join(relativePath, "/*")
+		e.GET(relativePath, func(c *Context) {
+			c.Redirect(relativePath + "/")
+		})
+		e.GET(relativePath+"/", handler)
+	}
 	e.GET(urlPattern, handler)
 	e.HEAD(urlPattern, handler)
 	log()

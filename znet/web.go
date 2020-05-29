@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,7 +54,6 @@ type (
 		preHandle          func(context *Context) bool
 		pool               sync.Pool
 	}
-
 	TlsCfg struct {
 		Cert           string
 		Key            string
@@ -60,12 +61,10 @@ type (
 		HTTPProcessing interface{}
 		Config         *tls.Config
 	}
-
 	addrSt struct {
 		addr string
 		TlsCfg
 	}
-
 	router struct {
 		prefix     string
 		middleware []HandlerFunc
@@ -74,7 +73,6 @@ type (
 		notFound   HandlerFunc
 		panic      PanicFunc
 	}
-
 	// HandlerFunc HandlerFunc
 	HandlerFunc func(c *Context)
 	// MiddlewareFunc MiddlewareFunc
@@ -83,12 +81,10 @@ type (
 	PanicFunc func(c *Context, err error)
 	// MiddlewareType is a public type that is used for middleware
 	MiddlewareType HandlerFunc
-
 	// Parameters records some parameters
 	Parameters struct {
 		routeName string
 	}
-
 	serverMap struct {
 		engine *Engine
 		srv    *http.Server
@@ -123,6 +119,8 @@ var (
 	defaultAddr     = addrSt{
 		addr: ":3788",
 	}
+	// BindStructDelimiter structure route delimiter
+	BindStructDelimiter = "-"
 )
 
 func init() {
@@ -257,16 +255,15 @@ func Run() {
 		for _, cfg := range e.addr {
 			m.Add(1)
 			go func(cfg addrSt, e *Engine) {
+				var err error
 				isTls := cfg.Cert != "" || cfg.Config != nil
-				addr := cfg.addr
-				if !strings.Contains(addr, ":") {
-					addr = ":" + addr
-				}
+				addr := getPort(cfg.addr)
 				hostname := "http://"
 				if isTls {
 					hostname = "https://"
 				}
 				hostname += resolveHostname(addr)
+
 				srv := &http.Server{
 					Addr:         addr,
 					Handler:      e,
@@ -274,13 +271,13 @@ func Run() {
 					WriteTimeout: e.writeTimeout,
 					// MaxHeaderBytes: 1 << 20,
 				}
+
 				srvMap.Store(addr, &serverMap{e, srv})
 
 				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
 				time.AfterFunc(time.Millisecond*100, func() {
 					e.Log.Successf("%s %s  %s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapPid)
 				})
-				var err error
 				if isTls {
 					if cfg.Config != nil {
 						srv.TLSConfig = cfg.Config
@@ -353,6 +350,23 @@ func Run() {
 		ShutdownDone()
 	}
 	time.Sleep(100 * time.Millisecond)
+}
+
+func getPort(addr string) string {
+	if !strings.Contains(addr, ":") {
+		addr = ":" + addr
+	}
+	if addr != ":0" {
+		return addr
+	}
+	// random port
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		Log.Fatalf("Listen: %s\n", err)
+	}
+	addr = ":" + strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
+	_ = listener.Close()
+	return addr
 }
 
 func runNewProcess() {

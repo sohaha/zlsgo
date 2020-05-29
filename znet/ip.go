@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-29 11:53:43
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-29 17:43:56
- */
-
 package znet
 
 import (
@@ -18,26 +11,11 @@ import (
 var localNetworks []*net.IPNet
 
 func init() {
-	localNetworks = make([]*net.IPNet, 19)
+	localNetworks = make([]*net.IPNet, 4)
 	for i, sNetwork := range []string{
 		"10.0.0.0/8",
 		"169.254.0.0/16",
 		"172.16.0.0/12",
-		"172.17.0.0/12",
-		"172.18.0.0/12",
-		"172.19.0.0/12",
-		"172.20.0.0/12",
-		"172.21.0.0/12",
-		"172.22.0.0/12",
-		"172.23.0.0/12",
-		"172.24.0.0/12",
-		"172.25.0.0/12",
-		"172.26.0.0/12",
-		"172.27.0.0/12",
-		"172.28.0.0/12",
-		"172.29.0.0/12",
-		"172.30.0.0/12",
-		"172.31.0.0/12",
 		"192.168.0.0/16",
 	} {
 		_, network, _ := net.ParseCIDR(sNetwork)
@@ -45,18 +23,20 @@ func init() {
 	}
 }
 
-func HasLocalIPddr(ip string) bool {
-	return HasLocalIP(net.ParseIP(ip))
+func IsLocalAddrIP(ip string) bool {
+	return IsLocalIP(net.ParseIP(ip))
 }
 
-func HasLocalIP(ip net.IP) bool {
+func IsLocalIP(ip net.IP) bool {
 	for _, network := range localNetworks {
 		if network.Contains(ip) {
 			return true
 		}
 	}
-
-	return ip.IsLoopback()
+	if ip.String() == "0.0.0.0" {
+		return true
+	}
+	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
 func ClientIP(r *http.Request) (ip string) {
@@ -77,17 +57,17 @@ func ClientPublicIP(r *http.Request) string {
 	var ip string
 	for _, ip = range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
 		ip = strings.TrimSpace(ip)
-		if ip != "" && !HasLocalIPddr(ip) {
+		if ip != "" && !IsLocalAddrIP(ip) {
 			return ip
 		}
 	}
 
 	ip = strings.TrimSpace(r.Header.Get("X-Real-Ip"))
-	if ip != "" && !HasLocalIPddr(ip) {
+	if ip != "" && !IsLocalAddrIP(ip) {
 		return ip
 	}
 
-	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil && !HasLocalIPddr(ip) {
+	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil && !IsLocalAddrIP(ip) {
 		return ip
 
 	}

@@ -7,11 +7,21 @@ import (
 	"github.com/sohaha/zlsgo"
 )
 
-func TestExtract(T *testing.T) {
-	t := zlsgo.NewTest(T)
+func TestExtract(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	res, err := RegexExtract(`abc(\d{2}).*(\w)`, "abc123999ok")
-	t.Equal(true, err == nil)
-	t.Equal([]string{"12", "k"}, res[1:])
+	tt.Equal(true, err == nil)
+	tt.Equal([]string{"12", "k"}, res[1:])
+	res2, err := RegexExtractAll(`a(\d{2})`, "a123999oa23kdsfsda323")
+	tt.EqualExit(true, err == nil)
+	t.Log(res2)
+	tt.Equal(res2[0][1], "12")
+	tt.Equal(res2[1][1], "23")
+	tt.Equal(res2[2][1], "32")
+	res2, err = RegexExtractAll(`a(\d{2})`, "a123999oa23kdsfsda323", 1)
+	tt.EqualExit(true, err == nil)
+	t.Log(res2)
+	tt.Equal(res2[0][1], "12")
 }
 
 func TestRegex(T *testing.T) {
