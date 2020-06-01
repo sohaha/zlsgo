@@ -61,6 +61,13 @@ func TestBindStruct(t *testing.T) {
 	})
 	tt.Log(err)
 	tt.EqualNil(err)
+	BindStructSuffix = ".go"
+	err = r.BindStruct(prefix, &testController{}, func(c *Context) {
+		t.Log("go", c.Request.URL)
+		c.Next()
+	})
+	tt.Log(err)
+	tt.EqualNil(err)
 	methods := [][]string{
 		{"GET", prefix + "/user"},
 		{"GET", prefix + "/get-user"},

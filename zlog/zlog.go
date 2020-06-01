@@ -84,9 +84,12 @@ func Dump(v ...interface{}) {
 			args = prependArgName(names, args)
 		}
 	}
-	Log.calldDepth--
-	_ = Log.OutPut(LogDump, fmt.Sprintln(args...), true)
-	Log.calldDepth++
+	_ = Log.outPut(LogDump, fmt.Sprintln(args...), true, func() func() {
+		Log.calldDepth--
+		return func() {
+			Log.calldDepth++
+		}
+	})
 }
 
 // Successf Successf

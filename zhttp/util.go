@@ -45,7 +45,7 @@ func File(patterns ...string) interface{} {
 	return uploads
 }
 
-var uaList = []string{
+var UserAgentLists = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
 	"Mozilla/5.0 (Linux; U; Android 2.3.6; zh-cn; GT-S5660 Build/GINGERBREAD) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1 MicroMessenger/4.5.255",
 	"Mozilla/5.0 (X11; OpenBSD i386) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36",
@@ -54,5 +54,5 @@ var uaList = []string{
 }
 
 func RandomUserAgent() Header {
-	return Header{"User-Agent": uaList[zstring.RandInt(0, len(uaList)-1)]}
+	return Header{"User-Agent": UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]}
 }

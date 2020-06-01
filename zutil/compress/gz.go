@@ -33,7 +33,7 @@ func Compress(currentPath, dest string) error {
 			if e != nil {
 				return e
 			}
-			header.Name = strings.ReplaceAll(path, currentPath, "")
+			header.Name = strings.Replace(path, currentPath, "", -1)
 			e = tw.WriteHeader(header)
 			if e != nil {
 				return e

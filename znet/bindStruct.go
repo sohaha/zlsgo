@@ -32,7 +32,10 @@ func (e *Engine) BindStruct(prefix string, s interface{},
 		fn := func(c *Context) {
 			valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
 		}
-		name := zstring.CamelCaseToSnakeCase(info[2], BindStructDelimiter)
+		name := info[2]
+		if BindStructDelimiter != "" {
+			name = zstring.CamelCaseToSnakeCase(info[2], BindStructDelimiter) + BindStructSuffix
+		}
 		switch strings.ToUpper(info[1]) {
 		case "GET":
 			g.GET(name, fn)

@@ -25,7 +25,7 @@ func (c *Context) Bind(obj interface{}) (err error) {
 }
 
 func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
-Engine) (
+	Engine) (
 	err error) {
 	err = c.bind(obj, func(kind reflect.Kind, field reflect.Value,
 		fieldTag string,

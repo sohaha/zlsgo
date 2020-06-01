@@ -182,7 +182,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	if r.getUserAgent != nil {
 		ua := r.getUserAgent()
 		if ua == "" {
-			ua = uaList[zstring.RandInt(0, len(uaList)-1)]
+			ua = UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]
 		}
 		req.Header.Add("User-Agent", ua)
 	}

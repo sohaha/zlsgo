@@ -38,7 +38,7 @@ func TestRunAllMethod(t *testing.T) {
 
 func TestGetAllMethod(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	err := GetAllMethod(&TestSt{}, func(numMethod int ,m reflect.Method) error {
+	err := GetAllMethod(&TestSt{}, func(numMethod int, m reflect.Method) error {
 		t.Log(m.Name)
 		if m.Name != "RunTest" && m.Name != "RunTest2" {
 			return errors.New("mismatch")
@@ -55,4 +55,3 @@ func TestGetAllMethod(t *testing.T) {
 	t.Log(err)
 	// tt.Equal(true, err == nil)
 }
-

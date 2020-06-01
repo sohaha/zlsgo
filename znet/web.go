@@ -121,6 +121,8 @@ var (
 	}
 	// BindStructDelimiter structure route delimiter
 	BindStructDelimiter = "-"
+	// BindStructSuffix structure route suffix
+	BindStructSuffix = ""
 )
 
 func init() {

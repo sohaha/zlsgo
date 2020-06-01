@@ -207,7 +207,7 @@ func LabelType(t reflect.Type) bool {
 
 // GetAllMethod get all methods of struct
 func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.
-Method) error) error {
+	Method) error) error {
 	if st == nil || fn == nil {
 		return nil
 	}

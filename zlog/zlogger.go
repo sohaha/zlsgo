@@ -218,10 +218,20 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 	}
 }
 
-// OutPut Output log
-func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string) error {
+// outPut Output log
+func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
+	prefixText ...string) error {
 	log.mu.Lock()
-	defer log.mu.Unlock()
+	var after func()
+	if fn != nil {
+		after = fn()
+	}
+	defer func() {
+		if after != nil {
+			after()
+		}
+		log.mu.Unlock()
+	}()
 	if log.out == ioutil.Discard {
 		return nil
 	}
@@ -274,22 +284,22 @@ func (log *Logger) OutPut(level int, s string, isWrap bool, prefixText ...string
 
 // Printf Printf
 func (log *Logger) Printf(format string, v ...interface{}) {
-	_ = log.OutPut(LogNot, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogNot, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Println Println
 func (log *Logger) Println(v ...interface{}) {
-	_ = log.OutPut(LogNot, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogNot, fmt.Sprintln(v...), true, nil)
 }
 
 // Debugf Debugf
 func (log *Logger) Debugf(format string, v ...interface{}) {
-	_ = log.OutPut(LogDebug, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Debug Debug
 func (log *Logger) Debug(v ...interface{}) {
-	_ = log.OutPut(LogDebug, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, nil)
 }
 
 // Dump Dump
@@ -306,72 +316,72 @@ func (log *Logger) Dump(v ...interface{}) {
 		}
 	}
 
-	_ = log.OutPut(LogDump, fmt.Sprintln(args...), true)
+	_ = log.outPut(LogDump, fmt.Sprintln(args...), true, nil)
 }
 
 // Successf Successf
 func (log *Logger) Successf(format string, v ...interface{}) {
-	_ = log.OutPut(LogSuccess, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Success Success
 func (log *Logger) Success(v ...interface{}) {
-	_ = log.OutPut(LogSuccess, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, nil)
 }
 
 // Infof Infof
 func (log *Logger) Infof(format string, v ...interface{}) {
-	_ = log.OutPut(LogInfo, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Info Info
 func (log *Logger) Info(v ...interface{}) {
-	_ = log.OutPut(LogInfo, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, nil)
 }
 
 // Warnf Warnf
 func (log *Logger) Warnf(format string, v ...interface{}) {
-	_ = log.OutPut(LogWarn, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Warn Warn
 func (log *Logger) Warn(v ...interface{}) {
-	_ = log.OutPut(LogWarn, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, nil)
 }
 
 // Errorf Errorf
 func (log *Logger) Errorf(format string, v ...interface{}) {
-	_ = log.OutPut(LogError, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Error Error
 func (log *Logger) Error(v ...interface{}) {
-	_ = log.OutPut(LogError, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogError, fmt.Sprintln(v...), true, nil)
 }
 
 // Fatalf Fatalf
 func (log *Logger) Fatalf(format string, v ...interface{}) {
-	_ = log.OutPut(LogFatal, fmt.Sprintf(format, v...), false)
+	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, nil)
 	osExit(1)
 }
 
 // Fatal Fatal
 func (log *Logger) Fatal(v ...interface{}) {
-	_ = log.OutPut(LogFatal, fmt.Sprintln(v...), true)
+	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, nil)
 	osExit(1)
 }
 
 // Panicf Panicf
 func (log *Logger) Panicf(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
-	_ = log.OutPut(LogPanic, fmt.Sprintf(format, s), false)
+	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, nil)
 	panic(s)
 }
 
 // panic panic
 func (log *Logger) Panic(v ...interface{}) {
 	s := fmt.Sprintln(v...)
-	_ = log.OutPut(LogPanic, s, true)
+	_ = log.outPut(LogPanic, s, true, nil)
 	panic(s)
 }
 
@@ -383,7 +393,7 @@ func (log *Logger) Stack(v ...interface{}) {
 	n := runtime.Stack(buf, true)
 	s += string(buf[:n])
 	s += "\n"
-	_ = log.OutPut(LogError, s, true)
+	_ = log.outPut(LogError, s, true, nil)
 }
 
 // Track Track
@@ -405,7 +415,7 @@ func (log *Logger) Track(logTip string, v ...int) {
 	b.WriteString(logTip)
 	b.WriteString("\n")
 	b.WriteString(strings.Join(track, "\n"))
-	_ = log.OutPut(LogDebug, b.String(), true)
+	_ = log.outPut(LogDebug, b.String(), true, nil)
 }
 
 func TrackCurrent(max, depth int) (track []string) {
