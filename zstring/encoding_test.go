@@ -26,3 +26,22 @@ func TestBase64(t *testing.T) {
 	tt.Equal(str, de)
 
 }
+
+type testSt struct {
+	Name string
+}
+
+func TestSerialize(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	test := &testSt{"hi"}
+
+	s, err := Serialize(test)
+	tt.EqualNil(err)
+
+	v, err := UnSerialize(s, &testSt{})
+	tt.EqualNil(err)
+
+	test2, ok := v.(*testSt)
+	tt.EqualTrue(ok)
+	tt.Equal(test.Name, test2.Name)
+}

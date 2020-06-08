@@ -4,6 +4,7 @@ package zfile
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -227,6 +228,32 @@ func PutAppend(path string, b []byte) (err error) {
 	path = RealPath(path)
 	if FileExist(path) {
 		file, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	} else {
+		_ = RealPathMkdir(filepath.Dir(path))
+		file, err = os.Create(path)
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(b)
+	return err
+}
+
+func ReadFile(path string) ([]byte, error) {
+	path = RealPath(path)
+	return ioutil.ReadFile(path)
+}
+
+func WriteFile(path string, b []byte, isAppend ...bool) (err error) {
+	var file *os.File
+	path = RealPath(path)
+	if FileExist(path) {
+		if len(isAppend) > 0 && isAppend[0] {
+			file, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		} else {
+			file, err = os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, os.ModeExclusive)
+		}
 	} else {
 		_ = RealPathMkdir(filepath.Dir(path))
 		file, err = os.Create(path)

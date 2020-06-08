@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 // Log header information tag bit, using bitmap mode
@@ -171,23 +172,28 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 		buf.WriteString(log.prefix)
 	}
 	if log.flag&(BitDate|BitTime|BitMicroSeconds|BitLevel) != 0 {
+		//timeTpl := zstring.Buffer()
 		if log.flag&BitDate != 0 {
-			year, month, day := t.Date()
-			itoa(buf, year, 4)
-			buf.WriteByte('/') // "2019/"
-			itoa(buf, int(month), 2)
-			buf.WriteByte('/') // "2019/04/"
-			itoa(buf, day, 2)
-			buf.WriteByte(' ') // "2019/04/11 "
+			//timeTpl.WriteString("Y/m/d ")
+			//year, month, day := t.Date()
+			//itoa(buf, year, 4)
+			//buf.WriteByte('/') // "2019/"
+			//itoa(buf, int(month), 2)
+			//buf.WriteByte('/') // "2019/04/"
+			//itoa(buf, day, 2)
+			//buf.WriteByte(' ') // "2019/04/11 "
+			buf.WriteString(ztime.FormatTime(t, "Y/m/d "))
 		}
 
 		if log.flag&(BitTime|BitMicroSeconds) != 0 {
-			hour, min, sec := t.Clock()
-			itoa(buf, hour, 2)
-			buf.WriteByte(':') // "12:"
-			itoa(buf, min, 2)
-			buf.WriteByte(':') // "12:12:"
-			itoa(buf, sec, 2)  // "12:12:59"
+			//timeTpl.WriteString("H:i:s")
+			//hour, min, sec := t.Clock()
+			//itoa(buf, hour, 2)
+			//buf.WriteByte(':') // "12:"
+			//itoa(buf, min, 2)
+			//buf.WriteByte(':') // "12:12:"
+			//itoa(buf, sec, 2)  // "12:12:59"
+			buf.WriteString(ztime.FormatTime(t, "H:i:s"))
 			if log.flag&BitMicroSeconds != 0 {
 				buf.WriteByte('.')
 				itoa(buf, t.Nanosecond()/1e3, 6) // "12:12:59.123456

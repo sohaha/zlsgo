@@ -8,7 +8,7 @@ import (
 // RandInt random numbers in the specified range
 func RandInt(min int, max int) int {
 	rand.Seed(rand.Int63n(time.Now().UnixNano()))
-	return min + rand.Intn(max-min)
+	return min + rand.Intn(max+1-min)
 }
 
 // RandString random string of specified length, the second parameter limit can only appear the specified character

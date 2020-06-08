@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 func TestNew(tt *testing.T) {
@@ -14,10 +15,11 @@ func TestNew(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	cron := New()
 	now := time.Now()
-	t.Log(now.String())
+	tt.Log(ztime.FormatTime(now))
 
 	next, err := ParseNextTime("* * * * * *")
 	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
 
 	next, err = ParseNextTime("* * * * * * 999")
 	t.Equal(true, err != nil)
@@ -25,7 +27,15 @@ func TestNew(tt *testing.T) {
 
 	next, err = ParseNextTime("12 * * * * * *")
 	t.Equal(nil, err)
-	t.Log(next.String())
+	tt.Log(ztime.FormatTime(next))
+
+	next, err = ParseNextTime("1 2 * * * * *")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
+
+	next, err = ParseNextTime("*/10 * * * * * *")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
 
 	_, _ = cron.Add("* * * * * * *", func() {
 		fmt.Println("running", time.Now().Unix())

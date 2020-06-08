@@ -1,7 +1,9 @@
 package zstring
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/gob"
 )
 
 func Base64Encode(value []byte) []byte {
@@ -27,5 +29,28 @@ func Base64DecodeString(data string) (value string, err error) {
 	if err == nil {
 		value = Bytes2String(dst)
 	}
+	return
+}
+
+func Serialize(value interface{}) ([]byte, error) {
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	gob.Register(value)
+
+	err := enc.Encode(&value)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func UnSerialize(valueBytes []byte, registers ...interface{}) (value interface{}, err error) {
+	for _, v := range registers {
+		gob.Register(v)
+	}
+	buf := bytes.NewBuffer(valueBytes)
+	dec := gob.NewDecoder(buf)
+	err = dec.Decode(&value)
 	return
 }

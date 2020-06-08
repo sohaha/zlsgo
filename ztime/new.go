@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	timeTpl      = "2006-01-02 15:04:05"
+	TimeTpl      = "2006-01-02 15:04:05"
 	formatKeyTpl = map[byte]string{
 		'd': "02",
 		'D': "Mon",
@@ -119,7 +119,7 @@ func (e *TimeEngine) in(t time.Time) time.Time {
 // FormatTime string format of return time
 func (e *TimeEngine) FormatTime(t time.Time, format ...string) string {
 	t = e.in(t)
-	tpl := timeTpl
+	tpl := TimeTpl
 	if len(format) > 0 {
 		tpl = FormatTlp(format[0])
 	}
@@ -174,7 +174,7 @@ func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error
 		min = zstring.Pad(s[2:4], 2, "0", zstring.PadLeft)
 		sec = zstring.Pad(s[4:6], 2, "0", zstring.PadLeft)
 	}
-	return time.ParseInLocation(timeTpl, fmt.Sprintf("%s-%s-%s %s:%s:%s", year, month, day, hour, min, sec), e.GetTimeZone())
+	return time.ParseInLocation(TimeTpl, fmt.Sprintf("%s-%s-%s %s:%s:%s", year, month, day, hour, min, sec), e.GetTimeZone())
 
 }
 

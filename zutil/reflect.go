@@ -89,6 +89,37 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 	return
 }
 
+func ReflectStructField(v reflect.Type, fn func(
+	numField int, fieldTag string, field reflect.StructField) error, tag ...string) error {
+	var err error
+	tagKey := "z"
+	if len(tag) > 0 {
+		tagKey = tag[0]
+	}
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldTag := ""
+		if tagKey != "" {
+			fieldTag = field.Tag.Get(tagKey)
+		}
+		if fieldTag == "-" {
+			continue
+		}
+		fieldName := field.Name
+		if fieldTag == "" {
+			fieldTag = fieldName
+		}
+		err = fn(i, fieldTag, field)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ReflectForNumField(v reflect.Value, fn func(fieldTag string,
 	kind reflect.Kind, field reflect.Value) error, tag ...string) error {
 	var err error

@@ -80,3 +80,29 @@ func TestPut(t *testing.T) {
 	err = PutOffset("./text.txt", []byte("\n(ok)\n"), 5)
 	tt.EqualNil(err)
 }
+func TestRW(t *testing.T) {
+
+	var err error
+	var text []byte
+	tt := NewTest(t)
+	str := []byte("666")
+
+	WriteFile("./text.txt", str)
+	text, err = ReadFile("./text.txt")
+	tt.EqualNil(err)
+	tt.Equal(str, text)
+	t.Log(string(text))
+
+	WriteFile("./text.txt", str, true)
+	text, err = ReadFile("./text.txt")
+	tt.EqualNil(err)
+	t.Log(string(text))
+	tt.Equal([]byte("666666"), text)
+
+	WriteFile("./text.txt", str)
+	text, err = ReadFile("./text.txt")
+	tt.EqualNil(err)
+	t.Log(string(text))
+	tt.Equal(str, text)
+	os.Remove("./text.txt")
+}

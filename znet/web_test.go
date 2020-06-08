@@ -254,7 +254,7 @@ func TestMore(t *testing.T) {
 func TestShouldBind(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	r := newServer()
-	w := newRequest(r, "POST", []string{"/?c=999",
+	w := newRequest(r, "POST", []string{"/?id=666666666&c=999",
 		"d[C][Cc]=88&d.z=566&arr=1&arr=2&d[a]=1&d[A]=1a&a=123a&b=abc&name=seekwe" +
 			"&s=true" +
 			"&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
@@ -273,7 +273,6 @@ func TestShouldBind(T *testing.T) {
 		t.EqualExit("abc", r)
 		r, _ = c.GetQuery("c")
 		t.EqualExit("999", r)
-
 		ss := struct {
 			Abc int
 			d1  int
@@ -302,6 +301,7 @@ func TestShouldBind(T *testing.T) {
 		var bind struct {
 			Name string `json:"name"`
 			Abc  int
+			ID   uint   `json:"id"`
 			A    string `json:"a"`
 		}
 

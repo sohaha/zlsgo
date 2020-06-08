@@ -63,7 +63,7 @@ func SetDeleteCallback(fn func(key string) bool) {
 }
 
 // New new cache
-func New(table string) *Table {
+func New(table string, accessCount ...bool) *Table {
 	mutex.RLock()
 	t, ok := cache[table]
 	mutex.RUnlock()
@@ -75,6 +75,9 @@ func New(table string) *Table {
 			t = &Table{
 				name:  table,
 				items: make(map[string]*Item),
+			}
+			if len(accessCount) > 0 && accessCount[0] {
+				t.accessCount = true
 			}
 			cache[table] = t
 		}

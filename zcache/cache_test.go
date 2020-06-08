@@ -9,13 +9,16 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zcache"
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zstring"
+	//"github.com/sohaha/zlsgo/zstring"
 )
 
 func TestCache(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	// 初始一个名为 demo 的缓存对象
-	c := zcache.New("demo")
+	c := zcache.New(zstring.Rand(7))
 
 	data := 666
 	key := "name"
@@ -217,6 +220,82 @@ func TestOther(t *testing.T) {
 	i, err := zcache.GetInt("TestOther")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
+}
+
+type testSt struct {
+	Name string
+	Key  int
+}
+
+func TestAccessCount(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	cache := zcache.New("AccessCount", true)
+	cache.SetLogger(zlog.Log)
+
+	cache.SetRaw("TestOther", 123, 100*time.Millisecond, true)
+	i, err := cache.GetInt("TestOther")
+	tt.EqualNil(err)
+	tt.Equal(123, i)
+	time.Sleep(90 * time.Millisecond)
+	i, err = cache.GetInt("TestOther")
+	tt.EqualNil(err)
+	tt.Equal(123, i)
+	time.Sleep(90 * time.Millisecond)
+	i, err = cache.GetInt("TestOther")
+	tt.EqualNil(err)
+	tt.Equal(123, i)
+	time.Sleep(110 * 4 * time.Millisecond)
+	i, err = cache.GetInt("TestOther")
+	tt.Equal(true, err != nil)
+	tt.Equal(0, i)
+}
+
+// func TestExportJSON(t *testing.T) {
+// 	cache := zcache.New("ExportJSON")
+// 	cache.Set("tmp1", &testSt{Name: "isName", Key: 100}, 1, true)
+// 	cache.Set("tmp2", 666, 2)
+// 	cache.Set("tmp3", "is string", 2)
+// 	jsonData := cache.ExportJSON()
+// 	t.Log(jsonData)
+// }
+
+func TestToFile(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	cache := zcache.New("file")
+	zfile.WriteFile("tmp.json", []byte(`{"tmp2":"XhAAFSp6Y2FjaGUucGVyc2lzdGVuY2VTdP+BAwEBDXBlcnNpc3RlbmNlU3QB/4IAAQMBBERhdGEBEAABCExpZmVTcGFuAQQAARBJbnRlcnZhbExpZmVTcGFuAQIAAAAV/4ISAQNpbnQEBAD+BTQB/O5rKAAA","tmp3":"XhAAFSp6Y2FjaGUucGVyc2lzdGVuY2VTdP+BAwEBDXBlcnNpc3RlbmNlU3QB/4IAAQMBBERhdGEBEAABCExpZmVTcGFuAQQAARBJbnRlcnZhbExpZmVTcGFuAQIAAAAf/4IcAQZzdHJpbmcMCwAJaXMgc3RyaW5nAfzuaygAAA==","tmp1":"XhAAFSp6Y2FjaGUucGVyc2lzdGVuY2VTdP+BAwEBDXBlcnNpc3RlbmNlU3QB/4IAAQMBBERhdGEBEAABCExpZmVTcGFuAQQAARBJbnRlcnZhbExpZmVTcGFuAQIAAABW/4I6ARMqemNhY2hlX3Rlc3QudGVzdFN0/4MDAQEGdGVzdFN0Af+EAAECAQROYW1lAQwAAQNLZXkBBAAAABj/hAwBBmlzTmFtZQH/yAAB/Hc1lAABAQA="}`))
+	save := cache.PersistenceToFile("tmp.json", false, &testSt{})
+
+	tmp1, err := cache.Get("tmp1")
+	tt.EqualNil(err)
+	tt.Equal("isName", tmp1.(*testSt).Name)
+	tmp2, err := cache.GetInt("tmp2")
+	tt.EqualNil(err)
+	tt.Equal(666, tmp2)
+	tmp3, err := cache.GetString("tmp3")
+	tt.EqualNil(err)
+	tt.Equal("is string", tmp3)
+
+	go func() {
+		time.Sleep(800 * time.Nanosecond)
+		cache.Get("tmp1")
+	}()
+	time.Sleep(3 * time.Second)
+
+	tmp1, err = cache.Get("tmp1")
+	tt.EqualNil(err)
+	tmp2, err = cache.GetInt("tmp2")
+	tt.EqualTrue(err != nil)
+	tmp3, err = cache.GetString("tmp3")
+	tt.EqualTrue(err != nil)
+
+	cache.Set("tmp0", 1, 2)
+	tt.Equal(2, cache.Count())
+	zfile.Rmdir("tmp.json")
+
+	err = save()
+	tt.EqualNil(err)
+
+	zfile.Rmdir("tmp.json")
 }
 
 func TestDo(t *testing.T) {

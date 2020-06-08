@@ -1,11 +1,18 @@
 package zcache
 
 import (
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
+	"encoding/gob"
+
+	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zstring"
+	// "sync/atomic"
 )
 
 type (
@@ -16,18 +23,23 @@ type (
 	}
 	// CacheItemPairList CacheItemPairList
 	CacheItemPairList []CacheItemPair
-
 	// Table Table
 	Table struct {
 		sync.RWMutex
 		name            string
 		items           map[string]*Item
+		accessCount     bool
 		cleanupTimer    *time.Timer
 		cleanupInterval time.Duration
 		logger          *zlog.Logger
 		loadNotCallback func(key string, args ...interface{}) *Item
 		addCallback     func(item *Item)
 		deleteCallback  func(key string) bool
+	}
+	persistenceSt struct {
+		Data             interface{}
+		LifeSpan         time.Duration
+		IntervalLifeSpan bool
 	}
 )
 
@@ -36,6 +48,46 @@ func (table *Table) Count() int {
 	table.RLock()
 	defer table.RUnlock()
 	return len(table.items)
+}
+
+func (table *Table) PersistenceToFile(file string, DisableAutoLoad bool, register ...interface{}) func() error {
+	gob.Register(&persistenceSt{})
+	file = zfile.RealPath(file)
+
+	for k := range register {
+		gob.Register(register[k])
+	}
+
+	if zfile.FileExist(file) {
+		content, err := zfile.ReadFile(file)
+		if err == nil {
+			zjson.ParseBytes(content).ForEach(func(k, v zjson.Res) (b bool) {
+				b = true
+				key := k.String()
+				base64 := zstring.String2Bytes(v.String())
+				base64, err := zstring.Base64Decode(base64)
+				if err != nil {
+					return
+				}
+				value, err := zstring.UnSerialize(base64)
+				if err != nil {
+					return
+				}
+
+				if persistence, ok := value.(*persistenceSt); ok {
+					zlog.Debug(key, persistence)
+					table.SetRaw(key, persistence.Data, persistence.LifeSpan, persistence.IntervalLifeSpan)
+				}
+				return
+			})
+		}
+	}
+	return func() error {
+		jsonData := table.exportJSON()
+		_ = zfile.RealPathMkdir(filepath.Dir(file))
+
+		return zfile.WriteFile(file, zstring.String2Bytes(jsonData))
+	}
 }
 
 // ForEach traversing the cache
@@ -60,6 +112,30 @@ func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
 			break
 		}
 	}
+}
+
+func (table *Table) exportJSON(registers ...interface{}) string {
+	for i := range registers {
+		gob.Register(registers[i])
+	}
+	jsonData := "{}"
+	table.ForEachRaw(func(key string, item *Item) bool {
+		item.RLock()
+		v := &persistenceSt{
+			Data:             item.data,
+			LifeSpan:         item.lifeSpan,
+			IntervalLifeSpan: item.intervalLifeSpan,
+		}
+		item.RUnlock()
+		value, err := zstring.Serialize(v)
+		if err != nil {
+			return true
+		}
+		jsonData, _ = zjson.Set(jsonData, key, zstring.Base64Encode(value))
+
+		return true
+	})
+	return jsonData
 }
 
 // SetLoadNotCallback SetLoadNotCallback
@@ -111,19 +187,27 @@ func (table *Table) expirationCheck() {
 		if lifeSpan == 0 {
 			continue
 		}
-		if intervalLifeSpan {
-			if now.Sub(accessedOn) >= lifeSpan {
+		remainingLift := item.RemainingLife()
+		if table.accessCount && intervalLifeSpan {
+			lastTime := now.Sub(accessedOn)
+			table.log(lastTime, lifeSpan, accessedOn)
+			if lastTime >= lifeSpan {
 				_, _ = table.deleteInternal(key)
 			} else {
-				nextDuration := lifeSpan - now.Sub(accessedOn)
+				lifeSpan = lifeSpan * 2
+				// table.Lock()
+				item.Lock()
+				item.lifeSpan = lifeSpan
+				item.Unlock()
+				// table.Unlock()
+				nextDuration := lifeSpan - lastTime
 				if smallestDuration == 0 || nextDuration < smallestDuration {
 					smallestDuration = nextDuration
 				}
 			}
-		} else if item.RemainingLife() <= 0 {
+		} else if remainingLift <= 0 {
 			_, _ = table.deleteInternal(key)
 		} else {
-			remainingLift := item.RemainingLife()
 			if smallestDuration == 0 || smallestDuration > remainingLift {
 				smallestDuration = remainingLift
 			}
@@ -150,8 +234,10 @@ func (table *Table) addInternal(item *Item) {
 	if addedItem != nil {
 		addedItem(item)
 	}
-
-	if item.lifeSpan > 0 && (expDur == 0 || item.lifeSpan < expDur) {
+	item.RLock()
+	lifeSpan := item.lifeSpan
+	item.RUnlock()
+	if lifeSpan > 0 && (expDur == 0 || lifeSpan < expDur) {
 		go table.expirationCheck()
 	}
 }
@@ -160,10 +246,13 @@ func (table *Table) addInternal(item *Item) {
 func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 	intervalLifeSpan ...bool) *Item {
 	item := NewCacheItem(key, data, lifeSpan)
-	if len(intervalLifeSpan) > 0 {
+	table.Lock()
+	if len(intervalLifeSpan) > 0 && intervalLifeSpan[0] {
+		if !table.accessCount {
+			table.accessCount = true
+		}
 		item.intervalLifeSpan = intervalLifeSpan[0]
 	}
-	table.Lock()
 	table.addInternal(item)
 
 	return item
@@ -284,7 +373,9 @@ func (table *Table) GetT(key string, args ...interface{}) (*Item, error) {
 	table.RUnlock()
 
 	if ok {
-		r.keepAlive()
+		if table.accessCount {
+			r.keepAlive()
+		}
 		return r, nil
 	}
 
