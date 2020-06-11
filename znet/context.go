@@ -154,8 +154,13 @@ func (c *Context) GetUserAgent() string {
 }
 
 // ContentType returns the Content-Type header of the request
-func (c *Context) ContentType() string {
-	content := c.GetHeader("Content-Type")
+func (c *Context) ContentType(contentText ...string) string {
+	var content string
+	if len(contentText) == 1 {
+		content = contentText[0]
+	} else {
+		content = c.GetHeader("Content-Type")
+	}
 	for i, char := range content {
 		if char == ' ' || char == ';' {
 			return content[:i]

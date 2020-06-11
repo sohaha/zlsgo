@@ -84,7 +84,16 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 		} else if kind == reflect.Struct {
 			value, ok = c.GetPostFormMap(fieldTag)
 		} else {
-			value, ok = c.GetPostForm(fieldTag)
+			if c.ContentType() == c.ContentType(ContentTypeJSON) {
+				jsonValue := c.GetJSON(fieldTag)
+				ok = jsonValue.Exists()
+				if ok {
+					value = jsonValue.String()
+				}
+			}
+			if !ok {
+				value, ok = c.GetPostForm(fieldTag)
+			}
 			if !ok {
 				value, ok = c.GetQuery(fieldTag)
 			}

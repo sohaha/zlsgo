@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -20,7 +19,6 @@ func (e *Engine) BindStruct(prefix string, s interface{},
 	_ = reflect.TypeOf(s)
 	valueOf := reflect.ValueOf(s)
 	return zutil.GetAllMethod(s, func(numMethod int, m reflect.Method) error {
-		fmt.Println(m.Name, m.Func)
 		info, err := zstring.RegexExtract(
 			`(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
 		if err != nil || len(info) != 3 {

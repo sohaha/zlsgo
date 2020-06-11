@@ -3,6 +3,7 @@ package zshell
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -44,7 +45,7 @@ func (s *ShellBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
 
-func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
+func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer,
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
 
 	var (
@@ -61,7 +62,7 @@ func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 		fmt.Println(fmt.Sprintf("[Command]\n%s\n%s",
 			command, strings.Repeat("-", len(command))))
 	}
-	var cmd = exec.Command(command[0], command[1:]...)
+	var cmd = exec.CommandContext(ctx, command[0], command[1:]...)
 
 	if Env == nil {
 		cmd.Env = os.Environ()
@@ -103,12 +104,16 @@ func ExecCommand(command []string, stdIn io.Reader, stdOut io.Writer,
 }
 
 func Run(command string) (code int, outStr, errStr string, err error) {
-	return ExecCommand(strings.Split(command, " "), nil, nil, nil)
+	return RunContext(context.Background(), command)
+}
+
+func RunContext(ctx context.Context, command string) (code int, outStr, errStr string, err error) {
+	return ExecCommand(ctx, strings.Split(command, " "), nil, nil, nil)
 }
 
 func OutRun(command string, stdIn io.Reader, stdOut io.Writer,
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
-	return ExecCommand(strings.Split(command, " "), stdIn, stdOut, stdErr)
+	return ExecCommand(context.Background(), strings.Split(command, " "), stdIn, stdOut, stdErr)
 }
 
 func BgRun(command string) (err error) {

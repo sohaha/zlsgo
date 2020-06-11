@@ -241,11 +241,18 @@ func TestMore(t *testing.T) {
 
 	}
 	CloseHotRestart = true
-	w := newRequest(r, "delete", "/", "/", func(c *Context) {
+	w := newRequest(r, "delete", []string{"/", `{"Name":"is json"}`, ContentTypeJSON}, "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 		c.GetAllQuerystMaps()
 		c.GetAllQueryst()
+		c.Log.Debug(c.GetJSON("Name"))
+		var u struct {
+			Name string `json:"Name"`
+		}
+		err := c.Bind(&u)
+		T.EqualNil(err)
+		c.Log.Warn(u)
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())

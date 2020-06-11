@@ -1,7 +1,14 @@
+/*
+ * @Author: seekwe
+ * @Date: 2020-06-06 17:03:53
+ * @Last Modified by:: seekwe
+ * @Last Modified time: 2020-06-09 16:39:23
+ */
 package daemon
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -63,7 +70,7 @@ func run(command string, args ...string) error {
 }
 
 func runcmd(commands []string, in *bytes.Reader, out, outErr *bytes.Buffer) error {
-	code, _, _, err := zshell.ExecCommand(commands, in, out, outErr)
+	code, _, _, err := zshell.ExecCommand(context.Background(), commands, in, out, outErr)
 	if err != nil {
 		return err
 	}

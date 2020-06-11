@@ -30,7 +30,13 @@ func (c *Context) ValidJSON(defRule zvalid.Engine, key string, name ...string) z
 
 // Valid Valid from -> query -> parame
 func (c *Context) Valid(defRule zvalid.Engine, key string, name ...string) zvalid.Engine {
-	value := c.DefaultFormOrQuery(key, "")
+	value := ""
+	if c.ContentType() == c.ContentType(ContentTypeJSON) {
+		value = c.GetJSON(key).String()
+	}
+	if value == "" {
+		value = c.DefaultFormOrQuery(key, "")
+	}
 	if value == "" {
 		value = c.GetParam(key)
 	}
