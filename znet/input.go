@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-06-05 11:38:38
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-05 12:16:25
- */
-
 package znet
 
 import (
@@ -106,6 +99,9 @@ func (c *Context) GetPostFormAll() (value url.Values, err error) {
 	req := c.Request
 	if req.PostForm == nil {
 		if c.ContentType() == MIMEMultipartPOSTForm {
+			if c.Request.Method == "DELETE"{
+
+			}
 			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 		} else {
 			err = req.ParseForm()

@@ -23,11 +23,11 @@ type (
 	Context struct {
 		Code int
 		sync.RWMutex
-		StartTime     time.Time
-		StopHandle    bool
+		startTime     time.Time
+		stopHandle    bool
 		middleware    []HandlerFunc
 		customizeData map[string]interface{}
-		heades        map[string]string
+		header        map[string]string
 		render        render
 		Writer        http.ResponseWriter
 		Request       *http.Request

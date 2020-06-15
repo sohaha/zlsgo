@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -8,8 +9,7 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-func (e *Engine) BindStruct(prefix string, s interface{},
-	handle ...HandlerFunc) error {
+func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc) error {
 	g := e.Group(prefix)
 	if len(handle) > 0 {
 		for _, v := range handle {
@@ -20,38 +20,40 @@ func (e *Engine) BindStruct(prefix string, s interface{},
 	valueOf := reflect.ValueOf(s)
 	return zutil.GetAllMethod(s, func(numMethod int, m reflect.Method) error {
 		info, err := zstring.RegexExtract(
-			`(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
-		if err != nil || len(info) != 3 {
+			`^(ID|Full){0,}(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
+		infoLen := len(info)
+		if err != nil || infoLen != 4 {
 			if e.IsDebug() {
-				e.Log.Warnf("matching rule error: [%s] %v", m.Name, err)
+				e.Log.Warnf("matching rule error: [%s] %v\n", m.Name, err)
 			}
 			return nil
 		}
-		fn := func(c *Context) {
-			valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
+		path := info[3]
+		method := strings.ToUpper(info[2])
+		key := strings.ToLower(info[1])
+		fn, ok := valueOf.Method(numMethod).Interface().(func(*Context))
+		if !ok {
+			return fmt.Errorf("Func: [%s] is not an effective routing method\n", m.Name)
 		}
-		name := info[2]
+		// valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
 		if BindStructDelimiter != "" {
-			name = zstring.CamelCaseToSnakeCase(info[2], BindStructDelimiter) + BindStructSuffix
+			path = zstring.CamelCaseToSnakeCase(path, BindStructDelimiter) + BindStructSuffix
 		}
-		switch strings.ToUpper(info[1]) {
-		case "GET":
-			g.GET(name, fn)
-		case "POST":
-			g.POST(name, fn)
-		case "PUT":
-			g.PUT(name, fn)
-		case "DELETE":
-			g.DELETE(name, fn)
-		case "PATCH":
-			g.PATCH(name, fn)
-		case "HEAD":
-			g.HEAD(name, fn)
-		case "OPTIONS":
-			g.OPTIONS(name, fn)
-		default:
-			g.Any(name, fn)
+		if path == "" {
+			path = "/"
 		}
+		if key != "" {
+			if strings.HasSuffix(path, "/") {
+				path += ":" + key
+			} else {
+				path += "/:" + key
+			}
+		}
+		if method == "ANY" {
+			g.Any(path, fn)
+			return nil
+		}
+		g.Handle(method, path, fn)
 		return nil
 	})
 }

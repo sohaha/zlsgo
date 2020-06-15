@@ -18,4 +18,3 @@ zls-watch.yaml
 .vscode/
 report/
 gotest
-vendor

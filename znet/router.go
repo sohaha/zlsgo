@@ -294,7 +294,6 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		tree = NewTree()
 		e.router.trees[method] = tree
 	}
-
 	path = completionPath(path, e.router.prefix)
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
@@ -360,7 +359,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if e.preHandle != nil && e.preHandle(rw) {
 		return
 	}
-	rw.StopHandle = false
+	rw.stopHandle = false
 	if _, ok := e.router.trees[req.Method]; !ok {
 		e.HandleNotFound(rw)
 		return

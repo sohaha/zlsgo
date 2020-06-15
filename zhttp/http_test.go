@@ -27,6 +27,7 @@ func TestHttp(T *testing.T) {
 
 	// test post
 	expectedText = "ok"
+	urlValues := url.Values{"ok": []string{"666"}}
 	res, err = newMethod("Post", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		id, ok := r.PostForm["id"]
@@ -34,8 +35,12 @@ func TestHttp(T *testing.T) {
 			t.T.Fatal("err")
 		}
 		_, _ = w.Write([]byte(expectedText + id[0]))
-	}, Param{
-		"id": "123",
+	}, urlValues, Param{
+		"id":  "123",
+		"id2": "123",
+	}, QueryParam{
+		"id3": 333,
+		"id6": 666,
 	})
 	if err != nil {
 		t.T.Fatal(err)

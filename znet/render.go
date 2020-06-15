@@ -76,7 +76,7 @@ func (c *Context) renderProcessing(code int, r render) {
 	c.Lock()
 	c.Code = code
 	c.render = r
-	c.StopHandle = true
+	c.stopHandle = true
 	c.Unlock()
 }
 
@@ -212,7 +212,7 @@ func (c *Context) Template(code int, name string, data interface{}, funcMap ...m
 // Abort Abort
 func (c *Context) Abort(code ...int) {
 	c.Lock()
-	c.StopHandle = true
+	c.stopHandle = true
 	c.Unlock()
 	if len(code) > 0 {
 		c.SetStatus(code[0])
@@ -251,7 +251,7 @@ func (c *Context) PrevContent() *PrevData {
 		content = r.Content(c)
 	}
 	c.RLock()
-	ctype, hasType := c.heades["Content-Type"]
+	ctype, hasType := c.header["Content-Type"]
 	if !hasType {
 		ctype = ContentTypePlain
 	}

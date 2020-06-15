@@ -11,20 +11,28 @@ import (
 )
 
 func completionPath(path, prefix string) string {
-	if prefix != "" {
-		if path != "" {
-			if strings.HasPrefix(path, "/") && strings.HasSuffix(prefix, "/") {
-				prefix = strings.TrimSuffix(prefix, "/")
-			}
-			tmp := zstring.Buffer()
-			tmp.WriteString(prefix)
-			tmp.WriteString("/")
-			tmp.WriteString(strings.TrimPrefix(path, "/"))
-			path = tmp.String()
-		} else {
-			path = prefix
+	if path != "" {
+		tmp := zstring.Buffer()
+		// prefixHasSuffix := strings.HasSuffix(prefix, "/")
+		pathHasPrefix := strings.HasPrefix(path, "/")
+		if prefix == "" && !pathHasPrefix {
+			prefix = "/"
+		} else if pathHasPrefix && strings.HasSuffix(prefix, "/") {
+			prefix = strings.TrimSuffix(prefix, "/")
 		}
+		if prefix != "" && !strings.HasPrefix(prefix, "/") {
+			tmp.WriteString("/")
+		}
+		tmp.WriteString(prefix)
+		if !strings.HasSuffix(prefix, "/") {
+			tmp.WriteString("/")
+		}
+		tmp.WriteString(strings.TrimPrefix(path, "/"))
+		path = tmp.String()
+	} else {
+		path = prefix
 	}
+
 	return path
 }
 
@@ -88,12 +96,16 @@ func parsPattern(res []string) (string, []string) {
 		} else if firstChar == ":" {
 			matchStr := str
 			res := strings.Split(matchStr, ":")
-			matchName = append(matchName, res[1])
-			if res[1] == idKey {
+			key := res[1]
+			if key == "full" {
+				key = allKey
+			}
+			matchName = append(matchName, key)
+			if key == idKey {
 				pattern.WriteString("/(")
 				pattern.WriteString(idPattern)
 				pattern.WriteString(")")
-			} else if res[1] == allKey {
+			} else if key == allKey {
 				pattern.WriteString("/(")
 				pattern.WriteString(allPattern)
 				pattern.WriteString(")")
@@ -131,8 +143,8 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		Log:           e.Log,
 		Cache:         Cache,
 		Code:          http.StatusOK,
-		StartTime:     time.Time{},
-		heades:        map[string]string{},
+		startTime:     time.Time{},
+		header:        map[string]string{},
 		customizeData: map[string]interface{}{},
 	}
 }
@@ -142,11 +154,11 @@ func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	c.Writer = w
 	c.Code = http.StatusOK
-	c.StartTime = time.Now()
-	c.StopHandle = false
+	c.startTime = time.Now()
+	c.stopHandle = false
 	c.middleware = []HandlerFunc{}[:0]
 	c.customizeData = map[string]interface{}{}
-	c.heades = map[string]string{}
+	c.header = map[string]string{}
 	c.render = nil
 	c.rawData = c.rawData[:0]
 	c.Unlock()

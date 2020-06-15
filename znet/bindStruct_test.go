@@ -59,7 +59,7 @@ func TestBindStruct(t *testing.T) {
 		t.Log("go", c.Request.URL)
 		c.Next()
 	})
-	tt.Log(err)
+	t.Log(err)
 	tt.EqualNil(err)
 	BindStructSuffix = ".go"
 	err = r.BindStruct(prefix, &testController{}, func(c *Context) {

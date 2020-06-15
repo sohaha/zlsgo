@@ -1,33 +1,33 @@
+# http://editorconfig.org
+
 root = true
 
 [*]
-end_of_line = lf
-charset = utf-8
+end_of_line              = lf
+charset                  = utf-8
 trim_trailing_whitespace = true
-insert_final_newline = true
-indent_style = space
-indent_size = 2
+insert_final_newline     = true
+indent_style             = space
+indent_size              = 2
 
 [*.md]
 trim_trailing_whitespace = false
 
 [*.php]
 indent_style = space
-indent_size = 4
+indent_size  = 4
 
 [Makefile]
 indent_style = tab
 
-[makefile]
-indent_style = tab
-
 [*.go]
-indent_style = tab
+indent_style    = tab
+max_line_length = 80
 
 [*.yml]
-indent_size = 2
+indent_size  = 2
 indent_style = space
 
 [*.sh]
-indent_size = 2
+indent_size  = 2
 indent_style = space

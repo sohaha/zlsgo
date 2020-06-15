@@ -31,9 +31,8 @@ func TestLogFile(T *testing.T) {
 	t.Equal(true, zfile.FileExist(logPath))
 	SetSaveLogFile("tmp2/ll.log", true)
 	t.Equal(true, zfile.DirExist("tmp2/ll"))
-	if err := os.RemoveAll("./tmp2/"); err != nil {
-		t.Log(err)
-	}
-	t.Equal(false, zfile.FileExist(logPath))
 	Discard()
+	ok := zfile.Rmdir("./tmp2/")
+	t.EqualTrue(ok)
+	t.Equal(false, zfile.FileExist(logPath))
 }

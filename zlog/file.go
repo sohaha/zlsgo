@@ -69,6 +69,9 @@ func (log *Logger) setLogfile(filepath string, archive bool) {
 func (log *Logger) Discard() {
 	log.mu.Lock()
 	log.out = ioutil.Discard
+	if log.file != nil {
+		_ = log.file.Close()
+	}
 	log.level = LogNot
 	log.mu.Unlock()
 }

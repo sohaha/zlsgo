@@ -77,9 +77,9 @@ func (c *Context) GetHeader(key string) string {
 func (c *Context) SetHeader(key, value string) {
 	c.Lock()
 	if value == "" {
-		delete(c.heades, key)
+		delete(c.header, key)
 	} else {
-		c.heades[key] = value
+		c.header[key] = value
 	}
 	c.Unlock()
 }
@@ -87,7 +87,7 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) done() {
 	data := c.PrevContent()
 	r := c.render
-	for key, value := range c.heades {
+	for key, value := range c.header {
 		c.Writer.Header().Set(key, value)
 	}
 	if r != nil {
@@ -104,7 +104,7 @@ func (c *Context) done() {
 
 func (c *Context) Next() (next HandlerFunc) {
 	c.RLock()
-	if !c.StopHandle && len(c.middleware) > 0 {
+	if !c.stopHandle && len(c.middleware) > 0 {
 		next = c.middleware[0]
 		c.middleware = c.middleware[1:]
 		c.RUnlock()

@@ -36,7 +36,7 @@ func requestLog(c *Context) {
 			c.RUnlock()
 			zutil.PutBuff(statusCode)
 		}()
-		latency := end.Sub(c.StartTime)
+		latency := end.Sub(c.startTime)
 		code := c.Code
 		statusCode.WriteString(" ")
 		statusCode.WriteString(strconv.Itoa(code))

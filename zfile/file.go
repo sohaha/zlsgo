@@ -86,6 +86,11 @@ func RootPath() string {
 	return RealPath(".", true)
 }
 
+func TmpPath() string {
+	path, _ := ioutil.TempDir("", "ztmp")
+	return path
+}
+
 // SafePath get an safe absolute path
 func SafePath(path string, addSlash ...bool) string {
 	realPath := RealPath(path, addSlash...)
