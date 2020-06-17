@@ -47,7 +47,7 @@ func main(){
     r.GET("/hi", func(c *znet.Context) {
         c.String(200, "Hello world")
      })
-
+    // Implicit routing (struct binding) please refer to the document
     znet.Run()
 }
 ```
@@ -107,6 +107,8 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] Validator
 - [x] Hot Restart
 - [x] Daemon
+- [x] Abnormal report
+- [x] Terminal application
 - [ ] [Database](https://github.com/sohaha/zdb)
 - [ ] ...
 

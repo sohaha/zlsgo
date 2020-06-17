@@ -18,6 +18,16 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 	}
 	_ = reflect.TypeOf(s)
 	valueOf := reflect.ValueOf(s)
+	if valueOf.IsValid() {
+		initFn := valueOf.MethodByName("Init")
+		if initFn.IsValid() {
+			before, ok := initFn.Interface().(func(e *Engine))
+			if !ok {
+				return fmt.Errorf("Func: [%s] is not an effective routing method\n", "Init")
+			}
+			before(g)
+		}
+	}
 	return zutil.GetAllMethod(s, func(numMethod int, m reflect.Method) error {
 		info, err := zstring.RegexExtract(
 			`^(ID|Full){0,}(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)

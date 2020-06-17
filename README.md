@@ -44,7 +44,7 @@ func main(){
     r.GET("/hi", func(c *znet.Context) {
         c.String(200, "Hello world")
      })
-
+    // 隐性路由（结构体绑定）请参考文档
     // 启动
     znet.Run()
 }
@@ -109,6 +109,8 @@ func main(){
 - [x] 验证器
 - [x] 热重启
 - [x] 守护进程
+- [x] 异常上报
+- [x] 终端应用
 - [ ] [数据库操作](https://github.com/sohaha/zdb)
 - [ ] ...
 

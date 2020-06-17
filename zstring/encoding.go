@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 func Base64Encode(value []byte) []byte {
@@ -53,4 +59,20 @@ func UnSerialize(valueBytes []byte, registers ...interface{}) (value interface{}
 	dec := gob.NewDecoder(buf)
 	err = dec.Decode(&value)
 	return
+}
+
+// Img2Base64 read picture files and convert to base 64 strings
+func Img2Base64(path string) (string, error) {
+	path = zfile.RealPath(path)
+	imgType := "jpg"
+	ext := filepath.Ext(path)
+	if ext != "" {
+		imgType = imgType[1:]
+	}
+	imgBuffer, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	imgType = strings.ToLower(imgType)
+	return fmt.Sprintf("data:image/%s;base64,%s", imgType, Bytes2String(Base64Encode(imgBuffer))), nil
 }

@@ -11,6 +11,10 @@ import (
 type testController struct {
 }
 
+func (t *testController) Init(e *Engine) {
+	e.Log.Debug("优先初始化")
+}
+
 func (t *testController) GetUser(_ *Context) {
 
 }

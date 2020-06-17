@@ -228,7 +228,10 @@ func TestToFile(t *testing.T) {
 	tt := zls.NewTest(t)
 	_ = RemoveProxy()
 	SetTimeout(20 * time.Second)
-	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json")
+	downloadProgress := func(current, total int64) {
+		t.Log("downloadProgress", current, total)
+	}
+	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json", downloadProgress)
 	tt.EqualNil(err)
 	if err == nil {
 		err = res.ToFile("../zhttp/package.json")
