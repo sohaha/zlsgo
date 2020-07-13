@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
 	"strings"
@@ -57,9 +58,13 @@ func resolveHostname(addrString string) string {
 	return addrString
 }
 
-func templateParse(file string, funcMap template.FuncMap) (t *template.Template, err error) {
+func templateParse(templateFile []string, funcMap template.FuncMap) (t *template.Template, err error) {
+	if len(templateFile) == 0 {
+		return nil, errors.New("template file cannot be empty")
+	}
+	file := templateFile[0]
 	if zfile.FileExist(file) {
-		t, err = template.ParseFiles(file)
+		t, err = template.ParseFiles(templateFile...)
 		if err == nil && funcMap != nil {
 			t.Funcs(funcMap)
 		}

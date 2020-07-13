@@ -75,7 +75,7 @@ func showSubcommandUsage(fs *flag.FlagSet, _ *cmdCont) {
 
 func showLogo() bool {
 	if Logo != "" {
-		Log.Printf("%s\n", strings.Replace(Logo+"v."+Version, "\n", "", 1))
+		Log.Printf("%s\n", strings.Replace(Logo+"v"+Version, "\n", "", 1))
 		return true
 	}
 	return false
@@ -95,7 +95,7 @@ func showDescription(logoOk bool) bool {
 	if Name != "" {
 		if !logoOk && Version != "" {
 			Log.Printf("%s v%s\n", Name, Version)
-		} else {
+		} else if !logoOk {
 			Log.Printf("%s\n", Name)
 		}
 
@@ -160,7 +160,7 @@ func argsIsHelp(args []string) {
 
 func CheckErr(err error, exit ...bool) {
 	if serviceErr == daemon.ErrNoServiceSystemDetected {
-		err = (fmt.Errorf("%s does not support process daemon\n", zenv.GetOs()))
+		err = fmt.Errorf("%s does not support process daemon\n", zenv.GetOs())
 		exit = []bool{true}
 	}
 	if err != nil {

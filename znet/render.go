@@ -48,10 +48,10 @@ type (
 	}
 	renderHTML struct {
 		Template    *template.Template
-		Name        string
 		Data        interface{}
 		ContentDate []byte
 		FuncMap     template.FuncMap
+		Templates   []string
 	}
 	ApiData struct {
 		Code int         `json:"code" example:"200"`
@@ -81,7 +81,9 @@ func (c *Context) renderProcessing(code int, r render) {
 }
 
 func (r *renderByte) Content(c *Context) []byte {
-	c.SetContentType(zutil.IfVal(r.Type != "", r.Type, ContentTypePlain).(string))
+	if !c.hasContentType() {
+		c.SetContentType(zutil.IfVal(r.Type != "", r.Type, ContentTypePlain).(string))
+	}
 	return r.Data
 }
 
@@ -89,7 +91,9 @@ func (r *renderString) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	c.SetContentType(ContentTypePlain)
+	if !c.hasContentType() {
+		c.SetContentType(ContentTypePlain)
+	}
 	if len(r.Data) > 0 {
 		r.ContentDate = zstring.String2Bytes(fmt.Sprintf(r.Format, r.Data...))
 	} else {
@@ -102,7 +106,9 @@ func (r *renderJSON) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	c.SetContentType(ContentTypeJSON)
+	if !c.hasContentType() {
+		c.SetContentType(ContentTypeJSON)
+	}
 	bf := zutil.GetBuff()
 	defer zutil.PutBuff(bf)
 	jsonEncoder := json.NewEncoder(bf)
@@ -124,9 +130,10 @@ func (r *renderFile) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-
-	fType := mime.TypeByExtension(filepath.Ext(r.Data))
-	c.SetContentType(fType)
+	if !c.hasContentType() {
+		fType := mime.TypeByExtension(filepath.Ext(r.Data))
+		c.SetContentType(fType)
+	}
 	r.ContentDate, _ = ioutil.ReadFile(r.Data)
 	return r.ContentDate
 }
@@ -135,11 +142,15 @@ func (r *renderHTML) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	c.SetContentType(ContentTypeHTML)
-	if r.Name != "" {
-		var t *template.Template
-		var err error
-		t, err = templateParse(r.Name, r.FuncMap)
+	if !c.hasContentType() {
+		c.SetContentType(ContentTypeHTML)
+	}
+	if len(r.Templates) > 0 {
+		var (
+			t   *template.Template
+			err error
+		)
+		t, err = templateParse(r.Templates, r.FuncMap)
 		if err != nil {
 			panic(err)
 		}
@@ -191,7 +202,6 @@ func (c *Context) ApiJSON(code int, msg string, data interface{}) {
 // HTML export html
 func (c *Context) HTML(code int, html string) {
 	c.renderProcessing(code, &renderHTML{
-		Name: "",
 		Data: html,
 	})
 }
@@ -203,9 +213,20 @@ func (c *Context) Template(code int, name string, data interface{}, funcMap ...m
 		fn = funcMap[0]
 	}
 	c.renderProcessing(code, &renderHTML{
-		Name:    name,
-		Data:    data,
-		FuncMap: fn,
+		Templates: []string{name},
+		Data:      data,
+		FuncMap:   fn,
+	})
+}
+func (c *Context) Templates(code int, templates []string, data interface{}, funcMap ...map[string]interface{}) {
+	var fn template.FuncMap
+	if len(funcMap) > 0 {
+		fn = funcMap[0]
+	}
+	c.renderProcessing(code, &renderHTML{
+		Templates: templates,
+		Data:      data,
+		FuncMap:   fn,
 	})
 }
 
@@ -239,6 +260,15 @@ func (c *Context) SetStatus(code int) *Context {
 func (c *Context) SetContentType(contentType string) *Context {
 	c.SetHeader("Content-Type", contentType)
 	return c
+}
+
+func (c *Context) hasContentType() bool {
+	c.RLock()
+	defer c.RUnlock()
+	if _, ok := c.header["Content-Type"]; ok {
+		return true
+	}
+	return false
 }
 
 func (c *Context) PrevContent() *PrevData {

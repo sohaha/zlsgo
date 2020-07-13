@@ -316,7 +316,7 @@ func Run() {
 
 	iskill := isKill()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	if !iskill && !CloseHotRestart {
@@ -353,6 +353,19 @@ func Run() {
 	}
 	time.Sleep(100 * time.Millisecond)
 }
+
+// todo reserved for future use
+// func listenAndServe(srv *http.Server, max int) error {
+// 	addr := srv.Addr
+// 	if addr == "" {
+// 		addr = ":http"
+// 	}
+// 	ln, err := net.Listen("tcp", addr)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return srv.Serve(netutil.LimitListener(ln, max))
+// }
 
 func getPort(addr string) string {
 	if !strings.Contains(addr, ":") {

@@ -266,7 +266,7 @@ func TestToFile(t *testing.T) {
 	save := cache.PersistenceToFile("tmp.json", false, &testSt{})
 
 	tmp1, err := cache.Get("tmp1")
-	tt.EqualNil(err)
+	tt.EqualExit(nil, err)
 	tt.Equal("isName", tmp1.(*testSt).Name)
 	tmp2, err := cache.GetInt("tmp2")
 	tt.EqualNil(err)
@@ -274,15 +274,14 @@ func TestToFile(t *testing.T) {
 	tmp3, err := cache.GetString("tmp3")
 	tt.EqualNil(err)
 	tt.Equal("is string", tmp3)
-
 	go func() {
-		time.Sleep(800 * time.Nanosecond)
+		time.Sleep(500 * time.Millisecond)
 		cache.Get("tmp1")
 	}()
 	time.Sleep(3 * time.Second)
-
 	tmp1, err = cache.Get("tmp1")
 	tt.EqualNil(err)
+	t.Log(tmp1)
 	tmp2, err = cache.GetInt("tmp2")
 	tt.EqualTrue(err != nil)
 	tmp3, err = cache.GetString("tmp3")

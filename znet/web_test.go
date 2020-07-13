@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zvalid"
@@ -256,6 +257,33 @@ func TestMore(t *testing.T) {
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())
+}
+
+func TestTemplate(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	template := `<html>123</html>`
+	_ = zfile.WriteFile("template.html", []byte(template))
+	defer zfile.Rmdir("template.html")
+	w := newRequest(r, "GET", "/Template", "/Template", func(c *Context) {
+		t.Log("TestHTML")
+		c.Template(200, "template.html", Data{})
+	})
+	tt.Equal(200, w.Code)
+	tt.EqualExit(template, w.Body.String())
+
+	templates := `<html><title>{{.title}}</title><body>{{template "body".}}</body></html>`
+	_ = zfile.WriteFile("template2.html", []byte(templates))
+	defer zfile.Rmdir("template2.html")
+	templatesBody := `{{define "body"}}This is body{{end}}`
+	_ = zfile.WriteFile("template2body.html", []byte(templatesBody))
+	defer zfile.Rmdir("template2body.html")
+	w = newRequest(r, "GET", "/Templates", "/Templates", func(c *Context) {
+		t.Log("TestHTML2")
+		c.Templates(202, []string{"template2.html", "template2body.html"}, Data{"title": "ZlsGo"})
+	})
+	tt.Equal(202, w.Code)
+	tt.EqualExit(`<html><title>ZlsGo</title><body>This is body</body></html>`, w.Body.String())
 }
 
 func TestShouldBind(T *testing.T) {

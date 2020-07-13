@@ -33,7 +33,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 			`^(ID|Full){0,}(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
 		infoLen := len(info)
 		if err != nil || infoLen != 4 {
-			if e.IsDebug() {
+			if e.IsDebug() && m.Name != "Init" {
 				e.Log.Warnf("matching rule error: [%s] %v\n", m.Name, err)
 			}
 			return nil
