@@ -19,10 +19,10 @@ func (*TestSt) RunTest(t *testing.T) {
 
 func (*TestSt) RunTest2() {}
 
-type TestSt2 struct{}
+type TestSt2 struct{ Name string }
 
-func (*TestSt2) RunTest(t *testing.T) {
-	t.Log("RunTest")
+func (tt *TestSt2) RunTest(t *testing.T) {
+	t.Log("RunTest", tt.Name)
 }
 
 func TestRunAllMethod(t *testing.T) {
@@ -31,7 +31,14 @@ func TestRunAllMethod(t *testing.T) {
 	t.Log(err)
 	tt.Equal(true, err != nil)
 
-	err = RunAllMethod(&TestSt2{}, t)
+	err = RunAllMethod(&TestSt2{"AllMethod"}, t)
+	t.Log(err)
+	tt.Equal(true, err == nil)
+
+	err = RunAssignMethod(&TestSt2{"AssignMethod"}, func(methodName string) bool {
+		t.Log("methodName:", methodName)
+		return true
+	}, t)
 	t.Log(err)
 	tt.Equal(true, err == nil)
 }

@@ -237,8 +237,7 @@ func LabelType(t reflect.Type) bool {
 }
 
 // GetAllMethod get all methods of struct
-func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.
-	Method) error) error {
+func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.Method) error) error {
 	if st == nil || fn == nil {
 		return nil
 	}
@@ -275,14 +274,23 @@ func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.
 
 // RunAllMethod run all methods of struct
 func RunAllMethod(st interface{}, args ...interface{}) (err error) {
+	return RunAssignMethod(st, func(methodName string) bool {
+		return true
+	}, args...)
+}
+
+// RunAssignMethod run assign methods of struct
+func RunAssignMethod(st interface{}, filter func(methodName string) bool, args ...interface{}) (err error) {
 	valueOf := reflect.ValueOf(st)
 	err = GetAllMethod(st, func(numMethod int, m reflect.Method) error {
+		if !filter(m.Name) {
+			return nil
+		}
 		var values []reflect.Value
 		for _, v := range args {
 			values = append(values, reflect.ValueOf(v))
 		}
 		valueOf.Method(numMethod).Call(values)
-		// m.Func.Call(values)
 		return nil
 	})
 

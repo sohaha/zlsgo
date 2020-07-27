@@ -8,10 +8,8 @@ import (
 
 func TestRand(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	t.Log(Rand(4))
-	t.Log(Rand(10))
-	t.Log(Rand(4, "a1"))
-	t.Log(RandInt(4, 10))
+	t.Log(Rand(4),Rand(10),Rand(4, "a1"))
+	t.Log(RandInt(4, 10), RandInt(1, 10), RandInt(1, 2), RandInt(1, 0))
 	t.Log(UUID())
 }
 

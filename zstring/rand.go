@@ -7,6 +7,9 @@ import (
 
 // RandInt random numbers in the specified range
 func RandInt(min int, max int) int {
+	if max < min {
+		max = min
+	}
 	rand.Seed(rand.Int63n(time.Now().UnixNano()))
 	return min + rand.Intn(max+1-min)
 }

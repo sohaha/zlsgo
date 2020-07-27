@@ -152,12 +152,31 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 		service, serviceErr = daemon.New(&app{
 			run: fn,
 		}, daemonConfig)
-		Add("install", "Install service", &serviceInstall{})
-		Add("uninstall", "Uninstall service", &serviceUnInstall{})
-		Add("status", "ServiceIfe status", &serviceStatus{})
-		Add("start", "Start service", &serviceStart{})
-		Add("stop", "Stop service", &serviceStop{})
-		Add("restart", "Restart service", &serviceRestart{})
+
+		langs[defaultLang]["install"] = "Install service"
+		langs["zh"]["install"] = "安装服务"
+
+		langs[defaultLang]["install"] = "Uninstall service"
+		langs["zh"]["uninstall"] = "卸载服务"
+
+		langs[defaultLang]["status"] = "ServiceIfe status"
+		langs["zh"]["status"] = "服务状态"
+
+		langs[defaultLang]["start"] = "Start service"
+		langs["zh"]["start"] = "启动服务"
+
+		langs[defaultLang]["stop"] = "Stop service"
+		langs["zh"]["stop"] = "停止服务"
+
+		langs[defaultLang]["restart"] = "Restart service"
+		langs["zh"]["restart"] = "重启服务"
+
+		Add("install", getLangs("install"), &serviceInstall{})
+		Add("uninstall", getLangs("uninstall"), &serviceUnInstall{})
+		Add("status", getLangs("status"), &serviceStatus{})
+		Add("start", getLangs("start"), &serviceStart{})
+		Add("stop", getLangs("stop"), &serviceStop{})
+		Add("restart", getLangs("restart"), &serviceRestart{})
 	})
 
 	return service, serviceErr

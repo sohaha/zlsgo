@@ -99,7 +99,7 @@ func (c *Context) GetPostFormAll() (value url.Values, err error) {
 	req := c.Request
 	if req.PostForm == nil {
 		if c.ContentType() == MIMEMultipartPOSTForm {
-			if c.Request.Method == "DELETE"{
+			if c.Request.Method == "DELETE" {
 
 			}
 			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
