@@ -42,7 +42,6 @@ func NewIDWorker(workerid int64) (iw *IDWorker, err error) {
 	iw.workerID = workerid
 	iw.lastTimeStamp = -1
 	iw.sequence = 0
-	// iw.lock = new(sync.RWMutex)
 	return iw, nil
 }
 

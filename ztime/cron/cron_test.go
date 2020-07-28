@@ -1,7 +1,8 @@
 package cron
 
 import (
-	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,11 +14,18 @@ func TestNew(tt *testing.T) {
 	// g := &sync.WaitGroup{}
 	// g.Add(2)
 	t := zlsgo.NewTest(tt)
-	cron := New()
 	now := time.Now()
 	tt.Log(ztime.FormatTime(now))
 
-	next, err := ParseNextTime("* * * * * *")
+	next, err := ParseNextTime("* * * * *")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
+
+	next, err = ParseNextTime("* * * * * *")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
+
+	next, err = ParseNextTime("* * * * * * *")
 	t.Equal(nil, err)
 	tt.Log(ztime.FormatTime(next))
 
@@ -37,15 +45,37 @@ func TestNew(tt *testing.T) {
 	t.Equal(nil, err)
 	tt.Log(ztime.FormatTime(next))
 
-	_, _ = cron.Add("* * * * * * *", func() {
-		fmt.Println("running", time.Now().Unix())
-		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
-		// g.Done()
-	})
+	next, err = ParseNextTime("0 22 * * 1-5")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
 
+	next, err = ParseNextTime("@weekly")
+	t.Equal(nil, err)
+	tt.Log(ztime.FormatTime(next))
+}
+
+func TestRun(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	cron := New()
+	now := time.Now()
+	var g sync.WaitGroup
+	g.Add(6)
+	i := int64(0)
+
+	_, _ = cron.Add("*/2 * * * * * *", func() {
+		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
+		atomic.AddInt64(&i, 1)
+	})
+	_, _ = cron.Add("*/5 * * * * * *", func() {
+		ii := atomic.LoadInt64(&i)
+		tt.Log("*/5", ii, time.Since(now).Seconds())
+		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
+		g.Done()
+	})
 	cron.Run()
-	time.Sleep(2 * time.Second)
-	// g.Wait()
+	g.Wait()
+	tt.Log(i, time.Since(now).Seconds())
+	t.EqualTrue(i >= 14)
 }
 
 type crontimes struct {
