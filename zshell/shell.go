@@ -108,19 +108,18 @@ func Run(command string) (code int, outStr, errStr string, err error) {
 }
 
 func RunContext(ctx context.Context, command string) (code int, outStr, errStr string, err error) {
-	return ExecCommand(ctx, strings.Split(command, " "), nil, nil, nil)
+	return ExecCommand(ctx, fixCommand(command), nil, nil, nil)
 }
 
 func OutRun(command string, stdIn io.Reader, stdOut io.Writer,
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
-	return ExecCommand(context.Background(), strings.Split(command, " "), stdIn, stdOut, stdErr)
+	return ExecCommand(context.Background(), fixCommand(command), stdIn, stdOut, stdErr)
 }
 
 func BgRun(command string) (err error) {
 	if strings.TrimSpace(command) == "" {
 		return errors.New("no such command")
 	}
-
 	arr := strings.Split(command, " ")
 	cmd := exec.Command(arr[0], arr[1:]...)
 	err = cmd.Start()
@@ -133,4 +132,20 @@ func BgRun(command string) (err error) {
 		}
 	}
 	return err
+}
+
+func fixCommand(command string) (runCommand []string) {
+	tmp := ""
+	for _, v := range strings.Split(command, " ") {
+		if strings.HasSuffix(v, "\\") {
+			tmp += v[:len(v)-1] + " "
+		} else {
+			if tmp != "" {
+				v = tmp + v
+				tmp = ""
+			}
+			runCommand = append(runCommand, v)
+		}
+	}
+	return
 }

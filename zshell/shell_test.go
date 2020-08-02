@@ -41,6 +41,9 @@ func Test_bash(T *testing.T) {
 	t.EqualExit(0, code)
 	t.EqualExit(true, err == nil)
 
+	_, res, _, err = Run("ls -a /Applications/Google\\ Chrome.app")
+	t.Log(res)
+
 	err = BgRun("")
 	t.EqualExit(true, err != nil)
 	err = BgRun("lll")

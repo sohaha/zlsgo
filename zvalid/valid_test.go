@@ -94,6 +94,14 @@ func TestBool(t *testing.T) {
 	tt.Equal(false, b)
 }
 
+func TestSplit(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	b, err := Text("1,2,3,4,5").Split(",")
+	tt.EqualNil(err)
+	t.Log(b)
+	tt.Equal(5, len(b))
+}
+
 func TestPassword(t *testing.T) {
 	var err error
 	tt := zlsgo.NewTest(t)

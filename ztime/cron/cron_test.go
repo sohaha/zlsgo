@@ -74,8 +74,9 @@ func TestRun(tt *testing.T) {
 	})
 	cron.Run()
 	g.Wait()
-	tt.Log(i, time.Since(now).Seconds())
-	t.EqualTrue(i >= 14)
+	ii := atomic.LoadInt64(&i)
+	tt.Log(ii, time.Since(now).Seconds())
+	t.EqualTrue(ii >= 13)
 }
 
 type crontimes struct {
