@@ -41,13 +41,14 @@ func requestLog(c *Context) {
 		statusCode.WriteString(" ")
 		statusCode.WriteString(strconv.Itoa(code))
 		statusCode.WriteString(" ")
+		s := statusCode.String()
 		switch {
 		case code >= 200 && code <= 299:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorGreen, statusCode.String())
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorGreen, s)
 		case code >= 300 && code <= 399:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorYellow, statusCode.String())
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorYellow, s)
 		default:
-			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorRed, statusCode.String())
+			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorRed, s)
 		}
 		ft := fmt.Sprintf("%s %15s %15v %%s  %%s", status, c.GetClientIP(), latency)
 		c.Log.Success(showRouteDebug(c.Log, ft, c.Request.Method, c.Request.RequestURI))

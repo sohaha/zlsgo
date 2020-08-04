@@ -104,11 +104,11 @@ func TestFile(tt *testing.T) {
 	T := zlsgo.NewTest(tt)
 	r := newServer()
 	w := newRequest(r, "GET", "/TestFile", "/TestFile", func(c *Context) {
-		c.Next()
-		tt.Log("PrevContent", c.PrevContent())
-	}, func(c *Context) {
 		tt.Log("TestFile")
 		c.File("doc.go")
+	}, func(c *Context) {
+		c.Next()
+		tt.Log("PrevContent", c.PrevContent())
 	})
 	T.Equal(200, w.Code)
 	tt.Log(len(w.Body.String()))
@@ -121,12 +121,12 @@ func TestFile(tt *testing.T) {
 	tt.Log(len(w.Body.String()))
 
 	w = newRequest(r, "GET", "/TestFile3", "/TestFile3", func(c *Context) {
+		tt.Log("TestFile")
+		c.File("doc_no.go")
+	}, func(c *Context) {
 		c.Next()
 		tt.Log("PrevContent", c.PrevContent())
 		c.String(211, "file")
-	}, func(c *Context) {
-		tt.Log("TestFile")
-		c.File("doc_no.go")
 	})
 	T.Equal(211, w.Code)
 	tt.Log(len(w.Body.String()))
@@ -137,6 +137,15 @@ func TestPost(tt *testing.T) {
 	r := newServer()
 	r.SetMode(DebugMode)
 	w := newRequest(r, "POST", "/Post", "/Post", func(c *Context) {
+		tt.Log("TestWeb")
+		c.WithValue("k3", "k3-data")
+		_, _ = c.GetDataRaw()
+		c.JSON(201, ApiData{
+			Code: 200,
+			Msg:  expected,
+			Data: nil,
+		})
+	}, func(c *Context) {
 		c.WithValue("k1", "k1-data")
 		tt.Log("==1==")
 		c.Next()
@@ -165,24 +174,15 @@ func TestPost(tt *testing.T) {
 		ctype := p.Type
 		tt.Log("PrevContentType", ctype)
 		c.WithValue("k2-2", "k2-2-data")
-	}, func(c *Context) {
-		tt.Log("TestWeb")
-		c.WithValue("k3", "k3-data")
-		_, _ = c.GetDataRaw()
-		c.JSON(201, ApiData{
-			Code: 200,
-			Msg:  expected,
-			Data: nil,
-		})
 	})
 	T.Equal(211, w.Code)
 	T.Equal("replace", zjson.Get(w.Body.String(), "msg").String())
 
-	w = newRequest(r, "POST", "/Post2", "/Post2",
+	w = newRequest(r, "POST", "/Post2", "/Post2", func(c *Context) {
+		c.String(200, "ok")
+	},
 		func(c *Context) {
 			c.Abort(222)
-		}, func(c *Context) {
-			c.String(200, "ok")
 		})
 	T.Equal(222, w.Code)
 

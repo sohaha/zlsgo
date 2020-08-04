@@ -302,16 +302,9 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		e.Log.Debug(showRouteDebug(e.Log, "%s --> %s", method, path))
 	}
 	middleware := e.router.middleware
-	moreHandlerLen := len(moreHandler)
-	if moreHandlerLen > 0 {
-		index := moreHandlerLen - 1
-		lastHandle := moreHandler[index]
-		moreHandler = moreHandler[:index]
-		middleware = append(middleware, handle)
+	if len(moreHandler) > 0 {
 		middleware = append(middleware, moreHandler...)
-		handle = lastHandle
 	}
-
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
 }
