@@ -45,6 +45,11 @@ func (item *Item) LifeSpan() time.Duration {
 	return item.lifeSpan
 }
 
+// LifeSpan LifeSpan
+func (item *Item) IntervalLifeSpan() bool {
+	return item.intervalLifeSpan
+}
+
 // LifeSpanUint LifeSpanUint
 func (item *Item) LifeSpanUint() uint {
 	return uint(item.lifeSpan / time.Second)

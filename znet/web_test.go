@@ -401,6 +401,18 @@ func TestSetMode(T *testing.T) {
 	r.SetMode("unknownMode")
 }
 
+func TestMoreMatchingRouter(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	w := newRequest(r, "GET", "/MoreMatchingRouter/file-1.txt",
+		`/MoreMatchingRouter/{name:[\w\d-]+}.{ext:[\w]+}`, func(c *Context) {
+			tt.Log(c.GetAllParam())
+			tt.Equal("file-1", c.GetParam("name"))
+			tt.Equal("txt", c.GetParam("ext"))
+		})
+	tt.Equal(200, w.Code)
+}
+
 func TestWebRouter(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	mux := newServer()

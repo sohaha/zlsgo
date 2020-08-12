@@ -78,7 +78,7 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 	return
 }
 
-func parsPattern(res []string) (string, []string) {
+func parsPattern(res []string, prefix string) (string, []string) {
 	var (
 		matchName []string
 		pattern   = zstring.Buffer()
@@ -87,17 +87,48 @@ func parsPattern(res []string) (string, []string) {
 		if str == "" {
 			continue
 		}
-		strLen := len(str)
+		pattern.WriteString(prefix)
+		l := len(str) - 1
+		i := strings.Index(str, "}")
+		i2 := strings.Index(str, "{")
 		firstChar := string(str[0])
-		lastChar := string(str[strLen-1])
 		// todo Need to optimize
-		if firstChar == "{" && lastChar == "}" {
-			matchStr := string(str[1 : strLen-1])
-			res := strings.Split(matchStr, ":")
-			matchName = append(matchName, res[0])
-			pattern.WriteString("/(")
-			pattern.WriteString(res[1])
-			pattern.WriteString(")")
+		if i2 != -1 && i != -1 {
+			// lastChar := string(str[l])
+			if i == l && i2 == 0 {
+				matchStr := str[1:l]
+				res := strings.Split(matchStr, ":")
+				matchName = append(matchName, res[0])
+				pattern.WriteString("(")
+				pattern.WriteString(res[1])
+				pattern.WriteString(")")
+			} else {
+				if i2 != 0 {
+					p, m := parsPattern([]string{str[:i2]}, "")
+					if p != "" {
+						pattern.WriteString(p)
+						matchName = append(matchName, m...)
+					}
+					str = str[i2:]
+				}
+				if i >= 0 {
+					ni := i - i2
+					matchStr := str[1:ni]
+					res := strings.Split(matchStr, ":")
+					matchName = append(matchName, res[0])
+					pattern.WriteString("(")
+					pattern.WriteString(res[1])
+					pattern.WriteString(")")
+					p, m := parsPattern([]string{str[ni+1:]}, "")
+					if p != "" {
+						pattern.WriteString(p)
+						matchName = append(matchName, m...)
+					}
+				} else {
+					pattern.WriteString(str)
+				}
+			}
+
 		} else if firstChar == ":" {
 			matchStr := str
 			res := strings.Split(matchStr, ":")
@@ -107,25 +138,24 @@ func parsPattern(res []string) (string, []string) {
 			}
 			matchName = append(matchName, key)
 			if key == idKey {
-				pattern.WriteString("/(")
+				pattern.WriteString("(")
 				pattern.WriteString(idPattern)
 				pattern.WriteString(")")
 			} else if key == allKey {
-				pattern.WriteString("/(")
+				pattern.WriteString("(")
 				pattern.WriteString(allPattern)
 				pattern.WriteString(")")
 			} else {
-				pattern.WriteString("/(")
+				pattern.WriteString("(")
 				pattern.WriteString(defaultPattern)
 				pattern.WriteString(")")
 			}
 		} else if firstChar == "*" {
-			pattern.WriteString("/(")
+			pattern.WriteString("(")
 			pattern.WriteString(allPattern)
 			pattern.WriteString(")")
 			matchName = append(matchName, allKey)
 		} else {
-			pattern.WriteString("/")
 			pattern.WriteString(str)
 		}
 	}

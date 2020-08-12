@@ -13,7 +13,7 @@ func TestBuffer(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	l := "0"
 	l += "1"
-	b := Buffer()
+	b := Buffer(2)
 	b.WriteString("0")
 	b.WriteString("1")
 	t.Equal(l, b.String())

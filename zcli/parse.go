@@ -11,9 +11,6 @@ import (
 )
 
 func parse(outHelp bool) {
-	if Version != "" {
-		flagVersion = SetVar("version", getLangs("version")).short("V").Bool()
-	}
 	parseCommand(outHelp)
 	parseSubcommand(flag.Args())
 }
@@ -44,6 +41,9 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 }
 
 func Parse(arg ...[]string) {
+	if Version != "" {
+		flagVersion = SetVar("version", getLangs("version")).short("V").Bool()
+	}
 	var argsData []string
 	if len(arg) == 1 {
 		argsData = arg[0]
@@ -75,10 +75,6 @@ func Parse(arg ...[]string) {
 	}
 
 	_ = flag.CommandLine.Parse(argsData)
-}
-
-func parseCommand(outHelp bool) {
-	Parse()
 	var v *bool
 	var ok bool
 	if v, ok = ShortValues["V"].(*bool); ok && *v {
@@ -89,6 +85,10 @@ func parseCommand(outHelp bool) {
 		osExit(0)
 		return
 	}
+}
+
+func parseCommand(outHelp bool) {
+	Parse()
 	if len(cmds) < 1 {
 		return
 	}

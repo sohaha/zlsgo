@@ -230,7 +230,7 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	for _, segment := range res {
 		if segment != "" {
 			if string(segment[0]) == ":" {
-				key := params[string(segment[1:])]
+				key := params[segment[1:]]
 				re := regexp.MustCompile(defaultPattern)
 				if one := re.Find([]byte(key)); one == nil {
 					return "", ErrGenerateParameters
@@ -242,7 +242,7 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 			if string(segment[0]) == "{" {
 				segmentLen := len(segment)
 				if string(segment[segmentLen-1]) == "}" {
-					splitRes := strings.Split(string(segment[1:segmentLen-1]), ":")
+					splitRes := strings.Split(segment[1:segmentLen-1], ":")
 					re := regexp.MustCompile(splitRes[1])
 					key := params[splitRes[0]]
 					if one := re.Find([]byte(key)); one == nil {
@@ -314,7 +314,8 @@ func (e *Engine) GetPanicHandler() PanicFunc {
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if !e.ShowFavicon && req.URL.Path == "/favicon.ico" {
+	p := req.URL.Path
+	if !e.ShowFavicon && p == "/favicon.ico" {
 		return
 	}
 	rw := e.acquireContext()
@@ -358,13 +359,14 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if e.FindHandle(rw, req, req.URL.Path, true) {
+	if e.FindHandle(rw, req, p, true) {
 		e.HandleNotFound(rw)
 	}
 }
 
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
 	nodes := e.router.trees[req.Method].Find(requestURL, false)
+	p := requestURL[1:]
 	if len(nodes) > 0 {
 		node := nodes[0]
 		if node.handle != nil {
@@ -376,7 +378,7 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 				}
 				return
 			}
-			if node.path == requestURL[1:] {
+			if node.path == p {
 				if applyMiddleware {
 					handle(rw, node.handle, node.middleware)
 				} else {
@@ -389,8 +391,7 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 
 	if len(nodes) == 0 {
 		res := strings.Split(requestURL, "/")
-		prefix := res[1]
-		nodes := e.router.trees[req.Method].Find(prefix, true)
+		nodes := e.router.trees[req.Method].Find(res[1], true)
 		for _, node := range nodes {
 			if handler := node.handle; handler != nil && node.path != requestURL {
 				if matchParamsMap, ok := e.matchAndParse(requestURL, node.path); ok {
@@ -446,12 +447,14 @@ func (e *Engine) matchAndParse(requestURL string, path string) (matchParams Para
 	bl = true
 	matchParams = make(ParamsMapType)
 	res := strings.Split(path, "/")
-	pattern, matchName := parsPattern(res)
+	pattern, matchName := parsPattern(res, "/")
+	if pattern == "" {
+		return nil, false
+	}
 	rr, err := zstring.RegexExtract(pattern, requestURL)
 	if err != nil || len(rr) == 0 {
 		return nil, false
 	}
-
 	if rr[0] == requestURL {
 		rr = rr[1:]
 		if len(matchName) != 0 {

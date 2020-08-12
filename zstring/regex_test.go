@@ -44,6 +44,11 @@ func TestRegex(T *testing.T) {
 
 	str, _ = RegexReplaceFunc(`\w{2}`, "abcd", Ucfirst)
 	t.Equal("AbCd", str)
+
+	clearRegexpCompile()
+
+	regexCache = map[string]*regexMapStruct{}
+	clearRegexpCompile()
 }
 
 func BenchmarkRegex1(b *testing.B) {

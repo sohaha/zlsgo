@@ -5,8 +5,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/sohaha/zlsgo/zlog"
 )
 
 var (
@@ -18,10 +16,6 @@ var (
 	ite                          = New("defaultCache")
 	mutex                        sync.RWMutex
 )
-
-func SetLogger(logger *zlog.Logger) {
-	ite.SetLogger(logger)
-}
 
 func Set(key string, data interface{}, lifeSpan uint, interval ...bool) {
 	ite.Set(key, data, lifeSpan, interval...)
@@ -51,7 +45,7 @@ func GetT(key string) (*Item, error) {
 	return ite.GetT(key)
 }
 
-// MustGet get the data of the specified key, set if it does not exist
+// MustGet get the Raw of the specified key, set if it does not exist
 func MustGet(key string, do func(set func(data interface{},
 	lifeSpan time.Duration, interval ...bool)) (
 	err error)) (data interface{}, err error) {

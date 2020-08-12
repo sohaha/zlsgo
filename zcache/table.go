@@ -1,17 +1,10 @@
 package zcache
 
 import (
-	"path/filepath"
 	"sort"
 	"sync"
 	"time"
-
-	"encoding/gob"
-
-	"github.com/sohaha/zlsgo/zfile"
-	"github.com/sohaha/zlsgo/zjson"
-	"github.com/sohaha/zlsgo/zlog"
-	"github.com/sohaha/zlsgo/zstring"
+	// "github.com/sohaha/zlsgo/zlog"
 	// "sync/atomic"
 )
 
@@ -31,15 +24,10 @@ type (
 		accessCount     bool
 		cleanupTimer    *time.Timer
 		cleanupInterval time.Duration
-		logger          *zlog.Logger
+		// logger          *zlog.Logger
 		loadNotCallback func(key string, args ...interface{}) *Item
 		addCallback     func(item *Item)
 		deleteCallback  func(key string) bool
-	}
-	persistenceSt struct {
-		Data             interface{}
-		LifeSpan         time.Duration
-		IntervalLifeSpan bool
 	}
 )
 
@@ -48,46 +36,6 @@ func (table *Table) Count() int {
 	table.RLock()
 	defer table.RUnlock()
 	return len(table.items)
-}
-
-func (table *Table) PersistenceToFile(file string, DisableAutoLoad bool, register ...interface{}) func() error {
-	gob.Register(&persistenceSt{})
-	file = zfile.RealPath(file)
-
-	for k := range register {
-		gob.Register(register[k])
-	}
-
-	if zfile.FileExist(file) {
-		content, err := zfile.ReadFile(file)
-		if err == nil {
-			zjson.ParseBytes(content).ForEach(func(k, v zjson.Res) (b bool) {
-				b = true
-				key := k.String()
-				base64 := zstring.String2Bytes(v.String())
-				base64, err := zstring.Base64Decode(base64)
-				if err != nil {
-					return
-				}
-				value, err := zstring.UnSerialize(base64)
-				if err != nil {
-					return
-				}
-
-				if persistence, ok := value.(*persistenceSt); ok {
-					zlog.Debug(key, persistence)
-					table.SetRaw(key, persistence.Data, persistence.LifeSpan, persistence.IntervalLifeSpan)
-				}
-				return
-			})
-		}
-	}
-	return func() error {
-		jsonData := table.exportJSON()
-		_ = zfile.RealPathMkdir(filepath.Dir(file))
-
-		return zfile.WriteFile(file, zstring.String2Bytes(jsonData))
-	}
 }
 
 // ForEach traversing the cache
@@ -114,30 +62,6 @@ func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
 	}
 }
 
-func (table *Table) exportJSON(registers ...interface{}) string {
-	for i := range registers {
-		gob.Register(registers[i])
-	}
-	jsonData := "{}"
-	table.ForEachRaw(func(key string, item *Item) bool {
-		item.RLock()
-		v := &persistenceSt{
-			Data:             item.data,
-			LifeSpan:         item.lifeSpan,
-			IntervalLifeSpan: item.intervalLifeSpan,
-		}
-		item.RUnlock()
-		value, err := zstring.Serialize(v)
-		if err != nil {
-			return true
-		}
-		jsonData, _ = zjson.Set(jsonData, key, zstring.Base64Encode(value))
-
-		return true
-	})
-	return jsonData
-}
-
 // SetLoadNotCallback SetLoadNotCallback
 func (table *Table) SetLoadNotCallback(f func(key string, args ...interface{}) *Item) {
 	table.Lock()
@@ -160,11 +84,11 @@ func (table *Table) SetDeleteCallback(f func(key string) bool) {
 }
 
 // SetLogger SetLogger
-func (table *Table) SetLogger(logger *zlog.Logger) {
-	table.Lock()
-	defer table.Unlock()
-	table.logger = logger
-}
+// func (table *Table) SetLogger(logger *zlog.Logger) {
+// 	table.Lock()
+// 	defer table.Unlock()
+// 	table.logger = logger
+// }
 
 func (table *Table) expirationCheck() {
 	now := time.Now()
@@ -259,9 +183,9 @@ func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 }
 
 // Set set cache whether to automatically renew
-func (table *Table) Set(key string, data interface{}, lifeSpan uint,
+func (table *Table) Set(key string, data interface{}, lifeSpanSecond uint,
 	interval ...bool) *Item {
-	return table.SetRaw(key, data, time.Duration(lifeSpan)*time.Second, interval...)
+	return table.SetRaw(key, data, time.Duration(lifeSpanSecond)*time.Second, interval...)
 }
 
 func (table *Table) deleteInternal(key string) (*Item, error) {
@@ -331,7 +255,7 @@ func (table *Table) Add(key string, data interface{}, lifeSpan time.Duration, in
 	return true
 }
 
-// MustGet get the data of the specified key, set if it does not exist
+// MustGet get the Raw of the specified key, set if it does not exist
 func (table *Table) MustGet(key string, do func(set func(data interface{},
 	lifeSpan time.Duration, interval ...bool)) (
 	err error)) (data interface{}, err error) {
@@ -393,7 +317,7 @@ func (table *Table) GetT(key string, args ...interface{}) (*Item, error) {
 	return nil, ErrKeyNotFound
 }
 
-// Get get the data of the specified key
+// Get get the Raw of the specified key
 func (table *Table) Get(key string, args ...interface{}) (value interface{}, err error) {
 	var data *Item
 	data, err = table.GetT(key, args...)
@@ -472,9 +396,9 @@ func (table *Table) MostAccessed(count int64) []*Item {
 }
 
 func (table *Table) log(v ...interface{}) {
-	if table.logger == nil {
-		return
-	}
-
-	table.logger.Debug(v...)
+	// if table.logger == nil {
+	// 	return
+	// }
+	//
+	// table.logger.Debug(v...)
 }

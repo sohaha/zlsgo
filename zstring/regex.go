@@ -9,51 +9,25 @@ import (
 type regexMapStruct struct {
 	Value *regexp.Regexp
 	Time  int64
+	sync.RWMutex
 }
 
 var (
-	regexs          sync.Map
-	clearRegexCache = time.Now().Unix()
+	l                 sync.RWMutex
+	regexCache             = map[string]*regexMapStruct{}
+	regexCacheTimeout uint = 1800
 )
 
-func getRegexpCompile(pattern string) (*regexp.Regexp, error) {
-	if r := getRegexCache(pattern); r != nil {
-		return r, nil
-	}
-	r, err := regexp.Compile(pattern)
-	if err == nil {
-		setRegexCache(pattern, r)
-		return r, nil
-	}
-	return nil, err
-}
-
-func getRegexCache(pattern string) (regex *regexp.Regexp) {
-	v, ok := regexs.Load(pattern)
-	now := time.Now().Unix()
-	if ((now / 1 % 10) >= 6) && ((now - clearRegexCache) > 1800) {
-		clearRegexCache = now
-		regexs.Range(func(k, v interface{}) bool {
-			reg := v.(*regexMapStruct)
-			if (now - reg.Time) >= 1800 {
-				regexs.Delete(k)
+func init() {
+	go func() {
+		t := time.Tick(600 * time.Second)
+		for {
+			select {
+			case <-t:
+				clearRegexpCompile()
 			}
-			return true
-		})
-	}
-
-	if !ok {
-		return
-	}
-	reg := v.(*regexMapStruct)
-	return reg.Value
-}
-
-func setRegexCache(pattern string, regex *regexp.Regexp) {
-	regexs.Store(pattern, &regexMapStruct{
-		Value: regex,
-		Time:  time.Now().Unix(),
-	})
+		}
+	}()
 }
 
 // RegexMatch check for match
@@ -110,4 +84,40 @@ func RegexReplaceFunc(pattern string, str string, repl func(string) string) (str
 		str = r.ReplaceAllStringFunc(str, repl)
 	}
 	return str, err
+}
+
+func clearRegexpCompile() {
+	now := time.Now().Unix()
+	newRegexCache := map[string]*regexMapStruct{}
+	l.Lock()
+	defer l.Unlock()
+	if len(regexCache) == 0 {
+		return
+	}
+	for k := range regexCache {
+		if uint(now-regexCache[k].Time) <= regexCacheTimeout {
+			newRegexCache[k] = &regexMapStruct{Value: regexCache[k].Value, Time: now}
+		}
+	}
+	regexCache = newRegexCache
+}
+
+func getRegexpCompile(pattern string) (r *regexp.Regexp, err error) {
+	l.RLock()
+	var data *regexMapStruct
+	var ok bool
+	data, ok = regexCache[pattern]
+	l.RUnlock()
+	if ok {
+		r = data.Value
+		return
+	}
+	r, err = regexp.Compile(pattern)
+	if err != nil {
+		return
+	}
+	l.Lock()
+	regexCache[pattern] = &regexMapStruct{Value: r, Time: time.Now().Unix()}
+	l.Unlock()
+	return
 }

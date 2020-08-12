@@ -65,11 +65,9 @@ func (t *Tree) Add(pattern string, handle HandlerFunc, middleware ...HandlerFunc
 	if len(middleware) > 0 && currentNode.depth == 1 {
 		currentNode.middleware = append(currentNode.middleware, middleware...)
 	}
-
 	currentNode.handle = handle
 	currentNode.isPattern = true
 	currentNode.path = pattern
-
 	if routeName := t.parameters.routeName; routeName != "" {
 		t.routes[routeName] = currentNode
 	}
@@ -85,24 +83,23 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 		nodes = append(nodes, node)
 		return
 	}
-
 	if !isRegex {
 		pattern = strings.TrimPrefix(pattern, "/")
 	}
 
 	res := strings.Split(pattern, "/")
-
-	for _, key := range res {
+	for i := range res {
+		key := res[i]
+		if key == "" {
+			continue
+		}
 		child, ok := node.children[key]
-
 		if !ok && isRegex {
 			break
 		}
-
 		if !ok && !isRegex {
 			return
 		}
-
 		if pattern == child.path && !isRegex {
 			nodes = append(nodes, child)
 			return
@@ -111,21 +108,17 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 	}
 
 	queue = append(queue, node)
-
 	for len(queue) > 0 {
 		var queueTemp []*Node
 		for _, n := range queue {
 			if n.isPattern {
 				nodes = append(nodes, n)
 			}
-
 			for _, childNode := range n.children {
 				queueTemp = append(queueTemp, childNode)
 			}
 		}
-
 		queue = queueTemp
 	}
-
 	return
 }
