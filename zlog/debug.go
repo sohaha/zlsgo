@@ -143,7 +143,7 @@ func (fo formatter) passThrough(f fmt.State, c rune) {
 	s := "%"
 	for i := 0; i < 128; i++ {
 		if f.Flag(i) {
-			s += string(i)
+			s += strconv.FormatInt(int64(i), 10)
 		}
 	}
 	if w, ok := f.Width(); ok {

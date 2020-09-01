@@ -10,16 +10,21 @@ import (
 	"unsafe"
 )
 
-type sliceT struct {
-	array unsafe.Pointer
-	len   int
-	cap   int
-}
-
-type stringStruct struct {
-	str unsafe.Pointer
-	len int
-}
+type (
+	sliceT struct {
+		array unsafe.Pointer
+		len   int
+		cap   int
+	}
+	stringStruct struct {
+		str unsafe.Pointer
+		len int
+	}
+	// ru is a pseudorandom number generator
+	ru struct {
+		x uint32
+	}
+)
 
 const (
 	// PadRight Right padding character
@@ -28,8 +33,7 @@ const (
 	PadLeft
 	// PadSides Two-sided padding characters,If the two sides are not equal, the right side takes precedence.
 	PadSides
-	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	letterIdxMask = 1<<6 - 1 // All 1-bits, as many as 6
+	letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 // Pad String padding

@@ -51,7 +51,7 @@ type (
 		customMethodType   string
 		addr               []addrSt
 		router             *router
-		preHandle          func(context *Context) bool
+		preHandler         func(context *Context) bool
 		pool               sync.Pool
 	}
 	TlsCfg struct {
@@ -93,16 +93,16 @@ type (
 
 const (
 	defaultMultipartMemory = 32 << 20 // 32 MB
-	// DebugMode debug
-	DebugMode = "debug"
-	// ReleaseMode release
-	ReleaseMode = "release"
+	// DebugMode dev
+	DebugMode = "dev"
+	// ProdMode release
+	ProdMode = "prod"
 	// TestMode test
 	TestMode          = "test"
 	defaultServerName = "Z"
 	defaultBindTag    = "json"
-	releaseCode       = iota
-	debugCode
+	prodCode          = 0
+	debugCode         = iota
 	testCode
 )
 
@@ -150,8 +150,8 @@ func New(serverName ...string) *Engine {
 		router:             route,
 		readTimeout:        0 * time.Second,
 		writeTimeout:       0 * time.Second,
-		webModeName:        ReleaseMode,
-		webMode:            releaseCode,
+		webModeName:        ProdMode,
+		webMode:            prodCode,
 		addr:               []addrSt{defaultAddr},
 		MaxMultipartMemory: defaultMultipartMemory,
 		BindTag:            defaultBindTag,
@@ -211,9 +211,9 @@ func CloseHotRestartFileMd5() {
 func (e *Engine) SetMode(value string) {
 	var level int
 	switch value {
-	case ReleaseMode, "":
+	case ProdMode, "":
 		level = zlog.LogSuccess
-		e.webMode = releaseCode
+		e.webMode = prodCode
 	case DebugMode:
 		level = zlog.LogDump
 		e.webMode = debugCode
@@ -224,7 +224,7 @@ func (e *Engine) SetMode(value string) {
 		e.Log.Panic("web mode unknown: " + value)
 	}
 	if value == "" {
-		value = ReleaseMode
+		value = ProdMode
 	}
 	e.webModeName = value
 	e.Log.SetLogLevel(level)
@@ -232,7 +232,7 @@ func (e *Engine) SetMode(value string) {
 
 // IsDebug IsDebug
 func (e *Engine) IsDebug() bool {
-	return e.webMode > releaseCode
+	return e.webMode > prodCode
 }
 
 // SetTimeout setTimeout
@@ -276,10 +276,15 @@ func Run() {
 
 				srvMap.Store(addr, &serverMap{e, srv})
 
-				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
 				time.AfterFunc(time.Millisecond*100, func() {
-					e.Log.Successf("%s %s  %s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapPid)
+					wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
+					wrapMode := ""
+					if e.webMode > 0 {
+						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("[%s] ", strings.ToUpper(e.webModeName)))
+					}
+					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightRed, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
 				})
+
 				if isTls {
 					if cfg.Config != nil {
 						srv.TLSConfig = cfg.Config
@@ -291,7 +296,6 @@ func Run() {
 							var err error
 							switch processing := cfg.HTTPProcessing.(type) {
 							case string:
-								// e.Log.Warn(addr + " Redirect " + cfg.HTTPAddr)
 								err = http.ListenAndServe(cfg.HTTPAddr, &tlsRedirectHandler{Domain: processing})
 							case http.Handler:
 								err = http.ListenAndServe(cfg.HTTPAddr, processing)

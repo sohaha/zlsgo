@@ -34,7 +34,7 @@ func newServer() *Engine {
 		engine = New("Web-test")
 		engine.SetMode(DebugMode)
 		engine.SetTimeout(3 * time.Second)
-		engine.PreHandle(func(context *Context) (stop bool) {
+		engine.PreHandler(func(context *Context) (stop bool) {
 			return
 		})
 		CloseHotRestartFileMd5()
@@ -89,7 +89,7 @@ func TestWeb(t *testing.T) {
 	_, ok := Server("Web-test")
 	tt.EqualExit(true, ok)
 
-	// r.SetMode(ReleaseMode)
+	// r.SetMode(ProdMode)
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
 		t.Log("TestWeb")
 		_, _ = c.GetDataRaw()
@@ -100,6 +100,59 @@ func TestWeb(t *testing.T) {
 	r.GetMiddleware()
 }
 
+func TestGet(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	_, ok := Server("Web-test")
+	tt.EqualExit(true, ok)
+	g := r.Group("/testGet")
+	g.GET("", func(c *Context) {
+		c.String(200, "")
+	})
+	g.GET("/", func(c *Context) {
+		c.String(200, "/")
+	})
+	g.GET("//ii", func(c *Context) {
+		c.String(200, "//ii")
+	})
+	g.GET("ii", func(c *Context) {
+		c.String(200, "ii")
+	})
+	g.GET("/ii", func(c *Context) {
+		c.String(200, "/ii")
+	})
+
+	var w *httptest.ResponseRecorder
+	var req *http.Request
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet/ii", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("/ii", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet//ii", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("//ii", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet/", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("/", w.Body.String())
+}
 func TestFile(tt *testing.T) {
 	T := zlsgo.NewTest(tt)
 	r := newServer()
@@ -395,7 +448,7 @@ func TestSetMode(T *testing.T) {
 	r.SetMode(DebugMode)
 	t.Equal(true, r.IsDebug())
 	r.SetMode(TestMode)
-	r.SetMode(ReleaseMode)
+	r.SetMode(ProdMode)
 	t.Equal(false, r.IsDebug())
 	r.SetMode("")
 	r.SetMode("unknownMode")

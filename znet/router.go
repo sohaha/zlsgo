@@ -54,7 +54,7 @@ type (
 
 func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	mode := e.webMode
-	e.webMode = releaseCode
+	e.webMode = prodCode
 	return func() {
 		e.webMode = mode
 		if e.IsDebug() {
@@ -266,8 +266,8 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	return "/" + strings.Join(segments, "/"), nil
 }
 
-func (e *Engine) PreHandle(preHandle func(context *Context) (stop bool)) {
-	e.preHandle = preHandle
+func (e *Engine) PreHandler(preHandler func(context *Context) (stop bool)) {
+	e.preHandler = preHandler
 }
 
 func (e *Engine) NotFoundHandler(handler HandlerFunc) {
@@ -288,7 +288,6 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
-
 	tree, ok := e.router.trees[method]
 	if !ok {
 		tree = NewTree()
@@ -350,7 +349,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			req.Method = strings.ToUpper(tmpType)
 		}
 	}
-	if e.preHandle != nil && e.preHandle(rw) {
+	if e.preHandler != nil && e.preHandler(rw) {
 		return
 	}
 	rw.stopHandle = false
@@ -365,6 +364,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
+
 	nodes := e.router.trees[req.Method].Find(requestURL, false)
 	p := requestURL[1:]
 	if len(nodes) > 0 {

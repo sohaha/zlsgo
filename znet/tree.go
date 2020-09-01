@@ -71,6 +71,7 @@ func (t *Tree) Add(pattern string, handle HandlerFunc, middleware ...HandlerFunc
 	if routeName := t.parameters.routeName; routeName != "" {
 		t.routes[routeName] = currentNode
 	}
+
 }
 
 func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
@@ -90,9 +91,6 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 	res := strings.Split(pattern, "/")
 	for i := range res {
 		key := res[i]
-		if key == "" {
-			continue
-		}
 		child, ok := node.children[key]
 		if !ok && isRegex {
 			break

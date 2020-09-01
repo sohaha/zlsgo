@@ -1,51 +1,53 @@
-/*
- * @Author: seekwe
- * @Date:   2019-06-06 19:23:27
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-06-06 19:35:46
- */
-
 package gzip
 
 import (
-	"bufio"
+	"bytes"
 	"compress/gzip"
-	"io"
-	"net"
-	"net/http"
 	"strings"
 
 	"github.com/sohaha/zlsgo/znet"
 )
 
-func New(level ...int) znet.HandlerFunc {
-	gzipLevel := 7
-	if len(level) > 0 {
-		gzipLevel = level[0]
+func Default() znet.HandlerFunc {
+	return New(Config{
+		CompressionLevel: 7,
+		PoolMaxSize:      200,
+		MinContentLength: 1024,
+	})
+}
+
+func New(conf Config) znet.HandlerFunc {
+	pool := &poolCap{
+		c: make(chan *gzip.Writer, conf.PoolMaxSize),
+		l: conf.CompressionLevel,
 	}
 	return func(c *znet.Context) {
 		if !strings.Contains(c.GetHeader("Accept-Encoding"), "gzip") {
 			c.Next()
 		} else {
-			c.SetHeader("Content-Encoding", "gzip")
-			w := c.Writer
-			gw, _ := gzip.NewWriterLevel(w, gzipLevel)
-			defer gw.Close()
-			c.Writer = &gzipResponseWriter{Writer: gw, ResponseWriter: w}
 			c.Next()
+			p := c.PrevContent()
+
+			if len(p.Content) < conf.MinContentLength {
+				return
+			}
+
+			g, err := pool.Get()
+			if err != nil {
+				return
+			}
+			defer pool.Put(g)
+
+			be := &bytes.Buffer{}
+			g.Reset(be)
+			_, err = g.Write(p.Content)
+			if err != nil {
+				return
+			}
+			_ = g.Flush()
+
+			c.SetHeader("Content-Encoding", "gzip")
+			c.Byte(p.Code, be.Bytes())
 		}
 	}
-}
-
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-func (w *gzipResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-func (w *gzipResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	return w.ResponseWriter.(http.Hijacker).Hijack()
 }

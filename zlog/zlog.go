@@ -42,12 +42,12 @@ func SetPrefix(prefix string) {
 }
 
 // SetFile Setting up log files
-func SetLogFile(filepath string, archive ...bool) {
+func SetFile(filepath string, archive ...bool) {
 	Log.SetFile(filepath, archive...)
 }
 
 // SetSaveFile SetSaveFile
-func SetSaveLogFile(filepath string, archive ...bool) {
+func SetSaveFile(filepath string, archive ...bool) {
 	Log.SetSaveFile(filepath, archive...)
 }
 

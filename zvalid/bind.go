@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// ValidEle ValidEle
 type ValidEle struct {
 	target interface{}
 	source Engine

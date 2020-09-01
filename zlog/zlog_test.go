@@ -42,7 +42,7 @@ func TestLog(T *testing.T) {
 	SetPrefix(text)
 	ForceConsoleColor()
 	ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
-	SetLogFile("tmp/Log.log")
+	SetFile("tmp/Log.log")
 	CleanLog(Log)
 	log := New(text)
 	log.SetPrefix(text)

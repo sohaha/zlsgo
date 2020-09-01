@@ -91,9 +91,7 @@ func (r *renderString) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	if !c.hasContentType() {
-		c.SetContentType(ContentTypePlain)
-	}
+	c.SetContentType(ContentTypePlain)
 	if len(r.Data) > 0 {
 		r.ContentDate = zstring.String2Bytes(fmt.Sprintf(r.Format, r.Data...))
 	} else {
@@ -106,9 +104,7 @@ func (r *renderJSON) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	if !c.hasContentType() {
-		c.SetContentType(ContentTypeJSON)
-	}
+	c.SetContentType(ContentTypeJSON)
 	bf := zutil.GetBuff()
 	defer zutil.PutBuff(bf)
 	jsonEncoder := json.NewEncoder(bf)
@@ -130,10 +126,8 @@ func (r *renderFile) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	if !c.hasContentType() {
-		fType := mime.TypeByExtension(filepath.Ext(r.Data))
-		c.SetContentType(fType)
-	}
+	fType := mime.TypeByExtension(filepath.Ext(r.Data))
+	c.SetContentType(fType)
 	r.ContentDate, _ = ioutil.ReadFile(r.Data)
 	return r.ContentDate
 }
@@ -142,9 +136,7 @@ func (r *renderHTML) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	if !c.hasContentType() {
-		c.SetContentType(ContentTypeHTML)
-	}
+	c.SetContentType(ContentTypeHTML)
 	if len(r.Templates) > 0 {
 		var (
 			t   *template.Template

@@ -62,6 +62,7 @@ func TestRun(tt *testing.T) {
 	g.Add(6)
 	i := int64(0)
 
+	//
 	_, _ = cron.Add("*/2 * * * * * *", func() {
 		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
 		atomic.AddInt64(&i, 1)
@@ -74,9 +75,11 @@ func TestRun(tt *testing.T) {
 	})
 	cron.Run()
 	g.Wait()
+	cron.Stop()
 	ii := atomic.LoadInt64(&i)
 	tt.Log(ii, time.Since(now).Seconds())
 	t.EqualTrue(ii >= 13)
+	t.EqualTrue(ii <= 15)
 }
 
 type crontimes struct {
