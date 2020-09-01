@@ -57,18 +57,6 @@ func TestFile(T *testing.T) {
 
 }
 
-func TestCopy(tt *testing.T) {
-	t := NewTest(tt)
-	dest := RealPathMkdir("../tmp", true)
-	defer Rmdir(dest)
-	err := CopyFile("../doc.go", dest+"tmp.tmp")
-	t.Equal(nil, err)
-	err = CopyDir("../znet", dest, func(srcFilePath, destFilePath string) bool {
-		return srcFilePath == "../znet/timeout/timeout.go"
-	})
-	t.Equal(nil, err)
-}
-
 func TestPut(t *testing.T) {
 	var err error
 	tt := NewTest(t)
@@ -77,35 +65,10 @@ func TestPut(t *testing.T) {
 	tt.EqualNil(err)
 	err = PutAppend("./text.txt", []byte(time.Now().String()+"\n"))
 	tt.EqualNil(err)
-	os.Remove("./text.txt")
-	err = PutAppend("./text.txt", []byte(time.Now().String()+"\n"))
+	_ = os.Remove("./text.txt")
+	err = PutAppend("./put/text.txt", []byte(time.Now().String()+"\n"))
 	tt.EqualNil(err)
+	_ = os.Remove("./put/text.txt")
 	err = PutOffset("./text.txt", []byte("\n(ok)\n"), 5)
 	tt.EqualNil(err)
-}
-func TestRW(t *testing.T) {
-
-	var err error
-	var text []byte
-	tt := NewTest(t)
-	str := []byte("666")
-
-	WriteFile("./text.txt", str)
-	text, err = ReadFile("./text.txt")
-	tt.EqualNil(err)
-	tt.Equal(str, text)
-	t.Log(string(text))
-
-	WriteFile("./text.txt", str, true)
-	text, err = ReadFile("./text.txt")
-	tt.EqualNil(err)
-	t.Log(string(text))
-	tt.Equal([]byte("666666"), text)
-
-	WriteFile("./text.txt", str)
-	text, err = ReadFile("./text.txt")
-	tt.EqualNil(err)
-	t.Log(string(text))
-	tt.Equal(str, text)
-	os.Remove("./text.txt")
 }
