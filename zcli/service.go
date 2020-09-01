@@ -153,30 +153,12 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			run: fn,
 		}, daemonConfig)
 
-		langs[defaultLang]["install"] = "Install service"
-		langs["zh"]["install"] = "安装服务"
-
-		langs[defaultLang]["install"] = "Uninstall service"
-		langs["zh"]["uninstall"] = "卸载服务"
-
-		langs[defaultLang]["status"] = "ServiceIfe status"
-		langs["zh"]["status"] = "服务状态"
-
-		langs[defaultLang]["start"] = "Start service"
-		langs["zh"]["start"] = "启动服务"
-
-		langs[defaultLang]["stop"] = "Stop service"
-		langs["zh"]["stop"] = "停止服务"
-
-		langs[defaultLang]["restart"] = "Restart service"
-		langs["zh"]["restart"] = "重启服务"
-
-		Add("install", getLangs("install"), &serviceInstall{})
-		Add("uninstall", getLangs("uninstall"), &serviceUnInstall{})
-		Add("status", getLangs("status"), &serviceStatus{})
-		Add("start", getLangs("start"), &serviceStart{})
-		Add("stop", getLangs("stop"), &serviceStop{})
-		Add("restart", getLangs("restart"), &serviceRestart{})
+		Add("install", GetLangText("install"), &serviceInstall{})
+		Add("uninstall", GetLangText("uninstall"), &serviceUnInstall{})
+		Add("status", GetLangText("status"), &serviceStatus{})
+		Add("start", GetLangText("start"), &serviceStart{})
+		Add("stop", GetLangText("stop"), &serviceStop{})
+		Add("restart", GetLangText("restart"), &serviceRestart{})
 	})
 
 	return service, serviceErr

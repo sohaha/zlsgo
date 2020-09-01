@@ -5,6 +5,8 @@ import (
 	"flag"
 	"os"
 	"testing"
+
+	zls "github.com/sohaha/zlsgo"
 )
 
 var globalDebug = SetVar("debug", "是否开启调试").Required().Bool()
@@ -36,7 +38,8 @@ func resetForTesting(args ...string) {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
-func testOther() {
+func testOther(t *testing.T) {
+	tt := zls.NewTest(t)
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
@@ -47,7 +50,14 @@ func testOther() {
 	HideHelp = true
 	Name = "test"
 	Lang = "zh"
-	getLangs("test")
+	s := GetLangText("test-key", "no")
+	tt.Equal("no", s)
+	s = GetLangText("test-key")
+	tt.Equal("test-key", s)
+	SetLangText("zh","isName","yes")
+	s = GetLangText("isName")
+	tt.Equal("yes", s)
+
 	tipText("ok")
 	errorText("err")
 	showText("show")

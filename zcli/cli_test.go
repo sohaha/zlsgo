@@ -53,8 +53,8 @@ func TestVersion(T *testing.T) {
 	})
 }
 
-func TestCliOther(_ *testing.T) {
-	testOther()
+func TestCliOther(t *testing.T) {
+	testOther(t)
 }
 
 func TestCliCommand(_ *testing.T) {

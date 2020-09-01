@@ -99,7 +99,16 @@ var (
 	}
 )
 
-func getLangs(key string) string {
+func SetLangText(lang, key, value string) {
+	l, ok := langs[lang]
+	if !ok {
+		l = map[string]string{}
+	}
+	l[key] = value
+	langs[lang] = l
+}
+
+func GetLangText(key string, def ...string) string {
 	if lang, ok := langs[Lang][key]; ok {
 		return lang
 	}
@@ -107,8 +116,10 @@ func getLangs(key string) string {
 	if lang, ok := langs[defaultLang][key]; ok {
 		return lang
 	}
-
-	return ""
+	if len(def) > 0 {
+		return def[0]
+	}
+	return key
 }
 
 func (e *errWrite) Write(p []byte) (n int, err error) {

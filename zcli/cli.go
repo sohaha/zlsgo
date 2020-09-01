@@ -24,7 +24,7 @@ func init() {
 // Add registers a cmd for the provided subCommand name
 func Add(name, description string, command Cmd) *cmdCont {
 	if name == "" {
-		Log.Error(getLangs("command_empty"))
+		Log.Error(GetLangText("command_empty"))
 		return nil
 	}
 	cmd := &cmdCont{
@@ -62,7 +62,7 @@ func usage() {
 	for _, name := range cmdsKey {
 		if cont, ok := cmds[name]; ok {
 			// for name, cont := range cmds {
-			Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
+			Log.Printf("    "+tipText("%-19s")+" %s", name, cont.desc)
 		}
 	}
 
@@ -74,7 +74,7 @@ func usage() {
 
 // ShowFlags ShowFlags
 func ShowFlags(fg *flag.FlagSet) {
-	Log.Printf("\noptional flags:\n")
+	Log.Printf("\noptional flags:")
 	max := 40
 	showFlagsHelp()
 	flagsItems := zstring.Buffer()

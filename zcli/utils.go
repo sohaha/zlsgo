@@ -86,7 +86,7 @@ func showFlagsHelp() {
 		help := zstring.Buffer()
 		help.WriteString(warnText(fmt.Sprintf("    -%-12s", "help")))
 		help.WriteString("\t")
-		help.WriteString(getLangs("help"))
+		help.WriteString(GetLangText("help"))
 		Log.Println(help.String())
 	}
 }
