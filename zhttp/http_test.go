@@ -12,6 +12,7 @@ import (
 
 	zls "github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/znet"
 )
 
 func TestHttp(T *testing.T) {
@@ -224,24 +225,43 @@ func TestHttpProxyUrl(t *testing.T) {
 	tt.Equal(true, err != nil)
 }
 
-func TestToFile(t *testing.T) {
+func TestFile(t *testing.T) {
 	tt := zls.NewTest(t)
 	_ = RemoveProxy()
 	SetTimeout(20 * time.Second)
 	downloadProgress := func(current, total int64) {
 		t.Log("downloadProgress", current, total)
 	}
-	res, err := Get("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json", downloadProgress)
+	res, err := Get("https://cdn.jsdelivr.net/gh/sohaha/uniapp-template/src/static/my.jpg", downloadProgress)
 	tt.EqualNil(err)
 	if err == nil {
-		err = res.ToFile("../zhttp/package.json")
+		err = res.ToFile("./my.jpg")
 		tt.EqualNil(err)
 	}
 
-	f := File("../zhttp/package.json")
-	_, _ = Post("https://cdn.jsdelivr.net/npm/zls-vue-spa/package.json", f)
+	f := File("./my.jpg")
 
-	zfile.Rmdir("../zhttp/package.json")
+	r := znet.New()
+	r.POST("/upload", func(c *znet.Context) {
+		file, err := c.FormFile("media")
+		t.Log(err, file)
+		err = c.SaveUploadedFile(file, "./my2.jpg")
+		tt.EqualNil(err)
+		c.String(200, "上传成功")
+	})
+	r.SetAddr("7878")
+	go func() {
+		znet.Run()
+	}()
+
+	time.Sleep(time.Second)
+
+	res, err = Post("http://127.0.0.1:7878/upload", f)
+	tt.EqualNil(err)
+	tt.Equal("上传成功", res.String())
+
+	zfile.Rmdir("./my.jpg")
+	zfile.Rmdir("./my2.jpg")
 }
 
 func TestRandomUserAgent(T *testing.T) {

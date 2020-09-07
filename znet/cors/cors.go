@@ -2,6 +2,7 @@ package cors
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/sohaha/zlsgo/znet"
 	"github.com/sohaha/zlsgo/zstring"
@@ -11,8 +12,16 @@ type (
 	// Config cors configuration
 	Config struct {
 		// Domains whitelist domain name
-		Domains []string
+		Domains       []string
+		Methods       []string
+		methods       string
+		Credentials   []string
+		credentials   string
+		Headers       []string
+		headers       string
+		CustomHandler Handler
 	}
+	Handler func(conf *Config, c *znet.Context)
 )
 
 func Default() znet.HandlerFunc {
@@ -25,6 +34,18 @@ func Default() znet.HandlerFunc {
 }
 
 func New(conf *Config) znet.HandlerFunc {
+	if len(conf.Methods) == 0 {
+		conf.Methods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	}
+	conf.methods = strings.Join(conf.Methods, ", ")
+	if len(conf.Credentials) == 0 {
+		conf.Credentials = []string{"true"}
+	}
+	conf.credentials = strings.Join(conf.Credentials, ", ")
+	if len(conf.Headers) == 0 {
+		conf.Headers = []string{"X-Requested-With"}
+	}
+	conf.headers = strings.Join(conf.Headers, ", ")
 	return func(c *znet.Context) {
 		if applyCors(c, conf) {
 			c.Next()
@@ -52,10 +73,14 @@ func applyCors(c *znet.Context, conf *Config) bool {
 		}
 	}
 
-	c.SetHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.SetHeader("Access-Control-Allow-Credentials", "true")
-	c.SetHeader("Access-Control-Allow-Headers", "X-Requested-With")
+	c.SetHeader("Access-Control-Allow-Methods", conf.methods)
+	c.SetHeader("Access-Control-Allow-Credentials", conf.credentials)
+	c.SetHeader("Access-Control-Allow-Headers", conf.headers)
 	c.SetHeader("Access-Control-Allow-Origin", origin)
+
+	if conf.CustomHandler != nil {
+		conf.CustomHandler(conf, c)
+	}
 
 	if c.Request.Method == "OPTIONS" {
 		c.Abort(http.StatusNoContent)
