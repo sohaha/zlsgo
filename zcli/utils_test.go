@@ -54,7 +54,7 @@ func testOther(t *testing.T) {
 	tt.Equal("no", s)
 	s = GetLangText("test-key")
 	tt.Equal("test-key", s)
-	SetLangText("zh","isName","yes")
+	SetLangText("zh", "isName", "yes")
 	s = GetLangText("isName")
 	tt.Equal("yes", s)
 

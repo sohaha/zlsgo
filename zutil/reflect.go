@@ -75,7 +75,7 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 	}
 
 	if values, ok := value.(map[string]string); ok {
-		err = ReflectForNumField(v, func(fieldTag string, kind reflect.Kind,
+		err = ReflectForNumField(v, func(fieldName, fieldTag string, kind reflect.Kind,
 			field reflect.Value) error {
 			if v, ok := values[fieldTag]; ok {
 				return SetValue(kind, field, v)
@@ -120,7 +120,7 @@ func ReflectStructField(v reflect.Type, fn func(
 	return nil
 }
 
-func ReflectForNumField(v reflect.Value, fn func(fieldTag string,
+func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
 	kind reflect.Kind, field reflect.Value) error, tag ...string) error {
 	var err error
 	tagKey := "z"
@@ -143,12 +143,12 @@ func ReflectForNumField(v reflect.Value, fn func(fieldTag string,
 		if fieldTag == "" {
 			fieldTag = fieldName
 		}
-		if kind == reflect.Struct && tfield.Anonymous {
-			if err = ReflectForNumField(field, fn); err != nil {
+		if kind == reflect.Struct { //  && tfield.Anonymous
+			if err = ReflectForNumField(field, fn, tag...); err != nil {
 				return err
 			}
 		}
-		if err = fn(fieldTag, kind, field); err != nil {
+		if err = fn(fieldName, fieldTag, kind, field); err != nil {
 			return err
 		}
 	}

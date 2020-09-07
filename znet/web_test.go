@@ -295,18 +295,30 @@ func TestMore(t *testing.T) {
 
 	}
 	CloseHotRestart = true
-	w := newRequest(r, "delete", []string{"/", `{"Name":"is json"}`, ContentTypeJSON}, "/", func(c *Context) {
+	w := newRequest(r, "delete", []string{"/", `{"Na":"is json","Name2":"222","U":{"Name3":"333"}}`, ContentTypeJSON}, "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 		c.GetAllQuerystMaps()
 		c.GetAllQueryst()
 		c.Log.Debug(c.GetJSON("Name"))
+		type U2 struct {
+			N2    int `json:"U.Name3"`
+			Name2 int
+		}
+		type U3 struct {
+			Name3 string `json:"U.Name3"`
+		}
 		var u struct {
-			Name string `json:"Name"`
+			Name string `json:"Na"`
+			U2   `json:"N2"`
+			U    U3
 		}
 		err := c.Bind(&u)
 		T.EqualNil(err)
-		c.Log.Warn(u)
+		c.Log.Dump(u)
+		T.Equal("333", u.U.Name3)
+		T.Equal(333, u.N2)
+		T.Equal(222, u.Name2)
 	})
 	T.Equal(200, w.Code)
 	T.Equal(expected, w.Body.String())
@@ -395,10 +407,10 @@ func TestShouldBind(T *testing.T) {
 
 		rule := c.ValidRule().Required()
 		err = c.BindValid(&bind, map[string]zvalid.Engine{
-			"name": rule,
-			"Abc":  rule.IsNumber(),
+			"name": rule.SetAlias("name"),
+			"Abc":  rule.SetAlias("Abc").IsNumber(),
 		})
-		T.Log(bind, err)
+		T.Log(bind, bind.Name, err)
 		t.EqualNil(err)
 		t.Equal(bind.Name, "seekwe")
 

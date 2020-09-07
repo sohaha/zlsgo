@@ -18,7 +18,7 @@ const (
 )
 
 func (c *Context) Bind(obj interface{}) (err error) {
-	return c.bind(obj, func(kind reflect.Kind, field reflect.Value, fieldTag string,
+	return c.bind(obj, func(kind reflect.Kind, field reflect.Value, fieldName, fieldTag string,
 		value interface{}) error {
 		return zutil.SetValue(kind, field, value)
 	})
@@ -28,7 +28,7 @@ func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
 	Engine) (
 	err error) {
 	err = c.bind(obj, func(kind reflect.Kind, field reflect.Value,
-		fieldTag string,
+		fieldName, fieldTag string,
 		value interface{}) error {
 		validRule, ok := elements[fieldTag]
 		if ok {
@@ -57,7 +57,7 @@ func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
 }
 
 func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
-	field reflect.Value, fieldTag string, value interface{}) error) (err error) {
+	field reflect.Value, fieldName, fieldTag string, value interface{}) error) (err error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr {
 		err = errors.New("assignment requires the use of pointers")
@@ -65,7 +65,7 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 	}
 	vv := v.Elem()
 	tag := c.Engine.BindTag
-	err = zutil.ReflectForNumField(vv, func(fieldTag string, kind reflect.Kind,
+	err = zutil.ReflectForNumField(vv, func(fieldName, fieldTag string, kind reflect.Kind,
 		field reflect.Value) error {
 		var (
 			value interface{}
@@ -91,7 +91,7 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 					value = jsonValue.String()
 				}
 			}
-			if !ok {
+			if !ok && (c.Request.Method != "GET") {
 				value, ok = c.GetPostForm(fieldTag)
 			}
 			if !ok {
@@ -99,7 +99,7 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 			}
 		}
 		if ok {
-			err = set(kind, field, fieldTag, value)
+			err = set(kind, field, fieldName, fieldTag, value)
 		}
 		// if err != nil {
 		// 	err = fmt.Errorf("key: %s, %v", fieldTag, err)

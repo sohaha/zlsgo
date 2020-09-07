@@ -418,7 +418,7 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 }
 
 func (e *Engine) HandleNotFound(c *Context) {
-	middleware := make([]HandlerFunc, 0)
+	middleware := e.GetMiddleware() // make([]HandlerFunc, 0)
 	c.Code = http.StatusNotFound
 	if e.router.notFound != nil {
 		handle(c, e.router.notFound, middleware)

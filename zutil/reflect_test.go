@@ -99,7 +99,7 @@ func TestReflectForNumField(t *testing.T) {
 	}{}
 	rv := reflect.ValueOf(test)
 	rv = rv.Elem()
-	err := ReflectForNumField(rv, func(fieldTag string, kind reflect.Kind, field reflect.Value) error {
+	err := ReflectForNumField(rv, func(fieldName, fieldTag string, kind reflect.Kind, field reflect.Value) error {
 		t.Log(fieldTag, kind, field.Kind())
 		return nil
 	})
