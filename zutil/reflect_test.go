@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -19,7 +20,10 @@ func (*TestSt) RunTest(t *testing.T) {
 
 func (*TestSt) RunTest2() {}
 
-type TestSt2 struct{ Name string }
+type TestSt2 struct {
+	Name  string
+	Test2 bool
+}
 
 func (tt *TestSt2) RunTest(t *testing.T) {
 	t.Log("RunTest", tt.Name)
@@ -31,11 +35,11 @@ func TestRunAllMethod(t *testing.T) {
 	t.Log(err)
 	tt.Equal(true, err != nil)
 
-	err = RunAllMethod(&TestSt2{"AllMethod"}, t)
+	err = RunAllMethod(&TestSt2{Name: "AllMethod"}, t)
 	t.Log(err)
 	tt.Equal(true, err == nil)
 
-	err = RunAssignMethod(&TestSt2{"AssignMethod"}, func(methodName string) bool {
+	err = RunAssignMethod(&TestSt2{Name: "AssignMethod"}, func(methodName string) bool {
 		t.Log("methodName:", methodName)
 		return true
 	}, t)
@@ -80,4 +84,24 @@ func TestReflectStructField(t *testing.T) {
 	})
 	tt.EqualNil(err)
 	t.Log(test)
+}
+
+func TestReflectForNumField(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	var test = &struct {
+		TestSt
+		*TestSt2
+		New       bool
+		UpdatedAt time.Time
+		Updated   uint8
+		T2p       *TestSt2
+		T2        TestSt2
+	}{}
+	rv := reflect.ValueOf(test)
+	rv = rv.Elem()
+	err := ReflectForNumField(rv, func(fieldTag string, kind reflect.Kind, field reflect.Value) error {
+		t.Log(fieldTag, kind, field.Kind())
+		return nil
+	})
+	tt.EqualNil(err)
 }

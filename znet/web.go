@@ -280,9 +280,9 @@ func Run() {
 					wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
 					wrapMode := ""
 					if e.webMode > 0 {
-						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("[%s] ", strings.ToUpper(e.webModeName)))
+						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
 					}
-					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightRed, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
+					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
 				})
 
 				if isTls {
@@ -290,17 +290,18 @@ func Run() {
 						srv.TLSConfig = cfg.Config
 					}
 					if cfg.HTTPAddr != "" {
+						httpAddr := getPort(cfg.HTTPAddr)
 						go func(e *Engine) {
-							newHostname := "http://" + resolveHostname(cfg.HTTPAddr)
+							newHostname := "http://" + resolveHostname(httpAddr)
 							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+newHostname)))
 							var err error
 							switch processing := cfg.HTTPProcessing.(type) {
 							case string:
-								err = http.ListenAndServe(cfg.HTTPAddr, &tlsRedirectHandler{Domain: processing})
+								err = http.ListenAndServe(httpAddr, &tlsRedirectHandler{Domain: processing})
 							case http.Handler:
-								err = http.ListenAndServe(cfg.HTTPAddr, processing)
+								err = http.ListenAndServe(httpAddr, processing)
 							default:
-								err = http.ListenAndServe(cfg.HTTPAddr, e)
+								err = http.ListenAndServe(httpAddr, e)
 							}
 							e.Log.Errorf("HTTP Listen: %s\n", err)
 						}(e)

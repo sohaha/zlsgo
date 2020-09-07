@@ -61,8 +61,6 @@ func TestRun(tt *testing.T) {
 	var g sync.WaitGroup
 	g.Add(6)
 	i := int64(0)
-
-	//
 	_, _ = cron.Add("*/2 * * * * * *", func() {
 		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
 		atomic.AddInt64(&i, 1)
@@ -78,7 +76,7 @@ func TestRun(tt *testing.T) {
 	cron.Stop()
 	ii := atomic.LoadInt64(&i)
 	tt.Log(ii, time.Since(now).Seconds())
-	t.EqualTrue(ii >= 13)
+	t.EqualTrue(ii >= 12)
 	t.EqualTrue(ii <= 15)
 }
 

@@ -143,8 +143,12 @@ func ReflectForNumField(v reflect.Value, fn func(fieldTag string,
 		if fieldTag == "" {
 			fieldTag = fieldName
 		}
-		err = fn(fieldTag, kind, field)
-		if err != nil {
+		if kind == reflect.Struct && tfield.Anonymous {
+			if err = ReflectForNumField(field, fn); err != nil {
+				return err
+			}
+		}
+		if err = fn(fieldTag, kind, field); err != nil {
 			return err
 		}
 	}
