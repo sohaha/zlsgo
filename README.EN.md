@@ -50,7 +50,7 @@ func main(){
 }
 ```
 
-![znet](https://www.notion.so/signed/https:%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png)
+![znet](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png?table=block&id=18fdfaa9-5dab-4cb8-abb3-f19ff37ed3f0&width=2210&userId=&cache=v2)
 
 ### Logger
 
