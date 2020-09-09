@@ -47,6 +47,14 @@ func (r *Engine) SetClient(client *http.Client) {
 	r.client = client
 }
 
+func (r *Engine) DisableChunke(enable ...bool) {
+	state := true
+	if len(enable) > 0 && enable[0] {
+		state = false
+	}
+	r.disableChunke = state
+}
+
 func (r *Engine) Get(url string, v ...interface{}) (*Res, error) {
 	return r.Do("GET", url, v...)
 }

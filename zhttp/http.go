@@ -22,22 +22,11 @@ import (
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 const (
 	textContentType = "Content-Type"
-)
-
-var (
-	std = New()
-	// regNewline = regexp.MustCompile(`[\n\r]`)
-)
-
-var (
-	ErrNoTransport     = errors.New("no transport")
-	ErrUrlNotSpecified = errors.New("url not specified")
-	ErrTransEmpty      = errors.New("trans is empty")
-	ErrNoMatched       = errors.New("no file have been matched")
 )
 
 const (
@@ -62,12 +51,13 @@ type (
 	DownloadProgress func(current, total int64)
 	UploadProgress   func(current, total int64)
 	Engine           struct {
-		client       *http.Client
-		jsonEncOpts  *jsonEncOpts
-		xmlEncOpts   *xmlEncOpts
-		flag         int
-		debug        bool
-		getUserAgent func() string
+		client        *http.Client
+		jsonEncOpts   *jsonEncOpts
+		xmlEncOpts    *xmlEncOpts
+		flag          int
+		debug         bool
+		disableChunke bool
+		getUserAgent  func() string
 	}
 
 	bodyJson struct {
@@ -117,6 +107,18 @@ func (h Header) Clone() Header {
 	}
 	return hh
 }
+
+var (
+	std = New()
+	// regNewline = regexp.MustCompile(`[\n\r]`)
+)
+
+var (
+	ErrNoTransport     = errors.New("no transport")
+	ErrUrlNotSpecified = errors.New("url not specified")
+	ErrTransEmpty      = errors.New("trans is empty")
+	ErrNoMatched       = errors.New("no file have been matched")
+)
 
 // New create a new *Engine
 func New() *Engine {
@@ -280,7 +282,11 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			uploads:        uploads,
 			uploadProgress: up,
 		}
-		multipartHelper.Upload(req)
+		if r.disableChunke {
+			multipartHelper.Upload(req)
+		} else {
+			multipartHelper.UploadChunke(req)
+		}
 		resp.multipartHelper = multipartHelper
 	} else {
 		if progress != nil {
@@ -478,16 +484,58 @@ func (b *bodyWrapper) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (m *multipartHelper) upload(req *http.Request, upload func(io.Writer, io.Reader) error, bodyWriter *multipart.Writer) {
+	for key, values := range m.form {
+		for _, value := range values {
+			_ = bodyWriter.WriteField(key, value)
+		}
+	}
+
+	i := 0
+	for _, up := range m.uploads {
+		if up.FieldName == "" {
+			i++
+			up.FieldName = "file" + strconv.Itoa(i)
+		}
+		fileWriter, err := bodyWriter.CreateFormFile(up.FieldName, up.FileName)
+		if err != nil {
+			continue
+		}
+
+		if upload == nil {
+			_, _ = io.Copy(fileWriter, up.File)
+		} else {
+			if _, ok := up.File.(*os.File); ok {
+				_ = upload(fileWriter, up.File)
+			} else {
+				_, _ = io.Copy(fileWriter, up.File)
+			}
+		}
+
+		_ = up.File.Close()
+	}
+}
+
 func (m *multipartHelper) Upload(req *http.Request) {
+	bodyBuf := zutil.GetBuff()
+	defer zutil.PutBuff(bodyBuf)
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	m.upload(req, nil, bodyWriter)
+	_ = bodyWriter.Close()
+
+	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
+	b := bytes.NewReader(bodyBuf.Bytes())
+	req.Body = ioutil.NopCloser(b)
+	req.ContentLength = int64(b.Len())
+}
+
+func (m *multipartHelper) UploadChunke(req *http.Request) {
 	pr, pw := io.Pipe()
 	bodyWriter := multipart.NewWriter(pw)
 	go func() {
-		for key, values := range m.form {
-			for _, value := range values {
-				_ = bodyWriter.WriteField(key, value)
-			}
-		}
 		var upload func(io.Writer, io.Reader) error
+
 		if m.uploadProgress != nil {
 			var total int64
 			for _, up := range m.uploads {
@@ -525,29 +573,7 @@ func (m *multipartHelper) Upload(req *http.Request) {
 				}
 			}
 		}
-
-		i := 0
-		for _, up := range m.uploads {
-			if up.FieldName == "" {
-				i++
-				up.FieldName = "file" + strconv.Itoa(i)
-			}
-			fileWriter, err := bodyWriter.CreateFormFile(up.FieldName, up.FileName)
-			if err != nil {
-				continue
-			}
-
-			if upload == nil {
-				_, _ = io.Copy(fileWriter, up.File)
-			} else {
-				if _, ok := up.File.(*os.File); ok {
-					_ = upload(fileWriter, up.File)
-				} else {
-					_, _ = io.Copy(fileWriter, up.File)
-				}
-			}
-			_ = up.File.Close()
-		}
+		m.upload(req, upload, bodyWriter)
 		_ = bodyWriter.Close()
 		_ = pw.Close()
 	}()

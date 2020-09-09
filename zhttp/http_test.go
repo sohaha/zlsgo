@@ -238,16 +238,16 @@ func TestFile(t *testing.T) {
 		err = res.ToFile("./my.jpg")
 		tt.EqualNil(err)
 	}
-
-	f := File("./my.jpg")
-
+	defer zfile.Rmdir("./my.jpg")
 	r := znet.New()
 	r.POST("/upload", func(c *znet.Context) {
-		file, err := c.FormFile("media")
+		file, err := c.FormFile("file")
 		t.Log(err, file)
-		err = c.SaveUploadedFile(file, "./my2.jpg")
-		tt.EqualNil(err)
-		c.String(200, "上传成功")
+		if err == nil {
+			err = c.SaveUploadedFile(file, "./my2.jpg")
+			tt.EqualNil(err)
+			c.String(200, "上传成功")
+		}
 	})
 	r.SetAddr("7878")
 	go func() {
@@ -256,11 +256,15 @@ func TestFile(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	res, err = Post("http://127.0.0.1:7878/upload", f)
+	res, err = Post("http://127.0.0.1:7878/upload", File("my.jpg", "file"))
+	tt.EqualExit(true, err == nil)
+	tt.Equal("上传成功", res.String())
+	zfile.Rmdir("./my2.jpg")
+
+	DisableChunke()
+	res, err = Post("http://127.0.0.1:7878/upload", File("my.jpg", "file"))
 	tt.EqualNil(err)
 	tt.Equal("上传成功", res.String())
-
-	zfile.Rmdir("./my.jpg")
 	zfile.Rmdir("./my2.jpg")
 }
 

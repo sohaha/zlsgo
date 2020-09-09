@@ -17,19 +17,21 @@ func BodyXML(v interface{}) *bodyXml {
 	return &bodyXml{v: v}
 }
 
-func File(patterns ...string) interface{} {
+func File(path string, field ...string) interface{} {
 	var matches []string
-	for _, pattern := range patterns {
-		m, err := filepath.Glob(pattern)
-		if err != nil {
-			return err
-		}
-		matches = append(matches, m...)
+	m, err := filepath.Glob(path)
+	if err != nil {
+		return err
 	}
+	matches = append(matches, m...)
 	if len(matches) == 0 {
 		return ErrNoMatched
 	}
 	uploads := make([]FileUpload, 0)
+	fieldName := "media"
+	if len(field) > 0 {
+		fieldName = field[0]
+	}
 	for _, match := range matches {
 		if s, e := os.Stat(match); e != nil || s.IsDir() {
 			continue
@@ -38,7 +40,7 @@ func File(patterns ...string) interface{} {
 		uploads = append(uploads, FileUpload{
 			File:      file,
 			FileName:  filepath.Base(match),
-			FieldName: "media",
+			FieldName: fieldName,
 		})
 	}
 

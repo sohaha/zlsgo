@@ -1,5 +1,9 @@
 package zhttp
 
+func DisableChunke(enable ...bool) {
+	std.DisableChunke(enable...)
+}
+
 func Get(url string, v ...interface{}) (*Res, error) {
 	return std.Get(url, v...)
 }
