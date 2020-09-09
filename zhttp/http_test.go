@@ -1,6 +1,7 @@
 package zhttp
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -240,7 +241,8 @@ func TestFile(t *testing.T) {
 	r := znet.New()
 	r.POST("/upload", func(c *znet.Context) {
 		file, err := c.FormFile("file")
-		t.Log(err, file)
+		t.Log(err, c.Host(true))
+		t.Log(c.GetPostFormAll())
 		if err == nil {
 			err = c.SaveUploadedFile(file, "./my2.jpg")
 			tt.EqualNil(err)
@@ -252,15 +254,25 @@ func TestFile(t *testing.T) {
 		znet.Run()
 	}()
 
+	std.CheckRedirect()
 	time.Sleep(time.Second)
 
-	res, err = Post("http://127.0.0.1:7878/upload", File("my.jpg", "file"))
+	v := url.Values{
+		"name": []string{"isTest"},
+	}
+	q := Param{"q": "yes"}
+
+	res, err = Post("http://127.0.0.1:7878/upload", UploadProgress(func(current, total int64) {
+		t.Log(current, total)
+	}), Host("http://127.0.0.1:7878"), v, q, File("my.jpg", "file"))
 	tt.EqualExit(true, err == nil)
 	tt.Equal("上传成功", res.String())
 	zfile.Rmdir("./my2.jpg")
 
 	DisableChunke()
-	res, err = Post("http://127.0.0.1:7878/upload", File("my.jpg", "file"))
+	res, err = Post("http://127.0.0.1:7878/upload", UploadProgress(func(current, total int64) {
+		t.Log(current, total)
+	}), v, q, context.Background(), File("my.jpg", "file"))
 	tt.EqualNil(err)
 	tt.Equal("上传成功", res.String())
 	zfile.Rmdir("./my2.jpg")
@@ -278,6 +290,7 @@ func TestRandomUserAgent(T *testing.T) {
 
 func TestGetCode(t *testing.T) {
 	tt := zls.NewTest(t)
+	EnableInsecureTLS(true)
 	r, _ := Get("https://xxxaaa--xxx.jsdelivr.net/")
 	tt.EqualExit(0, r.StatusCode())
 	t.Log(r.Dump())

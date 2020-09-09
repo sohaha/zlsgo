@@ -12,7 +12,6 @@ import (
 )
 
 func completionPath(path, prefix string) string {
-
 	if path != "" {
 		tmp := zstring.Buffer()
 		// prefixHasSuffix := strings.HasSuffix(prefix, "/")

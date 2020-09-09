@@ -1,10 +1,3 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-10 17:05:54
- * @Last Modified by:   seekwe
- * @Last Modified time: 2020-03-06 19:07:15
- */
-
 package znet
 
 import (
