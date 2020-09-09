@@ -35,6 +35,13 @@ func (r *Res) Response() *http.Response {
 	return r.resp
 }
 
+func (r *Res) StatusCode() int {
+	if r == nil || r.resp == nil {
+		return 0
+	}
+	return r.resp.StatusCode
+}
+
 func (r *Res) GetCookie() map[string]*http.Cookie {
 	cookiesRaw := r.Response().Cookies()
 	cookies := make(map[string]*http.Cookie, len(cookiesRaw))
@@ -53,7 +60,7 @@ func (r *Res) Bytes() []byte {
 }
 
 func (r *Res) ToBytes() ([]byte, error) {
-	if r.err != nil {
+	if r.err != nil || r.resp == nil {
 		return nil, r.err
 	}
 	if r.responseBody != nil {

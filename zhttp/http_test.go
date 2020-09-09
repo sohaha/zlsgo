@@ -137,9 +137,7 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 	curl := ts.URL
 	switch method {
 	case "Get":
-		std.debug = true
 		res, err = Get(curl, param...)
-		std.debug = false
 	case "Post":
 		res, err = Post(curl, param...)
 	case "Put":
@@ -165,7 +163,7 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 
 func TestRes(t *testing.T) {
 	tt := zls.NewTest(t)
-	u := "https://bing.com"
+	u := "https://cdn.jsdelivr.net/"
 	// res, err := Get("https://www.npmjs.com/package/zls-vue-spa/")
 	res, err := Get(u)
 	t.Log(u, err)
@@ -276,4 +274,11 @@ func TestRandomUserAgent(T *testing.T) {
 	SetUserAgent(func() string {
 		return ""
 	})
+}
+
+func TestGetCode(t *testing.T) {
+	tt := zls.NewTest(t)
+	r, _ := Get("https://xxxaaa--xxx.jsdelivr.net/")
+	tt.EqualExit(0, r.StatusCode())
+	t.Log(r.Dump())
 }

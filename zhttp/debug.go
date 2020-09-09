@@ -174,7 +174,7 @@ func (r *Res) dumpReqHead(dump *dumpBuffer) {
 func (r *Res) dumpResonse(dump *dumpBuffer) {
 	head := r.r.flag&BitRespHead != 0
 	body := r.r.flag&BitRespBody != 0
-	if head {
+	if head && r.resp != nil {
 		responseBodyDump, err := httputil.DumpResponse(r.resp, false)
 		if err != nil {
 			dump.WriteString(err.Error())

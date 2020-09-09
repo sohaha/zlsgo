@@ -260,7 +260,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			req = req.WithContext(vv)
 			resp.req = req
 		case error:
-			return nil, vv
+			return resp, vv
 		}
 	}
 
@@ -310,10 +310,10 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			rawurl = rawurl + "&" + paramStr
 		}
 	}
-
-	u, err := url.Parse(rawurl)
+	var u *url.URL
+	u, err = url.Parse(rawurl)
 	if err != nil {
-		return nil, err
+		return
 	}
 	req.URL = u
 
@@ -341,7 +341,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	for _, fn := range lastFunc {
@@ -351,9 +351,10 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	resp.resp = response
 
 	if _, ok := resp.client.Transport.(*http.Transport); ok && response.Header.Get("Content-Encoding") == "gzip" && req.Header.Get("Accept-Encoding") != "" {
-		body, err := gzip.NewReader(response.Body)
+		var body *gzip.Reader
+		body, err = gzip.NewReader(response.Body)
 		if err != nil {
-			return nil, err
+			return
 		}
 		response.Body = body
 	}

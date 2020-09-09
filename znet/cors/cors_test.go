@@ -56,11 +56,9 @@ func TestDefault(t *testing.T) {
 	tt.Equal(http.StatusForbidden, w.Code)
 	tt.Equal(0, w.Body.Len())
 
-
-
 	r.Any("/cors3", func(c *znet.Context) {
 		c.String(200, zstring.Rand(10, "abc"))
-	}, cors.New(&cors.Config{Domains: []string{"*://?q.com"},CustomHandler: func(conf *cors.Config, c *znet.Context) {
+	}, cors.New(&cors.Config{Domains: []string{"*://?q.com"}, CustomHandler: func(conf *cors.Config, c *znet.Context) {
 		c.Log.Debug(conf.Headers)
 	}}))
 	w = httptest.NewRecorder()
@@ -70,6 +68,5 @@ func TestDefault(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal(http.StatusForbidden, w.Code)
 	tt.Equal(0, w.Body.Len())
-
 
 }
