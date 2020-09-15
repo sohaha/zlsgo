@@ -52,15 +52,15 @@ func FileSize(file string) (size string) {
 	file = RealPath(file)
 	fileInfo, err := os.Stat(file)
 	if err != nil {
-		size = FileSizeFormat(0)
+		size = SizeFormat(0)
 	} else {
-		size = FileSizeFormat(uint64(fileInfo.Size()))
+		size = SizeFormat(uint64(fileInfo.Size()))
 	}
 	return
 }
 
-// FileSizeFormat Format file size
-func FileSizeFormat(s uint64) string {
+// SizeFormat Format file size
+func SizeFormat(s uint64) string {
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	humanateBytes := func(s uint64, base float64, sizes []string) string {
 		if s < 10 {

@@ -97,17 +97,6 @@ type (
 	}
 )
 
-func (h Header) Clone() Header {
-	if h == nil {
-		return nil
-	}
-	hh := Header{}
-	for k, v := range h {
-		hh[k] = v
-	}
-	return hh
-}
-
 var (
 	std = New()
 	// regNewline = regexp.MustCompile(`[\n\r]`)

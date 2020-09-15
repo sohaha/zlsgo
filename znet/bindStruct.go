@@ -47,17 +47,20 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		}
 		// valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
 		if BindStructDelimiter != "" {
-			path = zstring.CamelCaseToSnakeCase(path, BindStructDelimiter) + BindStructSuffix
+			path = zstring.CamelCaseToSnakeCase(path, BindStructDelimiter)
 		}
 		if path == "" {
 			path = "/"
 		}
+
 		if key != "" {
 			if strings.HasSuffix(path, "/") {
 				path += ":" + key
 			} else {
 				path += "/:" + key
 			}
+		} else if path != "/" && BindStructSuffix != "" {
+			path = path + BindStructSuffix
 		}
 		if method == "ANY" {
 			g.Any(path, fn)

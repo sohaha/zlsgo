@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sohaha/zlsgo/zenv"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
+	"github.com/sohaha/zlsgo/zutil"
 	"github.com/sohaha/zlsgo/zutil/daemon"
 )
 
@@ -160,7 +160,7 @@ func argsIsHelp(args []string) {
 
 func CheckErr(err error, exit ...bool) {
 	if serviceErr == daemon.ErrNoServiceSystemDetected {
-		err = fmt.Errorf("%s does not support process daemon\n", zenv.GetOs())
+		err = fmt.Errorf("%s does not support process daemon\n", zutil.GetOs())
 		exit = []bool{true}
 	}
 	if err != nil {

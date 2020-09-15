@@ -55,19 +55,34 @@ func (t *testController) No(_ *Context) {
 
 }
 
+func (t *testController) IDGet(_ *Context) {
+
+}
+
+func (t *testController) IDGetUser(_ *Context) {
+
+}
+
+func (t *testController) FullGetFile(_ *Context) {
+
+}
+
 func TestBindStruct(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
 	prefix := "/test"
 	err := r.BindStruct(prefix, &testController{}, func(c *Context) {
 		t.Log("go", c.Request.URL)
+		t.Log(c.GetAllParam())
 		c.Next()
 	})
 	t.Log(err)
 	tt.EqualNil(err)
+	BindStructDelimiter = ""
 	BindStructSuffix = ".go"
 	err = r.BindStruct(prefix, &testController{}, func(c *Context) {
 		t.Log("go", c.Request.URL)
+		t.Log(c.GetAllParam())
 		c.Next()
 	})
 	tt.Log(err)
@@ -81,6 +96,11 @@ func TestBindStruct(t *testing.T) {
 		{"DELETE", prefix + "/user-info"},
 		{"PATCH", prefix + "/user-info"},
 		{"OPTIONS", prefix + "/user-info"},
+		{"POST", prefix + "/UserInfo.go"},
+		{"GET", prefix + "/user/233"},
+		{"GET", prefix + "/User/233"},
+		{"GET", prefix + "/File/File233"},
+		{"GET", prefix + "/file/File233"},
 	}
 	for _, v := range methods {
 		w := httptest.NewRecorder()

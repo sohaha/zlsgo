@@ -1,4 +1,4 @@
-package zenv
+package zutil
 
 import (
 	"os"

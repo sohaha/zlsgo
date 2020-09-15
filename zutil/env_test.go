@@ -1,26 +1,27 @@
-package zenv
+package zutil_test
 
 import (
 	"runtime"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestOs(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	osName := runtime.GOOS
 	t.Log(osName)
-	isWin := IsWin()
+	isWin := zutil.IsWin()
 	t.Log("isWin", isWin)
-	isLinux := IsLinux()
+	isLinux := zutil.IsLinux()
 	t.Log("isLinux", isLinux)
-	isMac := IsMac()
+	isMac := zutil.IsMac()
 	t.Log("isMac", isMac)
 }
 func TestEnv(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	t.Log(Getenv("HOME"))
-	t.Log(Getenv("myos"))
-	t.Log(Getenv("我不存在", "66"))
+	t.Log(zutil.Getenv("HOME"))
+	t.Log(zutil.Getenv("myos"))
+	t.Log(zutil.Getenv("我不存在", "66"))
 }

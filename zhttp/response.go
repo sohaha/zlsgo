@@ -32,6 +32,7 @@ func (r *Res) Request() *http.Request {
 }
 
 func (r *Res) Response() *http.Response {
+
 	return r.resp
 }
 
@@ -39,6 +40,7 @@ func (r *Res) StatusCode() int {
 	if r == nil || r.resp == nil {
 		return 0
 	}
+	_, _ = r.ToBytes()
 	return r.resp.StatusCode
 }
 
