@@ -2,7 +2,10 @@ package zpool
 
 import (
 	"errors"
+	"fmt"
 	"sync"
+
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -16,12 +19,14 @@ type (
 		workerSum      uint
 		workesAliveNum uint
 		maxWorkerSum   uint
+		panicFunc      PanicFunc
 	}
 	worker struct {
 		jobQueue  chan Task
 		stop      chan struct{}
 		Parameter chan []interface{}
 	}
+	PanicFunc func(err error)
 )
 
 var (
@@ -61,6 +66,11 @@ func (wp *workPool) Do(fn Task) error {
 	return wp.do(fn, nil)
 }
 
+// Do Add to the workpool and implement
+func (wp *workPool) PanicFunc(handler PanicFunc) {
+	wp.panicFunc = handler
+}
+
 func (wp *workPool) do(fn Task, param []interface{}) error {
 	if wp.IsClosed() {
 		return ErrPoolClosed
@@ -93,7 +103,7 @@ func (wp *workPool) do(fn Task, param []interface{}) error {
 			wp.workesAliveNum++
 			wp.mux.Unlock()
 			w := wp.workers.Get().(*worker)
-			w.createGoroutines(wp.workerQueue)
+			w.createGoroutines(wp.workerQueue, wp.panicFunc)
 			run(w)
 		default:
 			wp.mux.Unlock()
@@ -165,7 +175,7 @@ func (wp *workPool) AdjustSize(workSize int) {
 		for wp.workesAliveNum < wp.workerSum {
 			wp.workesAliveNum++
 			w := wp.workers.Get().(*worker)
-			w.createGoroutines(wp.workerQueue)
+			w.createGoroutines(wp.workerQueue, wp.panicFunc)
 			wp.workerQueue <- w
 		}
 	}
@@ -185,20 +195,35 @@ func (wp *workPool) PreInit() error {
 	for wp.workesAliveNum < wp.workerSum {
 		wp.workesAliveNum++
 		w := wp.workers.Get().(*worker)
-		w.createGoroutines(wp.workerQueue)
+		w.createGoroutines(wp.workerQueue, wp.panicFunc)
 		wp.workerQueue <- w
 	}
 	wp.mux.Unlock()
 	return nil
 }
 
-func (w *worker) createGoroutines(q chan<- *worker) {
+func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				w.createGoroutines(q, handler)
+				q <- w
+			}
+		}()
 		for {
 			select {
 			case job := <-w.jobQueue:
-				job()
-				q <- w
+				zutil.Try(job, func(err interface{}) {
+					if handler != nil {
+						errMsg, ok := err.(error)
+						if !ok {
+							errMsg = errors.New(fmt.Sprint(err))
+						}
+						handler(errMsg)
+					}
+				}, func() {
+					q <- w
+				})
 			// case parameter := <-w.Parameter:
 			// 	q <- w
 			case <-w.stop:

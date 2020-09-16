@@ -4,22 +4,31 @@ package zutil
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 )
 
-func WithLockContext(fn func()) {
-	var mu sync.Mutex
+func WithLockContext(mu *sync.Mutex,fn func()) {
 	mu.Lock()
 	defer mu.Unlock()
 	fn()
 }
 
-func WithRunTimeContext(closer func(), callback func(time.Duration)) {
+func WithRunTimeContext(handler func(), callback func(time.Duration)) {
 	start := time.Now()
-	closer()
+	handler()
 	timeduration := time.Since(start)
 	callback(timeduration)
+}
+
+func WithRunMemContext(handler func()) uint64 {
+	var mem = runtime.MemStats{}
+	runtime.ReadMemStats(&mem)
+	curMem := mem.TotalAlloc
+	handler()
+	runtime.ReadMemStats(&mem)
+	return mem.TotalAlloc - curMem
 }
 
 // IfVal Simulate ternary calculations, pay attention to handling no variables or indexing problems

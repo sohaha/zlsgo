@@ -4,6 +4,7 @@ go test -race ./zpool -v
 package zpool_test
 
 import (
+	"errors"
 	"runtime"
 	"sync"
 	"testing"
@@ -12,21 +13,7 @@ import (
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zpool"
-)
-
-func memFn(fn func()) uint64 {
-	var mem = runtime.MemStats{}
-	runtime.ReadMemStats(&mem)
-	curMem := mem.TotalAlloc
-	fn()
-	runtime.ReadMemStats(&mem)
-	return mem.TotalAlloc - curMem
-}
-
-const (
-	_   = 1 << (10 * iota)
-	KiB // 1024
-	MiB // 1048576
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestPool(t *testing.T) {
@@ -40,7 +27,7 @@ func TestPool(t *testing.T) {
 		var now time.Time
 		runtime.GC()
 		now = time.Now()
-		curMem = memFn(func() {
+		curMem = zutil.WithRunMemContext(func() {
 			now = time.Now()
 			for i := 0; i < count; i++ {
 				ii := i
@@ -57,7 +44,7 @@ func TestPool(t *testing.T) {
 		runtime.GC()
 		p := zpool.New(workerNum)
 		now = time.Now()
-		curMem = memFn(func() {
+		curMem = zutil.WithRunMemContext(func() {
 			for i := 0; i < count; i++ {
 				ii := i
 				g.Add(1)
@@ -148,4 +135,59 @@ func TestPoolCap(t *testing.T) {
 
 	p.Close()
 	p.Continue(1000)
+}
+
+func TestPoolPanicFunc(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	p := zpool.New(1)
+	defErr := errors.New("test panic")
+	var g sync.WaitGroup
+	p.PanicFunc(func(err error) {
+		g.Done()
+		tt.Equal(err, defErr)
+		t.Log(err)
+	})
+	i := 0
+
+	g.Add(1)
+	_ = p.Do(func() {
+		zutil.CheckErr(defErr)
+		i++
+	})
+	g.Wait()
+	tt.EqualExit(0, i)
+
+	g.Add(1)
+	_ = p.Do(func() {
+		i++
+		zutil.CheckErr(defErr)
+		i++
+	})
+	g.Wait()
+	tt.EqualExit(1, i)
+
+	g.Add(1)
+	_ = p.Do(func() {
+		i++
+		g.Done()
+	})
+
+	g.Wait()
+	tt.EqualExit(2, i)
+
+	p.Pause()
+	p.PanicFunc(func(err error) {
+		t.Log("send again")
+		defer g.Done()
+		panic("send again")
+	})
+	p.Continue()
+	g.Add(1)
+	_ = p.Do(func() {
+		i++
+		zutil.CheckErr(defErr)
+		i++
+	})
+	g.Wait()
+	tt.EqualExit(3, i)
 }

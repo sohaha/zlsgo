@@ -2,25 +2,37 @@ package zutil
 
 import (
 	"errors"
+	"math"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
-func TestWithLockContext(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	now := time.Now().UnixNano()
+func TestWithLockContext(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	now := time.Now()
+	var lock sync.Mutex
+	var g sync.WaitGroup
+	var ii = 1
 	for i := 0; i < 5; i++ {
-		WithLockContext(func() {
+		g.Add(1)
+		go WithLockContext(&lock, func() {
 			time.Sleep(100 * time.Millisecond)
-			newNow := time.Now()
-			el := (newNow.UnixNano() - now) > 1000000
-			t.Log(el)
-			t.Equal(true, el)
-			now = newNow.UnixNano()
+			diffTime := time.Since(now)
+			expect := time.Duration(ii) * 100 * time.Millisecond
+			el := (diffTime) > expect
+			t.Log(diffTime, expect)
+			tt.Equal(true, el)
+			ii++
+			g.Done()
 		})
 	}
+	g.Wait()
 }
 
 func TestWithRunTimeContext(T *testing.T) {
@@ -36,6 +48,30 @@ func TestWithRunTimeContext(T *testing.T) {
 			t.Log(duration.String())
 		})
 	}
+}
+
+func TestWithRunMemContext(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	mem := WithRunMemContext(func() {
+		var b = zstring.Buffer()
+		size := 110000
+		count := math.Ceil(float64(size) / 1000)
+		count64 := int64(count)
+		var i int64
+		var length int
+		for i = 0; i < count64; i++ {
+			if i == (count64 - 1) {
+				length = int(int64(size) - (i)*1000)
+			} else {
+				length = 1000
+			}
+			b.WriteString(strings.Repeat("A", length))
+		}
+		_ = b.String()
+	})
+
+	tt.EqualExit(true, mem > 60000)
+	t.Log(zfile.SizeFormat(mem))
 }
 
 func TestIfVal(T *testing.T) {
