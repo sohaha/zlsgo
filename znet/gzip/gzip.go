@@ -11,7 +11,7 @@ import (
 func Default() znet.HandlerFunc {
 	return New(Config{
 		CompressionLevel: 7,
-		PoolMaxSize:      200,
+		PoolMaxSize:      1024,
 		MinContentLength: 1024,
 	})
 }

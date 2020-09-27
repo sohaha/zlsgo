@@ -200,13 +200,15 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		middleware: e.router.middleware,
 	}
 	engine = &Engine{
-		webMode:            e.webMode,
-		webModeName:        e.webModeName,
-		MaxMultipartMemory: e.MaxMultipartMemory,
-		customMethodType:   e.customMethodType,
-		router:             route,
-		Log:                e.Log,
-		Cache:              e.Cache,
+		webMode:             e.webMode,
+		webModeName:         e.webModeName,
+		MaxMultipartMemory:  e.MaxMultipartMemory,
+		customMethodType:    e.customMethodType,
+		router:              route,
+		Log:                 e.Log,
+		Cache:               e.Cache,
+		BindStructDelimiter: BindStructDelimiter,
+		BindStructSuffix:    BindStructSuffix,
 	}
 	if len(groupHandle) > 0 {
 		groupHandle[0](engine)

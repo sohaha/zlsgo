@@ -78,8 +78,8 @@ func TestBindStruct(t *testing.T) {
 	})
 	t.Log(err)
 	tt.EqualNil(err)
-	BindStructDelimiter = ""
-	BindStructSuffix = ".go"
+	r.BindStructDelimiter = ""
+	r.BindStructSuffix = ".go"
 	err = r.BindStruct(prefix, &testController{}, func(c *Context) {
 		t.Log("go", c.Request.URL)
 		t.Log(c.GetAllParam())

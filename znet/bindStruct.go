@@ -46,8 +46,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 			return fmt.Errorf("Func: [%s] is not an effective routing method\n", m.Name)
 		}
 		// valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
-		if BindStructDelimiter != "" {
-			path = zstring.CamelCaseToSnakeCase(path, BindStructDelimiter)
+		if e.BindStructDelimiter != "" {
+			path = zstring.CamelCaseToSnakeCase(path, e.BindStructDelimiter)
 		}
 		if path == "" {
 			path = "/"
@@ -59,8 +59,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 			} else {
 				path += "/:" + key
 			}
-		} else if path != "/" && BindStructSuffix != "" {
-			path = path + BindStructSuffix
+		} else if path != "/" && e.BindStructSuffix != "" {
+			path = path + e.BindStructSuffix
 		}
 		if method == "ANY" {
 			g.Any(path, fn)

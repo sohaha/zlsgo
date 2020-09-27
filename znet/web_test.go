@@ -93,6 +93,8 @@ func TestWeb(t *testing.T) {
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
 		t.Log("TestWeb")
 		_, _ = c.GetDataRaw()
+		c.SetCookie("testCookie", "yes")
+		c.GetCookie("testCookie")
 		c.String(200, expected)
 	})
 	tt.Equal(200, w.Code)
@@ -484,7 +486,6 @@ func TestWebRouter(T *testing.T) {
 
 	testRouterNotFound(mux, t)
 	testRouterCustomNotFound(mux, t)
-	// testRouterPanicHandler(mux, t)
 	testRouterCustomPanicHandler(mux, t)
 	testRouterGET(mux, t)
 }
@@ -557,9 +558,9 @@ func TestGetInput(T *testing.T) {
 func TestRecovery(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := New()
-	r.Use(Recovery(r, func(c *Context, err error) {
+	r.PanicHandler(func(c *Context, err error) {
 		c.String(200, "ok")
-	}))
+	})
 	r.GET("/", func(c *Context) {
 		panic("xxx")
 	})

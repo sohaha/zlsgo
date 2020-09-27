@@ -39,20 +39,22 @@ type (
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
 		// Log Log
-		Log                *zlog.Logger
-		Cache              *zcache.Table
-		readTimeout        time.Duration
-		writeTimeout       time.Duration
-		webModeName        string
-		webMode            int
-		ShowFavicon        bool
-		MaxMultipartMemory int64
-		BindTag            string
-		customMethodType   string
-		addr               []addrSt
-		router             *router
-		preHandler         func(context *Context) bool
-		pool               sync.Pool
+		Log                 *zlog.Logger
+		Cache               *zcache.Table
+		readTimeout         time.Duration
+		writeTimeout        time.Duration
+		webModeName         string
+		webMode             int
+		ShowFavicon         bool
+		MaxMultipartMemory  int64
+		BindTag             string
+		customMethodType    string
+		addr                []addrSt
+		router              *router
+		preHandler          func(context *Context) bool
+		pool                sync.Pool
+		BindStructDelimiter string
+		BindStructSuffix    string
 	}
 	TlsCfg struct {
 		Cert           string
@@ -145,16 +147,18 @@ func New(serverName ...string) *Engine {
 		trees: make(map[string]*Tree),
 	}
 	r := &Engine{
-		Log:                log,
-		Cache:              Cache,
-		router:             route,
-		readTimeout:        0 * time.Second,
-		writeTimeout:       0 * time.Second,
-		webModeName:        ProdMode,
-		webMode:            prodCode,
-		addr:               []addrSt{defaultAddr},
-		MaxMultipartMemory: defaultMultipartMemory,
-		BindTag:            defaultBindTag,
+		Log:                 log,
+		Cache:               Cache,
+		router:              route,
+		readTimeout:         0 * time.Second,
+		writeTimeout:        0 * time.Second,
+		webModeName:         ProdMode,
+		webMode:             prodCode,
+		addr:                []addrSt{defaultAddr},
+		MaxMultipartMemory:  defaultMultipartMemory,
+		BindTag:             defaultBindTag,
+		BindStructDelimiter: BindStructDelimiter,
+		BindStructSuffix:    BindStructSuffix,
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)

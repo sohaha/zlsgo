@@ -25,7 +25,7 @@ func (c *Context) Bind(obj interface{}) (err error) {
 }
 
 func (c *Context) BindValid(obj interface{}, elements map[string]zvalid.
-	Engine) (
+Engine) (
 	err error) {
 	err = c.bind(obj, func(kind reflect.Kind, field reflect.Value,
 		fieldName, fieldTag string,
@@ -64,6 +64,10 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 		return
 	}
 	vv := v.Elem()
+	if vv.Kind() == reflect.Ptr {
+		err = errors.New("binding pointer values are not supported")
+		return
+	}
 	tag := c.Engine.BindTag
 	err = zutil.ReflectForNumField(vv, func(fieldName, fieldTag string, kind reflect.Kind,
 		field reflect.Value) error {
