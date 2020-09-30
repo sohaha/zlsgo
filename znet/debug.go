@@ -25,11 +25,11 @@ import (
 func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 	mLen := zstring.Len(method)
 	var mtd string
-	min := 7
+	min := 6
 	if mLen < min {
 		mtd = zstring.Pad(method, min, " ", 1)
 	} else {
-		mtd = zstring.Substr(method, 0, min) + "."
+		mtd = zstring.Substr(method, 0, min)
 	}
 
 	switch method {
@@ -43,7 +43,8 @@ func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 		method = log.ColorTextWrap(zlog.ColorRed, mtd)
 	case "Any":
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
-	// case "OPTIONS":
+	case "OPTIONS":
+		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
 	default:
 		method = log.ColorTextWrap(zlog.ColorDefault, mtd)
 	}

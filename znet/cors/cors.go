@@ -43,7 +43,7 @@ func New(conf *Config) znet.HandlerFunc {
 	}
 	conf.credentials = strings.Join(conf.Credentials, ", ")
 	if len(conf.Headers) == 0 {
-		conf.Headers = []string{"X-Requested-With"}
+		conf.Headers = []string{"Origin", "No-Cache", "X-Requested-With", "If-Modified-Since", "Pragma", "Last-Modified", "Cache-Control", "Expires", "Content-Type", "Access-Control-Allow-Origin"}
 	}
 	conf.headers = strings.Join(conf.Headers, ", ")
 	return func(c *znet.Context) {
