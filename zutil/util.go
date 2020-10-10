@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func WithLockContext(mu *sync.Mutex,fn func()) {
+func WithLockContext(mu *sync.Mutex, fn func()) {
 	mu.Lock()
 	defer mu.Unlock()
 	fn()

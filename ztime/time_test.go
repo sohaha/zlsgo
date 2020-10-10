@@ -13,6 +13,7 @@ func TestNewTime(t *testing.T) {
 	nowTime := time.Unix(now, 0)
 
 	tt.Equal(time.Local, GetTimeZone())
+
 	SetTimeZone(0)
 
 	tt.EqualExit("2020-02-04 09:38:19", FormatTimestamp(now, "Y-m-d H:i:s"))
@@ -24,6 +25,9 @@ func TestNewTime(t *testing.T) {
 	tt.EqualExit("2020-02-04T09:38:19+00:00", FormatTimestamp(now, "c"))
 
 	SetTimeZone(8)
+
+	t.Log(GetTimeZone().String())
+
 	currentDate := "2020-02-04 17:38:19"
 	tt.Equal(New(8).FormatTimestamp(now, "Y-m-d H:i:s"), FormatTimestamp(now, "Y-m-d H:i:s"))
 
@@ -46,6 +50,7 @@ func TestNewTime(t *testing.T) {
 	_, _, err = MonthRange(0, 30)
 	tt.Equal(true, err != nil)
 
+	SetTimeZone(0)
 	t.Log(GetTimeZone().String())
 
 	t.Log(Now())

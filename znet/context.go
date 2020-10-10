@@ -12,9 +12,9 @@ import (
 func (c *Context) Host(full ...bool) string {
 	scheme := c.Request.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
-		scheme = "http"
-		if c.Request.TLS != nil {
-			scheme = "https"
+		scheme = "https"
+		if c.Request.TLS == nil {
+			scheme = "http"
 		}
 	}
 	host := c.Request.Host
@@ -87,7 +87,6 @@ func (c *Context) done() {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {
-			// panic(err)
 			c.Log.Error(err)
 		}
 	} else if data.Code != 0 && data.Code != 200 {

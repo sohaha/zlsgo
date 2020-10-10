@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
 )
@@ -45,62 +46,134 @@ func (s *ShellBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
 
-func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer,
-	stdErr io.Writer) (code int, outStr, errStr string, err error) {
-
-	var (
-		status syscall.WaitStatus
-		stdout *ShellBuffer
-		stderr *ShellBuffer
-	)
-
-	if len(command) == 0 {
-		return 1, "", "", errors.New("no such command")
+func ExecCommandHandle(ctx context.Context, command []string, bef func(cmd *exec.Cmd), aft func(cmd *exec.Cmd)) (code int, err error) {
+	var status syscall.WaitStatus
+	if len(command) == 0 || (len(command) == 1 && command[0] == "") {
+		return 1, errors.New("no such command")
 	}
-
-	if Debug {
-		fmt.Println(fmt.Sprintf("[Command]\n%s\n%s",
-			command, strings.Repeat("-", len(command))))
-	}
-	var cmd = exec.CommandContext(ctx, command[0], command[1:]...)
-
+	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
 	if Env == nil {
 		cmd.Env = os.Environ()
 	} else {
 		cmd.Env = Env
 		Env = nil
 	}
-	if Dir != "" {
-		cmd.Dir = Dir
-		Dir = ""
+	if Debug {
+		fmt.Println(fmt.Sprintf("[Command]: %s", strings.Join(command, " ")))
 	}
-	stdout = newShellStdBuffer(stdOut)
-	stderr = newShellStdBuffer(stdErr)
-
-	cmd.Stdout = stdout
-	cmd.Stdin = stdIn
-	cmd.Stderr = stderr
-
+	bef(cmd)
 	err = cmd.Start()
+	isSuccess := false
+	defer func() {
+		if Debug {
+			userTime := time.Duration(0)
+			if cmd != nil && cmd.ProcessState != nil {
+				userTime = cmd.ProcessState.UserTime()
+			}
+			if isSuccess {
+				fmt.Println("[OK]", status.ExitStatus(), " Used Time:", userTime)
+			} else {
+				fmt.Println("[Fail]", status.ExitStatus(), " Used Time:", userTime)
+			}
+		}
+	}()
 	if err != nil {
-		return 1, "", "", err
+		return 1, err
 	}
+	aft(cmd)
 	err = cmd.Wait()
 	status = cmd.ProcessState.Sys().(syscall.WaitStatus)
-	isSuccess := cmd.ProcessState.Success()
-	if Debug {
-		fmt.Println(strings.Repeat("-", len(command)))
-		if isSuccess {
-			fmt.Println("[OK]", status.ExitStatus(), " Used Time:", cmd.ProcessState.UserTime())
+	isSuccess = cmd.ProcessState.Success()
+
+	return status.ExitStatus(), err
+}
+
+type pipeWork struct {
+	cmd *exec.Cmd
+	r   *io.PipeReader
+	w   *io.PipeWriter
+}
+
+func PipeExecCommand(ctx context.Context, commands [][]string) (code int, outStr, errStr string, err error) {
+	defer func() {
+		Dir = ""
+	}()
+	var (
+		cmds   []*pipeWork
+		out    bytes.Buffer
+		outErr bytes.Buffer
+		set    func(r *io.PipeReader)
+	)
+	set = func(r *io.PipeReader) {
+		if len(commands) == 0 {
+			return
+		}
+		command := commands[0]
+		commands = commands[1:]
+		cmd := exec.CommandContext(ctx, command[0], command[1:]...)
+		if Dir != "" {
+			cmd.Dir = Dir
+		}
+		if r != nil {
+			cmd.Stdin = r
+		}
+		p := &pipeWork{
+			cmd: cmd,
+		}
+		if len(commands) == 0 {
+			cmd.Stdout = &out
+			cmd.Stderr = &outErr
 		} else {
-			fmt.Println("[Fail]", status.ExitStatus(), " Used Time:", cmd.ProcessState.UserTime())
+			r2, w2 := io.Pipe()
+			cmd.Stdout = w2
+			p.w = w2
+			set(r2)
+		}
+		cmds = append([]*pipeWork{p}, cmds...)
+	}
+	set(nil)
+
+	for _, v := range cmds {
+		err := v.cmd.Start()
+		if err != nil {
+			return 1, "", "", err
+		}
+	}
+	status := 0
+	for _, v := range cmds {
+		err := v.cmd.Wait()
+		if v.w != nil {
+			_ = v.w.Close()
+		}
+		waitStatus, _ := v.cmd.ProcessState.Sys().(syscall.WaitStatus)
+		status = waitStatus.ExitStatus()
+		if err != nil {
+			return status, "", "", err
 		}
 	}
 
+	return status, out.String(), "", nil
+}
+
+func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer,
+	stdErr io.Writer) (code int, outStr, errStr string, err error) {
+	stdout := newShellStdBuffer(stdOut)
+	stderr := newShellStdBuffer(stdErr)
+	code, err = ExecCommandHandle(ctx, command, func(cmd *exec.Cmd) {
+		cmd.Stdout = stdOut
+		cmd.Stdin = stdIn
+		cmd.Stderr = stdErr
+		if Dir != "" {
+			cmd.Dir = Dir
+			Dir = ""
+		}
+	}, func(cmd *exec.Cmd) {})
+	if err != nil {
+		return code, "", "", err
+	}
 	outStr = stdout.String()
 	errStr = stderr.String()
-
-	return status.ExitStatus(), outStr, errStr, err
+	return
 }
 
 func Run(command string) (code int, outStr, errStr string, err error) {
@@ -120,15 +193,14 @@ func BgRun(command string) (err error) {
 	if strings.TrimSpace(command) == "" {
 		return errors.New("no such command")
 	}
-	arr := strings.Split(command, " ")
+	arr := fixCommand(command)
 	cmd := exec.Command(arr[0], arr[1:]...)
 	err = cmd.Start()
-
 	if Debug {
-		fmt.Println(fmt.Sprintf("[Command]\n%s\n%s",
-			command, strings.Repeat("-", len(command))))
+		fmt.Println(fmt.Sprintf("[Command]: %s",
+			command))
 		if err != nil {
-			fmt.Println("[Error]:", err.Error())
+			fmt.Println("[Fail]", err.Error())
 		}
 	}
 	return err

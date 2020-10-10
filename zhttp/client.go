@@ -56,31 +56,39 @@ func (r *Engine) DisableChunke(enable ...bool) {
 }
 
 func (r *Engine) Get(url string, v ...interface{}) (*Res, error) {
-	return r.Do("GET", url, v...)
+	return r.Do(http.MethodGet, url, v...)
 }
 
 func (r *Engine) Post(url string, v ...interface{}) (*Res, error) {
-	return r.Do("POST", url, v...)
+	return r.Do(http.MethodPost, url, v...)
 }
 
 func (r *Engine) Put(url string, v ...interface{}) (*Res, error) {
-	return r.Do("PUT", url, v...)
+	return r.Do(http.MethodPut, url, v...)
 }
 
 func (r *Engine) Patch(url string, v ...interface{}) (*Res, error) {
-	return r.Do("PATCH", url, v...)
+	return r.Do(http.MethodPatch, url, v...)
 }
 
 func (r *Engine) Delete(url string, v ...interface{}) (*Res, error) {
-	return r.Do("DELETE", url, v...)
+	return r.Do(http.MethodDelete, url, v...)
 }
 
 func (r *Engine) Head(url string, v ...interface{}) (*Res, error) {
-	return r.Do("HEAD", url, v...)
+	return r.Do(http.MethodHead, url, v...)
 }
 
 func (r *Engine) Options(url string, v ...interface{}) (*Res, error) {
-	return r.Do("OPTIONS", url, v...)
+	return r.Do(http.MethodOptions, url, v...)
+}
+
+func (r *Engine) Trace(url string, v ...interface{}) (*Res, error) {
+	return r.Do(http.MethodTrace, url, v...)
+}
+
+func (r *Engine) Connect(url string, v ...interface{}) (*Res, error) {
+	return r.Do(http.MethodConnect, url, v...)
 }
 
 func (r *Engine) EnableInsecureTLS(enable bool) {

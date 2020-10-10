@@ -102,6 +102,75 @@ func TestWeb(t *testing.T) {
 	r.GetMiddleware()
 }
 
+func TestMoreMethod(t *testing.T) {
+	var w *httptest.ResponseRecorder
+	var req *http.Request
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	g := r.Group("/TestMore")
+	h := func(v string) func(c *Context) {
+		return func(c *Context) {
+			t.Log(c.Request.Method)
+			c.String(200, v)
+		}
+	}
+
+	g.CONNECT("/", h("CONNECT"))
+	g.OPTIONS("/", h("OPTIONS"))
+	g.DELETE("/", h("DELETE"))
+	g.TRACE("/", h("TRACE"))
+	g.POST("/", h("POST"))
+	g.PUT("/", h("PUT"))
+
+	for _, v := range []string{"CONNECT", "TRACE", "PUT", "DELETE", "POST", "OPTIONS"} {
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(v, "/TestMore/", nil)
+		req.Host = host
+		r.ServeHTTP(w, req)
+		tt.Equal(200, w.Code)
+		tt.Equal(v, w.Body.String())
+	}
+}
+
+func TestGroup(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	g := r.Group("")
+	g.GET("isGroup", func(c *Context) {
+		c.String(200, "isGroup")
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/isGroup", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("isGroup", w.Body.String())
+
+	r = newServer()
+	g = r.Group("/")
+	g.GET("isGroup2", func(c *Context) {
+		c.String(200, "isGroup2")
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/isGroup2", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("isGroup2", w.Body.String())
+
+	r = newServer()
+	g = r.Group("y")
+	g.GET("isGroup3", func(c *Context) {
+		c.String(200, "isGroup3")
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/y/isGroup3", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("isGroup3", w.Body.String())
+}
+
 func TestGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
@@ -155,6 +224,7 @@ func TestGet(t *testing.T) {
 	tt.Equal(200, w.Code)
 	tt.Equal("/", w.Body.String())
 }
+
 func TestFile(tt *testing.T) {
 	T := zlsgo.NewTest(tt)
 	r := newServer()
@@ -351,6 +421,63 @@ func TestTemplate(t *testing.T) {
 	})
 	tt.Equal(202, w.Code)
 	tt.EqualExit(`<html><title>ZlsGo</title><body>This is body</body></html>`, w.Body.String())
+}
+
+func TestBind(t *testing.T) {
+	type AppInfo struct {
+		Label   string `json:"label"`
+		Id      string `json:"id"`
+		Appid   string `json:"appid"`
+		HeadImg string `json:"head_img"`
+	}
+
+	type Articles struct {
+		Author             string `json:"author"`
+		Content            string `json:"content"`
+		Content_source_url string `json:"content_source_url"`
+		Digest             string `json:"digest"`
+		NeedOpenComment    string `json:"need_open_comment"`
+		OnlyFansCanComment string `json:"only_fans_can_comment"`
+		ShowCoverPic       string `json:"show_cover_pic"`
+		ThumbMediaId       string `json:"thumb_media_id"`
+		ThumbUrl           string `json:"thumb_url"`
+		Title              string `json:"title"`
+		Url                string `json:"url"`
+	}
+
+	type AddManyReqData struct {
+		Appid    string     `json:"appid"`
+		Appids   []AppInfo  `json:"appids"`
+		Articles []Articles `json:"articles"`
+	}
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	w := newRequest(r, "POST", []string{"/TestBind",
+		`{"appid":"Aid","appids":[{"label":"isLabel","id":"333"}]}`, ContentTypeJSON}, "/TestBind", func(c *Context) {
+		// var appids []AppInfo
+		// var data AddManyReqData
+		// // err := c.Bind(&data)
+		// _ = c.Bind(&appids)
+		//
+		// c.Log.Dump(data,appids)
+		// c.Log.Dump(c.GetDataRaw())
+		// c.Log.Debug(c.GetJSON("appid"))
+		json, _ := c.GetJSONs()
+		var appids []AppInfo
+		json.Get("appids").ForEach(func(key, value zjson.Res) bool {
+			appinfo := AppInfo{}
+			err := value.Unmarshal(&appinfo)
+			if err != nil {
+				c.Log.Error(err)
+				return false
+			}
+			appids = append(appids, appinfo)
+			return true
+		})
+		c.String(200, expected)
+	})
+	tt.EqualExit(200, w.Code)
+	tt.EqualExit(expected, w.Body.String())
 }
 
 func TestShouldBind(T *testing.T) {
@@ -557,7 +684,7 @@ func TestGetInput(T *testing.T) {
 
 func TestRecovery(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	r := New()
+	r := New("TestRecovery")
 	r.PanicHandler(func(c *Context, err error) {
 		c.String(200, "ok")
 	})
@@ -569,4 +696,26 @@ func TestRecovery(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal("ok", w.Body.String())
 	tt.Equal(200, w.Code)
+}
+
+func TestMethodAndName(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := New("TestMethodAndName")
+	r.SetMode(DebugMode)
+	g := r.Group("/TestMethodAndName")
+	h := func(s string) func(c *Context) {
+		return func(c *Context) {
+			c.String(200, c.GetParam("id"))
+		}
+	}
+	id := "456"
+	g.GETAndName("/:id", h("ok"), "isGet")
+	u, _ := r.GenerateURL("GET", "isGet", map[string]string{"id": id})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", u, nil)
+	r.ServeHTTP(w, req)
+	tt.Equal(id, w.Body.String())
+	t.Log(u)
+
+	t.Log(r.GenerateURL(http.MethodPost, "non existent", nil))
 }

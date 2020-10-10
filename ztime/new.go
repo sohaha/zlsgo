@@ -42,6 +42,13 @@ var (
 		'c': "2006-01-02T15:04:05-07:00",
 		'r': "Mon, 02 Jan 06 15:04 MST",
 	}
+	GetLocationName = func(zone int) string {
+		switch zone {
+		case 8:
+			return "Asia/Shanghai"
+		}
+		return "UTC"
+	}
 )
 
 type TimeEngine struct {
@@ -51,7 +58,7 @@ type TimeEngine struct {
 // Zone eastEightTimeZone
 func Zone(zone ...int) *time.Location {
 	if len(zone) > 0 {
-		return time.FixedZone("zTimeZone", zone[0]*3600)
+		return time.FixedZone(GetLocationName(zone[0]), zone[0]*3600)
 	}
 	return time.Local
 }

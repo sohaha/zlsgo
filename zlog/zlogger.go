@@ -45,14 +45,14 @@ const (
 )
 
 var Levels = []string{
-	"FATAL",
-	"PANIC",
-	"ERROR",
-	"WARN ",
-	"SUCCE",
-	"INFO ",
-	"DEBUG",
-	"DUMP ",
+	"[FATAL]",
+	"[PANIC]",
+	"[ERROR]",
+	"[WARN] ",
+	"[SUCCE]",
+	"[INFO] ",
+	"[DEBUG]",
+	"[DUMP] ",
 }
 
 var LevelColous = []Color{

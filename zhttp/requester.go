@@ -32,6 +32,14 @@ func Patch(url string, v ...interface{}) (*Res, error) {
 	return std.Patch(url, v...)
 }
 
+func Connect(url string, v ...interface{}) (*Res, error) {
+	return std.Connect(url, v...)
+}
+
+func Trace(url string, v ...interface{}) (*Res, error) {
+	return std.Trace(url, v...)
+}
+
 func Do(method, url string, v ...interface{}) (*Res, error) {
 	return std.Do(method, url, v...)
 }

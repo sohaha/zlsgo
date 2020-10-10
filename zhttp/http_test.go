@@ -123,7 +123,7 @@ func TestGetMethod(tt *testing.T) {
 }
 
 func forMethod(t *zls.TestUtil) {
-	values := [...]string{"Get", "Put", "Head", "Options", "Delete", "Patch"}
+	values := [...]string{"Get", "Put", "Head", "Options", "Delete", "Patch", "Trace", "Connect"}
 	for _, v := range values {
 		_, err := newMethod(v, func(_ http.ResponseWriter, _ *http.Request) {
 		})
@@ -151,6 +151,10 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 		res, err = Delete(curl, param...)
 	case "Patch":
 		res, err = Patch(curl, param...)
+	case "Connect":
+		res, err = Connect(curl, param...)
+	case "Trace":
+		res, err = Trace(curl, param...)
 	default:
 		method = strings.Title(method)
 		res, err = Do(method, curl, param...)
@@ -158,7 +162,6 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 			fmt.Println(res.Dump())
 		}
 	}
-
 	return
 }
 

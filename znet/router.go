@@ -41,6 +41,8 @@ var (
 		http.MethodPatch:   {},
 		http.MethodHead:    {},
 		http.MethodOptions: {},
+		http.MethodConnect: {},
+		http.MethodTrace:   {},
 	}
 )
 
@@ -108,6 +110,8 @@ func (e *Engine) Any(path string, handle HandlerFunc, moreHandler ...HandlerFunc
 	e.PATCH(path, handle, moreHandler...)
 	e.HEAD(path, handle, moreHandler...)
 	e.OPTIONS(path, handle, moreHandler...)
+	e.CONNECT(path, handle, moreHandler...)
+	e.TRACE(path, handle, moreHandler...)
 	log()
 }
 
@@ -142,6 +146,14 @@ func (e *Engine) HEAD(path string, handle HandlerFunc, moreHandler ...HandlerFun
 
 func (e *Engine) OPTIONS(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
 	e.Handle(http.MethodOptions, path, handle, moreHandler...)
+}
+
+func (e *Engine) CONNECT(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
+	e.Handle(http.MethodConnect, path, handle, moreHandler...)
+}
+
+func (e *Engine) TRACE(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
+	e.Handle(http.MethodTrace, path, handle, moreHandler...)
 }
 
 func (e *Engine) GETAndName(path string, handle HandlerFunc, routeName string) {
@@ -184,6 +196,18 @@ func (e *Engine) OPTIONSAndName(path string, handle HandlerFunc, routeName strin
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	e.OPTIONS(path, handle)
+}
+
+func (e *Engine) CONNECTAndName(path string, handle HandlerFunc, routeName string) {
+	e.router.parameters.routeName = routeName
+	defer func() { e.router.parameters.routeName = "" }()
+	e.CONNECT(path, handle)
+}
+
+func (e *Engine) TRACEAndName(path string, handle HandlerFunc, routeName string) {
+	e.router.parameters.routeName = routeName
+	defer func() { e.router.parameters.routeName = "" }()
+	e.TRACE(path, handle)
 }
 
 func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *Engine) {
@@ -368,7 +392,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
 
 	nodes := e.router.trees[req.Method].Find(requestURL, false)
-	p := requestURL[1:]
+	p := requestURL
+	if len(p) > 0 {
+		p = requestURL[1:]
+	}
 	if len(nodes) > 0 {
 		node := nodes[0]
 		if node.handle != nil {

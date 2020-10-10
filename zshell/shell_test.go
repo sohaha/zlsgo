@@ -1,15 +1,39 @@
 package zshell
 
 import (
+	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
 )
 
-func Test_bash(T *testing.T) {
+func TestPipe(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	ctx := context.Background()
+	commands := [][]string{
+		{"ls", "-a"},
+		{"grep", "go"},
+		{"grep", "shell_notwin"},
+	}
+
+	code, outStr, errStr, err := PipeExecCommand(ctx, commands)
+	t.Log(outStr, errStr, err)
+	tt.EqualExit(0, code)
+	tt.EqualExit("shell_notwin.go", strings.Trim(outStr, " \n"))
+
+	Dir = "../"
+	code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{{"ls"}})
+	t.Log(outStr, errStr, err)
+
+	code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{})
+	t.Log(outStr, errStr, err)
+}
+
+func TestBash(t *testing.T) {
 	Debug = true
-	t := zlsgo.NewTest(T)
+	tt := zlsgo.NewTest(t)
 
 	var res string
 	var errRes string
@@ -17,37 +41,27 @@ func Test_bash(T *testing.T) {
 	var err error
 
 	code, res, errRes, err = Run("")
-	t.EqualExit(1, code)
-	t.EqualExit(true, err != nil)
+	tt.EqualExit(1, code)
+	tt.EqualExit(true, err != nil)
 	t.Log(res, errRes)
 
 	code, _, _, err = Run("lll")
-	t.EqualExit(1, code)
-	t.EqualExit(true, err != nil)
+	tt.EqualExit(1, code)
+	tt.EqualExit(true, err != nil)
 	t.Log(err)
 
 	code, _, _, err = Run("ls")
-	t.EqualExit(0, code)
-	t.EqualExit(true, err == nil)
+	tt.EqualExit(0, code)
+	tt.EqualExit(true, err == nil)
 	t.Log(err)
-
-	code, _, _, err = Run("curl b.c")
-	t.Log(err)
-	t.EqualExit(6, code)
-	t.EqualExit(true, err != nil)
-
-	code, _, _, err = Run("curl qq.com")
-	t.Log(err)
-	t.EqualExit(0, code)
-	t.EqualExit(true, err == nil)
 
 	_, res, _, err = Run("ls -a /Applications/Google\\ Chrome.app")
 	t.Log(res)
 
 	err = BgRun("")
-	t.EqualExit(true, err != nil)
+	tt.EqualExit(true, err != nil)
 	err = BgRun("lll")
-	t.EqualExit(true, err != nil)
+	tt.EqualExit(true, err != nil)
 	t.Log(err)
 
 	Dir = "."
