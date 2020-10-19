@@ -46,7 +46,9 @@ func (s *ShellBuffer) String() string {
 	return zstring.Bytes2String(s.buf.Bytes())
 }
 
-func ExecCommandHandle(ctx context.Context, command []string, bef func(cmd *exec.Cmd), aft func(cmd *exec.Cmd)) (code int, err error) {
+func ExecCommandHandle(ctx context.Context, command []string,
+	bef func(cmd *exec.Cmd), aft func(cmd *exec.Cmd, err error)) (code int,
+	err error) {
 	var status syscall.WaitStatus
 	if len(command) == 0 || (len(command) == 1 && command[0] == "") {
 		return 1, errors.New("no such command")
@@ -77,10 +79,10 @@ func ExecCommandHandle(ctx context.Context, command []string, bef func(cmd *exec
 			}
 		}
 	}()
+	aft(cmd, err)
 	if err != nil {
 		return 1, err
 	}
-	aft(cmd)
 	err = cmd.Wait()
 	status = cmd.ProcessState.Sys().(syscall.WaitStatus)
 	isSuccess = cmd.ProcessState.Success()
@@ -160,17 +162,15 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 	stdout := newShellStdBuffer(stdOut)
 	stderr := newShellStdBuffer(stdErr)
 	code, err = ExecCommandHandle(ctx, command, func(cmd *exec.Cmd) {
-		cmd.Stdout = stdOut
+		cmd.Stdout = stdout
 		cmd.Stdin = stdIn
-		cmd.Stderr = stdErr
+		cmd.Stderr = stderr
 		if Dir != "" {
 			cmd.Dir = Dir
 			Dir = ""
 		}
-	}, func(cmd *exec.Cmd) {})
-	if err != nil {
-		return code, "", "", err
-	}
+	}, func(cmd *exec.Cmd, err error) {
+	})
 	outStr = stdout.String()
 	errStr = stderr.String()
 	return
@@ -203,6 +203,9 @@ func BgRun(command string) (err error) {
 			fmt.Println("[Fail]", err.Error())
 		}
 	}
+	go func() {
+		_ = cmd.Wait()
+	}()
 	return err
 }
 
