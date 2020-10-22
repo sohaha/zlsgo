@@ -27,7 +27,7 @@ type (
 		stopHandle    bool
 		middleware    []HandlerFunc
 		customizeData map[string]interface{}
-		header        map[string]string
+		header        map[string][]string
 		render        render
 		Writer        http.ResponseWriter
 		Request       *http.Request

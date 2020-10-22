@@ -72,7 +72,7 @@ func (c *Context) SetHeader(key, value string) {
 	if value == "" {
 		delete(c.header, key)
 	} else {
-		c.header[key] = value
+		c.header[key] = append(c.header[key], value)
 	}
 	c.Unlock()
 }
@@ -81,7 +81,14 @@ func (c *Context) done() {
 	data := c.PrevContent()
 	r := c.render
 	for key, value := range c.header {
-		c.Writer.Header().Set(key, value)
+		for i := range value {
+			header := value[i]
+			if i == 0 {
+				c.Writer.Header().Set(key, header)
+			} else {
+				c.Writer.Header().Add(key, header)
+			}
+		}
 	}
 	if r != nil {
 		c.Writer.WriteHeader(data.Code)

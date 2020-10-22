@@ -179,7 +179,7 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		Cache:         Cache,
 		Code:          http.StatusOK,
 		startTime:     time.Time{},
-		header:        map[string]string{},
+		header:        map[string][]string{},
 		customizeData: map[string]interface{}{},
 	}
 }
@@ -193,7 +193,7 @@ func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
 	c.stopHandle = false
 	c.middleware = []HandlerFunc{}[:0]
 	c.customizeData = map[string]interface{}{}
-	c.header = map[string]string{}
+	c.header = map[string][]string{}
 	c.render = nil
 	c.rawData = c.rawData[:0]
 	c.Unlock()

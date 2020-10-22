@@ -268,12 +268,12 @@ func (c *Context) PrevContent() *PrevData {
 	c.RLock()
 	ctype, hasType := c.header["Content-Type"]
 	if !hasType {
-		ctype = ContentTypePlain
+		ctype = []string{ContentTypePlain}
 	}
 	c.RUnlock()
 	return &PrevData{
 		Code:    code,
-		Type:    ctype,
+		Type:    ctype[0],
 		Content: content,
 	}
 }

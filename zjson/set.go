@@ -366,7 +366,7 @@ func isOptimisticPath(path string) bool {
 }
 
 func Marshal(json interface{}) ([]byte, error) {
-	return SetBytes([]byte{}, "", json)
+	return jsong.Marshal(json)
 }
 
 func Set(json, path string, value interface{}) (string, error) {
