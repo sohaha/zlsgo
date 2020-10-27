@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
@@ -19,6 +20,7 @@ func BodyXML(v interface{}) *bodyXml {
 
 func File(path string, field ...string) interface{} {
 	var matches []string
+	path = zfile.RealPath(path)
 	m, err := filepath.Glob(path)
 	if err != nil {
 		return err

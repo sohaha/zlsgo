@@ -238,10 +238,10 @@ func TestFile(t *testing.T) {
 	res, err := Get("https://cdn.jsdelivr.net/gh/sohaha/uniapp-template/src/static/my.jpg", downloadProgress)
 	tt.EqualNil(err)
 	if err == nil {
-		err = res.ToFile("./my.jpg")
+		err = res.ToFile(`../zhttp\test\my.jpg`)
 		tt.EqualNil(err)
 	}
-	defer zfile.Rmdir("./my.jpg")
+	defer zfile.Rmdir("./test/")
 	r := znet.New()
 	r.POST("/upload", func(c *znet.Context) {
 		file, err := c.FormFile("file")
@@ -272,7 +272,7 @@ func TestFile(t *testing.T) {
 	}
 	res, err = Post("http://127.0.0.1:7878/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), Host("http://127.0.0.1:7878"), v, q, File("my.jpg", "file"))
+	}), Host("http://127.0.0.1:7878"), v, q, File("test\\my.jpg", "file"))
 	if err != nil {
 		tt.EqualNil(err)
 		return
@@ -283,7 +283,7 @@ func TestFile(t *testing.T) {
 	DisableChunke()
 	res, err = Post("http://127.0.0.1:7878/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), v, q, context.Background(), File("my.jpg", "file"))
+	}), v, q, context.Background(), File("./test//my.jpg", "file"))
 	tt.EqualNil(err)
 	tt.Equal("上传成功", res.String())
 	zfile.Rmdir("./my2.jpg")

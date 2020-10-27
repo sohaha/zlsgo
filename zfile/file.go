@@ -103,7 +103,8 @@ func RealPath(path string, addSlash ...bool) (realPath string) {
 		path = ProjectPath + "/" + path
 	}
 	realPath, _ = filepath.Abs(path)
-	realPath = pathAddSlash(filepath.ToSlash(realPath), addSlash...)
+	realPath = strings.Replace(realPath, "\\", "/", -1)
+	realPath = pathAddSlash(realPath, addSlash...)
 
 	return
 }

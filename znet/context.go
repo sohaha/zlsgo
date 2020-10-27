@@ -90,6 +90,9 @@ func (c *Context) done() {
 			}
 		}
 	}
+	if data.Code == 0 {
+		data.Code = http.StatusInternalServerError
+	}
 	if r != nil {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)

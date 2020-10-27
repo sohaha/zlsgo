@@ -124,19 +124,19 @@ func (r *Res) ToXML(v interface{}) error {
 }
 
 func (r *Res) ToFile(name string) error {
-	nameSplit := strings.Split(name, "/")
+	nameSplit := strings.Split(zfile.RealPath(name), "/")
 	nameSplitLen := len(nameSplit)
 	if nameSplitLen > 1 {
 		dir := strings.Join(nameSplit[0:nameSplitLen-1], "/")
 		name = zfile.RealPathMkdir(dir) + "/" + nameSplit[nameSplitLen-1]
 	}
+
 	file, err := os.Create(name)
 	if err != nil {
 		return err
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
-
 	if r.responseBody != nil {
 		_, err = file.Write(r.responseBody)
 		return err
