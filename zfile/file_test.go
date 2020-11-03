@@ -2,6 +2,8 @@ package zfile
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -11,6 +13,14 @@ import (
 
 func TestFile(T *testing.T) {
 	t := NewTest(T)
+
+	T.Log("c:" + RealPath("/"+"d"))
+
+	baseDir := "c:\\test"
+	fileName := "isPic"
+	T.Log(filepath.Join(baseDir, fileName))
+	T.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
+	T.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
 
 	filePath := "../doc.go"
 	tIsFile := FileExist(filePath)
@@ -25,6 +35,10 @@ func TestFile(T *testing.T) {
 
 	size = FileSize("../_doc.go")
 	t.Equal("0 B" == size, true)
+
+	RealPath("")
+
+	T.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
 
 	dirPath := RealPathMkdir("../zfile")
 	tIsDir := DirExist(dirPath)
