@@ -25,12 +25,7 @@ type (
 )
 
 func Default() znet.HandlerFunc {
-	conf := &Config{Domains: []string{}}
-	return func(c *znet.Context) {
-		if applyCors(c, conf) {
-			c.Next()
-		}
-	}
+	return New(&Config{})
 }
 
 func New(conf *Config) znet.HandlerFunc {
