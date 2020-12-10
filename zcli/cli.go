@@ -25,7 +25,7 @@ func init() {
 func Add(name, description string, command Cmd) *cmdCont {
 	if name == "" {
 		Log.Error(GetLangText("command_empty"))
-		return nil
+		return &cmdCont{}
 	}
 	cmd := &cmdCont{
 		name:          name,
@@ -34,7 +34,6 @@ func Add(name, description string, command Cmd) *cmdCont {
 		requiredFlags: RequiredFlags{},
 	}
 	cmds[name] = cmd
-
 	cmdsKey = append(cmdsKey, name)
 	return cmd
 }

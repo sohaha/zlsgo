@@ -40,6 +40,7 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err erro
 	return
 }
 
+// Parse Parse
 func Parse(arg ...[]string) {
 	if Version != "" {
 		flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()

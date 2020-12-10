@@ -117,6 +117,7 @@ func (v Engine) valid() Engine {
 	return v
 }
 
+// SetAlias set alias
 func (v Engine) SetAlias(name string) Engine {
 	v.name = name
 	return v

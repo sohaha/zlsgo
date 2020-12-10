@@ -112,6 +112,7 @@ func (*serviceRestart) Run(_ []string) {
 	CheckErr(service.Restart(), true)
 }
 
+// LaunchServiceRun Launch Service and run
 func LaunchServiceRun(name string, description string, fn func(), config ...*daemon.Config) error {
 	_, _ = LaunchService(name, description, fn, config...)
 	Parse()
@@ -125,6 +126,7 @@ func LaunchServiceRun(name string, description string, fn func(), config ...*dae
 	return service.Run()
 }
 
+// LaunchService Launch Service
 func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIfe, error) {
 
 	once.Do(func() {

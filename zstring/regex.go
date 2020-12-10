@@ -20,12 +20,9 @@ var (
 
 func init() {
 	go func() {
-		t := time.Tick(600 * time.Second)
-		for {
-			select {
-			case <-t:
-				clearRegexpCompile()
-			}
+		ticker := time.NewTicker(600 * time.Second)
+		for range ticker.C {
+			clearRegexpCompile()
 		}
 	}()
 }
@@ -87,13 +84,13 @@ func RegexReplaceFunc(pattern string, str string, repl func(string) string) (str
 }
 
 func clearRegexpCompile() {
-	now := time.Now().Unix()
 	newRegexCache := map[string]*regexMapStruct{}
 	l.Lock()
 	defer l.Unlock()
 	if len(regexCache) == 0 {
 		return
 	}
+	now := time.Now().Unix()
 	for k := range regexCache {
 		if uint(now-regexCache[k].Time) <= regexCacheTimeout {
 			newRegexCache[k] = &regexMapStruct{Value: regexCache[k].Value, Time: now}

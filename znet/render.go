@@ -223,6 +223,7 @@ func (c *Context) Abort(code ...int) {
 	if len(code) > 0 {
 		c.SetStatus(code[0])
 	}
+	c.render = nil
 }
 
 // Redirect Redirect

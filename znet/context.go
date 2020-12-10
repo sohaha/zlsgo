@@ -2,6 +2,7 @@ package znet
 
 import (
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"strings"
 
@@ -68,6 +69,7 @@ func (c *Context) GetHeader(key string) string {
 
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
+	key = textproto.CanonicalMIMEHeaderKey(key)
 	c.Lock()
 	if value == "" {
 		delete(c.header, key)
