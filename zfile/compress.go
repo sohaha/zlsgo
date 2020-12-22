@@ -86,15 +86,20 @@ func GzDeCompress(tarFile, dest string) error {
 				return err
 			}
 		}
+		i := hdr.FileInfo()
 		filename := dest + hdr.Name
-		file, err := createFile(filename)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(file, tr)
-		_ = file.Close()
-		if err != nil {
-			return err
+		if i.IsDir() {
+			_ = createDir(filename, i.Mode())
+		} else {
+			file, err := createFile(filename)
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(file, tr)
+			_ = file.Close()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -148,6 +153,10 @@ func ZipDeCompress(zipFile, dest string) error {
 			return err
 		}
 		filename := dest + file.Name
+		if file.FileInfo().IsDir() {
+			_ = createDir(filename, file.FileInfo().Mode())
+			continue
+		}
 		w, err := createFile(filename)
 		if err != nil {
 			_ = rc.Close()
@@ -163,10 +172,17 @@ func ZipDeCompress(zipFile, dest string) error {
 	return nil
 }
 
+func createDir(dir string, perm os.FileMode) error {
+	if perm == 0 {
+		perm = 0755
+	}
+	return os.MkdirAll(dir, perm)
+}
+
 func createFile(name string) (*os.File, error) {
 	dir := string([]rune(name)[0:strings.LastIndex(name, "/")])
 	if !DirExist(dir) {
-		err := os.MkdirAll(dir, 0755)
+		err := createDir(dir, 0)
 		if err != nil {
 			return nil, err
 		}

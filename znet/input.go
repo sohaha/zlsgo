@@ -28,10 +28,12 @@ func (c *Context) GetAllParam() ParamsMapType {
 	return nil
 }
 
+// GetAllQueryst Get All Queryst
 func (c *Context) GetAllQueryst() url.Values {
 	return c.Request.URL.Query()
 }
 
+// GetAllQuerystMaps Get All Queryst Maps
 func (c *Context) GetAllQuerystMaps() map[string]string {
 	arr := map[string]string{}
 	for key, v := range c.Request.URL.Query() {
@@ -40,6 +42,7 @@ func (c *Context) GetAllQuerystMaps() map[string]string {
 	return arr
 }
 
+// GetQueryArray Get Query Array
 func (c *Context) GetQueryArray(key string) ([]string, bool) {
 	if values, ok := c.Request.URL.Query()[key]; ok && len(values) > 0 {
 		return values, true
@@ -47,6 +50,7 @@ func (c *Context) GetQueryArray(key string) ([]string, bool) {
 	return []string{}, false
 }
 
+// GetQuery Get Query
 func (c *Context) GetQuery(key string) (string, bool) {
 	if values, ok := c.GetQueryArray(key); ok {
 		return values[0], ok
@@ -54,6 +58,7 @@ func (c *Context) GetQuery(key string) (string, bool) {
 	return "", false
 }
 
+// DefaultQuery Get Query Or Default
 func (c *Context) DefaultQuery(key string, def string) string {
 	if value, ok := c.GetQuery(key); ok {
 		return value
@@ -61,6 +66,7 @@ func (c *Context) DefaultQuery(key string, def string) string {
 	return def
 }
 
+// DefaultPostForm Get Form Or Default
 func (c *Context) DefaultPostForm(key, def string) string {
 	if value, ok := c.GetPostForm(key); ok {
 		return value
@@ -68,6 +74,7 @@ func (c *Context) DefaultPostForm(key, def string) string {
 	return def
 }
 
+// GetPostForm Get PostForm
 func (c *Context) GetPostForm(key string) (string, bool) {
 	if values, ok := c.GetPostFormArray(key); ok {
 		return values[0], ok
@@ -75,6 +82,7 @@ func (c *Context) GetPostForm(key string) (string, bool) {
 	return "", false
 }
 
+// DefaultFormOrQuery  Get Form Or Query
 func (c *Context) DefaultFormOrQuery(key string, def string) string {
 	if value, ok := c.GetPostForm(key); ok {
 		return value
@@ -82,6 +90,7 @@ func (c *Context) DefaultFormOrQuery(key string, def string) string {
 	return c.DefaultQuery(key, def)
 }
 
+// GetPostFormArray Get Post FormArray
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	req := c.Request
 	postForm, _ := c.GetPostFormAll()
@@ -96,13 +105,12 @@ func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	return []string{}, false
 }
 
+// GetPostFormAll Get PostForm All
 func (c *Context) GetPostFormAll() (value url.Values, err error) {
 	req := c.Request
 	if req.PostForm == nil {
 		if c.ContentType() == MIMEMultipartPOSTForm {
-			if c.Request.Method == "DELETE" {
-
-			}
+			// if c.Request.Method == "DELETE" {}
 			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 		} else {
 			err = req.ParseForm()
@@ -112,11 +120,13 @@ func (c *Context) GetPostFormAll() (value url.Values, err error) {
 	return
 }
 
+// PostFormMap PostForm Map
 func (c *Context) PostFormMap(key string) map[string]string {
 	dicts, _ := c.GetPostFormMap(key)
 	return dicts
 }
 
+// GetPostFormMap Get PostForm Map
 func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	req := c.Request
 	postForm, _ := c.GetPostFormAll()
@@ -128,12 +138,14 @@ func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 	return dicts, exist
 }
 
+// GetJSON Get JSON
 func (c *Context) GetJSON(key string) zjson.Res {
 	j, _ := c.GetJSONs()
 
 	return j.Get(key)
 }
 
+// GetJSONs Get JSONs
 func (c *Context) GetJSONs() (json zjson.Res, err error) {
 	var body string
 	body, err = c.GetDataRaw()
@@ -148,6 +160,7 @@ func (c *Context) GetJSONs() (json zjson.Res, err error) {
 	return
 }
 
+// GetDataRaw Get Raw Data
 func (c *Context) GetDataRaw() (string, error) {
 	if c.rawData != "" {
 		return c.rawData, nil
@@ -179,16 +192,19 @@ func (c *Context) get(m map[string][]string, key string) (map[string]string, boo
 	return dicts, exist
 }
 
+// FormFile FormFile
 func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
 	_, fh, err := c.Request.FormFile(name)
 	return fh, err
 }
 
+// MultipartForm MultipartForm
 func (c *Context) MultipartForm() (*multipart.Form, error) {
 	err := c.Request.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 	return c.Request.MultipartForm, err
 }
 
+// SaveUploadedFile Save Uploaded File
 func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) error {
 	src, err := file.Open()
 	if err != nil {

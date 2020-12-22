@@ -106,6 +106,7 @@ func (c *Context) done() {
 	}
 }
 
+// Next Next Handler
 func (c *Context) Next() (next HandlerFunc) {
 	c.RLock()
 	if !c.stopHandle && len(c.middleware) > 0 {

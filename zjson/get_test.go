@@ -38,7 +38,13 @@ func TestGet(t *testing.T) {
 	_ = Get(demo, "timeNull").Type.String()
 	tt.EqualExit(1.8, Get(demo, "other.2").Float())
 	tt.EqualExit(66.6, Get(demo, "index\\.key").Float())
+
 	tt.EqualExit(uint(666), Get(demo, "other.1").Uint())
+	tt.EqualExit(uint(0), Get(demo, "time").Uint())
+	tt.EqualExit(uint(1), Get(demo, "f").Uint())
+	tt.EqualExit(uint(0), Get(demo, "user").Uint())
+	tt.EqualExit(uint(1), Get(demo, "boolTrue").Uint())
+
 	tt.EqualExit("666", Get(demo, "other.1").String())
 	tt.EqualExit(false, Get(demo, "bool").Bool())
 	_ = Get(demo, "boolTrue").Type.String()
@@ -46,6 +52,8 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, Get(demo, "boolTrue").Bool())
 	tt.EqualExit(false, Get(demo, "boolTrueNot").Bool())
 	tt.EqualExit("true", Get(demo, "boolTrue").String())
+	tt.EqualExit(true, Get(demo, "time").Bool())
+	tt.EqualExit(true, Get(demo, "i").Bool())
 	timeStr := Get(demo, "time").String()
 	tt.EqualExit("2019-09-10 13:48:22", timeStr)
 	loc, _ := time.LoadLocation("Local")

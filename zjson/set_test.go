@@ -68,6 +68,14 @@ func TestSet(t *testing.T) {
 	tt.EqualExit(true, err == nil)
 	t.Log(string(strBytes), err)
 
+	strBytes, err = SetRawBytes(strBytes, "set\\.other", []byte("Raw"))
+	tt.EqualExit(true, err == nil)
+	t.Log(string(strBytes), err)
+
+	strBytes, err = SetRawBytes(strBytes, "set.other", []byte("Raw"))
+	tt.EqualExit(true, err == nil)
+	t.Log(string(strBytes), err)
+
 	_, _ = SetBytes(strBytes, "setBytes2.s", "new set")
 
 	strBytes, err = SetBytesOptions(strBytes, "setBytes3.op", "new set", &StSetOptions{Optimistic: true, ReplaceInPlace: true})

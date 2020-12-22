@@ -10,6 +10,7 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
+// Recovery Recovery
 func Recovery(r *Engine, handler PanicFunc) HandlerFunc {
 	r.router.panic = handler
 	return func(c *Context) {

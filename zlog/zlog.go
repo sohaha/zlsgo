@@ -112,6 +112,16 @@ func Info(v ...interface{}) {
 	Log.Info(v...)
 }
 
+// Tipsf Tipsf
+func Tipsf(format string, v ...interface{}) {
+	Log.Tipsf(format, v...)
+}
+
+// Tips Tips
+func Tips(v ...interface{}) {
+	Log.Tips(v...)
+}
+
 // Warnf Warnf
 func Warnf(format string, v ...interface{}) {
 	Log.Warnf(format, v...)

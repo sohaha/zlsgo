@@ -110,6 +110,7 @@ func (v Engine) valid() Engine {
 				nv := q(v)
 				v.value = nv.value
 				v.err = nv.err
+				v.defaultValue = nv.defaultValue
 			}
 			queues.Remove(queue)
 		}

@@ -23,10 +23,12 @@ func init() {
 	}
 }
 
+// IsLocalAddrIP IsLocalAddrIP
 func IsLocalAddrIP(ip string) bool {
 	return IsLocalIP(net.ParseIP(ip))
 }
 
+// IsLocalIP IsLocalIP
 func IsLocalIP(ip net.IP) bool {
 	for _, network := range localNetworks {
 		if network.Contains(ip) {
@@ -39,6 +41,7 @@ func IsLocalIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
+// ClientIP ClientIP
 func ClientIP(r *http.Request) (ip string) {
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	ip = strings.TrimSpace(strings.Split(xForwardedFor, ",")[0])
@@ -53,6 +56,7 @@ func ClientIP(r *http.Request) (ip string) {
 	return
 }
 
+// ClientPublicIP ClientPublicIP
 func ClientPublicIP(r *http.Request) string {
 	var ip string
 	for _, ip = range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
@@ -75,6 +79,7 @@ func ClientPublicIP(r *http.Request) string {
 	return ""
 }
 
+// RemoteIP RemoteIP
 func RemoteIP(r *http.Request) string {
 	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil {
 		return ip
@@ -83,6 +88,7 @@ func RemoteIP(r *http.Request) string {
 	return ""
 }
 
+// IPString2Long IPString2Long
 func IPString2Long(ip string) (i uint, err error) {
 	b := net.ParseIP(ip).To4()
 	if b == nil {
@@ -93,6 +99,7 @@ func IPString2Long(ip string) (i uint, err error) {
 	return
 }
 
+// Long2IPString Long2IPString
 func Long2IPString(i uint) (IP string, err error) {
 	if i > math.MaxUint32 {
 		err = errors.New("beyond the scope of ipv4")
@@ -109,6 +116,7 @@ func Long2IPString(i uint) (IP string, err error) {
 	return
 }
 
+// IP2Long IP2Long
 func IP2Long(ip net.IP) (i uint, err error) {
 	b := ip.To4()
 	if b == nil {
@@ -120,6 +128,7 @@ func IP2Long(ip net.IP) (i uint, err error) {
 	return
 }
 
+// Long2IP Long2IP
 func Long2IP(i uint) (ip net.IP, err error) {
 	if i > math.MaxUint32 {
 		err = errors.New("beyond the scope of ipv4")

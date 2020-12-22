@@ -9,6 +9,7 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
+// BindStruct Bind Struct
 func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc) error {
 	g := e.Group(prefix)
 	if len(handle) > 0 {
@@ -23,7 +24,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		if initFn.IsValid() {
 			before, ok := initFn.Interface().(func(e *Engine))
 			if !ok {
-				return fmt.Errorf("Func: [%s] is not an effective routing method\n", "Init")
+				return fmt.Errorf("func: [%s] is not an effective routing method\n", "Init")
 			}
 			before(g)
 		}
@@ -43,7 +44,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		key := strings.ToLower(info[1])
 		fn, ok := valueOf.Method(numMethod).Interface().(func(*Context))
 		if !ok {
-			return fmt.Errorf("Func: [%s] is not an effective routing method\n", m.Name)
+			return fmt.Errorf("func: [%s] is not an effective routing method\n", m.Name)
 		}
 		// valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
 		if e.BindStructDelimiter != "" {

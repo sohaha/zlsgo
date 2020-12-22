@@ -37,6 +37,7 @@ const (
 	LogPanic
 	LogError
 	LogWarn
+	LogTips
 	LogSuccess
 	LogInfo
 	LogDebug
@@ -49,6 +50,7 @@ var Levels = []string{
 	"[PANIC]",
 	"[ERROR]",
 	"[WARN] ",
+	"[TIPS] ",
 	"[SUCCE]",
 	"[INFO] ",
 	"[DEBUG]",
@@ -60,6 +62,7 @@ var LevelColous = []Color{
 	ColorLightRed,
 	ColorRed,
 	ColorYellow,
+	ColorWhite,
 	ColorGreen,
 	ColorBlue,
 	ColorLightCyan,
@@ -98,16 +101,6 @@ type (
 		depth   int
 	}
 )
-
-type LoggerIfe interface {
-	Error(v ...interface{}) error
-	Warning(v ...interface{}) error
-	Info(v ...interface{}) error
-
-	Errorf(format string, a ...interface{}) error
-	Warningf(format string, a ...interface{}) error
-	Infof(format string, a ...interface{}) error
-}
 
 // New Initialize a log object
 func New(moduleName ...string) *Logger {
@@ -176,27 +169,11 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 			buf.WriteString(log.ColorTextWrap(LevelColous[level], Levels[level]+" "))
 		}
 
-		// timeTpl := zstring.Buffer()
 		if log.flag&BitDate != 0 {
-			// timeTpl.WriteString("Y/m/d ")
-			// year, month, day := t.Date()
-			// itoa(buf, year, 4)
-			// buf.WriteByte('/') // "2019/"
-			// itoa(buf, int(month), 2)
-			// buf.WriteByte('/') // "2019/04/"
-			// itoa(buf, day, 2)
-			// buf.WriteByte(' ') // "2019/04/11 "
 			buf.WriteString(ztime.FormatTime(t, "Y/m/d "))
 		}
 
 		if log.flag&(BitTime|BitMicroSeconds) != 0 {
-			// timeTpl.WriteString("H:i:s")
-			// hour, min, sec := t.Clock()
-			// itoa(buf, hour, 2)
-			// buf.WriteByte(':') // "12:"
-			// itoa(buf, min, 2)
-			// buf.WriteByte(':') // "12:12:"
-			// itoa(buf, sec, 2)  // "12:12:59"
 			buf.WriteString(ztime.FormatTime(t, "H:i:s"))
 			if log.flag&BitMicroSeconds != 0 {
 				buf.WriteByte('.')
@@ -267,24 +244,6 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 		log.buf.WriteByte('\n')
 	}
 	_, err := log.out.Write(log.buf.Bytes())
-	// if log.file != nil && log.FileMaxSize > 0 {
-	// 	if fileInfo, err := log.file.Stat(); err == nil {
-	// 		logSize := fileInfo.Size()
-	// 		if logSize > log.FileMaxSize {
-	// 			logFile := log.fileDir + "/" + log.fileName
-	// 			oldFile := oldLogFile(log.fileDir, log.fileName)
-	// 			log.CloseFile()
-	// 			_ = os.Rename(logFile, oldFile)
-	// 			file, _, _, _ := openFile(log.fileDir + log.fileName)
-	// 			log.file = file
-	// 			if log.fileAndStdout {
-	// 				log.out = io.MultiWriter(log.file, os.Stdout)
-	// 			} else {
-	// 				log.out = file
-	// 			}
-	// 		}
-	// 	}
-	// }
 	return err
 }
 
@@ -343,6 +302,16 @@ func (log *Logger) Infof(format string, v ...interface{}) {
 // Info Info
 func (log *Logger) Info(v ...interface{}) {
 	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, nil)
+}
+
+// Tipsf Tipsf
+func (log *Logger) Tipsf(format string, v ...interface{}) {
+	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, nil)
+}
+
+// Tips Tips
+func (log *Logger) Tips(v ...interface{}) {
+	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, nil)
 }
 
 // Warnf Warnf
@@ -477,6 +446,10 @@ func (log *Logger) SetPrefix(prefix string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 	log.prefix = prefix
+}
+
+func (log *Logger) GetPrefix() string {
+	return log.prefix
 }
 
 // SetLogLevel Setting log display level

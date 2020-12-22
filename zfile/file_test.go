@@ -83,6 +83,9 @@ func TestPut(t *testing.T) {
 	err = PutAppend("./put/text.txt", []byte(time.Now().String()+"\n"))
 	tt.EqualNil(err)
 	_ = os.Remove("./put/text.txt")
+	err = PutAppend("./put2/text.txt", []byte(time.Now().String()+"\n"))
+	tt.EqualNil(err)
+	_ = os.Remove("./put2/text.txt")
 	err = PutOffset("./text.txt", []byte("\n(ok)\n"), 5)
 	tt.EqualNil(err)
 }

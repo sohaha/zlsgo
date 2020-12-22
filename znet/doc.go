@@ -1,5 +1,5 @@
 /*
-Package zweb provides web service
+Package znet provides web service
     package main
 
     import (

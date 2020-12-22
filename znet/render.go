@@ -46,11 +46,13 @@ type (
 		FuncMap     template.FuncMap
 		Templates   []string
 	}
+	// ApiData unified return api format
 	ApiData struct {
 		Code int         `json:"code" example:"200"`
 		Msg  string      `json:"msg"`
 		Data interface{} `json:"data"`
 	}
+	// Data map string
 	Data     map[string]interface{}
 	PrevData struct {
 		Code    int
@@ -60,8 +62,11 @@ type (
 )
 
 var (
+	// ContentTypePlain text
 	ContentTypePlain = "text/plain; charset=utf-8"
+	// ContentTypeHTML html
 	ContentTypeHTML  = "text/html; charset=utf-8"
+	// ContentTypeJSON json
 	ContentTypeJSON  = "application/json; charset=utf-8"
 )
 

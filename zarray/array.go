@@ -6,13 +6,16 @@ import (
 	"fmt"
 )
 
-// Array 数组的插入、删除、按照下标随机访问操作，数据是interface类型的
+// Array Array insert, delete, random access according to the subscript operation, the data is interface type
 type Array struct {
 	data []interface{}
 	size int
 }
 
-// New 数组初始化内存
+// ERR_ILLEGAL_INDEX illegal index
+var ERR_ILLEGAL_INDEX = errors.New("illegal index")
+
+// New array initialization memory
 func New(capacity ...int) (array *Array) {
 	if len(capacity) >= 1 && capacity[0] != 0 {
 		array = &Array{
@@ -29,7 +32,7 @@ func New(capacity ...int) (array *Array) {
 	return
 }
 
-// Copy 复制一个数组
+// Copy copy an array
 func Copy(arr interface{}) (array *Array, err error) {
 	data, ok := arr.([]interface{})
 	if ok {
@@ -45,7 +48,7 @@ func Copy(arr interface{}) (array *Array, err error) {
 	return
 }
 
-// 判断索引是否越界
+// determine whether the index is out of bounds
 func (array *Array) checkIndex(index int) (bool, int) {
 	size := array.size
 	if index < 0 || index >= size {
@@ -55,7 +58,7 @@ func (array *Array) checkIndex(index int) (bool, int) {
 	return false, size
 }
 
-// 数组扩容
+// array expansion
 func (array *Array) resize(capacity int) {
 	newArray := make([]interface{}, capacity)
 	for i := 0; i < array.size; i++ {
@@ -64,41 +67,42 @@ func (array *Array) resize(capacity int) {
 	array.data = newArray
 }
 
-// CapLength 获取数组容量
+// CapLength get array capacity
 func (array *Array) CapLength() int {
 	return cap(array.data)
 }
 
-// Length 获取数组长度
+// Length get array length
 func (array *Array) Length() int {
 	return array.size
 }
 
-// IsEmpty 判断数组是否为空
+// IsEmpty determine whether the array is empty
 func (array *Array) IsEmpty() bool {
 	return array.size == 0
 }
 
-// Unshift 向数组头插入元素
+// Unshift insert element into array header
 func (array *Array) Unshift(value interface{}) error {
 	return array.Add(0, value)
 }
 
-// Push 向数组尾插入元素
+// Push insert element to end of array
 func (array *Array) Push(values ...interface{}) {
 	for i := 0; i < len(values); i++ {
 		_ = array.Add(array.size, values[i])
 	}
 }
 
-// Set 在 index 位置，插入元素
+// Set in the index position insert the element
 func (array *Array) Add(index int, value interface{}) (err error) {
 	if index < 0 || index > array.size {
 		err = errors.New("sdd failed. Require index >= 0 and index <= size")
 		return
 	}
 
-	// 如果当前元素个数等于数组容量，则将数组扩容为原来的2倍
+	// If the current number of elements is equal to the array capacity,
+	// the array will be expanded to twice the original size
 	capLen := array.CapLength()
 	if array.size == capLen {
 		array.resize(capLen * 2)
@@ -113,7 +117,7 @@ func (array *Array) Add(index int, value interface{}) (err error) {
 	return
 }
 
-// ForEcho 遍历生成新数组
+// ForEcho traversing generates a new array
 func (array *Array) Map(fn func(interface{}) interface{}) *Array {
 	values, _ := Copy(array.data)
 	for i := 0; i < values.Length(); i++ {
@@ -123,10 +127,10 @@ func (array *Array) Map(fn func(interface{}) interface{}) *Array {
 	return values
 }
 
-// Get 获取对应 index 位置的元素
+// Get Gets the element corresponding to the index position
 func (array *Array) Get(index int, def ...interface{}) (value interface{}, err error) {
 	if r, _ := array.checkIndex(index); r {
-		err = errors.New("get failed. Illegal index")
+		err = ERR_ILLEGAL_INDEX
 		if dValue, dErr := GetInterface(def, 0, nil); dErr == nil {
 			value = dValue
 		}
@@ -137,18 +141,17 @@ func (array *Array) Get(index int, def ...interface{}) (value interface{}, err e
 	return
 }
 
-// Set 修改 index 位置的元素
+// Set modify the element at the index position
 func (array *Array) Set(index int, value interface{}) (err error) {
 	if r, _ := array.checkIndex(index); r {
-		err = errors.New("set failed. Illegal index")
-		return
+		return ERR_ILLEGAL_INDEX
 	}
 
 	array.data[index] = value
 	return
 }
 
-// Contains 查找数组中是否有元素
+// Contains find if there are elements in the array
 func (array *Array) Contains(value interface{}) bool {
 	for i := 0; i < array.size; i++ {
 		if array.data[i] == value {
@@ -159,7 +162,7 @@ func (array *Array) Contains(value interface{}) bool {
 	return false
 }
 
-// Index 通过索引查找数组，索引范围[0,n-1]（未找到，返回 -1）
+// Index Find array by index, index range [0, n-1] (not found, return - 1)
 func (array *Array) Index(value interface{}) int {
 	for i := 0; i < array.size; i++ {
 		if array.data[i] == value {
@@ -170,12 +173,12 @@ func (array *Array) Index(value interface{}) int {
 	return -1
 }
 
-// Remove 删除 index 位置的元素，并返回
+// Remove delete the element at index position and return
 func (array *Array) Remove(index int, l ...int) (value []interface{}, err error) {
 	r, size := array.checkIndex(index)
 
 	if r {
-		err = errors.New("remove failed. Illegal index")
+		err = ERR_ILLEGAL_INDEX
 		return
 	}
 	removeL := 1
@@ -198,17 +201,17 @@ func (array *Array) Remove(index int, l ...int) (value []interface{}, err error)
 	return
 }
 
-// Shift 删除数组首个元素
+// Shift delete the first element of the array
 func (array *Array) Shift() (interface{}, error) {
 	return array.Remove(0)
 }
 
-// Pop 删除末尾元素
+// Pop delete end element
 func (array *Array) Pop() (interface{}, error) {
-	return array.Remove(int(array.size - 1))
+	return array.Remove(array.size - 1)
 }
 
-// RemoveValue 从数组中删除指定元素
+// RemoveValue removes the specified element from the array
 func (array *Array) RemoveValue(value interface{}) (e interface{}, err error) {
 	index := array.Index(value)
 	if index != -1 {
@@ -217,18 +220,18 @@ func (array *Array) RemoveValue(value interface{}) (e interface{}, err error) {
 	return
 }
 
-// Clear 清空数组
+// Clear clear array
 func (array *Array) Clear() {
 	array.data = make([]interface{}, array.size)
 	array.size = 0
 }
 
-// Raw 原始数组
+// Raw original array
 func (array *Array) Raw() []interface{} {
 	return array.data[:array.size]
 }
 
-// Format 输出数列
+// Format output sequence
 func (array *Array) Format() (format string) {
 	format = fmt.Sprintf("Array: size = %d , capacity = %d\n", array.size, cap(array.data))
 	format += "["
@@ -242,13 +245,13 @@ func (array *Array) Format() (format string) {
 	return
 }
 
-// GetInterface  获取 []interface{} 对应 index 位置的元素
+// GetInterface  Get the element corresponding to the index position of [] interface {}
 func GetInterface(arr []interface{}, index int, def ...interface{}) (value interface{}, err error) {
 	arrLen := len(arr)
 	if arrLen > 0 && index < arrLen {
 		value = arr[index]
 	} else {
-		err = errors.New("getInterface failed. Illegal index")
+		err = ERR_ILLEGAL_INDEX
 		var dValue interface{}
 		if len(def) > 0 {
 			dValue = def[0]

@@ -47,13 +47,13 @@ const cliPrefix = ""
 
 var (
 	// BuildTime Build Time
-	BuildTime        = ""
+	BuildTime = ""
 	// BuildGoVersion Build Go Version
-	BuildGoVersion   = ""
+	BuildGoVersion = ""
 	// BuildGitCommitID Build Git CommitID
 	BuildGitCommitID = ""
 	// Log cli logger
-	Log              *zlog.Logger
+	Log *zlog.Logger
 	// FirstParameter First Parameter
 	FirstParameter   = os.Args[0]
 	flagHelp         = new(bool)
