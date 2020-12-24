@@ -83,6 +83,16 @@ func TestJONS(tt *testing.T) {
 	}, v, Header{"name": "ok"})
 }
 
+func TestToHTML(tt *testing.T) {
+	t := zls.NewTest(tt)
+	res, err := Get("https://cdn.jsdelivr.net/")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	t.EqualTrue(res.HTML().Find("title").Text() != "")
+}
+
 func TestGetMethod(tt *testing.T) {
 	t := zls.NewTest(tt)
 	jsonData := struct {
@@ -216,7 +226,7 @@ func TestHttpProxy(t *testing.T) {
 }
 
 func TestHttpProxyUrl(t *testing.T) {
-	err := SetProxyUrl("http://127.0.0.1:6666", "http://127.0.0.1:7777")
+	err := SetProxyUrl("http://127.0.0.1:66661", "http://127.0.0.1:77771")
 	tt := zls.NewTest(t)
 	if err != nil {
 		tt.T.Fatal(err)
@@ -225,6 +235,7 @@ func TestHttpProxyUrl(t *testing.T) {
 	SetTimeout(1 * time.Second)
 	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
 	})
+	t.Log(err)
 	tt.Equal(true, err != nil)
 }
 

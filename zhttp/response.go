@@ -97,6 +97,15 @@ func (r *Res) Body() (body io.ReadCloser) {
 	return ioutil.NopCloser(bytes.NewReader(r.responseBody))
 }
 
+func (r *Res) HTML() (doc QueryHTML) {
+	data, err := r.ToBytes()
+	if err != nil {
+		return QueryHTML{}
+	}
+	doc, _ = HTMLParse(data)
+	return
+}
+
 func (r *Res) String() string {
 	data, _ := r.ToBytes()
 	return string(data)

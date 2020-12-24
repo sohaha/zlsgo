@@ -3,6 +3,9 @@ package zhttp
 import (
 	"os"
 	"path/filepath"
+	"strings"
+
+	"golang.org/x/net/html"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -59,4 +62,124 @@ var UserAgentLists = []string{
 
 func RandomUserAgent() Header {
 	return Header{"User-Agent": UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]}
+}
+
+func findElOnce(n *html.Node, el string, args map[string][]string, uni bool) (*html.Node, bool) {
+	if uni == true {
+		if n.Type == html.ElementNode && matchElName(n, el) {
+			if len(args) > 0 {
+				for i := 0; i < len(n.Attr); i++ {
+					attr := n.Attr[i]
+					for name, val := range args {
+						if findAttrValue(attr, name, val) {
+							return n, true
+						}
+					}
+				}
+			} else {
+				return n, true
+			}
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		p, q := findElOnce(c, el, args, true)
+		if q != false {
+			return p, q
+		}
+	}
+	return nil, false
+}
+
+func matchElName(n *html.Node, name string) bool {
+	return name == "" || name == n.Data
+}
+
+func arr2Attr(args []map[string]string) map[string][]string {
+	var attr map[string][]string
+	if len(args) > 0 {
+		attr = make(map[string][]string, len(args[0]))
+		for i := range args[0] {
+			attr[i] = strings.Fields(args[0][i])
+		}
+	}
+	return attr
+}
+
+func getAttrValue(attributes []html.Attribute) map[string]string {
+	var keyvalues = make(map[string]string)
+	for i := 0; i < len(attributes); i++ {
+		_, exists := keyvalues[attributes[i].Key]
+		if exists == false {
+			keyvalues[attributes[i].Key] = attributes[i].Val
+		}
+	}
+	return keyvalues
+}
+
+func findAttrValue(attr html.Attribute, attribute string, value []string) bool {
+	if attr.Key == attribute {
+		attr := strings.Fields(attr.Val)
+		num := len(value)
+		// todo optimization
+		for i := range value {
+			for a := range attr {
+				if attr[a] == value[i] {
+					num--
+					break
+				}
+			}
+		}
+		return num == 0
+	}
+	return false
+}
+
+func getElText(r QueryHTML, full bool) string {
+	b := zstring.Buffer()
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n == nil {
+			return
+		}
+		if n.Type == html.TextNode {
+			b.WriteString(n.Data)
+		}
+		if full {
+			if n.Type == html.ElementNode {
+				f(n.FirstChild)
+			}
+		}
+		if n.NextSibling != nil {
+			f(n.NextSibling)
+		}
+	}
+	f(r.node.FirstChild)
+	return b.String()
+}
+
+func findEl(n *html.Node, el string, args map[string][]string, multiple bool) (elArr []*html.Node) {
+	if n.Type == html.ElementNode && matchElName(n, el) {
+		if len(args) > 0 {
+			for i := 0; i < len(n.Attr); i++ {
+				attr := n.Attr[i]
+				for name, val := range args {
+					if findAttrValue(attr, name, val) {
+						elArr = append(elArr, n)
+					}
+				}
+			}
+		} else {
+			elArr = append(elArr, n)
+		}
+	}
+	if !multiple && len(elArr) > 0 {
+		return
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		p := findEl(c, el, args, multiple)
+		if len(p) > 0 {
+			elArr = append(elArr, p...)
+		}
+	}
+	return
 }
