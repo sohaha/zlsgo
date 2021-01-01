@@ -6,6 +6,10 @@ import (
 	"golang.org/x/net/html"
 )
 
+func (r QueryHTML) Exist() bool {
+	return r.node.Data != ""
+}
+
 func (r QueryHTML) Attr(key string) string {
 	return r.Attrs()[key]
 }

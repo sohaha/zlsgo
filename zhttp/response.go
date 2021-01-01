@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zjson"
 )
 
 type Res struct {
@@ -25,6 +26,7 @@ type Res struct {
 	responseBody     []byte
 	downloadProgress DownloadProgress
 	err              error
+	tmpFile          string
 }
 
 func (r *Res) Request() *http.Request {
@@ -111,6 +113,11 @@ func (r *Res) String() string {
 	return string(data)
 }
 
+func (r *Res) JSON() zjson.Res {
+	data, _ := r.ToBytes()
+	return zjson.ParseBytes(data)
+}
+
 func (r *Res) ToString() (string, error) {
 	data, err := r.ToBytes()
 	return string(data), err
@@ -140,24 +147,32 @@ func (r *Res) ToFile(name string) error {
 		name = zfile.RealPathMkdir(dir) + "/" + nameSplit[nameSplitLen-1]
 	}
 
+	if r.tmpFile != "" {
+		return zfile.CopyFile(r.tmpFile, name)
+	}
+
 	file, err := os.Create(name)
 	if err != nil {
 		return err
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
+
 	if r.responseBody != nil {
 		_, err = file.Write(r.responseBody)
 		return err
 	}
 
 	if r.downloadProgress != nil && r.resp.ContentLength > 0 {
-		return r.download(file)
+		err = r.download(file)
+	} else {
+		//noinspection GoUnhandledErrorResult
+		defer r.resp.Body.Close()
+		_, err = io.Copy(file, r.resp.Body)
 	}
-
-	//noinspection GoUnhandledErrorResult
-	defer r.resp.Body.Close()
-	_, err = io.Copy(file, r.resp.Body)
+	if err == nil {
+		r.tmpFile = name
+	}
 	return err
 }
 

@@ -110,6 +110,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] Abnormal report
 - [x] Terminal application
 - [x] Goroutine pool
+- [x] HTML Parse
 - [ ] [Database](https://github.com/sohaha/zdb)
 - [ ] ...
 

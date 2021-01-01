@@ -112,6 +112,7 @@ func main(){
 - [x] 异常上报
 - [x] 终端应用
 - [x] 协程池
+- [x] HTML 解析
 - [ ] [数据库操作](https://github.com/sohaha/zdb)
 - [ ] ...
 

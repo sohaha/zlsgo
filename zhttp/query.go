@@ -2,7 +2,6 @@ package zhttp
 
 import (
 	"bytes"
-	"fmt"
 
 	"golang.org/x/net/html"
 )
@@ -19,7 +18,6 @@ func HTMLParse(HTML []byte) (doc QueryHTML, err error) {
 	if err != nil {
 		return
 	}
-
 	for n.Type != html.ElementNode {
 		switch n.Type {
 		case html.DocumentNode:
@@ -34,45 +32,128 @@ func HTMLParse(HTML []byte) (doc QueryHTML, err error) {
 	return
 }
 
+func (r QueryHTML) SelectChild(el string, args ...map[string]string) QueryHTML {
+	var (
+		node  *html.Node
+		exist bool
+	)
+	forChild(r.node, func(n *html.Node) bool {
+		elArr := matchEl(n, el, arr2Attr(args))
+		exist = elArr != nil
+		if exist {
+			node = elArr
+			return false
+		}
+		return true
+	})
+	if !exist {
+		return QueryHTML{node: &html.Node{}}
+	}
+	return QueryHTML{node: node}
+}
+
 func (r QueryHTML) Child() (child []QueryHTML) {
-	n := r.node.FirstChild
-	for {
-		if n == nil {
-			return
-		}
-		if n.Type == html.ElementNode {
-			child = append(child, QueryHTML{node: n})
-		}
-		n = n.NextSibling
-	}
+	forChild(r.node, func(n *html.Node) bool {
+		child = append(child, QueryHTML{node: n})
+		return true
+	})
+	return
 }
 
-func (r QueryHTML) Find(el string, args ...map[string]string) QueryHTML {
-	t, _ := r.MustFind(el, args...)
-	return t
-}
-
-func (r QueryHTML) MustFind(el string, args ...map[string]string) (QueryHTML, error) {
-	n := findEl(r.node, el, arr2Attr(args), false)
+func (r QueryHTML) Select(el string, args ...map[string]string) QueryHTML {
+	n := findChild(r.node, el, args, false)
 	if len(n) == 0 {
-		return QueryHTML{node: &html.Node{}}, fmt.Errorf("element `%s` not found", el)
+		return QueryHTML{node: &html.Node{}}
 	}
-	return QueryHTML{node: n[0]}, nil
+	return QueryHTML{node: n[0]}
 }
 
-func (r *QueryHTML) FindAll(el string, args ...map[string]string) []QueryHTML {
-	t, _ := r.MustFindAll(el, args...)
-	return t
-}
-
-func (r QueryHTML) MustFindAll(el string, args ...map[string]string) ([]QueryHTML, error) {
-	n := findEl(r.node, el, arr2Attr(args), true)
-	if len(n) == 0 {
-		return []QueryHTML{{node: &html.Node{}}}, fmt.Errorf("element `%s` not found", el)
+func (r *QueryHTML) SelectAll(el string, args ...map[string]string) (arr []QueryHTML) {
+	n := findChild(r.node, el, args, true)
+	l := len(n)
+	if l == 0 {
+		return
 	}
-	var e []QueryHTML
+	arr = make([]QueryHTML, l)
 	for i := range n {
-		e = append(e, QueryHTML{node: n[i]})
+		arr[i] = QueryHTML{node: n[i]}
 	}
-	return e, nil
+	return arr
+}
+
+func (r QueryHTML) SelectParent(el string, args ...map[string]string) QueryHTML {
+	n := r.node
+	attr := arr2Attr(args)
+	for {
+		n = n.Parent
+		if n == nil {
+			break
+		}
+		p := matchEl(n, el, attr)
+		if p != nil {
+			return QueryHTML{node: p}
+		}
+	}
+
+	return QueryHTML{node: &html.Node{}}
+}
+
+func (r QueryHTML) Find(el string) QueryHTML {
+	level := parseSelector(el)
+	if len(level) == 0 {
+		return QueryHTML{node: &html.Node{}}
+	}
+	n := r
+	for i := range level {
+		l := level[i]
+		if l.Child {
+			n = n.SelectChild(l.Name, l.Attr)
+		} else {
+			n = n.Select(l.Name, l.Attr)
+		}
+		if !n.Exist() {
+			return QueryHTML{node: &html.Node{}}
+		}
+	}
+	return n
+}
+
+func parseSelector(el string) []*selector {
+	var (
+		ss []*selector
+		s  *selector
+	)
+	key, l := "", len(el)
+	if l > 0 {
+		s = &selector{i: 0, Attr: make(map[string]string, 0)}
+	}
+	for i := 0; i < l; {
+		v := el[i]
+		add := 0
+		switch v {
+		case '#':
+			s.appendAttr(key, el, i)
+			key = "id"
+		case '.':
+			s.appendAttr(key, el, i)
+			key = "class"
+		case ' ', '>':
+			s.appendAttr(key, el, i)
+			if s.Name != "" || len(s.Attr) != 0 {
+				ss = append(ss, s)
+				s = &selector{i: i + 1, Attr: make(map[string]string, 0)}
+				key = ""
+			}
+			if v == '>' {
+				s.Child = true
+			}
+		}
+		i = i + 1 + add
+	}
+
+	if s != nil {
+		s.appendAttr(key, el, l)
+		ss = append(ss, s)
+	}
+	return ss
 }

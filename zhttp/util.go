@@ -11,6 +11,29 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+type (
+	selector struct {
+		Name  string
+		Attr  map[string]string
+		i     int
+		Child bool
+	}
+)
+
+func (s *selector) appendAttr(key, val string, index int) {
+	if key == "" {
+		s.Name = val[s.i:index]
+	} else {
+		val = val[s.i:index]
+		if v, ok := s.Attr[key]; ok && v != "" {
+			s.Attr[key] = s.Attr[key] + " " + val
+		} else {
+			s.Attr[key] = val
+		}
+	}
+	s.i = index + 1
+}
+
 // BodyJSON make the object be encoded in json format and set it to the request body
 func BodyJSON(v interface{}) *bodyJson {
 	return &bodyJson{v: v}
@@ -58,36 +81,11 @@ var UserAgentLists = []string{
 	"Mozilla/5.0 (X11; OpenBSD i386) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1944.0 Safari/537.36",
 	"Mozilla/5.0 (Windows NT 5.1) Gecko/20100101 Firefox/14.0 Opera/12.0",
+	"Mozilla/5.0 (compatible; Googlebot/2.1;+http://www.google.com/bot.html)",
 }
 
 func RandomUserAgent() Header {
 	return Header{"User-Agent": UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]}
-}
-
-func findElOnce(n *html.Node, el string, args map[string][]string, uni bool) (*html.Node, bool) {
-	if uni == true {
-		if n.Type == html.ElementNode && matchElName(n, el) {
-			if len(args) > 0 {
-				for i := 0; i < len(n.Attr); i++ {
-					attr := n.Attr[i]
-					for name, val := range args {
-						if findAttrValue(attr, name, val) {
-							return n, true
-						}
-					}
-				}
-			} else {
-				return n, true
-			}
-		}
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		p, q := findElOnce(c, el, args, true)
-		if q != false {
-			return p, q
-		}
-	}
-	return nil, false
 }
 
 func matchElName(n *html.Node, name string) bool {
@@ -157,29 +155,56 @@ func getElText(r QueryHTML, full bool) string {
 	return b.String()
 }
 
-func findEl(n *html.Node, el string, args map[string][]string, multiple bool) (elArr []*html.Node) {
+func forChild(node *html.Node, iterator func(n *html.Node) bool) {
+	n := node.FirstChild
+	for {
+		if n == nil {
+			return
+		}
+		if n.Type == html.ElementNode {
+			if !iterator(n) {
+				return
+			}
+		}
+		n = n.NextSibling
+	}
+}
+
+func matchEl(n *html.Node, el string, args map[string][]string) *html.Node {
 	if n.Type == html.ElementNode && matchElName(n, el) {
 		if len(args) > 0 {
 			for i := 0; i < len(n.Attr); i++ {
 				attr := n.Attr[i]
 				for name, val := range args {
 					if findAttrValue(attr, name, val) {
-						elArr = append(elArr, n)
+						return n
 					}
 				}
 			}
 		} else {
-			elArr = append(elArr, n)
+			return n
 		}
 	}
-	if !multiple && len(elArr) > 0 {
-		return
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		p := findEl(c, el, args, multiple)
-		if len(p) > 0 {
-			elArr = append(elArr, p...)
+	return nil
+}
+
+func findChild(node *html.Node, el string, args []map[string]string, multiple bool) (elArr []*html.Node) {
+	attr := arr2Attr(args)
+	n := matchEl(node, el, attr)
+	if n != nil {
+		elArr = []*html.Node{n}
+		if !multiple {
+			elArr = []*html.Node{n}
+			return
 		}
 	}
+	for c := node.FirstChild; c != nil; c = c.NextSibling {
+		p := findChild(c, el, args, multiple)
+		elArr = append(elArr, p...)
+		if !multiple && len(elArr) > 0 {
+			return
+		}
+	}
+
 	return
 }

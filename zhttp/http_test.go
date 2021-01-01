@@ -90,7 +90,7 @@ func TestToHTML(tt *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	t.EqualTrue(res.HTML().Find("title").Text() != "")
+	t.EqualTrue(res.HTML().Select("title").Text() != "")
 }
 
 func TestGetMethod(tt *testing.T) {
@@ -118,10 +118,19 @@ func TestGetMethod(tt *testing.T) {
 			_, _ = w.Write([]byte(v))
 		}, v)
 		tt.Log("get ok", i, err)
-		t.Equal(nil, err)
+		t.EqualExit(nil, err)
+		tt.Log(res.String())
 		if err = res.ToJSON(&jsonData); err == nil {
 			t.Equal(201, jsonData.Code)
 		}
+
+		j := res.JSON()
+
+		tt.Log(j.String())
+		if j.IsObject() {
+			t.EqualExit(201, j.Get("code").Int())
+		}
+
 		if data, err = res.ToString(); err == nil {
 			t.Equal(v, data)
 		}
@@ -250,6 +259,10 @@ func TestFile(t *testing.T) {
 	tt.EqualNil(err)
 	if err == nil {
 		err = res.ToFile(`../zhttp\test\my.jpg`)
+		tt.EqualNil(err)
+		t.Log(len(res.String()))
+		err = res.ToFile(`../zhttp\test\my2.jpg`)
+		tt.Log(err)
 		tt.EqualNil(err)
 	}
 	defer zfile.Rmdir("./test/")
