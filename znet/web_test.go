@@ -13,6 +13,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zvalid"
 
@@ -480,13 +481,50 @@ func TestBind(t *testing.T) {
 	tt.EqualExit(expected, w.Body.String())
 }
 
+func TestShouldBindStruct(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	r := newServer()
+	type GG struct {
+		Info string
+	}
+	type AA struct {
+		ID   int `json:"id"`
+		Name string
+		Gg   GG `json:"g"`
+	}
+	type SS struct {
+		Name string `json:"name"`
+		Abc  int
+		Gg   GG  `json:"g"`
+		ID   int `json:"id"`
+		Pid  uint
+		IDs  []AA `json:"ids"`
+	}
+	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct1", `{"id":666,"Pid":100,"name":"名字","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情"}}]}`, MIMEJSON}, "/TestShouldBindStruct1", func(c *Context) {
+		var ss SS
+		err := c.Bind(&ss)
+		tt.Log(err, ss)
+		zlog.Dump(ss)
+		t.EqualExit(1, len(ss.IDs))
+		t.EqualExit(666, ss.ID)
+		t.EqualExit("基础", ss.Gg.Info)
+		t.EqualExit("详情", ss.IDs[0].Gg.Info)
+	})
+
+	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct2", `id=666&&g[Info]=基础`, MIMEPOSTForm}, "/TestShouldBindStruct2", func(c *Context) {
+		var ss SS
+		err := c.Bind(&ss)
+		tt.Log(err, ss)
+		t.EqualExit(666, ss.ID)
+		t.EqualExit("基础", ss.Gg.Info)
+	})
+}
+
 func TestShouldBind(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	r := newServer()
 	w := newRequest(r, "POST", []string{"/?id=666666666&c=999",
-		"d[C][Cc]=88&d.z=566&arr=1&arr=2&d[a]=1&d[A]=1a&a=123a&b=abc&name=seekwe" +
-			"&s=true" +
-			"&Abc=123&d[b]=9", "application/x-www-form-urlencoded"}, "/", func(c *Context) {
+		"d[C][Cc]=88&d.z=566&arr=1&arr=2&d[a]=1&d[A]=1a&a=123a&b=abc&name=seekwe&s=true&Abc=123&d[b]=9", MIMEPOSTForm}, "/", func(c *Context) {
 		ct := c.ContentType()
 		t.Equal(MIMEPOSTForm, ct)
 		_ = c.DefaultFormOrQuery("ok", "yes")

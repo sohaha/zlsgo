@@ -124,13 +124,12 @@ func TestGetMethod(tt *testing.T) {
 			t.Equal(201, jsonData.Code)
 		}
 
-		j := res.JSON()
-
+		j := res.JSONs()
 		tt.Log(j.String())
 		if j.IsObject() {
 			t.EqualExit(201, j.Get("code").Int())
+			t.EqualExit(201, res.JSON("code").Int())
 		}
-
 		if data, err = res.ToString(); err == nil {
 			t.Equal(v, data)
 		}

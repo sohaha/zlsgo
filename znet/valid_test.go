@@ -6,7 +6,7 @@ import (
 	"github.com/sohaha/zlsgo"
 )
 
-func TestContext_Valid(tt *testing.T) {
+func TestContextValid(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
 	w := newRequest(r, "POST", []string{
@@ -42,7 +42,7 @@ func TestContext_Valid(tt *testing.T) {
 	t.Equal(expected, w.Body.String())
 }
 
-func TestContext_BatchValid(tt *testing.T) {
+func TestContextBatchValid(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
 	w := newRequest(r, "POST", []string{

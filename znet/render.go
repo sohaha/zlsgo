@@ -65,9 +65,9 @@ var (
 	// ContentTypePlain text
 	ContentTypePlain = "text/plain; charset=utf-8"
 	// ContentTypeHTML html
-	ContentTypeHTML  = "text/html; charset=utf-8"
+	ContentTypeHTML = "text/html; charset=utf-8"
 	// ContentTypeJSON json
-	ContentTypeJSON  = "application/json; charset=utf-8"
+	ContentTypeJSON = "application/json; charset=utf-8"
 )
 
 func (c *Context) renderProcessing(code int, r render) {

@@ -69,6 +69,21 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 		return
 	}
 	tag := c.Engine.BindTag
+	isJSON := c.ContentType() == c.ContentType(ContentTypeJSON)
+	jsonSet := func(fieldTag string, field reflect.Value) (ok bool, err error) {
+		jsonValue := c.GetJSON(fieldTag)
+		if jsonValue.Exists() {
+			y := reflect.New(field.Type()).Interface()
+			err = jsonValue.Unmarshal(y)
+			zutil.Try(func() {
+				field.Set(reflect.ValueOf(y).Elem())
+			}, func(e interface{}) {
+				err, _ = e.(error)
+			})
+			return true, err
+		}
+		return false, nil
+	}
 	err = zutil.ReflectForNumField(vv, func(fieldName, fieldTag string, kind reflect.Kind,
 		field reflect.Value) error {
 		var (
@@ -81,14 +96,22 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 			fieldTag = zstring.CamelCaseToSnakeCase(fieldTag)
 		}
 		if kind == reflect.Slice {
+			ok, err = jsonSet(fieldTag, field)
+			if ok {
+				return err
+			}
 			value, ok = c.GetPostFormArray(fieldTag)
 			if !ok {
 				value, ok = c.GetQueryArray(fieldTag)
 			}
 		} else if kind == reflect.Struct {
+			ok, err = jsonSet(fieldTag, field)
+			if ok {
+				return err
+			}
 			value, ok = c.GetPostFormMap(fieldTag)
 		} else {
-			if c.ContentType() == c.ContentType(ContentTypeJSON) {
+			if isJSON {
 				jsonValue := c.GetJSON(fieldTag)
 				ok = jsonValue.Exists()
 				if ok {

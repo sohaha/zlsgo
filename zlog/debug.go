@@ -159,9 +159,9 @@ func (p *zprinter) indent() *zprinter {
 func (p *zprinter) printInline(v reflect.Value, x interface{}, showType bool) {
 	if showType {
 		_, _ = io.WriteString(p, v.Type().String())
-		_, _ = fmt.Fprintf(p, "(%#v)", x)
+		_, _ = fmt.Fprintf(p, "(%+v)", x)
 	} else {
-		_, _ = fmt.Fprintf(p, "%#v", x)
+		_, _ = fmt.Fprintf(p, "%+v", x)
 	}
 }
 
@@ -170,7 +170,6 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 		_, _ = io.WriteString(p, "!%v(DEPTH EXCEEDED)")
 		return
 	}
-
 	switch v.Kind() {
 	case reflect.Bool:
 		p.printInline(v, v.Bool(), showType)

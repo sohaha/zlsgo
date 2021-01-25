@@ -489,6 +489,7 @@ func formatArgs(args ...interface{}) []interface{} {
 		s := ColorTextWrap(ColorCyan, sprint(a))
 		formatted = append(formatted, s)
 	}
+
 	return formatted
 }
 
