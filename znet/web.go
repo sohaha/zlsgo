@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"os"
@@ -53,8 +54,10 @@ type (
 		router              *router
 		preHandler          func(context *Context) bool
 		pool                sync.Pool
+		templateFuncMap     template.FuncMap
 		BindStructDelimiter string
 		BindStructSuffix    string
+		template            *tpl
 	}
 	TlsCfg struct {
 		Cert           string
@@ -62,6 +65,11 @@ type (
 		HTTPAddr       string
 		HTTPProcessing interface{}
 		Config         *tls.Config
+	}
+	tpl struct {
+		tpl             *template.Template
+		pattern         string
+		templateFuncMap template.FuncMap
 	}
 	addrSt struct {
 		addr string
@@ -149,16 +157,17 @@ func New(serverName ...string) *Engine {
 	r := &Engine{
 		Log:                 log,
 		Cache:               Cache,
+		MaxMultipartMemory:  defaultMultipartMemory,
+		BindTag:             defaultBindTag,
+		BindStructDelimiter: BindStructDelimiter,
+		BindStructSuffix:    BindStructSuffix,
 		router:              route,
 		readTimeout:         0 * time.Second,
 		writeTimeout:        0 * time.Second,
 		webModeName:         ProdMode,
 		webMode:             prodCode,
 		addr:                []addrSt{defaultAddr},
-		MaxMultipartMemory:  defaultMultipartMemory,
-		BindTag:             defaultBindTag,
-		BindStructDelimiter: BindStructDelimiter,
-		BindStructSuffix:    BindStructSuffix,
+		templateFuncMap:     template.FuncMap{},
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)
@@ -209,6 +218,29 @@ func (e *Engine) SetCustomMethodField(field string) {
 // CloseHotRestartFileMd5 CloseHotRestartFileMd5
 func CloseHotRestartFileMd5() {
 	fileMd5 = ""
+}
+
+func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
+	e.templateFuncMap = funcMap
+}
+
+func (e *Engine) LoadHTMLGlob(pattern string) {
+	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
+	if err != nil {
+		e.Log.Fatalf("Template loading failed: %s\n", err)
+		return
+	}
+	isDebug := e.IsDebug()
+	tplval := &tpl{
+		pattern:         pattern,
+		tpl:             t,
+		templateFuncMap: template.FuncMap{},
+	}
+	if isDebug {
+		templatesDebug(t)
+		tplval.templateFuncMap = e.templateFuncMap
+	}
+	e.template = tplval
 }
 
 // SetMode Setting Server Mode
@@ -362,19 +394,6 @@ func Run() {
 	}
 	time.Sleep(100 * time.Millisecond)
 }
-
-// todo reserved for future use
-// func listenAndServe(srv *http.Server, max int) error {
-// 	addr := srv.Addr
-// 	if addr == "" {
-// 		addr = ":http"
-// 	}
-// 	ln, err := net.Listen("tcp", addr)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return srv.Serve(netutil.LimitListener(ln, max))
-// }
 
 func getPort(addr string) string {
 	if !strings.Contains(addr, ":") {

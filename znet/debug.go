@@ -1,26 +1,12 @@
-/*
- * @Author: seekwe
- * @Date:   2019-05-09 16:07:46
- * @Last Modified by:   seekwe
- * @Last Modified time: 2019-05-24 15:08:01
- */
-
 package znet
 
 import (
 	"fmt"
+	"html/template"
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 )
-
-// func debugShowRequest(c *Context) {
-// 	method := zstring.Buffer()
-// 	method.WriteString("{")
-// 	method.WriteString(c.Request.Method)
-// 	method.WriteString("}")
-// 	c.Log.Debugf("Visit: [%d] %s %s\n", c.Code, zstring.Pad(method.String(), 8, " ", 0), c.Request.RequestURI)
-// }
 
 func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 	mLen := zstring.Len(method)
@@ -50,4 +36,19 @@ func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 	}
 
 	return fmt.Sprintf(tf, method, path)
+}
+
+func templatesDebug(t *template.Template) {
+	l := len(t.Templates())
+	buf := zstring.Buffer(l)
+	for _, t := range t.Templates() {
+		n := t.Name()
+		if n == "" {
+			continue
+		}
+		buf.WriteString("\t  - ")
+		buf.WriteString(n)
+		buf.WriteString("\n")
+	}
+	Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf.String())
 }

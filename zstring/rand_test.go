@@ -13,6 +13,11 @@ func TestRand(T *testing.T) {
 	t.Log(UUID())
 }
 
+func TestUniqueID(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	t.Log(UniqueID(4), UniqueID(10), UniqueID(0), UniqueID(-6))
+}
+
 func BenchmarkRandStr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Rand(1)

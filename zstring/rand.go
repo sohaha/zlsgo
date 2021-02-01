@@ -1,6 +1,10 @@
 package zstring
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"io"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -33,9 +37,9 @@ func RandUint32() uint32 {
 }
 
 // RandUint32Max returns pseudorandom uint32 in the range [0..max)
-func RandUint32Max(maxN uint32) uint32 {
+func RandUint32Max(max uint32) uint32 {
 	x := RandUint32()
-	return uint32((uint64(x) * uint64(maxN)) >> 32)
+	return uint32((uint64(x) * uint64(max)) >> 32)
 }
 
 // RandInt random numbers in the specified range
@@ -61,6 +65,18 @@ func Rand(n int, tpl ...string) string {
 		b[i] = s[idx]
 	}
 	return Bytes2String(b)
+}
+
+// UniqueID unique id minimum 6 digits
+func UniqueID(n int) string {
+	if n < 6 {
+		n = 6
+	}
+	k := make([]byte, n)
+	if _, err := io.ReadFull(rand.Reader, k); err != nil {
+		return Rand(n-2) + strconv.Itoa(time.Now().Nanosecond()/10000000)
+	}
+	return hex.EncodeToString(k)
 }
 
 var idWorkers, _ = NewIDWorker(0)

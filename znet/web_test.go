@@ -34,6 +34,8 @@ func newServer() *Engine {
 	one.Do(func() {
 		engine = New("Web-test")
 		engine.SetMode(DebugMode)
+		engine.AddAddr("3787")
+		engine.SetAddr("3788")
 		engine.SetTimeout(3 * time.Second)
 		engine.PreHandler(func(context *Context) (stop bool) {
 			return
@@ -422,6 +424,30 @@ func TestTemplate(t *testing.T) {
 	})
 	tt.Equal(202, w.Code)
 	tt.EqualExit(`<html><title>ZlsGo</title><body>This is body</body></html>`, w.Body.String())
+
+}
+func TestTemplateLoad(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	path := zfile.RealPathMkdir("tmpTemplate", true)
+	defer zfile.Rmdir(path)
+
+	template := `{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`
+	_ = zfile.WriteFile(path+"template-define.html", []byte(template))
+	r.SetTemplateFuncMap(map[string]interface{}{
+		"test": func() string {
+			return "-ok"
+		},
+	})
+
+	r.LoadHTMLGlob("tmpTemplate/*")
+
+	w := newRequest(r, "GET", "/Template-define", "/Template-define",
+		func(c *Context) {
+			c.Template(200, "user/index.html", Data{"title": "ZlsGo"})
+		})
+	tt.Equal(200, w.Code)
+	tt.EqualExit(`ZlsGo-ok`, w.Body.String())
 }
 
 func TestBind(t *testing.T) {

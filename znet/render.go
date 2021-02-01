@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -137,15 +138,29 @@ func (r *renderHTML) Content(c *Context) []byte {
 	c.SetContentType(ContentTypeHTML)
 	if len(r.Templates) > 0 {
 		var (
-			t   *template.Template
+			buf bytes.Buffer
 			err error
+			t   *template.Template
 		)
-		t, err = templateParse(r.Templates, r.FuncMap)
-		if err != nil {
-			panic(err)
+		tpl := c.Engine.template
+		if tpl != nil {
+			isDebug := c.Engine.IsDebug()
+			t = tpl.Get(isDebug)
+			if t != nil && len(r.FuncMap) == 0 {
+				name := r.Templates[0]
+				err = t.ExecuteTemplate(&buf, name, r.Data)
+				if err == nil {
+					r.ContentDate = buf.Bytes()
+					return r.ContentDate
+				}
+				if !strings.Contains(err.Error(), " is undefined") {
+					panic(err)
+				}
+			}
 		}
-		var buf bytes.Buffer
-		err = t.Execute(&buf, r.Data)
+		if t, err = templateParse(r.Templates, r.FuncMap); err == nil {
+			err = t.Execute(&buf, r.Data)
+		}
 		if err != nil {
 			panic(err)
 		}
@@ -196,7 +211,7 @@ func (c *Context) HTML(code int, html string) {
 	})
 }
 
-// Template export template
+// Template export tpl
 func (c *Context) Template(code int, name string, data interface{}, funcMap ...map[string]interface{}) {
 	var fn template.FuncMap
 	if len(funcMap) > 0 {
@@ -282,4 +297,12 @@ func (c *Context) PrevContent() *PrevData {
 		Type:    ctype[0],
 		Content: content,
 	}
+}
+
+func (t *tpl) Get(debug bool) *template.Template {
+	if !debug {
+		return t.tpl
+	}
+	tpl, _ := template.New("").Funcs(t.templateFuncMap).ParseGlob(t.pattern)
+	return tpl
 }
