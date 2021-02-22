@@ -6,12 +6,33 @@ import (
 	"testing"
 
 	zls "github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zjson"
 )
 
 type st interface {
 	String() string
 	Set(string)
 }
+
+type (
+	type1 struct {
+		A  int
+		B  string
+		C1 float32
+	}
+	type2 struct {
+		D bool
+		E *uint
+		F []string
+		G map[string]int
+		type1
+		S1 type1
+		S2 *type1
+	}
+	type3 struct {
+		Name string
+	}
+)
 
 var ni interface{}
 
@@ -226,4 +247,46 @@ func String(val interface{}) string {
 	default:
 		return fmt.Sprintf("%v", val)
 	}
+}
+
+func TestStructToMap(tt *testing.T) {
+	e := uint(8)
+	t := zls.NewTest(tt)
+	v := &type2{
+		D: true,
+		E: &e,
+		F: []string{"f1", "f2"},
+		G: map[string]int{"G1": 1, "G2": 2},
+		type1: type1{
+			A: 1,
+			B: "type1",
+		},
+		S1: type1{
+			A: 2,
+			B: "S1",
+		},
+		S2: &type1{
+			A: 3,
+			B: "Ss",
+		},
+	}
+	r := StructToMap(v)
+	t.Log(v, r)
+	j, err := zjson.Marshal(r)
+	t.EqualNil(err)
+	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"A":2,"B":"S1"},"S2":{"A":3,"B":"Ss"},"type1":{"A":1,"B":"type1"}}`, string(j))
+
+	v2 := []string{"1", "2", "more"}
+	r = StructToMap(v2)
+	t.Log(v2, r)
+	j, err = zjson.Marshal(v2)
+	t.EqualNil(err)
+	t.EqualExit(`["1","2","more"]`, string(j))
+
+	v3 := "ok"
+	r = StructToMap(v3)
+	t.Log(v3, r)
+	j, err = zjson.Marshal(v3)
+	t.EqualNil(err)
+	t.EqualExit(`"ok"`, string(j))
 }

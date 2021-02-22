@@ -2,8 +2,7 @@ package ztype
 
 import "reflect"
 
-func Slice(value interface{}) []interface{} {
-	m := []interface{}{}
+func Slice(value interface{}) (m []interface{}) {
 	ref := reflect.Indirect(reflect.ValueOf(value))
 	switch ref.Kind() {
 	case reflect.Slice, reflect.String:

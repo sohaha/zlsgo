@@ -4,6 +4,7 @@ package ztype
 import (
 	// "encoding/json"
 	"encoding/json"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -48,7 +49,7 @@ func ToString(i interface{}) string {
 	case uint32:
 		return strconv.FormatUint(uint64(value), 10)
 	case uint64:
-		return strconv.FormatUint(uint64(value), 10)
+		return strconv.FormatUint(value, 10)
 	case float32:
 		return strconv.FormatFloat(float64(value), 'f', -1, 32)
 	case float64:
@@ -274,4 +275,53 @@ func ToFloat64(i interface{}) float64 {
 	}
 	v, _ := strconv.ParseFloat(strings.TrimSpace(ToString(i)), 64)
 	return v
+}
+
+// StructToMap struct to map
+func StructToMap(data interface{}) (v map[string]interface{}) {
+	val := reflect.ValueOf(data)
+	switch val.Kind() {
+	case reflect.Ptr:
+		v = getStruct(val.Elem())
+	case reflect.Struct:
+		v = getStruct(val)
+	case reflect.Slice:
+		l := val.Len()
+		v = make(map[string]interface{}, l)
+		for i := 0; i < l; i++ {
+			v[strconv.Itoa(i)] = val.Index(i).Interface()
+		}
+	default:
+		v = map[string]interface{}{"0": val.Interface()}
+	}
+	return
+}
+
+func getStruct(val reflect.Value) map[string]interface{} {
+	valType := val.Type()
+	var tmp = make(map[string]interface{})
+	for i := 0; i < val.NumField(); i++ {
+		v := val.Field(i)
+		f := valType.Field(i)
+		switch v.Kind() {
+		case reflect.Ptr:
+			if v.IsNil() {
+				continue
+			}
+			v = v.Elem()
+			k := v.Kind()
+			if !(k == reflect.Struct || k == reflect.Slice) {
+				tmp[f.Name] = v.Interface()
+				continue
+			}
+			tmp[f.Name] = getStruct(v)
+		case reflect.Struct:
+			tmp[f.Name] = getStruct(v)
+		default:
+			if ToBool(v.Interface()) {
+				tmp[f.Name] = v.Interface()
+			}
+		}
+	}
+	return tmp
 }
