@@ -5,23 +5,60 @@ import (
 	"sync"
 )
 
-const BuffSize = 10 * 1024
+var bufTypes = [...]int{
+	0, 16, 32, 64, 128, 256, 512, 1024, 1048576, 10485760, 104857600,
+}
 
-var buffPool sync.Pool
+const bufTypeNum = len(bufTypes)
 
-func GetBuff() *bytes.Buffer {
-	var buffer *bytes.Buffer
-	item := buffPool.Get()
-	if item == nil {
-		byteSlice := make([]byte, 0, BuffSize)
-		buffer = bytes.NewBuffer(byteSlice)
-	} else {
-		buffer = item.(*bytes.Buffer)
+var (
+	bufPools [bufTypeNum]sync.Pool
+	BuffSize = bufTypes[3]
+)
+
+func init() {
+	for i := 0; i < bufTypeNum; i++ {
+		l := bufTypes[i]
+		bufPools[i].New = func() interface{} {
+			return bytes.NewBuffer(make([]byte, 0, l))
+		}
 	}
-	return buffer
+}
+
+func GetBuff(ss ...int) *bytes.Buffer {
+	size := BuffSize
+	if len(ss) > 0 {
+		size = ss[0]
+	}
+	if size > 0 {
+		if size <= bufTypes[bufTypeNum-1] {
+			for i := 0; i < bufTypeNum; i++ {
+				if size <= bufTypes[i] {
+					return bufPools[i].Get().(*bytes.Buffer)
+				}
+			}
+		}
+		return bytes.NewBuffer(make([]byte, 0, size))
+	}
+
+	return bufPools[0].Get().(*bytes.Buffer)
 }
 
 func PutBuff(buffer *bytes.Buffer) {
+	size := buffer.Cap()
 	buffer.Reset()
-	buffPool.Put(buffer)
+	if size > bufTypes[bufTypeNum-1] {
+		bufPools[0].Put(buffer)
+		return
+	}
+	for i := 1; i < bufTypeNum; i++ {
+		if size <= bufTypes[i] {
+			if size == bufTypes[i] {
+				bufPools[i].Put(buffer)
+			} else {
+				bufPools[i-1].Put(buffer)
+			}
+			return
+		}
+	}
 }

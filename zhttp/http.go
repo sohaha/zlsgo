@@ -507,7 +507,7 @@ func (m *multipartHelper) upload(req *http.Request, upload func(io.Writer, io.Re
 }
 
 func (m *multipartHelper) Upload(req *http.Request) {
-	bodyBuf := zutil.GetBuff()
+	bodyBuf := zutil.GetBuff(1048576)
 	defer zutil.PutBuff(bodyBuf)
 	bodyWriter := multipart.NewWriter(bodyBuf)
 
