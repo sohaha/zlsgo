@@ -73,7 +73,7 @@ var (
 
 func (c *Context) renderProcessing(code int, r render) {
 	c.Lock()
-	c.Code = code
+	c.prevData.Code = code
 	c.render = r
 	c.stopHandle = true
 	c.Unlock()
@@ -180,7 +180,9 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 }
 
 func (c *Context) SetContent(data *PrevData) {
-	c.renderProcessing(data.Code, &renderByte{Data: data.Content, Type: data.Type})
+	c.Lock()
+	c.prevData = data
+	c.Unlock()
 }
 
 func (c *Context) File(path string) {
@@ -258,7 +260,7 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 
 func (c *Context) SetStatus(code int) *Context {
 	c.Lock()
-	c.Code = code
+	c.prevData.Code = code
 	c.Unlock()
 	return c
 }
@@ -278,25 +280,15 @@ func (c *Context) hasContentType() bool {
 }
 
 func (c *Context) PrevContent() *PrevData {
-	c.RLock()
-	r := c.render
-	code := c.Code
-	c.RUnlock()
-	var content []byte
-	if r != nil {
-		content = r.Content(c)
+	if c.render == nil {
+		return c.prevData
 	}
-	c.RLock()
+	c.prevData.Content = c.render.Content(c)
 	ctype, hasType := c.header["Content-Type"]
-	if !hasType {
-		ctype = []string{ContentTypePlain}
+	if hasType {
+		c.prevData.Type = ctype[0]
 	}
-	c.RUnlock()
-	return &PrevData{
-		Code:    code,
-		Type:    ctype[0],
-		Content: content,
-	}
+	return c.prevData
 }
 
 func (t *tpl) Get(debug bool) *template.Template {

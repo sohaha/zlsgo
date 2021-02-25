@@ -22,20 +22,20 @@ import (
 type (
 	// Context context
 	Context struct {
-		Code int
-		sync.RWMutex
-		startTime     time.Time
 		stopHandle    bool
+		rawData       string
+		startTime     time.Time
 		middleware    []HandlerFunc
 		customizeData map[string]interface{}
 		header        map[string][]string
 		render        render
+		prevData      *PrevData
 		Writer        http.ResponseWriter
 		Request       *http.Request
-		rawData       string
 		Engine        *Engine
 		Log           *zlog.Logger
 		Cache         *zcache.Table
+		sync.RWMutex
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {

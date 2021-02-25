@@ -79,12 +79,12 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 		node  = t.root
 		queue []*Node
 	)
-
+	l := len(pattern)
 	if pattern == node.path {
 		nodes = append(nodes, node)
 		return
 	}
-	if !isRegex {
+	if !isRegex && l >= 1 {
 		pattern = strings.TrimPrefix(pattern, "/")
 	}
 

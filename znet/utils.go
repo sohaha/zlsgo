@@ -177,26 +177,20 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		Engine:        e,
 		Log:           e.Log,
 		Cache:         Cache,
-		Code:          http.StatusOK,
 		startTime:     time.Time{},
 		header:        map[string][]string{},
 		customizeData: map[string]interface{}{},
+		prevData: &PrevData{
+			Code: http.StatusOK,
+			Type: ContentTypePlain,
+		},
 	}
 }
 
-func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
-	c.Lock()
+func (c *Context) reset(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	c.Writer = w
-	c.Code = http.StatusOK
 	c.startTime = time.Now()
-	c.stopHandle = false
-	c.middleware = []HandlerFunc{}[:0]
-	c.customizeData = map[string]interface{}{}
-	c.header = map[string][]string{}
-	c.render = nil
-	c.rawData = c.rawData[:0]
-	c.Unlock()
 }
 
 func (e *Engine) acquireContext() *Context {
@@ -204,5 +198,16 @@ func (e *Engine) acquireContext() *Context {
 }
 
 func (e *Engine) releaseContext(c *Context) {
+	c.Lock()
+	c.prevData.Code = http.StatusOK
+	c.stopHandle = false
+	c.middleware = c.middleware[0:0]
+	c.customizeData = map[string]interface{}{}
+	c.header = map[string][]string{}
+	c.render = nil
+	c.rawData = c.rawData[0:0]
+	c.prevData.Content = c.prevData.Content[0:0]
+	c.prevData.Type = ContentTypePlain
+	c.Unlock()
 	e.pool.Put(c)
 }

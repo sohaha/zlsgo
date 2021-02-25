@@ -80,8 +80,6 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) done() {
-	data := c.PrevContent()
-	r := c.render
 	for key, value := range c.header {
 		for i := range value {
 			header := value[i]
@@ -92,10 +90,11 @@ func (c *Context) done() {
 			}
 		}
 	}
+	data := c.PrevContent()
 	if data.Code == 0 {
 		data.Code = http.StatusInternalServerError
 	}
-	if r != nil {
+	if len(data.Content) > 0 {
 		c.Writer.WriteHeader(data.Code)
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {
@@ -114,7 +113,6 @@ func (c *Context) Next() (next HandlerFunc) {
 		c.middleware = c.middleware[1:]
 		c.RUnlock()
 		next(c)
-		// c.PrevContent()
 	} else {
 		c.RUnlock()
 	}
@@ -124,16 +122,16 @@ func (c *Context) Next() (next HandlerFunc) {
 
 // SetCookie Set Cookie
 func (c *Context) SetCookie(name, value string, maxAge ...int) {
-	_maxAge := 0
+	a := 0
 	if len(maxAge) > 0 {
-		_maxAge = maxAge[0]
+		a = maxAge[0]
 	}
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   _maxAge,
+		MaxAge:   a,
 	}
 	c.Writer.Header().Add("Set-Cookie", cookie.String())
 }
@@ -166,7 +164,8 @@ func (c *Context) ContentType(contentText ...string) string {
 	} else {
 		content = c.GetHeader("Content-Type")
 	}
-	for i, char := range content {
+	for i := 0; i < len(content); i++ {
+		char := content[i]
 		if char == ' ' || char == ';' {
 			return content[:i]
 		}

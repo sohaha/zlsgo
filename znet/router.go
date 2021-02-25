@@ -344,11 +344,11 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	rw := e.acquireContext()
-	rw.Reset(w, req)
+	rw.reset(w, req)
 	defer func() {
 		if e.router.panic != nil {
 			if err := recover(); err != nil {
-				rw.Code = http.StatusInternalServerError
+				rw.prevData.Code = http.StatusInternalServerError
 				errMsg, ok := err.(error)
 				if !ok {
 					errMsg = errors.New(fmt.Sprint(err))
@@ -448,7 +448,7 @@ func (e *Engine) Use(middleware ...HandlerFunc) {
 
 func (e *Engine) HandleNotFound(c *Context) {
 	middleware := e.GetMiddleware() // make([]HandlerFunc, 0)
-	c.Code = http.StatusNotFound
+	c.prevData.Code = http.StatusNotFound
 	if e.router.notFound != nil {
 		handle(c, e.router.notFound, middleware)
 		return
