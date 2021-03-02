@@ -457,38 +457,10 @@ func TestBind(t *testing.T) {
 		Appid   string `json:"appid"`
 		HeadImg string `json:"head_img"`
 	}
-
-	type Articles struct {
-		Author             string `json:"author"`
-		Content            string `json:"content"`
-		Content_source_url string `json:"content_source_url"`
-		Digest             string `json:"digest"`
-		NeedOpenComment    string `json:"need_open_comment"`
-		OnlyFansCanComment string `json:"only_fans_can_comment"`
-		ShowCoverPic       string `json:"show_cover_pic"`
-		ThumbMediaId       string `json:"thumb_media_id"`
-		ThumbUrl           string `json:"thumb_url"`
-		Title              string `json:"title"`
-		Url                string `json:"url"`
-	}
-
-	type AddManyReqData struct {
-		Appid    string     `json:"appid"`
-		Appids   []AppInfo  `json:"appids"`
-		Articles []Articles `json:"articles"`
-	}
 	tt := zlsgo.NewTest(t)
 	r := newServer()
 	w := newRequest(r, "POST", []string{"/TestBind",
 		`{"appid":"Aid","appids":[{"label":"isLabel","id":"333"}]}`, ContentTypeJSON}, "/TestBind", func(c *Context) {
-		// var appids []AppInfo
-		// var data AddManyReqData
-		// // err := c.Bind(&data)
-		// _ = c.Bind(&appids)
-		//
-		// c.Log.Dump(data,appids)
-		// c.Log.Dump(c.GetDataRaw())
-		// c.Log.Debug(c.GetJSON("appid"))
 		json, _ := c.GetJSONs()
 		var appids []AppInfo
 		json.Get("appids").ForEach(func(key, value zjson.Res) bool {
@@ -618,7 +590,6 @@ func TestShouldBind(T *testing.T) {
 			"Abc":  rule.IsNumber(),
 		})
 		T.Log(bind2, err)
-		// t.EqualNil(err)
 		t.Equal(bind2.Name, "")
 
 		var bind3 struct {
@@ -633,9 +604,7 @@ func TestShouldBind(T *testing.T) {
 			"Abc":  rule.SetAlias("Abc").IsNumber(),
 		})
 		T.Log(bind3, err)
-		// t.EqualNil(err)
 		t.Equal(bind3.Name, "seekwe")
-
 		c.String(210, expected)
 	})
 	t.EqualExit(210, w.Code)
@@ -760,6 +729,28 @@ func TestRecovery(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal("ok", w.Body.String())
 	tt.Equal(200, w.Code)
+}
+
+func TestSetContent(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := New("SetContent")
+	r.GET("/SetContent", func(c *Context) {
+		c.String(200, "ok")
+	}, func(c *Context) {
+		c.Next()
+		data := c.PrevContent()
+		tt.Equal([]byte("ok"), data.Content)
+		data.Content = []byte("yes")
+	}, func(c *Context) {
+		c.Next()
+		data := c.PrevContent()
+		data.Code = 404
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/SetContent", nil)
+	r.ServeHTTP(w, req)
+	tt.Equal("yes", w.Body.String())
+	tt.Equal(404, w.Code)
 }
 
 func TestMethodAndName(t *testing.T) {

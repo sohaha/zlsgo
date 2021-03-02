@@ -179,6 +179,7 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 	c.renderProcessing(code, &renderString{Format: format, Data: values})
 }
 
+// Deprecated: You can directly modify the return value of PrevContent()
 func (c *Context) SetContent(data *PrevData) {
 	c.Lock()
 	c.prevData = data
@@ -259,9 +260,7 @@ func (c *Context) Redirect(link string, statusCode ...int) {
 }
 
 func (c *Context) SetStatus(code int) *Context {
-	c.Lock()
 	c.prevData.Code = code
-	c.Unlock()
 	return c
 }
 
@@ -279,6 +278,7 @@ func (c *Context) hasContentType() bool {
 	return false
 }
 
+// PrevContent current output content
 func (c *Context) PrevContent() *PrevData {
 	if c.render == nil {
 		return c.prevData
@@ -288,6 +288,7 @@ func (c *Context) PrevContent() *PrevData {
 	if hasType {
 		c.prevData.Type = ctype[0]
 	}
+	c.render = nil
 	return c.prevData
 }
 
