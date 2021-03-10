@@ -1,9 +1,3 @@
-/*
- * @Author: seekwe
- * @Date: 2020-06-06 17:03:53
- * @Last Modified by:: seekwe
- * @Last Modified time: 2020-06-09 16:39:23
- */
 package daemon
 
 import (

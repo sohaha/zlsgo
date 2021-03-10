@@ -105,3 +105,57 @@ func TestReflectForNumField(t *testing.T) {
 	})
 	tt.EqualNil(err)
 }
+
+func TestNonzero(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	v := reflect.ValueOf(0)
+	t.EqualTrue(!Nonzero(v))
+
+	v = reflect.ValueOf(10.00)
+	t.EqualTrue(Nonzero(v))
+
+	v = reflect.ValueOf(false)
+	t.EqualTrue(!Nonzero(v))
+}
+
+func TestCanInline(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	v := reflect.TypeOf(0)
+	t.EqualTrue(CanInline(v))
+
+	v = reflect.TypeOf(&TestSt{})
+	t.EqualTrue(!CanInline(v))
+
+	v = reflect.TypeOf(TestSt{Name: "yes"})
+	t.EqualTrue(CanInline(v))
+
+	v = reflect.TypeOf(map[string]interface{}{"d": 10, "a": "zz"})
+	t.EqualTrue(!CanInline(v))
+
+	v = reflect.TypeOf([...]int{10, 256})
+	t.EqualTrue(CanInline(v))
+
+	v = reflect.TypeOf(func() {})
+	t.EqualTrue(!CanInline(v))
+
+}
+
+func TestSetValue(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	t.Log(666)
+	vv := &TestSt2{Name: "1"}
+
+	v := reflect.ValueOf(vv)
+	err := ReflectForNumField(v.Elem(), func(fieldName, fieldTag string,
+		kind reflect.Kind, field reflect.Value) error {
+		if fieldName == "Test2" {
+			tt.Log(fieldName, true)
+			return SetValue(kind, field, true)
+		}
+		tt.Log(fieldName, "new")
+		return SetValue(kind, field, "new")
+	})
+	t.EqualNil(err)
+	t.Equal("new", vv.Name)
+	t.Equal(true, vv.Test2)
+}

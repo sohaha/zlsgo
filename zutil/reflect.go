@@ -3,6 +3,7 @@ package zutil
 import (
 	"errors"
 	"fmt"
+	"github.com/sohaha/zlsgo/ztype"
 	"reflect"
 	"strconv"
 )
@@ -13,6 +14,8 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 	v, ok := value.(string)
 	if ok {
 		vString = v
+	} else {
+		vString = ztype.ToString(value)
 	}
 	switch vTypeOf {
 	case reflect.String:
