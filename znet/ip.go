@@ -5,6 +5,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -142,4 +143,51 @@ func Long2IP(i uint) (ip net.IP, err error) {
 	ip[3] = byte(i)
 
 	return
+}
+
+// IsIP IsIP
+func IsIP(ip string) bool {
+	address := net.ParseIP(ip)
+	if address == nil {
+		return false
+	}
+	return true
+}
+
+// GetPort Check if the port is available, if not, then automatically get an available
+func Port(port int, change bool) (newPort int, err error) {
+	host := ":" + strconv.Itoa(port)
+	listener, err := net.Listen("tcp", host)
+	if err != nil {
+		if !change && port != 0 {
+			return 0, err
+		}
+		listener, err = net.Listen("tcp", ":0")
+		if err != nil {
+			return 0, err
+		}
+	}
+	defer listener.Close()
+	addr := listener.Addr().String()
+	_, portString, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(portString)
+}
+
+// MultiplePort Check if the multiple port is available, if not, then automatically get an available
+func MultiplePort(ports []int, change bool) (int, error) {
+	last := len(ports) - 1
+	for k, v := range ports {
+		c := false
+		if last == k {
+			c = change
+		}
+		n, err := Port(v, c)
+		if err == nil {
+			return n, nil
+		}
+	}
+	return 0, errors.New("no available port")
 }

@@ -53,7 +53,6 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		if path == "" {
 			path = "/"
 		}
-
 		if key != "" {
 			if strings.HasSuffix(path, "/") {
 				path += ":" + key
@@ -63,6 +62,10 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		} else if path != "/" && e.BindStructSuffix != "" {
 			path = path + e.BindStructSuffix
 		}
+		if path == "/" {
+			path = ""
+		}
+
 		if method == "ANY" {
 			g.Any(path, fn)
 			return nil
