@@ -4,12 +4,36 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 )
+
+func getAddr(addr string) string {
+	var port int
+	if strings.Contains(addr, ":") {
+		port, _ = strconv.Atoi(strings.Split(addr, ":")[1])
+	} else {
+		port, _ = strconv.Atoi(addr)
+		addr = ":" + addr
+	}
+	if port != 0 {
+		return addr
+	}
+	port, _ = Port(port, true)
+	return ":" + strconv.Itoa(port)
+}
+
+func getHostname(addr string, isTls bool) string {
+	hostname := "http://"
+	if isTls {
+		hostname = "https://"
+	}
+	return hostname + resolveHostname(addr)
+}
 
 func completionPath(path, prefix string) string {
 	if path != "" {

@@ -56,7 +56,13 @@ func TestIsIP(tt *testing.T) {
 func TestGetPort(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	p := 3780
-	port, err := Port(p, true)
+
+	port, err := Port(0, true)
+	t.EqualNil(err)
+	t.EqualTrue(port != p)
+	tt.Log(port)
+
+	port, err = Port(p, true)
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	t.EqualNil(err)
 	defer l.Close()

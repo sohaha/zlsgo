@@ -2,6 +2,7 @@ package znet
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -268,6 +269,7 @@ func TestPost(tt *testing.T) {
 		tt.Log("TestWeb")
 		c.WithValue("k3", "k3-data")
 		_, _ = c.GetDataRaw()
+		_, _ = c.MultipartForm()
 		c.JSON(201, ApiData{
 			Code: 200,
 			Msg:  expected,
@@ -344,26 +346,26 @@ func TestCustomMethod(t *testing.T) {
 	tt.Equal("put", w.Body.String())
 }
 
-func TestHTML(t *testing.T) {
-	tt := zlsgo.NewTest(t)
+func TestHTML(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
 	r := newServer()
 	w := newRequest(r, "GET", "/TestHTML", "/TestHTML", func(c *Context) {
-		t.Log("TestHTML")
+		tt.Log("TestHTML")
 		c.HTML(202, `<html>123</html>`)
 	})
-	tt.Equal(202, w.Code)
-	tt.EqualExit(`<html>123</html>`, w.Body.String())
+	t.Equal(202, w.Code)
+	t.EqualExit(`<html>123</html>`, w.Body.String())
 
 	w = newRequest(r, "GET", "/TestHTML2", "/TestHTML2", func(c *Context) {
-		t.Log("TestHTML2")
+		tt.Log("TestHTML2")
 		c.Template(202, `<html>{{.title}}</html>`, Data{"title": "ZlsGo"})
 	})
-	tt.Equal(202, w.Code)
-	tt.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
+	t.Equal(202, w.Code)
+	t.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
 }
 
-func TestMore(t *testing.T) {
-	T := zlsgo.NewTest(t)
+func TestMore(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
 	r := newServer()
 	r.SetMode(DebugMode)
 	ShutdownDone = func() {
@@ -389,14 +391,23 @@ func TestMore(t *testing.T) {
 			U    U3
 		}
 		err := c.Bind(&u)
-		T.EqualNil(err)
+		t.EqualNil(err)
 		c.Log.Dump(u)
-		T.Equal("333", u.U.Name3)
-		T.Equal(333, u.N2)
-		T.Equal(222, u.Name2)
+		t.Equal("333", u.U.Name3)
+		t.Equal(333, u.N2)
+		t.Equal(222, u.Name2)
 	})
-	T.Equal(200, w.Code)
-	T.Equal(expected, w.Body.String())
+	t.Equal(200, w.Code)
+	t.Equal(expected, w.Body.String())
+
+	t.EqualTrue(getAddr("") != "")
+	t.EqualExit(":3120", getAddr("3120"))
+	t.EqualExit(":3120", getAddr(":3120"))
+	t.EqualExit("0.0.0.0:3120", getAddr("0.0.0.0:3120"))
+
+
+	t.EqualExit("http://127.0.0.1:3120", getHostname(":3120",false))
+	t.EqualExit("https://127.0.0.1:3120", getHostname(":3120",true))
 }
 
 func TestTemplate(t *testing.T) {
@@ -424,16 +435,15 @@ func TestTemplate(t *testing.T) {
 	})
 	tt.Equal(202, w.Code)
 	tt.EqualExit(`<html><title>ZlsGo</title><body>This is body</body></html>`, w.Body.String())
-
 }
+
 func TestTemplateLoad(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
 	path := zfile.RealPathMkdir("tmpTemplate", true)
 	defer zfile.Rmdir(path)
 
-	template := `{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`
-	_ = zfile.WriteFile(path+"template-define.html", []byte(template))
+	_ = zfile.WriteFile(path+"tpl-define.html", []byte(`{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`))
 	r.SetTemplateFuncMap(map[string]interface{}{
 		"test": func() string {
 			return "-ok"
@@ -448,6 +458,16 @@ func TestTemplateLoad(t *testing.T) {
 		})
 	tt.Equal(200, w.Code)
 	tt.EqualExit(`ZlsGo-ok`, w.Body.String())
+
+	temple, _ := template.New("tmpTemplate/tpl-html.html").Parse(`{{.title}}`)
+	r.SetHTMLTemplate(temple)
+
+	w = newRequest(r, "GET", "/Template-define", "/Template-define",
+		func(c *Context) {
+			c.Template(200, "tmpTemplate/tpl-html.html", Data{"title": "ZlsGo"})
+		})
+	tt.Equal(200, w.Code)
+	tt.EqualExit(`ZlsGo`, w.Body.String())
 }
 
 func TestBind(t *testing.T) {

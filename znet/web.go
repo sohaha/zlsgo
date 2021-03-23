@@ -5,10 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"html/template"
-	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -220,18 +218,21 @@ func CloseHotRestartFileMd5() {
 	fileMd5 = ""
 }
 
+// SetTemplateFuncMap Set Template Func
 func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
 	e.templateFuncMap = funcMap
 }
 
+// SetHTMLTemplate Set HTML Template
 func (e *Engine) SetHTMLTemplate(t *template.Template) {
-	tplval := &tpl{
+	val := &tpl{
 		tpl:             t,
 		templateFuncMap: template.FuncMap{},
 	}
-	e.template = tplval
+	e.template = val
 }
 
+// LoadHTMLGlob Load Glob HTML
 func (e *Engine) LoadHTMLGlob(pattern string) {
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {
@@ -239,16 +240,16 @@ func (e *Engine) LoadHTMLGlob(pattern string) {
 		return
 	}
 	isDebug := e.IsDebug()
-	tplval := &tpl{
+	val := &tpl{
 		pattern:         pattern,
 		tpl:             t,
 		templateFuncMap: template.FuncMap{},
 	}
 	if isDebug {
 		templatesDebug(t)
-		tplval.templateFuncMap = e.templateFuncMap
+		val.templateFuncMap = e.templateFuncMap
 	}
-	e.template = tplval
+	e.template = val
 }
 
 // SetMode Setting Server Mode
@@ -303,13 +304,8 @@ func Run() {
 			go func(cfg addrSt, e *Engine) {
 				var err error
 				isTls := cfg.Cert != "" || cfg.Config != nil
-				addr := getPort(cfg.addr)
-				hostname := "http://"
-				if isTls {
-					hostname = "https://"
-				}
-				hostname += resolveHostname(addr)
-
+				addr := getAddr(cfg.addr)
+				hostname := getHostname(addr, isTls)
 				srv := &http.Server{
 					Addr:         addr,
 					Handler:      e,
@@ -334,7 +330,7 @@ func Run() {
 						srv.TLSConfig = cfg.Config
 					}
 					if cfg.HTTPAddr != "" {
-						httpAddr := getPort(cfg.HTTPAddr)
+						httpAddr := getAddr(cfg.HTTPAddr)
 						go func(e *Engine) {
 							newHostname := "http://" + resolveHostname(httpAddr)
 							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+newHostname)))
@@ -363,12 +359,12 @@ func Run() {
 		}
 	}
 
-	iskill := isKill()
+	sigkill := isKill()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	if !iskill && !CloseHotRestart {
+	if !sigkill && !CloseHotRestart {
 		runNewProcess()
 	}
 
@@ -376,17 +372,17 @@ func Run() {
 		go func(value interface{}) {
 			if s, ok := value.(*serverMap); ok {
 				r := s.engine
-				if iskill {
+				if sigkill {
 					r.Log.Info("Shutdown server ...")
 				}
 				err := s.srv.Shutdown(ctx)
 				if err != nil {
-					if iskill {
+					if sigkill {
 						r.Log.Error("Timeout forced close")
 					}
 					_ = s.srv.Close()
 				} else {
-					if iskill {
+					if sigkill {
 						r.Log.Success("Shutdown server done")
 					}
 				}
@@ -401,23 +397,6 @@ func Run() {
 		ShutdownDone()
 	}
 	time.Sleep(100 * time.Millisecond)
-}
-
-func getPort(addr string) string {
-	if !strings.Contains(addr, ":") {
-		addr = ":" + addr
-	}
-	if addr != ":0" {
-		return addr
-	}
-	// random port
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		Log.Fatalf("Listen: %s\n", err)
-	}
-	addr = ":" + strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
-	_ = listener.Close()
-	return addr
 }
 
 func runNewProcess() {
