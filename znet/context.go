@@ -80,6 +80,10 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) done() {
+	data := c.PrevContent()
+	if data.Code == 0 {
+		data.Code = http.StatusInternalServerError
+	}
 	for key, value := range c.header {
 		for i := range value {
 			header := value[i]
@@ -89,10 +93,6 @@ func (c *Context) done() {
 				c.Writer.Header().Add(key, header)
 			}
 		}
-	}
-	data := c.PrevContent()
-	if data.Code == 0 {
-		data.Code = http.StatusInternalServerError
 	}
 	if len(data.Content) > 0 {
 		c.Writer.WriteHeader(data.Code)
