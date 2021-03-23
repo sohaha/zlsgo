@@ -224,6 +224,14 @@ func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
 	e.templateFuncMap = funcMap
 }
 
+func (e *Engine) SetHTMLTemplate(t *template.Template) {
+	tplval := &tpl{
+		tpl:             t,
+		templateFuncMap: template.FuncMap{},
+	}
+	e.template = tplval
+}
+
 func (e *Engine) LoadHTMLGlob(pattern string) {
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {

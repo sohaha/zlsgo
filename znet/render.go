@@ -144,8 +144,7 @@ func (r *renderHTML) Content(c *Context) []byte {
 		)
 		tpl := c.Engine.template
 		if tpl != nil {
-			isDebug := c.Engine.IsDebug()
-			t = tpl.Get(isDebug)
+			t = tpl.Get(c.Engine.IsDebug())
 			if t != nil && len(r.FuncMap) == 0 {
 				name := r.Templates[0]
 				err = t.ExecuteTemplate(&buf, name, r.Data)
@@ -293,7 +292,7 @@ func (c *Context) PrevContent() *PrevData {
 }
 
 func (t *tpl) Get(debug bool) *template.Template {
-	if !debug {
+	if !debug || t.pattern == "" {
 		return t.tpl
 	}
 	tpl, _ := template.New("").Funcs(t.templateFuncMap).ParseGlob(t.pattern)
