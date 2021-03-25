@@ -54,7 +54,12 @@ func TestNewTime(t *testing.T) {
 	t.Log(GetTimeZone().String())
 
 	t.Log(Now())
+}
 
+func TestFormatTlp(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	t.Equal("06-01-d",FormatTlp("y-m-\\d"))
+	t.Equal("06-01-02 00:00:00",FormatTlp("y-m-d \\0\\0:\\0\\0:\\0\\0"))
 }
 
 func TestParse(t *testing.T) {

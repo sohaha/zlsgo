@@ -10,11 +10,11 @@ import (
 
 // CopyDir copies the source directory to the dest directory.
 func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFilePath string) bool) (err error) {
-	sourceinfo, err := os.Stat(source)
+	info, err := os.Stat(source)
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(dest, sourceinfo.Mode())
+	err = os.MkdirAll(dest, info.Mode())
 	if err != nil {
 		return err
 	}

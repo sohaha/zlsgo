@@ -18,8 +18,8 @@ func WithLockContext(mu *sync.Mutex, fn func()) {
 func WithRunTimeContext(handler func(), callback func(time.Duration)) {
 	start := time.Now()
 	handler()
-	timeduration := time.Since(start)
-	callback(timeduration)
+	duration := time.Since(start)
+	callback(duration)
 }
 
 func WithRunMemContext(handler func()) uint64 {
