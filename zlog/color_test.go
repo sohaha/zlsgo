@@ -21,7 +21,7 @@ func TestColor(t *testing.T) {
 	}
 
 	DisableColor = true
-	bl = IsSupportColor()
+	bl = isSupportColor()
 	T.Equal(false, bl)
 	OutAllColor()
 	T.Equal(testText, ColorTextWrap(ColorGreen, testText))

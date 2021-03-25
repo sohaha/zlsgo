@@ -57,7 +57,13 @@ func TestCliOther(t *testing.T) {
 	testOther(t)
 }
 
-func TestCliCommand(_ *testing.T) {
+func TestCliCommand(t *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+		t.Log("myExit:",code)
+	}
+	osExit = myExit
 	requiredFlags = RequiredFlags{}
 	resetForTesting("test", "-flag1")
 	Add("test", "test", &testCmd{})
@@ -77,7 +83,7 @@ func TestCliCommandErr(_ *testing.T) {
 	Run()
 }
 
-func TestCliCommandHelp(_ *testing.T) {
+func TestCliCommandHelp(t *testing.T) {
 	expectedName := "gopher"
 	requiredFlags = RequiredFlags{}
 	resetForTesting("testHelp", "-help")
@@ -91,7 +97,13 @@ func TestCliCommandHelp(_ *testing.T) {
 	ShowFlags(flag.CommandLine)
 }
 
-func TestCliCommandHelp2(_ *testing.T) {
+func TestCliCommandHelp2(t *testing.T) {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	myExit := func(code int) {
+		t.Log("myExit:",code)
+	}
+	osExit = myExit
 	requiredFlags = RequiredFlags{}
 	resetForTesting("test", "ddd", "-h")
 	Add("test", "test", &testCmd{})

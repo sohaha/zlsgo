@@ -5,6 +5,8 @@ import (
 )
 
 func TestService(t *testing.T) {
-	_ = LaunchServiceRun("test", "", func() {
+	s, err := LaunchService("test", "", func() {
+		t.Log("TestService")
 	})
+	t.Log(s, err)
 }

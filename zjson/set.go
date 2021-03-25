@@ -296,8 +296,13 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	}
 	switch jsres.Raw[0] {
 	case '{':
-		buf = append(buf, '{')
-		buf = appendBuild(buf, false, paths, raw, stringify)
+		end := len(jsres.Raw) - 1
+		for ; end > 0; end-- {
+			if jsres.Raw[end] == '}' {
+				break
+			}
+		}
+		buf = append(buf, jsres.Raw[:end]...)
 		if comma {
 			buf = append(buf, ',')
 		}
@@ -313,7 +318,7 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 			}
 		}
 		if appendit {
-			njson := trim(jsres.Raw)
+			njson := zstring.TrimSpace(jsres.Raw)
 			if njson[len(njson)-1] == ']' {
 				njson = njson[:len(njson)-1]
 			}

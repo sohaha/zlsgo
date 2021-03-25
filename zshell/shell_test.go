@@ -2,6 +2,7 @@ package zshell
 
 import (
 	"context"
+	"github.com/sohaha/zlsgo/zutil"
 	"os"
 	"strings"
 	"testing"
@@ -10,8 +11,13 @@ import (
 )
 
 func TestPipe(t *testing.T) {
+	if zutil.IsWin() {
+		t.Log("ignore windows")
+		return
+	}
 	tt := zlsgo.NewTest(t)
 	ctx := context.Background()
+
 	commands := [][]string{
 		{"ls", "-a"},
 		{"grep", "go"},
@@ -50,10 +56,12 @@ func TestBash(t *testing.T) {
 	tt.EqualExit(true, err != nil)
 	t.Log(err)
 
-	code, _, _, err = Run("ls")
-	tt.EqualExit(0, code)
-	tt.EqualExit(true, err == nil)
-	t.Log(err)
+	if !zutil.IsWin() {
+		code, _, _, err = Run("ls")
+		tt.EqualExit(0, code)
+		tt.EqualExit(true, err == nil)
+		t.Log(err)
+	}
 
 	_, res, _, err = Run("ls -a /Applications/Google\\ Chrome.app")
 	t.Log(res)

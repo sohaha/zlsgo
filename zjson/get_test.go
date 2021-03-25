@@ -89,7 +89,7 @@ func TestGet(t *testing.T) {
 	})
 
 	byteData := zstring.String2Bytes(demo)
-	tt.EqualExit(true, ValidBytes(byteData))
+	tt.EqualTrue( ValidBytes(byteData))
 	tt.EqualExit("暴龙兽", GetBytes(byteData, "user.name").String())
 
 	resData := GetMultiple(demo, "user.name", "f?iends.1.name")
@@ -147,6 +147,15 @@ func TestGetFormat(T *testing.T) {
 	SetModifiersState(true)
 	t := zlsgo.NewTest(T)
 	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
+}
+
+func TestModifiers(T *testing.T) {
+	SetModifiersState(true)
+	t := zlsgo.NewTest(T)
+	t.Log(Get(demo, "enemy").String())
+	t.Log(Get(demo, "enemy|@reverse").String())
+	t.Log(Get(demo, "enemy|@ugly").String())
+	t.Log(Get(demo, "enemy|@format").String())
 }
 
 func BenchmarkGet(b *testing.B) {

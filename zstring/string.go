@@ -189,3 +189,22 @@ func XSSClean(str string) string {
 	str, _ = RegexReplace("\\s{2,}", str, " ")
 	return strings.TrimSpace(str)
 }
+
+// TrimSpace TrimSpace
+func TrimSpace(s string) string {
+	for len(s) > 0 {
+		if s[0] <= ' ' {
+			s = s[1:]
+			continue
+		}
+		break
+	}
+	for len(s) > 0 {
+		if s[len(s)-1] <= ' ' {
+			s = s[:len(s)-1]
+			continue
+		}
+		break
+	}
+	return s
+}

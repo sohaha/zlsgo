@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -63,12 +62,8 @@ func TestFile(T *testing.T) {
 	t.EqualTrue(DirExist(path))
 	t.EqualTrue(DirExist(testPath))
 	ok := Rmdir(testPath)
-
+	Rmdir(path)
 	T.Log(path, testPath, ok)
-	var g sync.WaitGroup
-	g.Add(1)
-	// g.Wait()
-
 }
 
 func TestPut(t *testing.T) {

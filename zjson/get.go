@@ -89,6 +89,8 @@ func (r Res) Bool() bool {
 		return true
 	case String:
 		return r.Str != "" && r.Str != "0" && r.Str != "false"
+		b, _ := strconv.ParseBool(strings.ToLower(r.Str))
+		return b
 	case Number:
 		return r.Num != 0
 	default:
@@ -104,14 +106,16 @@ func (r Res) Int() int {
 		n, _ := parseInt(r.Str)
 		return n
 	case Number:
-		n, ok := floatToInt(r.Num)
-		if !ok {
-			n, ok = parseInt(r.Raw)
-			if !ok {
-				return int(r.Num)
-			}
+		i, ok := safeInt(r.Num)
+		if ok {
+			return i
 		}
-		return n
+		// now try to parse the raw string
+		i, ok = parseInt(r.Raw)
+		if ok {
+			return i
+		}
+		return int(r.Num)
 	default:
 		return 0
 	}
@@ -127,14 +131,15 @@ func (r Res) Uint() uint {
 		n, _ := parseUint(r.Str)
 		return n
 	case Number:
-		n, ok := floatToUint(r.Num)
-		if !ok {
-			n, ok = parseUint(r.Raw)
-			if !ok {
-				return uint(r.Num)
-			}
+		i, ok := safeInt(r.Num)
+		if ok && i >= 0 {
+			return uint(i)
 		}
-		return n
+		u, ok := parseUint(r.Raw)
+		if ok {
+			return u
+		}
+		return uint(r.Num)
 	}
 }
 
@@ -785,8 +790,8 @@ func parseQuery(query string) (
 		return "", "", "", "", i, false
 	}
 	if j > 0 {
-		path = trim(query[2:j])
-		value = trim(query[j:i])
+		path = zstring.TrimSpace(query[2:j])
+		value = zstring.TrimSpace(query[j:i])
 		remain = query[i+1:]
 		var opsz int
 		switch {
@@ -813,9 +818,9 @@ func parseQuery(query string) (
 			opsz = 1
 		}
 		op = value[:opsz]
-		value = trim(value[opsz:])
+		value = zstring.TrimSpace(value[opsz:])
 	} else {
-		path = trim(query[2:i])
+		path = zstring.TrimSpace(query[2:i])
 		remain = query[i+1:]
 	}
 	return path, op, value, remain, i + 1, true
@@ -1822,8 +1827,10 @@ func GetMultipleBytes(json []byte, path ...string) []Res {
 	return res
 }
 
-var fieldsmu sync.RWMutex
-var fields = make(map[string]map[string]int)
+var (
+	fieldsmu sync.RWMutex
+	fields   = make(map[string]map[string]int)
+)
 
 func assign(jsval Res, val reflect.Value) {
 	if jsval.Type == Null {
@@ -1944,7 +1951,7 @@ func Unmarshal(json, v interface{}) error {
 		data = v
 	}
 	if atomic.LoadUintptr(&validate) == 1 {
-		_, ok := validpayload(data, 0)
+		_, ok := validPayload(data, 0)
 		if !ok {
 			return ErrInvalidJSON
 		}
@@ -1955,7 +1962,7 @@ func Unmarshal(json, v interface{}) error {
 	return nil
 }
 
-func validpayload(data []byte, i int) (outi int, ok bool) {
+func validPayload(data []byte, i int) (outi int, ok bool) {
 	for ; i < len(data); i++ {
 		switch data[i] {
 		default:
@@ -2223,12 +2230,12 @@ func validnull(data []byte, i int) (outi int, ok bool) {
 }
 
 func Valid(json string) (ok bool) {
-	_, ok = validpayload(zstring.String2Bytes(json), 0)
+	_, ok = validPayload(zstring.String2Bytes(json), 0)
 	return
 }
 
 func ValidBytes(json []byte) bool {
-	_, ok := validpayload(json, 0)
+	_, ok := validPayload(json, 0)
 	return ok
 }
 
@@ -2268,22 +2275,6 @@ func parseInt(s string) (n int, ok bool) {
 		return n * -1, true
 	}
 	return n, true
-}
-
-func floatToUint(f float64) (n uint, ok bool) {
-	n = uint(f)
-	if float64(n) == f {
-		return n, true
-	}
-	return 0, false
-}
-
-func floatToInt(f float64) (n int, ok bool) {
-	n = int(f)
-	if float64(n) == f {
-		return n, true
-	}
-	return 0, false
 }
 
 func execModifier(json, path string) (pathOut, res string, ok bool) {
@@ -2336,13 +2327,14 @@ func execModifier(json, path string) (pathOut, res string, ok bool) {
 	return pathOut, res, false
 }
 
-var openModifiers = false
-
-var modifiers = map[string]func(json, arg string) string{
-	"format":  modPretty,
-	"ugly":    modUgly,
-	"reverse": modReverse,
-}
+var (
+	openModifiers = false
+	modifiers     = map[string]func(json, arg string) string{
+		"format":  modifierPretty,
+		"ugly":    modifierUgly,
+		"reverse": modifierReverse,
+	}
+)
 
 func AddModifier(name string, fn func(json, arg string) string) {
 	modifiers[name] = fn
@@ -2353,7 +2345,7 @@ func ModifierExists(name string) bool {
 	return ok
 }
 
-func modPretty(json, arg string) string {
+func modifierPretty(json, arg string) string {
 	if len(arg) > 0 {
 		opts := *DefOptions
 		Parse(arg).ForEach(func(key, value Res) bool {
@@ -2365,7 +2357,7 @@ func modPretty(json, arg string) string {
 			case "prefix":
 				opts.Prefix = value.String()
 			case "width":
-				opts.Width = int(value.Int())
+				opts.Width = value.Int()
 			}
 			return true
 		})
@@ -2374,11 +2366,11 @@ func modPretty(json, arg string) string {
 	return zstring.Bytes2String(Format(zstring.String2Bytes(json)))
 }
 
-func modUgly(json, _ string) string {
+func modifierUgly(json, _ string) string {
 	return zstring.Bytes2String(Ugly(zstring.String2Bytes(json)))
 }
 
-func modReverse(json, _ string) string {
+func modifierReverse(json, _ string) string {
 	res := Parse(json)
 	if res.IsArray() {
 		var values []Res
@@ -2469,13 +2461,4 @@ func switchJson(json string, i int, isParse bool) (string, int) {
 	} else {
 		return json, i
 	}
-}
-
-func squash(json string) string {
-	ss, _ := switchJson(json, 0, false)
-	return ss
-}
-
-func parseSquash(json string, i int) (string, int) {
-	return switchJson(json, i, true)
 }

@@ -16,8 +16,8 @@ type (
 		SortKeys bool
 	}
 	pair struct {
-		kstart, kend int
-		vstart, vend int
+		ks, kd int
+		vs, vd int
 	}
 	byKey struct {
 		sorted bool
@@ -28,7 +28,7 @@ type (
 
 var (
 	DefOptions = &StFormatOptions{Width: 80, Prefix: "", Indent: "  ", SortKeys: false}
-	Maches     = []Map{
+	Matches    = []Map{
 		{"start": "//", "end": "\n"},
 		{"start": "/*", "end": "*/"},
 	}
@@ -122,8 +122,8 @@ func (arr *byKey) Len() int {
 }
 
 func (arr *byKey) Less(i, j int) bool {
-	key1 := arr.json[arr.pairs[i].kstart+1 : arr.pairs[i].kend-1]
-	key2 := arr.json[arr.pairs[j].kstart+1 : arr.pairs[j].kend-1]
+	key1 := arr.json[arr.pairs[i].ks+1 : arr.pairs[i].kd-1]
+	key2 := arr.json[arr.pairs[j].ks+1 : arr.pairs[j].kd-1]
 	return zstring.Bytes2String(key1) < zstring.Bytes2String(key2)
 }
 
@@ -189,15 +189,15 @@ func appendObject(buf, json []byte, i int, open, close byte, pretty bool, width 
 				nl = len(buf)
 				buf = append(buf, '\n')
 				if open == '{' && sortkeys {
-					p.kstart = i
-					p.vstart = len(buf)
+					p.ks = i
+					p.vs = len(buf)
 				}
 				buf = appendTabs(buf, prefix, indent, tabs+1)
 			}
 			if open == '{' {
 				buf, i, nl, _ = appendString(buf, json, i, nl)
 				if sortkeys {
-					p.kend = i
+					p.kd = i
 				}
 				buf = append(buf, ':')
 				if pretty {
@@ -209,8 +209,8 @@ func appendObject(buf, json []byte, i int, open, close byte, pretty bool, width 
 				return buf, i, nl, false
 			}
 			if pretty && open == '{' && sortkeys {
-				p.vend = len(buf)
-				if p.kstart > p.kend || p.vstart > p.vend {
+				p.vd = len(buf)
+				if p.ks > p.kd || p.vs > p.vd {
 					sortkeys = false
 				} else {
 					pairs = append(pairs, p)
@@ -227,8 +227,8 @@ func sortPairs(json, buf []byte, pairs []pair) []byte {
 	if len(pairs) == 0 {
 		return buf
 	}
-	vstart := pairs[0].vstart
-	vend := pairs[len(pairs)-1].vend
+	vstart := pairs[0].vs
+	vend := pairs[len(pairs)-1].vd
 	arr := byKey{false, json, pairs}
 	sort.Sort(&arr)
 	if !arr.sorted {
@@ -236,7 +236,7 @@ func sortPairs(json, buf []byte, pairs []pair) []byte {
 	}
 	nbuf := make([]byte, 0, vend-vstart)
 	for i, p := range pairs {
-		nbuf = append(nbuf, buf[p.vstart:p.vend]...)
+		nbuf = append(nbuf, buf[p.vs:p.vd]...)
 		if i < len(pairs)-1 {
 			nbuf = append(nbuf, ',')
 			nbuf = append(nbuf, '\n')
@@ -307,7 +307,7 @@ func Discard(json string) (string, error) {
 	for i := 0; i < len(runes); {
 		v = runes[i]
 		if flag == -1 {
-			for f, v := range Maches {
+			for f, v := range Matches {
 				l := match(&runes, i, v["start"])
 				if l != 0 {
 					flag = f
@@ -331,7 +331,7 @@ func Discard(json string) (string, error) {
 				continue
 			}
 		} else {
-			l := match(&runes, i, Maches[flag]["end"])
+			l := match(&runes, i, Matches[flag]["end"])
 			if l != 0 {
 				flag = -1
 				i += l

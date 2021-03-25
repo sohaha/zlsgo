@@ -7,18 +7,15 @@ import (
 )
 
 var (
-	winEnable          = isSupportColor()
-	procGetConsoleMode *syscall.LazyProc
+	winEnable          bool
 	procSetConsoleMode *syscall.LazyProc
 )
 
 func init() {
-	if winEnable {
+	if supportColor || isMsystem {
 		return
 	}
-
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	procGetConsoleMode = kernel32.NewProc("GetConsoleMode")
 	procSetConsoleMode = kernel32.NewProc("SetConsoleMode")
 
 	winEnable = tryApplyOnCONOUT()
@@ -73,5 +70,5 @@ func EnableTerminalProcessing(stream syscall.Handle, enable bool) error {
 
 // IsSupportColor IsSupportColor
 func IsSupportColor() bool {
-	return !DisableColor && winEnable
+	return supportColor || winEnable
 }

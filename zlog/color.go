@@ -2,6 +2,7 @@ package zlog
 
 import (
 	"fmt"
+	"github.com/sohaha/zlsgo/zutil"
 	"os"
 	"strings"
 
@@ -84,7 +85,7 @@ const (
 
 // OpTextWrap OpTextWrap
 func OpTextWrap(op Op, text string) string {
-	if !IsSupportColor() {
+	if !isSupportColor() {
 		return text
 	}
 	return fmt.Sprintf("\x1b[%dm%s", op, text)
@@ -92,7 +93,7 @@ func OpTextWrap(op Op, text string) string {
 
 // ColorBackgroundWrap ColorBackgroundWrap
 func ColorBackgroundWrap(color Color, backgroundColor Color, text string) string {
-	if !IsSupportColor() {
+	if !isSupportColor() {
 		return text
 	}
 	return fmt.Sprintf("\x1b[%d;%dm%s\x1b[0m", color, backgroundColor+10, text)
@@ -144,12 +145,23 @@ func GetAllColorText() map[string]Color {
 
 // ColorTextWrap ColorTextWrap
 func ColorTextWrap(color Color, text string) string {
-	if !IsSupportColor() {
+	if !isSupportColor() {
 		return text
 	}
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color, text)
 }
 
+var supportColor bool
+var isMsystem = os.Getenv("MSYSTEM") != ""
+
+func init() {
+	if zutil.IsWin() && isMsystem {
+		return
+	}
+	term := os.Getenv("TERM")
+	supportColor = strings.Contains(term, "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "" || strings.Contains(term, "256color")
+}
+
 func isSupportColor() bool {
-	return !DisableColor && (strings.Contains(os.Getenv("TERM"), "xterm") || os.Getenv("ConEmuANSI") == "ON" || os.Getenv("ANSICON") != "" || os.Getenv("ANSICON") != "" || strings.Contains(os.Getenv("TERM"), "256color"))
+	return !DisableColor && IsSupportColor()
 }

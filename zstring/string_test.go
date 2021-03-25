@@ -2,6 +2,7 @@ package zstring
 
 import (
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 	"unsafe"
@@ -100,6 +101,16 @@ func TestXss(T *testing.T) {
 	}
 	for _, v := range htmls {
 		t.Equal(v[1], XSSClean(v[0]))
+	}
+}
+
+func TestTrimSpace(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	for _, v := range []string{
+		" ", ` 22 33`, `123 `," \t\n a lone gopher \n\t\r\n",
+	} {
+		t.EqualExit(strings.TrimSpace(v), TrimSpace(v))
+		t.Log(strings.TrimSpace(v), TrimSpace(v))
 	}
 }
 

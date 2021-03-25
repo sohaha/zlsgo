@@ -4,7 +4,6 @@ package zjson
 import (
 	jsongo "encoding/json"
 	"errors"
-	"reflect"
 	"strconv"
 	"unsafe"
 
@@ -20,32 +19,44 @@ var (
 	ErrTypeError             = errors.New("json must be an object or array")
 )
 
+type stringHeader struct {
+	data unsafe.Pointer
+	len  int
+}
+
+type sliceHeader struct {
+	data unsafe.Pointer
+	len  int
+	cap  int
+}
+
 func getBytes(json []byte, path string) Res {
 	var result Res
 	if json != nil {
-		result = Get(zstring.Bytes2String(json), path)
-		rawhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Raw))
-		strhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Str))
-		rawh := reflect.SliceHeader{Data: rawhi.Data, Len: rawhi.Len}
-		strh := reflect.SliceHeader{Data: strhi.Data, Len: strhi.Len}
-		if strh.Data == 0 {
-			if rawh.Data == 0 {
+		result = Get(*(*string)(unsafe.Pointer(&json)), path)
+		raw := *(*stringHeader)(unsafe.Pointer(&result.Raw))
+		str := *(*stringHeader)(unsafe.Pointer(&result.Str))
+		rawh := sliceHeader{data: raw.data, len: raw.len, cap: raw.len}
+		strh := sliceHeader{data: str.data, len: str.len, cap: raw.len}
+		if strh.data == nil {
+			if rawh.data == nil {
 				result.Raw = ""
 			} else {
-				result.Raw = sliceHeaderToString(&rawh)
+				result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
 			}
 			result.Str = ""
-		} else if rawh.Data == 0 {
+		} else if rawh.data == nil {
 			result.Raw = ""
-			result.Str = sliceHeaderToString(&strh)
-		} else if strh.Data >= rawh.Data &&
-			int(strh.Data)+strh.Len <= int(rawh.Data)+rawh.Len {
-			start := int(strh.Data - rawh.Data)
-			result.Raw = sliceHeaderToString(&rawh)
-			result.Str = result.Raw[start : start+strh.Len]
+			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
+		} else if uintptr(strh.data) >= uintptr(rawh.data) &&
+			uintptr(strh.data)+uintptr(strh.len) <=
+				uintptr(rawh.data)+uintptr(rawh.len) {
+			start := uintptr(strh.data) - uintptr(rawh.data)
+			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
+			result.Str = result.Raw[start : start+uintptr(strh.len)]
 		} else {
-			result.Raw = sliceHeaderToString(&rawh)
-			result.Str = sliceHeaderToString(&strh)
+			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
+			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
 		}
 	}
 	return result
@@ -53,38 +64,16 @@ func getBytes(json []byte, path string) Res {
 
 func fillIndex(json string, c *parseContext) {
 	if len(c.value.Raw) > 0 && !c.calcd {
-		jhdr := *(*reflect.StringHeader)(unsafe.Pointer(&json))
-		rhdr := *(*reflect.StringHeader)(unsafe.Pointer(&(c.value.Raw)))
-		c.value.Index = int(rhdr.Data - jhdr.Data)
+		jhdr := *(*stringHeader)(unsafe.Pointer(&json))
+		rhdr := *(*stringHeader)(unsafe.Pointer(&(c.value.Raw)))
+		c.value.Index = int(uintptr(rhdr.data) - uintptr(jhdr.data))
 		if c.value.Index < 0 || c.value.Index >= len(json) {
 			c.value.Index = 0
 		}
 	}
 }
 
-func sliceHeaderToString(s *reflect.SliceHeader) string {
-	return string(*(*[]byte)(unsafe.Pointer(s)))
-}
-
-func trim(s string) string {
-	for len(s) > 0 {
-		if s[0] <= ' ' {
-			s = s[1:]
-			continue
-		}
-		break
-	}
-	for len(s) > 0 {
-		if s[len(s)-1] <= ' ' {
-			s = s[:len(s)-1]
-			continue
-		}
-		break
-	}
-	return s
-}
-
-func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]byte, error) {
+func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, error) {
 	if path == "" {
 		if !Valid(raw) {
 			return nil, ErrPathEmpty
@@ -92,15 +81,15 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 		return zstring.String2Bytes(raw), nil
 	}
 	if !del && optimistic && isOptimisticPath(path) {
-		res := Get(jstr, path)
+		res := Get(s, path)
 		if res.Exists() && res.Index > 0 {
-			sz := len(jstr) - len(res.Raw) + len(raw)
+			sz := len(s) - len(res.Raw) + len(raw)
 			if stringify {
 				sz += 2
 			}
-			if inplace && sz <= len(jstr) {
+			if place && sz <= len(s) {
 				if !stringify || !mustMarshalString(raw) {
-					jbytes := []byte(jstr)
+					jbytes := []byte(s)
 					if stringify {
 						jbytes[res.Index] = '"'
 						copy(jbytes[res.Index+1:], zstring.String2Bytes(raw))
@@ -117,13 +106,13 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 				return nil, nil
 			}
 			buf := make([]byte, 0, sz)
-			buf = append(buf, jstr[:res.Index]...)
+			buf = append(buf, s[:res.Index]...)
 			if stringify {
 				buf = appendStringify(buf, raw)
 			} else {
 				buf = append(buf, raw...)
 			}
-			buf = append(buf, jstr[res.Index+len(res.Raw):]...)
+			buf = append(buf, s[res.Index+len(res.Raw):]...)
 			return buf, nil
 		}
 	}
@@ -140,7 +129,7 @@ func set(jstr, path, raw string, stringify, del, optimistic, inplace bool) ([]by
 		paths = append(paths, r)
 	}
 
-	njson, err := appendRawPaths(nil, jstr, paths, raw, stringify, del)
+	njson, err := appendRawPaths(nil, s, paths, raw, stringify, del)
 	if err != nil {
 		return nil, err
 	}
@@ -241,4 +230,20 @@ func SetRawBytesOptions(json []byte, path string, value []byte,
 		return json, nil
 	}
 	return res, err
+}
+
+func safeInt(f float64) (n int, ok bool) {
+	if f < -9007199254740991 || f > 9007199254740991 {
+		return 0, false
+	}
+	return int(f), true
+}
+
+func squash(json string) string {
+	ss, _ := switchJson(json, 0, false)
+	return ss
+}
+
+func parseSquash(json string, i int) (string, int) {
+	return switchJson(json, i, true)
 }
