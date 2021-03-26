@@ -125,34 +125,33 @@ func (r *Engine) SetTimeout(d time.Duration) {
 	r.Client().Timeout = d
 }
 
-func (r *Engine) SetProxyUrl(proxyUrl ...string) error {
-	proxylen := len(proxyUrl)
-	if proxylen == 0 {
-		return errors.New("proxyurl cannot be empty")
-	}
-	rawurl := proxyUrl[0]
-	if proxylen > 1 {
-		rawurl = proxyUrl[zstring.RandInt(0, proxylen-1)]
-	}
+func (r *Engine) SetTransport(transport func(*http.Transport)) error {
 	trans := r.getTransport()
 	if trans == nil {
 		return ErrNoTransport
 	}
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		return err
-	}
-	trans.Proxy = http.ProxyURL(u)
+	transport(trans)
 	return nil
 }
 
-func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
-	trans := r.getTransport()
-	if trans == nil {
-		return ErrNoTransport
+func (r *Engine) SetProxyUrl(proxyUrl ...string) error {
+	l := len(proxyUrl)
+	if l == 0 {
+		return errors.New("proxy url cannot be empty")
 	}
-	trans.Proxy = proxy
-	return nil
+	u := proxyUrl[0]
+	return r.SetProxy(func(request *http.Request) (*url.URL, error) {
+		if l > 1 {
+			u = proxyUrl[zstring.RandInt(0, l-1)]
+		}
+		return url.Parse(u)
+	})
+}
+
+func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
+	return r.SetTransport(func(transport *http.Transport) {
+		transport.Proxy = proxy
+	})
 }
 
 func (r *Engine) RemoveProxy() error {

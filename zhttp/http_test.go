@@ -233,18 +233,18 @@ func TestHttpProxy(t *testing.T) {
 	tt.Equal(false, err != nil)
 }
 
-func TestHttpProxyUrl(t *testing.T) {
-	err := SetProxyUrl("http://127.0.0.1:66661", "http://127.0.0.1:77771")
-	tt := zls.NewTest(t)
-	if err != nil {
-		tt.T.Fatal(err)
-	}
+func TestHttpProxyUrl(tt *testing.T) {
+	t := zls.NewTest(tt)
+	err := SetProxyUrl()
+	t.EqualTrue(err != nil)
+	err = SetProxyUrl("http://127.0.0.1:66661", "http://127.0.0.1:77771")
+	t.EqualNil(err)
 
 	SetTimeout(1 * time.Second)
 	_, err = newMethod("GET", func(w http.ResponseWriter, _ *http.Request) {
 	})
-	t.Log(err)
-	tt.Equal(true, err != nil)
+	tt.Log(err)
+	t.Equal(true, err != nil)
 }
 
 func TestFile(t *testing.T) {
