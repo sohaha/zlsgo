@@ -2,12 +2,12 @@ package zhttp
 
 import (
 	"bytes"
-
+	"github.com/sohaha/zlsgo/zstring"
 	"golang.org/x/net/html"
 )
 
 func (r QueryHTML) Exist() bool {
-	return r.node.Data != ""
+	return r.node != nil && r.node.Data != ""
 }
 
 func (r QueryHTML) Attr(key string) string {
@@ -15,28 +15,41 @@ func (r QueryHTML) Attr(key string) string {
 }
 
 func (r QueryHTML) Attrs() (attrs map[string]string) {
-	if r.node.Type != html.ElementNode || len(r.node.Attr) == 0 {
+	node := r.getNode()
+	if node.Type != html.ElementNode || len(node.Attr) == 0 {
 		return
 	}
-	return getAttrValue(r.node.Attr)
+	return getAttrValue(node.Attr)
 }
 
 func (r QueryHTML) Name() string {
-	return r.node.Data
+	return r.getNode().Data
 }
 
-func (r QueryHTML) Text() string {
-	return getElText(r, false)
+func (r QueryHTML) Text(trimSpace ...bool) string {
+	text := getElText(r, false)
+	if len(trimSpace) > 0 && trimSpace[0] {
+		text = zstring.TrimSpace(text)
+	}
+	return text
 }
 
-func (r QueryHTML) FullText() string {
-	return getElText(r, true)
+func (r QueryHTML) FullText(trimSpace ...bool) string {
+	text := getElText(r, true)
+	if len(trimSpace) > 0 && trimSpace[0] {
+		text = zstring.TrimSpace(text)
+	}
+	return text
 }
 
-func (r QueryHTML) HTML() string {
+func (r QueryHTML) HTML(trimSpace ...bool) string {
 	var b bytes.Buffer
-	if err := html.Render(&b, r.node); err != nil {
+	if err := html.Render(&b, r.getNode()); err != nil {
 		return ""
 	}
-	return b.String()
+	text := b.String()
+	if len(trimSpace) > 0 && trimSpace[0] {
+		text = zstring.TrimSpace(text)
+	}
+	return text
 }

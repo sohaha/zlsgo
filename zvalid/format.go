@@ -12,7 +12,7 @@ import (
 func (v Engine) Trim() Engine {
 	return pushQueue(v, func(v Engine) Engine {
 		if notEmpty(&v) {
-			v.value = strings.TrimSpace(v.value)
+			v.value = zstring.TrimSpace(v.value)
 		}
 
 		return v

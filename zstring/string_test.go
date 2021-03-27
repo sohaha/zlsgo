@@ -107,7 +107,7 @@ func TestXss(T *testing.T) {
 func TestTrimSpace(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	for _, v := range []string{
-		" ", ` 22 33`, `123 `," \t\n a lone gopher \n\t\r\n",
+		" ", ` 22 33`, `123 `, " \t\n a lone gopher \n\t\r\n",
 	} {
 		t.EqualExit(strings.TrimSpace(v), TrimSpace(v))
 		t.Log(strings.TrimSpace(v), TrimSpace(v))

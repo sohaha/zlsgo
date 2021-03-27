@@ -405,9 +405,8 @@ func TestMore(tt *testing.T) {
 	t.EqualExit(":3120", getAddr(":3120"))
 	t.EqualExit("0.0.0.0:3120", getAddr("0.0.0.0:3120"))
 
-
-	t.EqualExit("http://127.0.0.1:3120", getHostname(":3120",false))
-	t.EqualExit("https://127.0.0.1:3120", getHostname(":3120",true))
+	t.EqualExit("http://127.0.0.1:3120", getHostname(":3120", false))
+	t.EqualExit("https://127.0.0.1:3120", getHostname(":3120", true))
 }
 
 func TestTemplate(t *testing.T) {

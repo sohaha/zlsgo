@@ -19,11 +19,15 @@ ok
 		<hr id="HR" />ha
 		<br>
 		<div class="content">is box</div>
-		<div class="content test blue">blue box</div>
+		<div class="content test blue">
+
+blue box </div>
 		<div class="content test blue blue2" data-name="TheSmurfs">blue2 box</div>
 		<div class="multiple boxs">
-			<div class="content">content:<span>666</span></div>
+			<div id="One" class="content">content:<span>666</span></div>
 			<div id="Tow" name="saiya" class="content tow">div->div.tow<i>M</i></div>
+			<div id="Three">Three</div>
+			<div id="Four">Four</div>
 		</div>
 yes
 	</body>
@@ -34,55 +38,61 @@ func TestHTMLParse(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 
 	h, err := zhttp.HTMLParse([]byte("<div></div>"))
-	t.Log(h, err)
+	tt.Log(h, err)
 
 	h, err = zhttp.HTMLParse([]byte("div"))
-	t.Log(h, err)
+	tt.Log(h, err)
 
 	h, err = zhttp.HTMLParse([]byte("<!- ok -->"))
-	t.Log(h, err)
+	tt.Log(h, err)
 
 	h, err = zhttp.HTMLParse([]byte(""))
-	t.Log(h.Attr("name"), err)
+	tt.Log(h.Attr("name"), err)
 
 	h, err = zhttp.HTMLParse([]byte("<html><div class='box'>The is HTML</div><div class='red'>Red</div></html>"))
-	t.Log(h.Select("div").Text(), h.Select("div").Attr("class"), h.Select("div", map[string]string{"class": "red"}).HTML())
+	tt.Log(h.Select("div").Text(), h.Select("div").Attr("class"),
+		h.Select("div", map[string]string{"class": "red"}).HTML())
 
 	h, err = zhttp.HTMLParse([]byte(html))
 	if err != nil {
 		tt.Fatal(err)
 	}
 
-	t.Log(len(h.Select("body").FullText()))
+	tt.Log(len(h.Select("body").FullText(true)))
 
-	t.EqualExit("okhayes", strings.TrimSpace(strings.Replace(strings.Replace(h.Select("body").Text(), "\n", "", -1), "\t", "", -1)))
+	t.EqualExit("okhayes", strings.Replace(strings.Replace(h.Select("body").Text(), "\n", "", -1), "\t", "", -1))
+	t.EqualExit("blue box", h.Find(".blue").Text(true))
 
 	// does not exist
 	el := h.Select("div", map[string]string{"id": "does not exist"})
-	tt.Logf("Not: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
+	tt.Logf("id Not: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
 
 	// Tow
-	el = h.Select("div", map[string]string{"ID": "Tow"})
-	tt.Logf("Tow: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
+	el = h.Select("div", map[string]string{"id": "Tow"})
+	tt.Logf("id Tow: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
+	t.EqualTrue(el.Exist())
+	t.EqualExit("Tow", el.Attr("id"))
 
 	// Tow
 	el = h.Select("div", map[string]string{"Id": "Tow"})
-	tt.Logf("Tow: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
+	tt.Logf("Id Tow: %s|%s|%s\n", el.Attr("name"), el.Text(), el.HTML())
 
 	// Blue
 	el = h.Select("div", map[string]string{"class": "blue"})
-	tt.Logf("Blue: %s|%s|%s\n", el.Attr("data-name"), el.Text(), el.HTML())
+	tt.Logf("class Blue: %s|%s|%s\n", el.Attr("data-name"), el.Text(true),
+		el.HTML(true))
 
 	// Blue2
 	el = h.Select("div", map[string]string{"class": " blue blue2 "})
-	tt.Logf("Blue2: %s|%s|%s\n", el.Attr("data-name"), el.Text(), el.HTML())
+	tt.Logf("class Blue2: %s|%s|%s\n", el.Attr("data-name"), el.Text(true),
+		el.HTML(true))
 
 }
 
 func TestSelectAll(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	h, _ := zhttp.HTMLParse([]byte(html))
-	t.EqualExit(7, len(h.SelectAll("div")))
+	t.EqualExit(9, len(h.SelectAll("div")))
 	t.EqualExit(0, len(h.SelectAll("vue")))
 }
 
@@ -120,6 +130,11 @@ func TestChild(tt *testing.T) {
 
 	multiple := h.Select("body").Select("div", map[string]string{"class": "multiple"})
 
+	t.Equal("", multiple.NthChild(0).Attr("id"))
+	t.Equal("One", multiple.NthChild(1).Attr("id"))
+	t.Equal("Tow", multiple.NthChild(2).Attr("id"))
+	t.Equal("Three", multiple.NthChild(3).Attr("id"))
+
 	span := multiple.SelectChild("span")
 	tt.Log(span.Exist(), span.HTML())
 
@@ -137,5 +152,30 @@ func TestFind(tt *testing.T) {
 
 	t.Log(h.Select("div", map[string]string{"class": "multiple boxs"}).Select("", map[string]string{"class": "tow"}).SelectChild("i").Exist())
 	t.Log(h.Select("div", map[string]string{"class": "multiple boxs"}).Select("", map[string]string{"class": "tow"}).SelectChild("i").HTML())
+}
 
+func TestBrother(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	t.Log("oik")
+	h, _ := zhttp.HTMLParse([]byte(html))
+	d := h.Find("#Tow")
+	parent := d.SelectParent("")
+	tt.Log(parent.HTML())
+
+	b := d.SelectBrother("div")
+	t.EqualTrue(b.Exist())
+	t.Equal("Three", b.Attr("id"))
+	tt.Log(b.HTML(true))
+
+	b = b.SelectBrother("div")
+	t.EqualTrue(b.Exist())
+	t.Equal("Four", b.Attr("id"))
+	tt.Log(b.HTML(true))
+
+	b = b.SelectBrother("div")
+	t.EqualTrue(!b.Exist())
+
+	b = h.Find("#One").SelectBrother("")
+	tt.Log(b.HTML(true))
+	t.EqualTrue(b.Exist())
 }

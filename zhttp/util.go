@@ -1,6 +1,7 @@
 package zhttp
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,20 @@ func (s *selector) appendAttr(key, val string, index int) {
 		}
 	}
 	s.i = index + 1
+}
+
+// ConvertCookie Parse Cookie String
+func ConvertCookie(cookiesRaw string) map[string]*http.Cookie {
+	cookie := map[string]*http.Cookie{}
+	c := strings.Split(cookiesRaw, ";")
+	for _, s := range c {
+		v := strings.Split(zstring.TrimSpace(s), "=")
+		if len(v) == 2 {
+			name := zstring.TrimSpace(v[0])
+			cookie[name] = &http.Cookie{Name: name, Value: v[1]}
+		}
+	}
+	return cookie
 }
 
 // BodyJSON make the object be encoded in json format and set it to the request body
@@ -104,14 +119,14 @@ func arr2Attr(args []map[string]string) map[string][]string {
 }
 
 func getAttrValue(attributes []html.Attribute) map[string]string {
-	var keyvalues = make(map[string]string)
+	var values = make(map[string]string)
 	for i := 0; i < len(attributes); i++ {
-		_, exists := keyvalues[attributes[i].Key]
+		_, exists := values[attributes[i].Key]
 		if exists == false {
-			keyvalues[attributes[i].Key] = attributes[i].Val
+			values[attributes[i].Key] = attributes[i].Val
 		}
 	}
-	return keyvalues
+	return values
 }
 
 func findAttrValue(attr html.Attribute, attribute string, value []string) bool {
@@ -151,7 +166,7 @@ func getElText(r QueryHTML, full bool) string {
 			f(n.NextSibling)
 		}
 	}
-	f(r.node.FirstChild)
+	f(r.getNode().FirstChild)
 	return b.String()
 }
 

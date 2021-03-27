@@ -665,10 +665,17 @@ func SetUserAgent(fn func() string) {
 	std.SetUserAgent(fn)
 }
 
+// SetTransport SetTransport
+func SetTransport(transport func(*http.Transport)) error {
+	return std.SetTransport(transport)
+}
+
+// SetProxyUrl SetProxyUrl
 func SetProxyUrl(proxyUrl ...string) error {
 	return std.SetProxyUrl(proxyUrl...)
 }
 
+// SetProxy SetProxy
 func SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
 	return std.SetProxy(proxy)
 }

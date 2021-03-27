@@ -235,6 +235,7 @@ func TestHttpProxy(t *testing.T) {
 
 func TestHttpProxyUrl(tt *testing.T) {
 	t := zls.NewTest(tt)
+	_ = SetTransport(func(transport *http.Transport) {})
 	err := SetProxyUrl()
 	t.EqualTrue(err != nil)
 	err = SetProxyUrl("http://127.0.0.1:66661", "http://127.0.0.1:77771")
@@ -338,4 +339,22 @@ func TestGetCode(t *testing.T) {
 	t.Log(r.String())
 	t.Log(r.StatusCode())
 	r.Dump()
+}
+
+func TestConvertCookie(tt *testing.T) {
+	t := zls.NewTest(tt)
+	cookie := ConvertCookie(
+		" langx=zh-cn; lang code= zh-cn; sid=3c14598d6f2bce696a73a7649ab3df0df23c13c1; ")
+	for _, c := range cookie {
+		switch c.Name {
+		case "langx":
+			t.Equal("zh-cn", c.Value)
+		case "lang code":
+			t.Equal(" zh-cn", c.Value)
+		case "sid":
+			t.Equal("3c14598d6f2bce696a73a7649ab3df0df23c13c1", c.Value)
+		default:
+			tt.Fatal("no match", c.Name, c.Value)
+		}
+	}
 }

@@ -24,7 +24,7 @@ type (
 )
 
 func Stringify(value interface{}) (json string) {
-	if jsonByte, err := jsong.Marshal(value); err != nil {
+	if jsonByte, err := jsong.Marshal(value); err == nil {
 		json = zstring.Bytes2String(jsonByte)
 	} else {
 		json = "{}"

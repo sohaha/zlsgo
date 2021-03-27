@@ -52,7 +52,8 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, Get(demo, "boolTrue").Bool())
 	tt.EqualExit(false, Get(demo, "boolTrueNot").Bool())
 	tt.EqualExit("true", Get(demo, "boolTrue").String())
-	tt.EqualExit(true, Get(demo, "time").Bool())
+	t.Log(Get(demo, "time").Bool(),Get(demo, "time").String())
+	tt.EqualExit(false, Get(demo, "time").Bool())
 	tt.EqualExit(true, Get(demo, "i").Bool())
 	timeStr := Get(demo, "time").String()
 	tt.EqualExit("2019-09-10 13:48:22", timeStr)
@@ -89,7 +90,7 @@ func TestGet(t *testing.T) {
 	})
 
 	byteData := zstring.String2Bytes(demo)
-	tt.EqualTrue( ValidBytes(byteData))
+	tt.EqualTrue(ValidBytes(byteData))
 	tt.EqualExit("暴龙兽", GetBytes(byteData, "user.name").String())
 
 	resData := GetMultiple(demo, "user.name", "f?iends.1.name")
@@ -159,6 +160,7 @@ func TestModifiers(T *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = Get(demo, "i")
 	}
@@ -166,7 +168,24 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkGetBytes(b *testing.B) {
 	demoByte := []byte(demo)
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = GetBytes(demoByte, "i")
+	}
+}
+
+func BenchmarkGetBig(b *testing.B) {
+	json := getBigJSON()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Get(json, "i")
+	}
+}
+
+func BenchmarkGetBigBytes(b *testing.B) {
+	json := zstring.String2Bytes(getBigJSON())
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = GetBytes(json, "i")
 	}
 }

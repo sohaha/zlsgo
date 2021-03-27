@@ -39,14 +39,13 @@ func TestWithRunTimeContext(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	now := time.Now().UnixNano()
 	for i := 0; i < 5; i++ {
-		WithRunTimeContext(func() {
+		duration := WithRunTimeContext(func() {
 			time.Sleep(1 * time.Millisecond)
 			newNow := time.Now()
 			t.Equal(true, (newNow.UnixNano()-now) > 1000000)
 			now = newNow.UnixNano()
-		}, func(duration time.Duration) {
-			t.Log(duration.String())
 		})
+		t.Log(duration.String())
 	}
 }
 
@@ -82,8 +81,27 @@ func TestIfVal(T *testing.T) {
 	t.EqualExit(2, i)
 }
 
-func TestTryError(T *testing.T) {
-	t := zlsgo.NewTest(T)
+func TestTryCatch(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	errMsg := errors.New("test error")
+	err := TryCatch(func() error {
+		return errMsg
+	})
+	tt.Log(err)
+	t.EqualTrue(err != nil)
+	t.Equal(errMsg, err)
+
+	err = TryCatch(func() error {
+		panic(123)
+		return nil
+	})
+	tt.Log(err)
+	t.EqualTrue(err != nil)
+	t.Equal(errors.New("123"), err)
+}
+
+func TestTryError(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
 	defer func() {
 		if message := recover(); message != nil {
 			if e, ok := message.(error); ok {

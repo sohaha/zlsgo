@@ -135,6 +135,7 @@ func setRawValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value s
 		if targetValueOf.Elem().OverflowFloat(v) {
 			return typeErr
 		}
+		targetValueOf.Elem().SetFloat(v)
 	case reflect.Bool:
 		v, err := strconv.ParseBool(value)
 		if err != nil {

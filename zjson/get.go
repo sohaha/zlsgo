@@ -88,7 +88,6 @@ func (r Res) Bool() bool {
 	case True:
 		return true
 	case String:
-		return r.Str != "" && r.Str != "0" && r.Str != "false"
 		b, _ := strconv.ParseBool(strings.ToLower(r.Str))
 		return b
 	case Number:
@@ -1689,7 +1688,7 @@ func Get(json, path string) Res {
 }
 
 func GetBytes(json []byte, path string) Res {
-	return getBytes(json, path)
+	return Get(zstring.Bytes2String(json), path)
 }
 
 func runeit(json string) rune {

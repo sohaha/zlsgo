@@ -15,11 +15,10 @@ func WithLockContext(mu *sync.Mutex, fn func()) {
 	fn()
 }
 
-func WithRunTimeContext(handler func(), callback func(time.Duration)) {
+func WithRunTimeContext(handler func()) time.Duration {
 	start := time.Now()
 	handler()
-	duration := time.Since(start)
-	callback(duration)
+	return time.Since(start)
 }
 
 func WithRunMemContext(handler func()) uint64 {
@@ -39,6 +38,23 @@ func IfVal(condition bool, trueVal, falseVal interface{}) interface{} {
 	return falseVal
 }
 
+// TryCatch exception capture
+func TryCatch(fn func() error) (err error) {
+	defer func() {
+		if recoverErr := recover(); recoverErr != nil {
+			if e, ok := recoverErr.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%v", recoverErr)
+			}
+		}
+	}()
+	err = fn()
+	return
+}
+
+// Deprecated: please use TryCatch
+// Try exception capture
 func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	if len(finally) > 0 {
 		defer func() {

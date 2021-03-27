@@ -22,6 +22,17 @@ func TestVar(t *testing.T) {
 	tt.EqualNil(err)
 	tt.Equal(99, i)
 
+	var iu uint
+	err = Var(&iu, Text("99").RemoveSpace())
+	tt.EqualNil(err)
+	tt.Equal(uint(99), iu)
+
+	var f32 float32
+	val := Text("99.0")
+	err = Var(&f32, val)
+	tt.EqualNil(err)
+	tt.Equal(float32(99), f32)
+
 	var sts []string
 	err = Var(&sts, Text("1,2,3,go").Separator(","))
 	tt.EqualNil(err)

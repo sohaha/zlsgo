@@ -143,6 +143,9 @@ func SetOptions(json, path string, value interface{},
 		opts = &nopts
 		opts.ReplaceInPlace = false
 	}
+	if json == "" {
+		json = "{}"
+	}
 	jsonb := zstring.String2Bytes(json)
 	res, err := SetBytesOptions(jsonb, path, value, opts)
 	return zstring.Bytes2String(res), err
