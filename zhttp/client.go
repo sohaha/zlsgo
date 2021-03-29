@@ -102,6 +102,32 @@ func (r *Engine) EnableInsecureTLS(enable bool) {
 	trans.TLSClientConfig.InsecureSkipVerify = enable
 }
 
+type Certificate struct {
+	CertFile string
+	KeyFile  string
+}
+
+func (r *Engine) TlsCertificate(certs ...Certificate) error {
+	trans := r.getTransport()
+	if trans == nil {
+		return nil
+	}
+	if trans.TLSClientConfig == nil {
+		trans.TLSClientConfig = &tls.Config{}
+	}
+	l := len(certs)
+	certificates := make([]tls.Certificate, 0, l)
+	for i := 0; i < l; i++ {
+		x509KeyPair, err := tls.LoadX509KeyPair(certs[i].CertFile, certs[i].KeyFile)
+		if err != nil {
+			return err
+		}
+		certificates = append(certificates, x509KeyPair)
+	}
+	trans.TLSClientConfig.Certificates = certificates
+	return nil
+}
+
 func (r *Engine) EnableCookie(enable bool) {
 	if enable {
 		jar, _ := cookiejar.New(nil)

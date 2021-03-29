@@ -48,7 +48,7 @@ func BenchmarkSetMarshal(b *testing.B) {
 	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = SetBytesOptions([]byte("{}"), "", demoData, &StSetOptions{
+		_, _ = SetBytesOptions([]byte("{}"), "", demoData, &Options{
 			Optimistic: true,
 		})
 	}

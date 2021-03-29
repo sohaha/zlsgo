@@ -648,6 +648,10 @@ func EnableInsecureTLS(enable bool) {
 	std.EnableInsecureTLS(enable)
 }
 
+func TlsCertificate(certs ...Certificate) error {
+	return std.TlsCertificate(certs...)
+}
+
 func EnableCookie(enable bool) {
 	std.EnableCookie(enable)
 }

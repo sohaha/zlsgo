@@ -137,7 +137,7 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 }
 
 func SetOptions(json, path string, value interface{},
-	opts *StSetOptions) (string, error) {
+	opts *Options) (string, error) {
 	if opts != nil && opts.ReplaceInPlace {
 		nopts := *opts
 		opts = &nopts
@@ -152,7 +152,7 @@ func SetOptions(json, path string, value interface{},
 }
 
 func SetBytesOptions(json []byte, path string, value interface{},
-	opts *StSetOptions) ([]byte, error) {
+	opts *Options) ([]byte, error) {
 	var optimistic, inplace bool
 	if opts != nil {
 		optimistic = opts.Optimistic
@@ -182,6 +182,9 @@ func SetBytesOptions(json []byte, path string, value interface{},
 		} else {
 			res, err = set(jstr, path, "false", false, false, optimistic, inplace)
 		}
+	case int:
+		res, err = set(jstr, path, strconv.FormatInt(int64(v), 10),
+			false, false, optimistic, inplace)
 	case int8:
 		res, err = set(jstr, path, strconv.FormatInt(int64(v), 10),
 			false, false, optimistic, inplace)
@@ -193,6 +196,9 @@ func SetBytesOptions(json []byte, path string, value interface{},
 			false, false, optimistic, inplace)
 	case int64:
 		res, err = set(jstr, path, strconv.FormatInt(int64(v), 10),
+			false, false, optimistic, inplace)
+	case uint:
+		res, err = set(jstr, path, strconv.FormatUint(uint64(v), 10),
 			false, false, optimistic, inplace)
 	case uint8:
 		res, err = set(jstr, path, strconv.FormatUint(uint64(v), 10),
@@ -220,7 +226,7 @@ func SetBytesOptions(json []byte, path string, value interface{},
 }
 
 func SetRawBytesOptions(json []byte, path string, value []byte,
-	opts *StSetOptions) ([]byte, error) {
+	opts *Options) ([]byte, error) {
 	jstr := zstring.Bytes2String(json)
 	vstr := zstring.Bytes2String(value)
 	var optimistic, inplace bool

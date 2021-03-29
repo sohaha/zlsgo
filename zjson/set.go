@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	StSetOptions struct {
+	Options struct {
 		Optimistic     bool
 		ReplaceInPlace bool
 	}
@@ -296,13 +296,8 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	}
 	switch jsres.Raw[0] {
 	case '{':
-		end := len(jsres.Raw) - 1
-		for ; end > 0; end-- {
-			if jsres.Raw[end] == '}' {
-				break
-			}
-		}
-		buf = append(buf, jsres.Raw[:end]...)
+		buf = append(buf, '{')
+		buf = appendBuild(buf, false, paths, raw, stringify)
 		if comma {
 			buf = append(buf, ',')
 		}
@@ -386,7 +381,7 @@ func SetRaw(json, path, value string) (string, error) {
 	return SetRawOptions(json, path, value, nil)
 }
 
-func SetRawOptions(json, path, value string, opts *StSetOptions) (string, error) {
+func SetRawOptions(json, path, value string, opts *Options) (string, error) {
 	var optimistic bool
 	if opts != nil {
 		optimistic = opts.Optimistic
