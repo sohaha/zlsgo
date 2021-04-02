@@ -10,16 +10,16 @@ import (
 	. "github.com/sohaha/zlsgo"
 )
 
-func TestFile(T *testing.T) {
-	t := NewTest(T)
+func TestFile(tt *testing.T) {
+	t := NewTest(tt)
 
-	T.Log("c:" + RealPath("/"+"d"))
+	tt.Log("c:" + RealPath("/"+"d"))
 
 	baseDir := "c:\\test"
 	fileName := "isPic"
-	T.Log(filepath.Join(baseDir, fileName))
-	T.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
-	T.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
+	tt.Log(filepath.Join(baseDir, fileName))
+	tt.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
+	tt.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
 
 	filePath := "../doc.go"
 	tIsFile := FileExist(filePath)
@@ -37,7 +37,7 @@ func TestFile(T *testing.T) {
 
 	RealPath("")
 
-	T.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
+	tt.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
 
 	dirPath := RealPathMkdir("../zfile")
 	tIsDir := DirExist(dirPath)
@@ -46,24 +46,25 @@ func TestFile(T *testing.T) {
 	dirPath = SafePath("../zfile/ok")
 	t.Equal("ok", dirPath)
 
-	tmpPath := TmpPath()
+	tmpPath := TmpPath("")
 	t.EqualTrue(tmpPath != "")
+	tt.Log(tmpPath, TmpPath("666"))
 
 	path := RealPathMkdir("../tmp")
 	path2 := RealPathMkdir(path + "/ooo")
-	T.Log(path, path2)
+	tt.Log(path, path2)
 	t.Equal(true, Rmdir(path, true))
 	t.Equal(true, Rmdir(path))
 	ePath := ProgramPath(true)
 	ProjectPath = ePath
 	path = RealPathMkdir("../ppppp")
 	testPath := ePath + "../ppppp"
-	T.Log(path, testPath)
+	tt.Log(path, testPath)
 	t.EqualTrue(DirExist(path))
 	t.EqualTrue(DirExist(testPath))
 	ok := Rmdir(testPath)
 	Rmdir(path)
-	T.Log(path, testPath, ok)
+	tt.Log(path, testPath, ok)
 }
 
 func TestPut(t *testing.T) {

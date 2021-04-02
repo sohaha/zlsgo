@@ -16,7 +16,12 @@ var (
 )
 
 func init() {
-	ProjectPath, _ = filepath.Abs(".")
+	//abs, _ := filepath.Abs(".")
+	//ProjectPath = RealPath(abs)
+	ProjectPath = ProgramPath()
+	if strings.Contains(ProjectPath,TmpPath("")){
+		ProjectPath = RootPath()
+	}
 }
 
 // PathExist PathExist
@@ -82,13 +87,23 @@ func logSize(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
 }
 
+// RootPath Project Launch Path
 func RootPath() string {
-	return RealPath(".", true)
+	path, _ := filepath.Abs(".")
+	return RealPath(path, true)
 }
 
-func TmpPath() string {
-	path, _ := ioutil.TempDir("", "ztmp")
-	return path
+func TmpPath(pattern ...string) string {
+	p := ""
+	if len(pattern) > 0 {
+		p = pattern[0]
+	}
+	path, _ := ioutil.TempDir("", p)
+	if p == "" {
+		path, _ = filepath.Split(path)
+	}
+	path, _ = filepath.EvalSymlinks(path)
+	return RealPath(path)
 }
 
 // SafePath get an safe absolute path
@@ -158,7 +173,7 @@ func ProgramPath(addSlash ...bool) (path string) {
 	if err != nil {
 		ePath = ProjectPath
 	}
-	path = pathAddSlash(filepath.Dir(ePath), addSlash...)
+	path = RealPath(filepath.Dir(ePath), addSlash...)
 
 	return
 }
