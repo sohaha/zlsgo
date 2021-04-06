@@ -1,6 +1,6 @@
 // +build windows
 
-package zcli
+package zutil
 
 import (
 	"syscall"
@@ -9,7 +9,6 @@ import (
 
 func IsDoubleClickStartUp() bool {
 	if name, err := GetParentProcessName(); err == nil && name == "explorer.exe" {
-		// defer fmt.Scanln()
 		return true
 	}
 	return false

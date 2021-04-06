@@ -1,6 +1,6 @@
 // +build !windows
 
-package zcli
+package zutil
 
 func IsDoubleClickStartUp() bool {
 	return false

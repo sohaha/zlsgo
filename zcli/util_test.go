@@ -72,8 +72,10 @@ func TestUtil(T *testing.T) {
 	showVersionNum(true)
 	Version = ""
 	showVersion()
-	_, _ = GetParentProcessName()
 	IsDoubleClickStartUp()
+	go func() {
+		KillSignal()
+	}()
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {

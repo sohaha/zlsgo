@@ -84,3 +84,4 @@ func CheckErr(err error, exit ...bool) {
 		panic(err)
 	}
 }
+

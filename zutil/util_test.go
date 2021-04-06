@@ -140,3 +140,8 @@ func TestTryError(tt *testing.T) {
 		panic("test")
 	}, nil)
 }
+
+func TestUtil(T *testing.T) {
+	_, _ = GetParentProcessName()
+	IsDoubleClickStartUp()
+}

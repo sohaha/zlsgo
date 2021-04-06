@@ -172,3 +172,8 @@ func CheckErr(err error, exit ...bool) {
 		Log.Fatal(err)
 	}
 }
+
+func IsDoubleClickStartUp() bool {
+	return zutil.IsDoubleClickStartUp()
+}
+

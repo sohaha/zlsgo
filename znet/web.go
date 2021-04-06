@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/sohaha/zlsgo/zcli"
 	"html/template"
 	"net/http"
 	"os"
@@ -38,7 +39,8 @@ type (
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
 		// Log Log
-		Log                 *zlog.Logger
+		Log *zlog.Logger
+		// Deprecated: 以后可能移除
 		Cache               *zcache.Table
 		readTimeout         time.Duration
 		writeTimeout        time.Duration
@@ -171,7 +173,7 @@ func New(serverName ...string) *Engine {
 		return r.NewContext(nil, nil)
 	}
 	if _, ok := zservers[name]; ok {
-		Log.Fatalf("serverName: %s is has", name)
+		Log.Fatal("serverName: [", name, "] it already exists")
 	}
 	zservers[name] = r
 	// r.Use(withRequestLog)
@@ -291,75 +293,90 @@ func (e *Engine) SetTimeout(Timeout time.Duration, WriteTimeout ...time.Duration
 	}
 }
 
+func (e *Engine) StartUp() []*serverMap {
+	var wg sync.WaitGroup
+	var srvMap sync.Map
+	for _, cfg := range e.addr {
+		wg.Add(1)
+		go func(cfg addrSt, e *Engine) {
+			var err error
+			isTls := cfg.Cert != "" || cfg.Config != nil
+			addr := getAddr(cfg.addr)
+			hostname := getHostname(addr, isTls)
+			srv := &http.Server{
+				Addr:         addr,
+				Handler:      e,
+				ReadTimeout:  e.readTimeout,
+				WriteTimeout: e.writeTimeout,
+				// MaxHeaderBytes: 1 << 20,
+			}
+
+			srvMap.Store(addr, &serverMap{e, srv})
+
+			time.AfterFunc(time.Millisecond*100, func() {
+				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
+				wrapMode := ""
+				if e.webMode > 0 {
+					wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
+				}
+				e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
+			})
+			wg.Done()
+			if isTls {
+				if cfg.Config != nil {
+					srv.TLSConfig = cfg.Config
+				}
+				if cfg.HTTPAddr != "" {
+					httpAddr := getAddr(cfg.HTTPAddr)
+					go func(e *Engine) {
+						newHostname := "http://" + resolveHostname(httpAddr)
+						e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+newHostname)))
+						var err error
+						switch processing := cfg.HTTPProcessing.(type) {
+						case string:
+							err = http.ListenAndServe(httpAddr, &tlsRedirectHandler{Domain: processing})
+						case http.Handler:
+							err = http.ListenAndServe(httpAddr, processing)
+						default:
+							err = http.ListenAndServe(httpAddr, e)
+						}
+						e.Log.Errorf("HTTP Listen: %s\n", err)
+					}(e)
+				}
+				err = srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
+			} else {
+				err = srv.ListenAndServe()
+			}
+			if err != nil && err != http.ErrServerClosed {
+				e.Log.Fatalf("Listen: %s\n", err)
+			} else if err != http.ErrServerClosed {
+				e.Log.Info(err)
+			}
+		}(cfg, e)
+	}
+	wg.Wait()
+	srvs := make([]*serverMap, 0)
+	srvMap.Range(func(addr, value interface{}) bool {
+		srvs = append(srvs, value.(*serverMap))
+		return true
+	})
+	return srvs
+}
+
 // Run run serve
 func Run() {
 	var (
-		srvMap sync.Map
-		m      sync.WaitGroup
+		srvs []*serverMap
+		m    sync.WaitGroup
 	)
 
 	for _, e := range zservers {
-		for _, cfg := range e.addr {
-			m.Add(1)
-			go func(cfg addrSt, e *Engine) {
-				var err error
-				isTls := cfg.Cert != "" || cfg.Config != nil
-				addr := getAddr(cfg.addr)
-				hostname := getHostname(addr, isTls)
-				srv := &http.Server{
-					Addr:         addr,
-					Handler:      e,
-					ReadTimeout:  e.readTimeout,
-					WriteTimeout: e.writeTimeout,
-					// MaxHeaderBytes: 1 << 20,
-				}
-
-				srvMap.Store(addr, &serverMap{e, srv})
-
-				time.AfterFunc(time.Millisecond*100, func() {
-					wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
-					wrapMode := ""
-					if e.webMode > 0 {
-						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
-					}
-					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
-				})
-
-				if isTls {
-					if cfg.Config != nil {
-						srv.TLSConfig = cfg.Config
-					}
-					if cfg.HTTPAddr != "" {
-						httpAddr := getAddr(cfg.HTTPAddr)
-						go func(e *Engine) {
-							newHostname := "http://" + resolveHostname(httpAddr)
-							e.Log.Success(e.Log.ColorBackgroundWrap(zlog.ColorYellow, zlog.ColorDefault, e.Log.OpTextWrap(zlog.OpBold, "Listen: "+newHostname)))
-							var err error
-							switch processing := cfg.HTTPProcessing.(type) {
-							case string:
-								err = http.ListenAndServe(httpAddr, &tlsRedirectHandler{Domain: processing})
-							case http.Handler:
-								err = http.ListenAndServe(httpAddr, processing)
-							default:
-								err = http.ListenAndServe(httpAddr, e)
-							}
-							e.Log.Errorf("HTTP Listen: %s\n", err)
-						}(e)
-					}
-					err = srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
-				} else {
-					err = srv.ListenAndServe()
-				}
-				if err != nil && err != http.ErrServerClosed {
-					e.Log.Fatalf("Listen: %s\n", err)
-				} else if err != http.ErrServerClosed {
-					e.Log.Info(err)
-				}
-			}(cfg, e)
-		}
+		ss := e.StartUp()
+		m.Add(len(ss))
+		srvs = append(srvs, ss...)
 	}
 
-	sigkill := isKill()
+	sigkill := zcli.KillSignal()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -368,30 +385,24 @@ func Run() {
 		runNewProcess()
 	}
 
-	srvMap.Range(func(key, value interface{}) bool {
-		go func(value interface{}) {
-			if s, ok := value.(*serverMap); ok {
-				r := s.engine
-				if sigkill {
-					r.Log.Info("Shutdown server ...")
-				}
-				err := s.srv.Shutdown(ctx)
-				if err != nil {
-					if sigkill {
-						r.Log.Error("Timeout forced close")
-					}
-					_ = s.srv.Close()
-				} else {
-					if sigkill {
-						r.Log.Success("Shutdown server done")
-					}
-				}
-				m.Done()
+	for _, s := range srvs {
+		r := s.engine
+		if sigkill {
+			r.Log.Info("Shutdown server ...")
+		}
+		err := s.srv.Shutdown(ctx)
+		if err != nil {
+			if sigkill {
+				r.Log.Error("Timeout forced close")
 			}
-		}(value)
-		return true
-	})
-
+			_ = s.srv.Close()
+		} else {
+			if sigkill {
+				r.Log.Success("Shutdown server done")
+			}
+		}
+		m.Done()
+	}
 	m.Wait()
 	if ShutdownDone != nil {
 		ShutdownDone()

@@ -61,7 +61,7 @@ func TestCliCommand(t *testing.T) {
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
-		t.Log("myExit:",code)
+		t.Log("myExit:", code)
 	}
 	osExit = myExit
 	requiredFlags = RequiredFlags{}
@@ -101,7 +101,7 @@ func TestCliCommandHelp2(t *testing.T) {
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
-		t.Log("myExit:",code)
+		t.Log("myExit:", code)
 	}
 	osExit = myExit
 	requiredFlags = RequiredFlags{}

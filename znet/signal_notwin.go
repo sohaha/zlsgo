@@ -4,7 +4,6 @@ package znet
 
 import (
 	"os"
-	"os/signal"
 	"syscall"
 )
 
@@ -16,12 +15,4 @@ func (e *Engine) Restart() error {
 		return err
 	}
 	return proc.Signal(syscall.SIGUSR2)
-}
-
-func isKill() bool {
-	quit := make(chan os.Signal)
-	// signal.Notify(quit, os.Interrupt, os.Kill)
-	signal.Notify(quit, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR2)
-	sig := <-quit
-	return sig != syscall.SIGUSR2
 }

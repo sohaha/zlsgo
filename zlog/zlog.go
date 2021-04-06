@@ -3,12 +3,18 @@ package zlog
 
 import (
 	"fmt"
+	"github.com/sohaha/zlsgo/zutil"
 	"os"
 )
 
 var (
 	Log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 3)
-	osExit = os.Exit
+	osExit = func(code int) {
+		if zutil.IsDoubleClickStartUp() {
+			_, _ = fmt.Scanln()
+		}
+		os.Exit(code)
+	}
 )
 
 // GetFlags Get the tag bits
