@@ -104,16 +104,7 @@ func (r *renderJSON) Content(c *Context) []byte {
 		return r.ContentDate
 	}
 	c.SetContentType(ContentTypeJSON)
-	bf := zutil.GetBuff()
-	defer zutil.PutBuff(bf)
-	jsonEncoder := json.NewEncoder(bf)
-	jsonEncoder.SetEscapeHTML(false)
-	if err := jsonEncoder.Encode(r.Data); err != nil {
-		r.ContentDate, _ = json.Marshal(r.Data)
-	} else {
-		r.ContentDate = bf.Bytes()
-	}
-
+	r.ContentDate, _ = json.Marshal(r.Data)
 	return r.ContentDate
 }
 

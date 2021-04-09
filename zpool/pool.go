@@ -1,9 +1,11 @@
 package zpool
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/sohaha/zlsgo/zutil"
 )
@@ -11,15 +13,15 @@ import (
 type (
 	// Task Define function callbacks
 	Task     func()
-	workPool struct {
-		workers        sync.Pool
-		closed         bool
-		mux            sync.RWMutex
-		workerQueue    chan *worker
-		workerSum      uint
-		workesAliveNum uint
-		maxWorkerSum   uint
-		panicFunc      PanicFunc
+	WorkPool struct {
+		workers   sync.Pool
+		closed    bool
+		mu        sync.RWMutex
+		queue     chan *worker
+		minIdle   uint
+		usedNum   uint
+		maxIdle   uint
+		panicFunc PanicFunc
 	}
 	worker struct {
 		jobQueue  chan Task
@@ -30,26 +32,27 @@ type (
 )
 
 var (
-	ErrPoolClosed = errors.New("pool has been closed")
+	ErrPoolClosed  = errors.New("pool has been closed")
+	ErrWaitTimeout = errors.New("pool wait timeout")
 )
 
-func New(workerNum int, maxWorkerNum ...int) *workPool {
-	workerSum := uint(workerNum)
-	if workerSum <= 0 {
-		workerSum = 1
+func New(min int, max ...int) *WorkPool {
+	minIdle := uint(min)
+	if minIdle <= 0 {
+		minIdle = 1
 	}
-	maxWorkerSum := workerSum
-	if len(maxWorkerNum) > 0 && maxWorkerNum[0] > 0 {
-		max := uint(maxWorkerNum[0])
-		if max > maxWorkerSum {
-			maxWorkerSum = max
+	maxIdle := minIdle
+	if len(max) > 0 && max[0] > 0 {
+		max := uint(max[0])
+		if max > maxIdle {
+			maxIdle = max
 		}
 	}
 
-	w := &workPool{
-		workerSum:    workerSum,
-		maxWorkerSum: maxWorkerSum,
-		workerQueue:  make(chan *worker, maxWorkerSum),
+	w := &WorkPool{
+		minIdle: minIdle,
+		maxIdle: maxIdle,
+		queue:   make(chan *worker, maxIdle),
 		workers: sync.Pool{New: func() interface{} {
 			return &worker{
 				jobQueue:  make(chan Task),
@@ -62,28 +65,41 @@ func New(workerNum int, maxWorkerNum ...int) *workPool {
 }
 
 // Do Add to the workpool and implement
-func (wp *workPool) Do(fn Task) error {
-	return wp.do(fn, nil)
+func (wp *WorkPool) Do(fn Task) error {
+	return wp.do(context.Background(), fn, nil)
+}
+
+func (wp *WorkPool) DoWithTimeout(fn Task, t time.Duration) error {
+	ctx, canle := context.WithTimeout(context.Background(), t)
+	defer canle()
+	return wp.do(ctx, fn, nil)
 }
 
 // Do Add to the workpool and implement
-func (wp *workPool) PanicFunc(handler PanicFunc) {
+func (wp *WorkPool) PanicFunc(handler PanicFunc) {
 	wp.panicFunc = handler
 }
 
-func (wp *workPool) do(fn Task, param []interface{}) error {
+func (wp *WorkPool) do(cxt context.Context, fn Task, param []interface{}) error {
 	if wp.IsClosed() {
 		return ErrPoolClosed
 	}
-	wp.mux.Lock()
+	wp.mu.Lock()
 	run := func(w *worker) {
 		if fn != nil {
 			w.jobQueue <- fn
 		}
 	}
+	add := func() *worker {
+		wp.usedNum++
+		wp.mu.Unlock()
+		w := wp.workers.Get().(*worker)
+		w.createGoroutines(wp.queue, wp.panicFunc)
+		return w
+	}
 	select {
-	case w := <-wp.workerQueue:
-		wp.mux.Unlock()
+	case w := <-wp.queue:
+		wp.mu.Unlock()
 		if w != nil {
 			run(w)
 		} else {
@@ -91,58 +107,69 @@ func (wp *workPool) do(fn Task, param []interface{}) error {
 		}
 	default:
 		switch {
-		case wp.workesAliveNum == wp.workerSum:
-			wp.mux.Unlock()
-			w := <-wp.workerQueue
-			if w != nil {
+		case wp.usedNum >= wp.minIdle:
+			wp.mu.Unlock()
+			// todo 超时处理
+			select {
+			case <-cxt.Done():
+				wp.mu.Lock()
+				if wp.usedNum >= wp.maxIdle {
+					wp.mu.Unlock()
+					return ErrWaitTimeout
+				}
+				w := add()
 				run(w)
-			} else {
-				return ErrPoolClosed
+				return nil
+				// 尝试扩大容量？
+			case w := <-wp.queue:
+				if w != nil {
+					run(w)
+				} else {
+					return ErrPoolClosed
+				}
+
 			}
-		case wp.workesAliveNum < wp.workerSum:
-			wp.workesAliveNum++
-			wp.mux.Unlock()
-			w := wp.workers.Get().(*worker)
-			w.createGoroutines(wp.workerQueue, wp.panicFunc)
+		case wp.usedNum < wp.minIdle:
+			w := add()
 			run(w)
 		default:
-			wp.mux.Unlock()
+			wp.mu.Unlock()
 		}
 	}
 	return nil
 }
 
 // IsClosed Has it been closed
-func (wp *workPool) IsClosed() bool {
-	wp.mux.RLock()
+func (wp *WorkPool) IsClosed() bool {
+	wp.mu.RLock()
 	b := wp.closed
-	wp.mux.RUnlock()
+	wp.mu.RUnlock()
 	return b
 }
 
 // Close close the pool
-func (wp *workPool) Close() {
+func (wp *WorkPool) Close() {
 	if wp.IsClosed() {
 		return
 	}
-	wp.mux.Lock()
+	wp.mu.Lock()
 	wp.closed = true
-	for 0 < wp.workesAliveNum {
-		wp.workesAliveNum--
-		worker := <-wp.workerQueue
+	for 0 < wp.usedNum {
+		wp.usedNum--
+		worker := <-wp.queue
 		worker.close()
 	}
-	wp.mux.Unlock()
+	wp.mu.Unlock()
 }
 
 // Pause pause
-func (wp *workPool) Pause() {
+func (wp *WorkPool) Pause() {
 	wp.AdjustSize(0)
 }
 
 // Continue continue
-func (wp *workPool) Continue(workerNum ...int) {
-	num := int(wp.maxWorkerSum)
+func (wp *WorkPool) Continue(workerNum ...int) {
+	num := int(wp.maxIdle)
 	if len(workerNum) > 0 {
 		num = workerNum[0]
 	}
@@ -150,55 +177,55 @@ func (wp *workPool) Continue(workerNum ...int) {
 }
 
 // Cap get the number of coroutines
-func (wp *workPool) Cap() uint {
-	wp.mux.RLock()
-	defer wp.mux.RUnlock()
-	return wp.workesAliveNum
+func (wp *WorkPool) Cap() uint {
+	wp.mu.RLock()
+	defer wp.mu.RUnlock()
+	return wp.usedNum
 }
 
 // AdjustSize adjust the pool size
-func (wp *workPool) AdjustSize(workSize int) {
-	wp.mux.Lock()
-	defer wp.mux.Unlock()
+func (wp *WorkPool) AdjustSize(workSize int) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
 	if wp.closed {
 		return
 	}
 
-	oldSize := wp.workerSum
+	oldSize := wp.minIdle
 	newSize := uint(workSize)
-	if newSize > wp.maxWorkerSum {
-		newSize = wp.maxWorkerSum
+	if newSize > wp.maxIdle {
+		newSize = wp.maxIdle
 	}
-	wp.workerSum = newSize
+	wp.minIdle = newSize
 
-	if workSize > 0 && oldSize < wp.workerSum {
-		for wp.workesAliveNum < wp.workerSum {
-			wp.workesAliveNum++
+	if workSize > 0 && oldSize < wp.minIdle {
+		for wp.usedNum < wp.minIdle {
+			wp.usedNum++
 			w := wp.workers.Get().(*worker)
-			w.createGoroutines(wp.workerQueue, wp.panicFunc)
-			wp.workerQueue <- w
+			w.createGoroutines(wp.queue, wp.panicFunc)
+			wp.queue <- w
 		}
 	}
-	for wp.workerSum < wp.workesAliveNum {
-		wp.workesAliveNum--
-		worker := <-wp.workerQueue
+	for wp.minIdle < wp.usedNum {
+		wp.usedNum--
+		worker := <-wp.queue
 		worker.stop <- struct{}{}
 		wp.workers.Put(worker)
 	}
 }
 
-func (wp *workPool) PreInit() error {
+func (wp *WorkPool) PreInit() error {
 	if wp.IsClosed() {
 		return ErrPoolClosed
 	}
-	wp.mux.Lock()
-	for wp.workesAliveNum < wp.workerSum {
-		wp.workesAliveNum++
+	wp.mu.Lock()
+	for wp.usedNum < wp.minIdle {
+		wp.usedNum++
 		w := wp.workers.Get().(*worker)
-		w.createGoroutines(wp.workerQueue, wp.panicFunc)
-		wp.workerQueue <- w
+		w.createGoroutines(wp.queue, wp.panicFunc)
+		wp.queue <- w
 	}
-	wp.mux.Unlock()
+	wp.mu.Unlock()
 	return nil
 }
 

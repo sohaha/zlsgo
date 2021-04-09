@@ -191,3 +191,50 @@ func TestPoolPanicFunc(t *testing.T) {
 	g.Wait()
 	tt.EqualExit(3, i)
 }
+
+func TestPoolTimeout(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	p := zpool.New(1)
+	for i := 0; i < 3; i++ {
+		v := i
+		err := p.DoWithTimeout(func() {
+			t.Log(v)
+			time.Sleep(time.Second)
+		}, time.Second/3)
+		t.Log(err)
+		if v > 0 {
+			tt.EqualTrue(err == zpool.ErrWaitTimeout)
+		}
+		if err == zpool.ErrWaitTimeout {
+			t.Log(v)
+		}
+	}
+}
+
+func TestPoolAuto(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	var g sync.WaitGroup
+	p := zpool.New(1, 2)
+	for i := 0; i < 4; i++ {
+		g.Add(1)
+		v := i
+		err := p.DoWithTimeout(func() {
+			time.Sleep(time.Second)
+			t.Log("ok", v)
+			g.Done()
+		}, time.Second/6)
+		t.Log(v, err)
+		if v > 1 {
+			tt.EqualTrue(err == zpool.ErrWaitTimeout)
+		}
+		if err == zpool.ErrWaitTimeout {
+			go func() {
+				time.Sleep(time.Second)
+				t.Log("err", v)
+				g.Done()
+			}()
+		}
+	}
+	g.Wait()
+	tt.Log("done", p.Cap())
+}
