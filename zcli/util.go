@@ -176,4 +176,3 @@ func CheckErr(err error, exit ...bool) {
 func IsDoubleClickStartUp() bool {
 	return zutil.IsDoubleClickStartUp()
 }
-

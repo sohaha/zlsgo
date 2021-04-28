@@ -63,10 +63,11 @@ type (
 	bodyJson struct {
 		v interface{}
 	}
-
 	bodyXml struct {
 		v interface{}
 	}
+
+	CustomReq func(req *http.Request)
 
 	param struct {
 		url.Values
@@ -179,6 +180,8 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 	for _, v := range vs {
 		switch vv := v.(type) {
+		case CustomReq:
+			vv(req)
 		case Header:
 			for key, value := range vv {
 				req.Header.Add(key, value)

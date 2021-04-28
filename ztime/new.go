@@ -72,7 +72,7 @@ func FormatTlp(format string) string {
 		case '\\':
 			if i < len(runes)-1 {
 				buffer.WriteRune(runes[i+1])
-				i += 2
+				i += 1
 				continue
 			} else {
 				return buffer.String()

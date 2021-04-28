@@ -8,10 +8,10 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-func getBigJSON()string{
-	s :=""
+func getBigJSON() string {
+	s := ""
 	for i := 0; i < 10000; i++ {
-		s,_ = Set(s,strconv.Itoa(i),zstring.Rand(10))
+		s, _ = Set(s, strconv.Itoa(i), zstring.Rand(10))
 	}
 	return s
 }

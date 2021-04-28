@@ -59,6 +59,7 @@ func TestNewTime(t *testing.T) {
 func TestFormatTlp(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Equal("06-01-d", FormatTlp("y-m-\\d"))
+	t.Equal("地球时间：2006y01-d", FormatTlp("地球时间：Y\\ym-\\d"))
 	t.Equal("06-01-02 00:00:00", FormatTlp("y-m-d \\0\\0:\\0\\0:\\0\\0"))
 }
 
@@ -73,6 +74,10 @@ func TestParse(t *testing.T) {
 	t.Log(date, err)
 
 	date, err = Parse("2020.02.04", "Y.m.d")
+	tt.EqualNil(err)
+	t.Log(date, err)
+
+	date, err = Parse("地球时间:2020y02m04 11:11:11", "地球时间:Y\\ym\\md h:i:s")
 	tt.EqualNil(err)
 	t.Log(date, err)
 

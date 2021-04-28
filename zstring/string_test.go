@@ -34,7 +34,6 @@ func TestSubstr(T *testing.T) {
 	t.Equal(Substr(s, 2, 1), "2")
 	t.Equal("A,是我呀", Substr("你好A,是我呀", 2))
 	t.Equal("是我呀", Substr("你好A,是我呀", -3))
-	t.Equal("A,是", Substr("你好A,是我呀", 2, -2))
 }
 
 func TestPad(T *testing.T) {

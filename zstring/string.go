@@ -67,21 +67,31 @@ func Len(str string) int {
 
 // Substr returns part of a string
 func Substr(str string, start int, length ...int) string {
-	s := []rune(str)
-	sl := len(s)
-	if start < 0 {
-		start = sl + start
-	}
-
+	var size, ll, n, nn int
 	if len(length) > 0 {
-		ll := length[0]
-		if ll < 0 {
-			sl = sl + ll
-		} else {
-			sl = ll + start
+		ll = length[0] + start
+	}
+	lb := ll == 0
+	if start < 0 {
+		start = Len(str) + start
+	}
+	for i := 0; i < len(str); i++ {
+		_, size = utf8.DecodeRuneInString(str[nn:])
+		if i < start {
+			n += size
+		} else if lb {
+			break
+		}
+		if !lb && i < ll {
+			nn += size
+		} else if lb {
+			nn += size
 		}
 	}
-	return string(s[start:sl])
+	if !lb {
+		return str[n:nn]
+	}
+	return str[n:]
 }
 
 // Bytes2String bytes to string

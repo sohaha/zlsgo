@@ -305,7 +305,9 @@ func TestFile(t *testing.T) {
 	zfile.Rmdir("./my2.jpg")
 
 	DisableChunke()
-	res, err = Post("http://127.0.0.1:7878/upload", h, UploadProgress(func(current, total int64) {
+	res, err = Post("http://127.0.0.1:7878/upload", h, CustomReq(func(req *http.Request) {
+
+	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)
 	}), v, q, context.Background(), File("./test//my.jpg", "file"))
 	tt.EqualNil(err)

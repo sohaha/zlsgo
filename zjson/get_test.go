@@ -52,7 +52,7 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, Get(demo, "boolTrue").Bool())
 	tt.EqualExit(false, Get(demo, "boolTrueNot").Bool())
 	tt.EqualExit("true", Get(demo, "boolTrue").String())
-	t.Log(Get(demo, "time").Bool(),Get(demo, "time").String())
+	t.Log(Get(demo, "time").Bool(), Get(demo, "time").String())
 	tt.EqualExit(false, Get(demo, "time").Bool())
 	tt.EqualExit(true, Get(demo, "i").Bool())
 	timeStr := Get(demo, "time").String()

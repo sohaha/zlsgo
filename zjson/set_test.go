@@ -125,7 +125,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkSetBytes(b *testing.B) {
-	s := []byte( zstring.Rand(100))
+	s := []byte(zstring.Rand(100))
 	json := []byte("{}")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

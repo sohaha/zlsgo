@@ -19,7 +19,7 @@ func init() {
 	//abs, _ := filepath.Abs(".")
 	//ProjectPath = RealPath(abs)
 	ProjectPath = ProgramPath()
-	if strings.Contains(ProjectPath,TmpPath("")){
+	if strings.Contains(ProjectPath, TmpPath("")) {
 		ProjectPath = RootPath()
 	}
 }
