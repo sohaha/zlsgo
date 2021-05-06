@@ -20,6 +20,22 @@ func init() {
 	r.SetMode(znet.ProdMode)
 }
 
+func TestNewAllowHeaders(t *testing.T) {
+	tt := zls.NewTest(t)
+
+	addAllowHeader, h := cors.NewAllowHeaders()
+	r.Any("/TestNewAllowHeaders", func(c *znet.Context) {
+		c.String(200, zstring.Rand(10, "abc"))
+	}, h)
+	addAllowHeader("AllowTest")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("OPTIONS", "/TestNewAllowHeaders", nil)
+	req.Header.Add("AllowTest", "https://qq.com")
+	r.ServeHTTP(w, req)
+	tt.Equal(http.StatusOK, w.Code)
+	tt.Equal(10, w.Body.Len())
+}
+
 func TestDefault(t *testing.T) {
 	tt := zls.NewTest(t)
 

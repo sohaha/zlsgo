@@ -28,6 +28,17 @@ func Default() znet.HandlerFunc {
 	return New(&Config{})
 }
 
+func NewAllowHeaders() (addAllowHeader func(header string), handler znet.HandlerFunc) {
+	conf := &Config{}
+	handler = New(conf)
+
+	return func(header string) {
+		headers := strings.Split(conf.headers, ", ")
+		headers = append(headers, header)
+		conf.headers = strings.Join(headers, ", ")
+	}, handler
+}
+
 func New(conf *Config) znet.HandlerFunc {
 	if len(conf.Methods) == 0 {
 		conf.Methods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
@@ -72,7 +83,6 @@ func applyCors(c *znet.Context, conf *Config) bool {
 	c.SetHeader("Access-Control-Allow-Credentials", conf.credentials)
 	c.SetHeader("Access-Control-Allow-Headers", conf.headers)
 	c.SetHeader("Access-Control-Allow-Origin", origin)
-
 	if conf.CustomHandler != nil {
 		conf.CustomHandler(conf, c)
 	}

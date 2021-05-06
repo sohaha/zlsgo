@@ -304,6 +304,10 @@ func TestFile(t *testing.T) {
 	tt.Equal("上传成功", res.String())
 	zfile.Rmdir("./my2.jpg")
 
+	SetTransport(func(transport *http.Transport) {
+		transport.MaxIdleConnsPerHost = 100
+	})
+
 	DisableChunke()
 	res, err = Post("http://127.0.0.1:7878/upload", h, CustomReq(func(req *http.Request) {
 
