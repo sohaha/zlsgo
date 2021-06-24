@@ -3,6 +3,7 @@ package znet
 import (
 	"errors"
 	"math"
+	"math/big"
 	"net"
 	"net/http"
 	"strconv"
@@ -89,36 +90,23 @@ func RemoteIP(r *http.Request) string {
 	return ""
 }
 
-// IPString2Long IPString2Long
-func IPString2Long(ip string) (i uint, err error) {
-	b := net.ParseIP(ip).To4()
-	if b == nil {
-		err = errors.New("invalid ipv4 format")
-		return
-	}
-	i = uint(b[3]) | uint(b[2])<<8 | uint(b[1])<<16 | uint(b[0])<<24
-	return
+// IPToLong IPToLong
+func IPToLong(ip string) (i uint, err error) {
+	return NetIPToLong(net.ParseIP(ip))
 }
 
-// Long2IPString Long2IPString
-func Long2IPString(i uint) (IP string, err error) {
-	if i > math.MaxUint32 {
-		err = errors.New("beyond the scope of ipv4")
-		return
+// LongToIP LongToIP
+func LongToIP(i uint) (string, error) {
+	ip, err := LongToNetIP(i)
+	if err != nil {
+		return "", err
 	}
 
-	ip := make(net.IP, net.IPv4len)
-	ip[0] = byte(i >> 24)
-	ip[1] = byte(i >> 16)
-	ip[2] = byte(i >> 8)
-	ip[3] = byte(i)
-
-	IP = ip.String()
-	return
+	return ip.String(), nil
 }
 
-// IP2Long IP2Long
-func IP2Long(ip net.IP) (i uint, err error) {
+// NetIPToLong NetIPToLong
+func NetIPToLong(ip net.IP) (i uint, err error) {
 	b := ip.To4()
 	if b == nil {
 		err = errors.New("invalid ipv4 format")
@@ -129,8 +117,18 @@ func IP2Long(ip net.IP) (i uint, err error) {
 	return
 }
 
-// Long2IP Long2IP
-func Long2IP(i uint) (ip net.IP, err error) {
+// NetIPv6ToLong NetIPv6ToLong
+func NetIPv6ToLong(ip net.IP) (*big.Int, error) {
+	if ip == nil {
+		return nil, errors.New("invalid ipv6 format")
+	}
+	IPv6Int := big.NewInt(0)
+	IPv6Int.SetBytes(ip.To16())
+	return IPv6Int, nil
+}
+
+// LongToNetIP LongToNetIP
+func LongToNetIP(i uint) (ip net.IP, err error) {
 	if i > math.MaxUint32 {
 		err = errors.New("beyond the scope of ipv4")
 		return
@@ -145,6 +143,12 @@ func Long2IP(i uint) (ip net.IP, err error) {
 	return
 }
 
+// LongToNetIPv6 LongToNetIPv6
+func LongToNetIPv6(i *big.Int) (ip net.IP, err error) {
+	ip = i.Bytes()
+	return
+}
+
 // IsIP IsIP
 func IsIP(ip string) bool {
 	address := net.ParseIP(ip)
@@ -154,7 +158,33 @@ func IsIP(ip string) bool {
 	return true
 }
 
-// GetPort Check if the port is available, if not, then automatically get an available
+// GetIPv GetIPv
+func GetIPv(s string) int {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '.':
+			return 4
+		case ':':
+			return 6
+		}
+	}
+	return 0
+}
+
+// InNetwork InNetwork
+func InNetwork(ip, network string) bool {
+	_, n, err := net.ParseCIDR(network)
+	if err != nil && IsIP(network) {
+		_, n, err = net.ParseCIDR(network + "/24")
+	}
+	if err != nil {
+		return false
+	}
+	netIP := net.ParseIP(ip)
+	return n.Contains(netIP)
+}
+
+// Port GetPort Check if the port is available, if not, then automatically get an available
 func Port(port int, change bool) (newPort int, err error) {
 	host := ":" + strconv.Itoa(port)
 	listener, err := net.Listen("tcp", host)

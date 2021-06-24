@@ -18,7 +18,7 @@ func (r *Rule) Remaining(key interface{}) []int {
 
 // RemainingVisitsByIP Remaining Visits IP
 func (r *Rule) RemainingVisitsByIP(ip string) []int {
-	ipUint, _ := znet.IPString2Long(ip)
+	ipUint, _ := znet.IPToLong(ip)
 	if ipUint == 0 {
 		return []int{}
 	}
@@ -42,7 +42,7 @@ func (r *Rule) GetOnline() []string {
 			var user string
 			switch v := k.(type) {
 			case uint:
-				user, _ = znet.Long2IPString(v)
+				user, _ = znet.LongToIP(v)
 			default:
 				user = fmt.Sprint(k)
 			}

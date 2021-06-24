@@ -61,7 +61,7 @@ func (r *Rule) AllowVisit(key interface{}) bool {
 
 // AllowVisitByIP AllowVisit IP
 func (r *Rule) AllowVisitByIP(ip string) bool {
-	i, _ := znet.IPString2Long(ip)
+	i, _ := znet.IPToLong(ip)
 	if i == 0 {
 		return false
 	}

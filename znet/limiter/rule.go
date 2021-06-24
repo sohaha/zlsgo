@@ -76,7 +76,7 @@ func (r *singleRule) remainingVisits(key interface{}) int {
 
 // remainingVisitsIP Remaining access times of an IP
 func (r *singleRule) remainingVisitsIP(ip string) int {
-	i, _ := znet.IPString2Long(ip)
+	i, _ := znet.IPToLong(ip)
 	if i == 0 {
 		return 0
 	}

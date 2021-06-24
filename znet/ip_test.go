@@ -19,14 +19,14 @@ func TestNetIP(tt *testing.T) {
 		t.Equal("", c.GetClientIP())
 		ip := "127.0.0.1"
 		ipb := uint(2130706433)
-		_, _ = IPString2Long("127")
-		l, _ := IPString2Long(ip)
+		_, _ = IPToLong("127")
+		l, _ := IPToLong(ip)
 		t.Equal(ipb, l)
-		i, _ := Long2IPString(l)
+		i, _ := LongToIP(l)
 		t.Equal(ip, i)
-		ip2P, _ := Long2IP(l)
+		ip2P, _ := LongToNetIP(l)
 		t.Equal(ip, ztype.ToString(ip2P))
-		ip2L, _ := IP2Long(ip2P)
+		ip2L, _ := NetIPToLong(ip2P)
 		t.Equal(ipb, ip2L)
 		t.Equal(true, IsLocalAddrIP(ip))
 		tt.Log(RemoteIP(c.Request))
@@ -51,6 +51,42 @@ func TestIsIP(tt *testing.T) {
 	t.EqualTrue(IsIP("127.0.0.1"))
 	t.EqualTrue(IsIP("172.31.255.255"))
 	t.EqualTrue(!IsIP("172.31.255.a"))
+}
+
+func TestGetIPV(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	t.EqualExit(4, GetIPv("127.0.0.1"))
+	t.EqualExit(4, GetIPv("172.31.255.255"))
+	t.EqualExit(6, GetIPv("2001:db8:1:2::1"))
+	t.EqualTrue(4 != GetIPv("2001:db8:1:2::1"))
+}
+
+func TestIP2(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	ip4Str := "127.0.0.1"
+	ip4 := net.ParseIP(ip4Str)
+	ipLong, _ := NetIPToLong(ip4)
+	ip4Raw, _ := LongToNetIP(ipLong)
+	t.EqualExit(ip4Str, ip4Raw.String())
+
+	ip6Str := "2001:db8:1:2::1"
+	ip6 := net.ParseIP(ip6Str)
+	ipv6Long, _ := NetIPv6ToLong(ip6)
+	ip6Raw, _ := LongToNetIPv6(ipv6Long)
+	t.EqualExit(ip6Str, ip6Raw.String())
+}
+
+func TestInNetwork(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	sNetwork := "120.85.5.131/24"
+	for k, v := range map[string]bool{
+		"120.85.5.1":   true,
+		"120.85.5.255": true,
+		"120.85.5.256": false,
+		"120.85.8.131": false,
+	} {
+		t.Equal(v, InNetwork(k, sNetwork))
+	}
 }
 
 func TestGetPort(tt *testing.T) {
