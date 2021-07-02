@@ -1,9 +1,8 @@
 package zutil_test
 
 import (
-	"testing"
-
 	"github.com/sohaha/zlsgo/zutil"
+	"testing"
 )
 
 func TestGetGid(t *testing.T) {

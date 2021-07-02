@@ -12,6 +12,11 @@ import (
 
 var localNetworks []*net.IPNet
 
+var (
+	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP"}
+	TrustedProxies  = []string{"0.0.0.0/0"}
+)
+
 func init() {
 	localNetworks = make([]*net.IPNet, 4)
 	for i, sNetwork := range []string{
@@ -43,41 +48,63 @@ func IsLocalIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
+func getRemoteIP(r *http.Request) []string {
+	ips := make([]string, 0)
+	ip := RemoteIP(r)
+	trusted := false
+	if ip != "" {
+		for i := range TrustedProxies {
+			proxy := TrustedProxies[i]
+			if InNetwork(ip, proxy) {
+				trusted = true
+				break
+			}
+		}
+	} else {
+		trusted = true
+	}
+	if trusted {
+		for i := range RemoteIPHeaders {
+			key := RemoteIPHeaders[i]
+			ips = append(ips, parseHeadersIP(r, key)...)
+		}
+	}
+	return append(ips, ip)
+}
+
+func parseHeadersIP(r *http.Request, key string) []string {
+	val := r.Header.Get(key)
+	if val == "" {
+		return []string{}
+	}
+	str := strings.Split(val, ",")
+	l := len(str)
+	ips := make([]string, l)
+	for i := l - 1; i >= 0; i-- {
+		ips[l-1-i] = strings.TrimSpace(str[i])
+	}
+	return ips
+}
+
 // ClientIP ClientIP
 func ClientIP(r *http.Request) (ip string) {
-	xForwardedFor := r.Header.Get("X-Forwarded-For")
-	ip = strings.TrimSpace(strings.Split(xForwardedFor, ",")[0])
-	if ip != "" {
-		return
+	ips := getRemoteIP(r)
+	if len(ips) > 0 && ips[0] != "" {
+		return ips[0]
 	}
-	ip = strings.TrimSpace(r.Header.Get("X-Real-Ip"))
-	if ip != "" {
-		return
-	}
-	ip, _, _ = net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
 	return
 }
 
 // ClientPublicIP ClientPublicIP
 func ClientPublicIP(r *http.Request) string {
 	var ip string
-	for _, ip = range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
-		ip = strings.TrimSpace(ip)
+	ips := getRemoteIP(r)
+	for i := range ips {
+		ip = ips[i]
 		if ip != "" && !IsLocalAddrIP(ip) {
 			return ip
 		}
 	}
-
-	ip = strings.TrimSpace(r.Header.Get("X-Real-Ip"))
-	if ip != "" && !IsLocalAddrIP(ip) {
-		return ip
-	}
-
-	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil && !IsLocalAddrIP(ip) {
-		return ip
-
-	}
-
 	return ""
 }
 

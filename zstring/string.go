@@ -12,11 +12,11 @@ import (
 
 type (
 	sliceT struct {
-		array unsafe.Pointer
-		len   int
-		cap   int
+		arr unsafe.Pointer
+		len int
+		cap int
 	}
-	stringStruct struct {
+	stringS struct {
 		str unsafe.Pointer
 		len int
 	}
@@ -102,9 +102,13 @@ func Bytes2String(b []byte) string {
 // String2Bytes string to bytes
 // remark: read only, the structure of runtime changes will be affected, the role of unsafe.Pointer will be changed, and it will also be affected
 func String2Bytes(s string) []byte {
-	str := (*stringStruct)(unsafe.Pointer(&s))
-	ret := sliceT{array: str.str, len: str.len, cap: str.len}
-	return *(*[]byte)(unsafe.Pointer(&ret))
+	var b []byte
+	str := (*stringS)(unsafe.Pointer(&s))
+	pbytes := (*sliceT)(unsafe.Pointer(&b))
+	pbytes.arr = str.str
+	pbytes.len = str.len
+	pbytes.cap = str.len
+	return b
 }
 
 // Ucfirst Ucfirst

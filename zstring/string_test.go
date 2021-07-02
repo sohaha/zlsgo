@@ -132,9 +132,10 @@ func TestTo(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	s := "我是中国人"
 	b := String2Bytes(s)
-	b = TrimBOM(b)
+	b2 := TrimBOM(b)
 	s2 := Bytes2String(b)
 	t.Equal(s, s2)
+	T.Log(s, s2, string(b), string(b2))
 }
 
 func BenchmarkTo(b *testing.B) {
