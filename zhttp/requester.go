@@ -1,5 +1,9 @@
 package zhttp
 
+import (
+	"time"
+)
+
 func DisableChunke(enable ...bool) {
 	std.DisableChunke(enable...)
 }
@@ -40,6 +44,10 @@ func Trace(url string, v ...interface{}) (*Res, error) {
 	return std.Trace(url, v...)
 }
 
-func Do(method, url string, v ...interface{}) (*Res, error) {
-	return std.Do(method, url, v...)
+func Do(method, rawurl string, v ...interface{}) (resp *Res, err error) {
+	return std.Do(method, rawurl, v...)
+}
+
+func DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error) {
+	return std.DoRetry(attempt, sleep, fn)
 }

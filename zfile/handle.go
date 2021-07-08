@@ -56,7 +56,8 @@ func ReadFile(path string) ([]byte, error) {
 }
 
 // ReadLineFile ReadLineFile
-func ReadLineFile(path string, handle func(line int, data []byte)) (err error) {
+func ReadLineFile(path string, handle func(line int,
+	data []byte) error) (err error) {
 	var f *os.File
 	f, err = os.Open(RealPath(path))
 	if err != nil {
@@ -68,11 +69,13 @@ func ReadLineFile(path string, handle func(line int, data []byte)) (err error) {
 	i := 0
 	for {
 		i++
-		line, err := rd.ReadBytes('\n')
-		if err != nil || io.EOF == err {
+		line, lerr := rd.ReadBytes('\n')
+		if lerr != nil || io.EOF == lerr {
 			break
 		}
-		handle(i, line)
+		if err = handle(i, line); err != nil {
+			break
+		}
 	}
 	return
 }

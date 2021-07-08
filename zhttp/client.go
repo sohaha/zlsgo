@@ -91,6 +91,19 @@ func (r *Engine) Connect(url string, v ...interface{}) (*Res, error) {
 	return r.Do(http.MethodConnect, url, v...)
 }
 
+func (r *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error) {
+	for attempt >= 0 {
+		attempt--
+		res, err := fn()
+		if err != nil {
+			time.Sleep(sleep)
+			continue
+		}
+		return res, nil
+	}
+	return nil, errors.New("the number of retries has been exhausted")
+}
+
 func (r *Engine) EnableInsecureTLS(enable bool) {
 	trans := r.getTransport()
 	if trans == nil {

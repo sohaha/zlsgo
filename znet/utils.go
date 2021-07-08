@@ -88,6 +88,9 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 	}
 	file := templateFile[0]
 	if zfile.FileExist(file) {
+		for i := range templateFile {
+			templateFile[i] = zfile.RealPath(templateFile[i])
+		}
 		t, err = template.ParseFiles(templateFile...)
 		if err == nil && funcMap != nil {
 			t.Funcs(funcMap)

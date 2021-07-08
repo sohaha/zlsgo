@@ -83,6 +83,23 @@ func TestJONS(tt *testing.T) {
 	}, v, Header{"name": "ok"})
 }
 
+func TestRetry(tt *testing.T) {
+	t := zls.NewTest(tt)
+	h := New()
+	i := 0
+	_, err := DoRetry(30, time.Second/10, func() (*Res, error) {
+		t := time.Duration(100*2*i+1) * time.Millisecond
+		h.SetTimeout(t)
+		tt.Log("Retry", i, t)
+		res, err := h.Get("https://cdn.jsdelivr.net/")
+		i++
+
+		return res, err
+	})
+
+	t.Log(i, err)
+}
+
 func TestToHTML(tt *testing.T) {
 	t := zls.NewTest(tt)
 	res, err := Get("https://cdn.jsdelivr.net/")

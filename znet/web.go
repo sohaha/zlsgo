@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zcli"
+	"github.com/sohaha/zlsgo/zfile"
 
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
@@ -237,6 +238,7 @@ func (e *Engine) SetHTMLTemplate(t *template.Template) {
 
 // LoadHTMLGlob Load Glob HTML
 func (e *Engine) LoadHTMLGlob(pattern string) {
+	pattern = zfile.RealPath(pattern)
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {
 		e.Log.Fatalf("Template loading failed: %s\n", err)

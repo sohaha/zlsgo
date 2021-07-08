@@ -50,8 +50,9 @@ func TestReadLineFile(t *testing.T) {
 	defer os.Remove("./TestReadLineFile.txt")
 	tt := NewTest(t)
 	file := "./TestReadLineFile.txt"
-	err := ReadLineFile(file, func(line int, data []byte) {
+	err := ReadLineFile(file, func(line int, data []byte) error{
 		t.Log(line, string(data))
+		return nil
 	})
 	tt.EqualNil(err)
 }
