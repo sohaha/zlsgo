@@ -7,9 +7,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sohaha/zlsgo/ztype"
-
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func TestNetIP(tt *testing.T) {
@@ -119,4 +118,43 @@ func TestGetPort(tt *testing.T) {
 	port, err = MultiplePort([]int{p}, false)
 	t.EqualTrue(err != nil)
 	tt.Log(port, err)
+}
+
+func Test_parseHeadersIP(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tests := []struct {
+		args string
+		want []string
+	}{
+		{"", []string{}},
+		{"11.11.11.11,1.1.1.1, 2.2.2.2", []string{
+			"2.2.2.2",
+			"1.1.1.1",
+			"11.11.11.11",
+		}},
+	}
+	for _, v := range tests {
+		tt.EqualExit(v.want, parseHeadersIP(v.args))
+	}
+}
+
+func TestIsLocalAddrIP(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tests := []struct {
+		args string
+		want bool
+	}{
+		{"127.0.0.1", true},
+		{"192.168.3.199", true},
+		{"18.22.1.3", false},
+	}
+	for _, v := range tests {
+		tt.EqualExit(v.want, IsLocalAddrIP(v.args))
+	}
+
+	request, _ := http.NewRequest("POST", "/", nil)
+	request.Header.Set("X-Forwarded-For", "  20.20.20.20, 30.30.30.30,10.10.10.10")
+	remoteIP := "10.10.10.10"
+	t.Log(getTrustedIP(request, remoteIP))
+	t.Log(RemoteIP(request))
 }

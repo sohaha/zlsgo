@@ -206,15 +206,24 @@ func XSSClean(str string) string {
 
 // TrimSpace TrimSpace
 func TrimSpace(s string) string {
+	space := [...]uint8{127, 128, 133, 160, 194, 226, 227}
+	well := func(s uint8) bool {
+		for i := range space {
+			if space[i] == s {
+				return true
+			}
+		}
+		return false
+	}
 	for len(s) > 0 {
-		if s[0] <= ' ' {
+		if (s[0] <= 31) || s[0] <= ' ' || well(s[0]) {
 			s = s[1:]
 			continue
 		}
 		break
 	}
 	for len(s) > 0 {
-		if s[len(s)-1] <= ' ' {
+		if s[len(s)-1] <= ' ' || (s[len(s)-1] <= 31) || well(s[len(s)-1]) {
 			s = s[:len(s)-1]
 			continue
 		}

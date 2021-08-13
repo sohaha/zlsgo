@@ -18,8 +18,9 @@ var (
 )
 
 func init() {
-	localNetworks = make([]*net.IPNet, 4)
+	localNetworks = make([]*net.IPNet, 5)
 	for i, sNetwork := range []string{
+		"127.0.0.0/8",
 		"10.0.0.0/8",
 		"169.254.0.0/16",
 		"172.16.0.0/12",
@@ -48,6 +49,32 @@ func IsLocalIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
+func trustedProxies() []*net.IPNet {
+	trusted := make([]*net.IPNet, 0)
+	for i := range TrustedProxies {
+		n, err := netCIDR(TrustedProxies[i])
+		if err != nil {
+			continue
+		}
+		trusted = append(trusted, n)
+	}
+	return trusted
+}
+
+func getTrustedIP(r *http.Request, remoteIP string) string {
+	ip := remoteIP
+	for i := range RemoteIPHeaders {
+		key := RemoteIPHeaders[i]
+		val := r.Header.Get(key)
+		ips := parseHeadersIP(val)
+		for i := range ips {
+
+			Log.Debug(i, ips[i])
+		}
+	}
+	return ip
+}
+
 func getRemoteIP(r *http.Request) []string {
 	ips := make([]string, 0)
 	ip := RemoteIP(r)
@@ -66,14 +93,14 @@ func getRemoteIP(r *http.Request) []string {
 	if trusted {
 		for i := range RemoteIPHeaders {
 			key := RemoteIPHeaders[i]
-			ips = append(ips, parseHeadersIP(r, key)...)
+			val := r.Header.Get(key)
+			ips = append(ips, parseHeadersIP(val)...)
 		}
 	}
 	return append(ips, ip)
 }
 
-func parseHeadersIP(r *http.Request, key string) []string {
-	val := r.Header.Get(key)
+func parseHeadersIP(val string) []string {
 	if val == "" {
 		return []string{}
 	}
@@ -178,11 +205,7 @@ func LongToNetIPv6(i *big.Int) (ip net.IP, err error) {
 
 // IsIP IsIP
 func IsIP(ip string) bool {
-	address := net.ParseIP(ip)
-	if address == nil {
-		return false
-	}
-	return true
+	return net.ParseIP(ip) != nil
 }
 
 // GetIPv GetIPv
@@ -198,12 +221,20 @@ func GetIPv(s string) int {
 	return 0
 }
 
-// InNetwork InNetwork
-func InNetwork(ip, network string) bool {
+func netCIDR(network string) (*net.IPNet, error) {
 	_, n, err := net.ParseCIDR(network)
 	if err != nil && IsIP(network) {
 		_, n, err = net.ParseCIDR(network + "/24")
 	}
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+// InNetwork InNetwork
+func InNetwork(ip, network string) bool {
+	n, err := netCIDR(network)
 	if err != nil {
 		return false
 	}

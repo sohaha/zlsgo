@@ -2,6 +2,7 @@ package zhttp
 
 import (
 	"bytes"
+
 	"golang.org/x/net/html"
 )
 
@@ -9,6 +10,7 @@ type (
 	QueryHTML struct {
 		node *html.Node
 	}
+	Els []QueryHTML
 )
 
 func HTMLParse(HTML []byte) (doc QueryHTML, err error) {
@@ -37,6 +39,7 @@ func (r *QueryHTML) getNode() *html.Node {
 	}
 	return r.node
 }
+
 func (r QueryHTML) SelectChild(el string, args ...map[string]string) QueryHTML {
 	var (
 		node  *html.Node
@@ -57,12 +60,34 @@ func (r QueryHTML) SelectChild(el string, args ...map[string]string) QueryHTML {
 	return QueryHTML{node: node}
 }
 
-func (r QueryHTML) Child() (child []QueryHTML) {
+func (r QueryHTML) SelectAllChild(el string, args ...map[string]string) (arr Els) {
 	forChild(r.getNode(), func(n *html.Node) bool {
-		child = append(child, QueryHTML{node: n})
+		elArr := matchEl(n, el, arr2Attr(args))
+		exist := elArr != nil
+		if exist {
+			arr = append(arr, QueryHTML{node: elArr})
+		}
 		return true
 	})
 	return
+}
+
+// Deprecated: please use SelectAllChild("")
+// Child All child elements
+func (r QueryHTML) Child() (childs []QueryHTML) {
+	r.ForEachChild(func(index int, child QueryHTML) bool {
+		childs = append(childs, child)
+		return true
+	})
+	return
+}
+
+func (r QueryHTML) ForEachChild(f func(index int, child QueryHTML) bool) {
+	i := -1
+	forChild(r.getNode(), func(n *html.Node) bool {
+		i++
+		return f(i, QueryHTML{node: n})
+	})
 }
 
 func (r QueryHTML) NthChild(index int) QueryHTML {
@@ -78,6 +103,7 @@ func (r QueryHTML) NthChild(index int) QueryHTML {
 	})
 	return doc
 }
+
 func (r QueryHTML) Select(el string, args ...map[string]string) QueryHTML {
 	n := findChild(r.getNode(), el, args, false)
 	if len(n) == 0 {
@@ -86,7 +112,7 @@ func (r QueryHTML) Select(el string, args ...map[string]string) QueryHTML {
 	return QueryHTML{node: n[0]}
 }
 
-func (r QueryHTML) SelectAll(el string, args ...map[string]string) (arr []QueryHTML) {
+func (r QueryHTML) SelectAll(el string, args ...map[string]string) (arr Els) {
 	n := findChild(r.getNode(), el, args, true)
 	l := len(n)
 	if l == 0 {
@@ -101,7 +127,7 @@ func (r QueryHTML) SelectAll(el string, args ...map[string]string) (arr []QueryH
 
 func (r QueryHTML) SelectBrother(el string, args ...map[string]string) QueryHTML {
 	parent := r.SelectParent("")
-	child := parent.Child()
+	child := parent.SelectAllChild(el, args...)
 	index := 0
 	brother := QueryHTML{}
 	for i := range child {
@@ -144,6 +170,8 @@ func (r QueryHTML) Find(el string) QueryHTML {
 		l := level[i]
 		if l.Child {
 			n = n.SelectChild(l.Name, l.Attr)
+		} else if l.Brother {
+			n = n.SelectBrother(l.Name, l.Attr)
 		} else {
 			n = n.Select(l.Name, l.Attr)
 		}
@@ -172,15 +200,17 @@ func parseSelector(el string) []*selector {
 			case '.':
 				s.appendAttr(key, el, i)
 				key = "class"
-			case ' ', '>':
+			case ' ', '>', '~':
 				s.appendAttr(key, el, i)
 				if s.Name != "" || len(s.Attr) != 0 {
 					ss = append(ss, s)
-					s = &selector{i: i + 1, Attr: make(map[string]string, 0)}
+					s = &selector{i: i + 1, Attr: make(map[string]string)}
 					key = ""
 				}
 				if v == '>' {
 					s.Child = true
+				} else if v == '~' {
+					s.Brother = true
 				}
 			}
 			i = i + 1 + add

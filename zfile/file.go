@@ -16,8 +16,8 @@ var (
 )
 
 func init() {
-	//abs, _ := filepath.Abs(".")
-	//ProjectPath = RealPath(abs)
+	// abs, _ := filepath.Abs(".")
+	// ProjectPath = RealPath(abs)
 	ProjectPath = ProgramPath()
 	if strings.Contains(ProjectPath, TmpPath("")) {
 		ProjectPath = RootPath()
@@ -107,9 +107,14 @@ func TmpPath(pattern ...string) string {
 }
 
 // SafePath get an safe absolute path
-func SafePath(path string, addSlash ...bool) string {
-	realPath := RealPath(path, addSlash...)
-	return strings.TrimPrefix(realPath, RootPath())
+func SafePath(path string, pathRange ...string) string {
+	base := ""
+	if len(pathRange) == 0 {
+		base = RootPath()
+	} else {
+		base = RealPath(pathRange[0], true)
+	}
+	return strings.TrimPrefix(RealPath(path, true), base)
 }
 
 // RealPath get an absolute path

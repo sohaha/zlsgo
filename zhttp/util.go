@@ -14,10 +14,11 @@ import (
 
 type (
 	selector struct {
-		Name  string
-		Attr  map[string]string
-		i     int
-		Child bool
+		Name    string
+		Attr    map[string]string
+		i       int
+		Child   bool
+		Brother bool
 	}
 )
 

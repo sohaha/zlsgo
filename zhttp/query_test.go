@@ -28,6 +28,7 @@ blue box </div>
 			<div id="Tow" name="saiya" class="content tow">div->div.tow<i>M</i></div>
 			<div id="Three">Three</div>
 			<div id="Four">Four</div>
+			<span id="six">666</div>
 		</div>
 yes
 	</body>
@@ -99,11 +100,13 @@ func TestSelectAll(tt *testing.T) {
 func TestSelectParent(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	h, _ := zhttp.HTMLParse([]byte(html))
+
 	span := h.Select("span")
 	tt.Log(span.Exist())
 
 	multiple := span.SelectParent("div", map[string]string{"class": "multiple"})
 	tt.Log(multiple.HTML())
+	tt.Log(multiple)
 	t.EqualTrue(multiple.Exist())
 
 	parent := span.SelectParent("vue")
@@ -115,6 +118,7 @@ func TestChild(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	h, _ := zhttp.HTMLParse([]byte(html))
 
+	tt.Log(h.Select("no-body").Child())
 	child := h.Select("body").Child()
 	for i, v := range child {
 		switch i {
@@ -124,16 +128,36 @@ func TestChild(tt *testing.T) {
 			t.EqualExit("br", v.Name())
 		case 5:
 			t.EqualExit("div", v.Name())
+			tt.Log(v.Text())
 			t.EqualExit("blue2 box", v.Text())
 		}
 	}
 
+	h.Select("body").SelectAllChild("").ForEach(func(index int, el zhttp.QueryHTML) bool {
+		t.Equal(child[index], el)
+		return true
+	})
+
+	h.Select("body").ForEachChild(func(i int, v zhttp.QueryHTML) bool {
+		switch i {
+		case 1:
+			t.EqualExit("hr", v.Name())
+		case 2:
+			t.EqualExit("br", v.Name())
+		case 5:
+			t.EqualExit("div", v.Name())
+			tt.Log(v.Text())
+			t.EqualExit("blue2 box", v.Text())
+		}
+		return true
+	})
 	multiple := h.Select("body").Select("div", map[string]string{"class": "multiple"})
 
 	t.Equal("", multiple.NthChild(0).Attr("id"))
 	t.Equal("One", multiple.NthChild(1).Attr("id"))
 	t.Equal("Tow", multiple.NthChild(2).Attr("id"))
 	t.Equal("Three", multiple.NthChild(3).Attr("id"))
+	t.Equal("", multiple.NthChild(3).Attr("no-id"))
 
 	span := multiple.SelectChild("span")
 	tt.Log(span.Exist(), span.HTML())
@@ -141,11 +165,22 @@ func TestChild(tt *testing.T) {
 	span = multiple.Select("div", map[string]string{"class": "content"}).SelectChild("span")
 	t.EqualTrue(span.Exist())
 	tt.Log(span.HTML())
+
+	d := h.Select("div", map[string]string{
+		"class": "multiple",
+	})
+	tt.Log(d)
+	d.SelectAllChild("div").ForEach(func(index int, el zhttp.QueryHTML) bool {
+		t.Log(el)
+		return true
+	})
 }
 
 func TestFind(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	h, _ := zhttp.HTMLParse([]byte(html))
+
+	t.Equal(h.Find("div#Three").SelectBrother("div"), h.Find("div#Three ~ div"))
 	t.EqualTrue(h.Find("div#Tow.tow").Exist())
 	t.EqualTrue(h.Find("div.multiple.boxs .tow>i").Exist())
 	t.EqualTrue(!h.Find("div.multiple.boxs >   i").Exist())
@@ -172,7 +207,9 @@ func TestBrother(tt *testing.T) {
 	t.Equal("Four", b.Attr("id"))
 	tt.Log(b.HTML(true))
 
+	tt.Log(b)
 	b = b.SelectBrother("div")
+	tt.Log(b)
 	t.EqualTrue(!b.Exist())
 
 	b = h.Find("#One").SelectBrother("")

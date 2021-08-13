@@ -103,13 +103,14 @@ func TestXss(T *testing.T) {
 	}
 }
 
-func TestTrimSpace(T *testing.T) {
-	t := zlsgo.NewTest(T)
+func TestTrimSpace(t *testing.T) {
+	const space = "\t\v\r\f\n\u0085\u00a0\u2000\u3000"
+	tt := zlsgo.NewTest(t)
 	for _, v := range []string{
-		" ", ` 22 33`, `123 `, " \t\n a lone gopher \n\t\r\n",
+		`    22 33`, `456     `, " \t\n a lone gopher \n\t\r\n", " ", " ", " \t\r\n \t\t\r\r\n\n ", " \t\r\n x\t\t\r\r\n\n ", "1 \t\r\n2", "x ☺\xc0\xc0 ", "x \xc0 ", "x ☺", space + "abc" + space,
 	} {
-		t.EqualExit(strings.TrimSpace(v), TrimSpace(v))
-		t.Log(strings.TrimSpace(v), TrimSpace(v))
+		t.Log(strings.TrimSpace(v), "==", TrimSpace(v))
+		tt.Equal(strings.TrimSpace(v), TrimSpace(v))
 	}
 }
 

@@ -21,7 +21,10 @@ func TestFile(tt *testing.T) {
 	tt.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
 	tt.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
 
-	filePath := "../doc.go"
+	_ = WriteFile("./tmp.tmp", []byte(""))
+	defer os.RemoveAll("./tmp.tmp")
+
+	filePath := "./tmp.tmp"
 	tIsFile := FileExist(filePath)
 	t.Equal(true, tIsFile)
 
@@ -29,22 +32,22 @@ func TestFile(tt *testing.T) {
 	status, _ := PathExist(notPath)
 	t.Equal(0, status)
 
-	size := FileSize("../doc.go")
-	t.Equal("0 B" != size, true)
-
-	size = FileSize("../_doc.go")
+	size := FileSize(filePath)
+	tt.Log(size)
 	t.Equal("0 B" == size, true)
 
 	RealPath("")
 
 	tt.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
 
-	dirPath := RealPathMkdir("../zfile")
+	dirPath := RealPathMkdir("../zfile", true)
+	tt.Log(dirPath)
 	tIsDir := DirExist(dirPath)
 	t.Equal(true, tIsDir)
 
-	dirPath = SafePath("../zfile/ok")
-	t.Equal("ok", dirPath)
+	dirPath = SafePath(dirPath, RealPath(".."))
+	tt.Log(dirPath, SafePath(dirPath))
+	t.Equal("zfile/", dirPath)
 
 	tmpPath := TmpPath("")
 	t.EqualTrue(tmpPath != "")

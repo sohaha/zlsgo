@@ -27,11 +27,11 @@ func assKeyPadding(key string) []byte {
 	}
 }
 
-// PKCS7 fill mode
+// PKCS7Padding PKCS7 fill mode
 func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(ciphertext, padtext...)
+	pad := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, pad...)
 }
 
 // PKCS7UnPadding Reverse operation of padding to delete the padding string
@@ -40,35 +40,49 @@ func PKCS7UnPadding(origData []byte) ([]byte, error) {
 	if length == 0 {
 		return nil, errors.New("encryption string error")
 	} else {
-		unpadding := int(origData[length-1])
-		return origData[:(length - unpadding)], nil
+		u := int(origData[length-1])
+		return origData[:(length - u)], nil
 	}
 }
 
-// AesEnCrypt aes encryption
-func AesEnCrypt(origData []byte, key string) (crypted []byte, err error) {
-	k := assKeyPadding(key)
+// AesEncrypt aes encryption
+func AesEncrypt(plainText []byte, key string, iv ...string) (crypted []byte,
+	err error) {
+	var k []byte
 	var block cipher.Block
-	block, err = aes.NewCipher(k)
+	if len(iv) > 0 {
+		k = String2Bytes(iv[0])
+		block, err = aes.NewCipher(String2Bytes(key))
+	} else {
+		k = assKeyPadding(key)
+		block, err = aes.NewCipher(k)
+	}
 	if err == nil {
 		blockSize := block.BlockSize()
-		origData = PKCS7Padding(origData, blockSize)
+		plainText = PKCS7Padding(plainText, blockSize)
 		blocMode := cipher.NewCBCEncrypter(block, k[:blockSize])
-		crypted = make([]byte, len(origData))
-		blocMode.CryptBlocks(crypted, origData)
+		crypted = make([]byte, len(plainText))
+		blocMode.CryptBlocks(crypted, plainText)
 	}
 	return
 }
 
-// AesDeCrypt aes decryption
-func AesDeCrypt(cypted []byte, key string) (origData []byte, err error) {
-	k := assKeyPadding(key)
+// AesDecrypt aes decryption
+func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, err error) {
 	var block cipher.Block
-	block, err = aes.NewCipher(k)
+	var k []byte
+	if len(iv) > 0 {
+		k = String2Bytes(iv[0])
+		block, err = aes.NewCipher(String2Bytes(key))
+	} else {
+		k = assKeyPadding(key)
+		block, err = aes.NewCipher(k)
+	}
+
 	if err == nil {
 		blockSize := block.BlockSize()
 		blockMode := cipher.NewCBCDecrypter(block, k[:blockSize])
-		origData = make([]byte, len(cypted))
+		plainText = make([]byte, len(cipherText))
 		defer func() {
 			if e := recover(); e != nil {
 				var ok bool
@@ -78,26 +92,29 @@ func AesDeCrypt(cypted []byte, key string) (origData []byte, err error) {
 				}
 			}
 		}()
-		blockMode.CryptBlocks(origData, cypted)
+		blockMode.CryptBlocks(plainText, cipherText)
 		if err == nil {
-			origData, err = PKCS7UnPadding(origData)
+			plainText, err = PKCS7UnPadding(plainText)
 		}
 	}
 	return
 }
 
-func AesEnCryptString(origData string, key string) (string, error) {
+// AesEncryptString Aes Encrypt to String
+func AesEncryptString(plainText string, key string, iv ...string) (string, error) {
 	str := ""
-	cypted, err := AesEnCrypt(String2Bytes(origData), key)
+	c, err := AesEncrypt(String2Bytes(plainText), key, iv...)
 	if err == nil {
-		str = Bytes2String(Base64Encode(cypted))
+		str = Bytes2String(Base64Encode(c))
 	}
 	return str, nil
 }
 
-func AesDeCryptString(cypted string, key string) (string, error) {
-	base64Byte, _ := Base64Decode(String2Bytes(cypted))
-	origData, err := AesDeCrypt(base64Byte, key)
+// AesDecryptString Aes Decrypt to String
+func AesDecryptString(cipherText string, key string, iv ...string) (string,
+	error) {
+	base64Byte, _ := Base64Decode(String2Bytes(cipherText))
+	origData, err := AesDecrypt(base64Byte, key, iv...)
 	if err != nil {
 		return "", err
 	}
