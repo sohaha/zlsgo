@@ -66,3 +66,25 @@ func TestRSA(t *testing.T) {
 	c, err = zstring.RSADecryptString(c, "pri")
 	t.Log(c, err)
 }
+
+func TestRSA2(t *testing.T) {
+	tt := zls.NewTest(t)
+
+	val := "是我呀，我是测试的人呢，你想干嘛呀？？？我就是试试看这么长会发生什么情况呢"
+
+	c, err := zstring.RSAPriKeyEncryptString(val, pri)
+	tt.EqualNil(err)
+	t.Log(c)
+
+	c, err = zstring.RSAPubKeyDecryptString(c, pub)
+	tt.EqualNil(err)
+	t.Log(c)
+
+	tt.Equal(val, c)
+
+	c, err = zstring.RSAPriKeyEncryptString(val, "pub")
+	t.Log(c, err)
+
+	c, err = zstring.RSAPubKeyDecryptString(c, "pri")
+	t.Log(c, err)
+}
