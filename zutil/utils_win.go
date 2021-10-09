@@ -45,3 +45,8 @@ func GetParentProcessName() (string, error) {
 		}
 	}
 }
+
+// MaxRlimit (not relevant on Windows)
+func MaxRlimit() (int, error) {
+	return 0, errors.New("not relevant on Windows")
+}

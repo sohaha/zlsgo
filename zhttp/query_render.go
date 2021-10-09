@@ -30,7 +30,7 @@ func (r QueryHTML) Attr(key string) string {
 func (r QueryHTML) Attrs() map[string]string {
 	node := r.getNode()
 	if node.Type != html.ElementNode || len(node.Attr) == 0 {
-		return make(map[string]string, 0)
+		return make(map[string]string)
 	}
 	return getAttrValue(node.Attr)
 }

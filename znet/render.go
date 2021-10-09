@@ -72,11 +72,11 @@ var (
 )
 
 func (c *Context) renderProcessing(code int, r render) {
-	c.Lock()
+	c.l.Lock()
 	c.prevData.Code = code
 	c.render = r
 	c.stopHandle = true
-	c.Unlock()
+	c.l.Unlock()
 }
 
 func (r *renderByte) Content(c *Context) []byte {
@@ -171,9 +171,9 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 
 // Deprecated: You can directly modify the return value of PrevContent()
 func (c *Context) SetContent(data *PrevData) {
-	c.Lock()
+	c.l.Lock()
 	c.prevData = data
-	c.Unlock()
+	c.l.Unlock()
 }
 
 func (c *Context) File(path string) {
@@ -230,9 +230,9 @@ func (c *Context) Templates(code int, templates []string, data interface{}, func
 
 // Abort Abort
 func (c *Context) Abort(code ...int) {
-	c.Lock()
+	c.l.Lock()
 	c.stopHandle = true
-	c.Unlock()
+	c.l.Unlock()
 	if len(code) > 0 {
 		c.SetStatus(code[0])
 	}
@@ -260,8 +260,8 @@ func (c *Context) SetContentType(contentType string) *Context {
 }
 
 func (c *Context) hasContentType() bool {
-	c.RLock()
-	defer c.RUnlock()
+	c.l.RLock()
+	defer c.l.RUnlock()
 	if _, ok := c.header["Content-Type"]; ok {
 		return true
 	}

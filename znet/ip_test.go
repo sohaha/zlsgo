@@ -98,6 +98,8 @@ func TestGetPort(tt *testing.T) {
 	tt.Log(port)
 
 	port, err = Port(p, true)
+	t.EqualNil(err)
+
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	t.EqualNil(err)
 	defer l.Close()

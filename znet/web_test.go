@@ -177,6 +177,19 @@ func TestGroup(t *testing.T) {
 	tt.Equal("isGroup3", w.Body.String())
 }
 
+func TestRedirect(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	g := r.Group("/Redirect")
+	g.GET("", func(c *Context) {
+		c.Redirect("/", 301)
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/Redirect", nil)
+	r.ServeHTTP(w, req)
+	tt.Equal(301, w.Code)
+}
+
 func TestGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()

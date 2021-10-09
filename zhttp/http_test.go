@@ -321,7 +321,7 @@ func TestFile(t *testing.T) {
 	tt.Equal("上传成功", res.String())
 	zfile.Rmdir("./my2.jpg")
 
-	SetTransport(func(transport *http.Transport) {
+	_ = SetTransport(func(transport *http.Transport) {
 		transport.MaxIdleConnsPerHost = 100
 	})
 
@@ -385,8 +385,8 @@ func TestConvertCookie(tt *testing.T) {
 func TestTlsCertificate(tt *testing.T) {
 	t := zls.NewTest(tt)
 
-	key := "localhost.key"
-	crt := "localhost.crt"
+	key := zfile.RealPath("localhost.key")
+	crt := zfile.RealPath("localhost.crt")
 	defer func() {
 		zfile.Rmdir(key)
 		zfile.Rmdir(crt)

@@ -36,7 +36,7 @@ type (
 		Engine        *Engine
 		Log           *zlog.Logger
 		Cache         *zcache.Table
-		sync.RWMutex
+		l             sync.RWMutex
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {

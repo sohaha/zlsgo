@@ -141,7 +141,12 @@ func TestTryError(tt *testing.T) {
 	}, nil)
 }
 
-func TestUtil(T *testing.T) {
+func TestUtil(t *testing.T) {
 	_, _ = GetParentProcessName()
 	IsDoubleClickStartUp()
+}
+
+func TestMaximizeOpenFileLimit(t *testing.T) {
+	l, err := MaxRlimit()
+	t.Log(l, err)
 }

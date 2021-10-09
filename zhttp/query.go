@@ -189,7 +189,7 @@ func parseSelector(el string) []*selector {
 	)
 	key, l := "", len(el)
 	if l > 0 {
-		s = &selector{i: 0, Attr: make(map[string]string, 0)}
+		s = &selector{i: 0, Attr: make(map[string]string)}
 		for i := 0; i < l; {
 			v := el[i]
 			add := 0

@@ -49,17 +49,17 @@ func IsLocalIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
-func trustedProxies() []*net.IPNet {
-	trusted := make([]*net.IPNet, 0)
-	for i := range TrustedProxies {
-		n, err := netCIDR(TrustedProxies[i])
-		if err != nil {
-			continue
-		}
-		trusted = append(trusted, n)
-	}
-	return trusted
-}
+// func trustedProxies() []*net.IPNet {
+// 	trusted := make([]*net.IPNet, 0)
+// 	for i := range TrustedProxies {
+// 		n, err := netCIDR(TrustedProxies[i])
+// 		if err != nil {
+// 			continue
+// 		}
+// 		trusted = append(trusted, n)
+// 	}
+// 	return trusted
+// }
 
 func getTrustedIP(r *http.Request, remoteIP string) string {
 	ip := remoteIP
@@ -78,8 +78,8 @@ func getTrustedIP(r *http.Request, remoteIP string) string {
 func getRemoteIP(r *http.Request) []string {
 	ips := make([]string, 0)
 	ip := RemoteIP(r)
-	trusted := false
-	if ip != "" {
+	trusted := ip == ""
+	if !trusted {
 		for i := range TrustedProxies {
 			proxy := TrustedProxies[i]
 			if InNetwork(ip, proxy) {
@@ -87,8 +87,6 @@ func getRemoteIP(r *http.Request) []string {
 				break
 			}
 		}
-	} else {
-		trusted = true
 	}
 	if trusted {
 		for i := range RemoteIPHeaders {
@@ -135,7 +133,7 @@ func ClientPublicIP(r *http.Request) string {
 	return ""
 }
 
-// RemoteIP RemoteIP
+// RemoteIP Remote IP
 func RemoteIP(r *http.Request) string {
 	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil {
 		return ip

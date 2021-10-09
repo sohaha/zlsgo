@@ -31,10 +31,10 @@ func requestLog(c *Context) {
 	if c.Engine.IsDebug() {
 		var status string
 		end := time.Now()
-		c.RLock()
+		c.l.RLock()
 		statusCode := zutil.GetBuff()
 		defer func() {
-			c.RUnlock()
+			c.l.RUnlock()
 			zutil.PutBuff(statusCode)
 		}()
 		latency := end.Sub(c.startTime)

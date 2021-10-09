@@ -123,7 +123,7 @@ func getAttrValue(attributes []html.Attribute) map[string]string {
 	var values = make(map[string]string)
 	for i := 0; i < len(attributes); i++ {
 		_, exists := values[attributes[i].Key]
-		if exists == false {
+		if !exists {
 			values[attributes[i].Key] = attributes[i].Val
 		}
 	}

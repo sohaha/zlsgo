@@ -87,7 +87,7 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 		return nil, errors.New("template file cannot be empty")
 	}
 	file := templateFile[0]
-	if zfile.FileExist(file) {
+	if len(file) <= 255 && zfile.FileExist(file) {
 		for i := range templateFile {
 			templateFile[i] = zfile.RealPath(templateFile[i])
 		}
@@ -96,7 +96,7 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 			t.Funcs(funcMap)
 		}
 	} else {
-		t = template.New(file)
+		t = template.New("")
 		if funcMap != nil {
 			t.Funcs(funcMap)
 		}
@@ -225,7 +225,7 @@ func (e *Engine) acquireContext() *Context {
 }
 
 func (e *Engine) releaseContext(c *Context) {
-	c.Lock()
+	c.l.Lock()
 	c.prevData.Code = http.StatusOK
 	c.stopHandle = false
 	c.middleware = c.middleware[0:0]
@@ -235,6 +235,6 @@ func (e *Engine) releaseContext(c *Context) {
 	c.rawData = c.rawData[0:0]
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain
-	c.Unlock()
+	c.l.Unlock()
 	e.pool.Put(c)
 }

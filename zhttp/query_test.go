@@ -51,6 +51,7 @@ func TestHTMLParse(tt *testing.T) {
 	tt.Log(h.Attr("name"), err)
 
 	h, err = zhttp.HTMLParse([]byte("<html><div class='box'>The is HTML</div><div class='red'>Red</div></html>"))
+	t.EqualNil(err)
 	tt.Log(h.Select("div").Text(), h.Select("div").Attr("class"),
 		h.Select("div", map[string]string{"class": "red"}).HTML())
 

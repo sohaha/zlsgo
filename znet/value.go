@@ -74,11 +74,10 @@ func (c *Context) bind(obj interface{}, set func(kind reflect.Kind,
 		jsonValue := c.GetJSON(fieldTag)
 		if jsonValue.Exists() {
 			y := reflect.New(field.Type()).Interface()
-			err = jsonValue.Unmarshal(y)
-			zutil.Try(func() {
+			_ = zutil.TryCatch(func() error {
+				err = jsonValue.Unmarshal(y)
 				field.Set(reflect.ValueOf(y).Elem())
-			}, func(e interface{}) {
-				err, _ = e.(error)
+				return err
 			})
 			return true, err
 		}

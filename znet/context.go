@@ -70,13 +70,13 @@ func (c *Context) GetHeader(key string) string {
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
 	key = textproto.CanonicalMIMEHeaderKey(key)
-	c.Lock()
+	c.l.Lock()
 	if value == "" {
 		delete(c.header, key)
 	} else {
 		c.header[key] = append(c.header[key], value)
 	}
-	c.Unlock()
+	c.l.Unlock()
 }
 
 func (c *Context) done() {
@@ -107,14 +107,14 @@ func (c *Context) done() {
 
 // Next Next Handler
 func (c *Context) Next() (next HandlerFunc) {
-	c.RLock()
+	c.l.RLock()
 	if !c.stopHandle && len(c.middleware) > 0 {
 		next = c.middleware[0]
 		c.middleware = c.middleware[1:]
-		c.RUnlock()
+		c.l.RUnlock()
 		next(c)
 	} else {
-		c.RUnlock()
+		c.l.RUnlock()
 	}
 
 	return
@@ -175,19 +175,19 @@ func (c *Context) ContentType(contentText ...string) string {
 
 // WithValue context sharing data
 func (c *Context) WithValue(key string, value interface{}) *Context {
-	c.Lock()
+	c.l.Lock()
 	c.customizeData[key] = value
-	c.Unlock()
+	c.l.Unlock()
 	return c
 }
 
 // Value get context sharing data
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
-	c.RLock()
+	c.l.RLock()
 	value, ok = c.customizeData[key]
 	if !ok && (len(def) > 0) {
 		value = def[0]
 	}
-	c.RUnlock()
+	c.l.RUnlock()
 	return
 }
