@@ -4,6 +4,7 @@
 package zutil
 
 import (
+	"errors"
 	"syscall"
 	"unsafe"
 )

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -12,28 +11,6 @@ import (
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 )
-
-func TestWithLockContext(t *testing.T) {
-	tt := zlsgo.NewTest(t)
-	now := time.Now()
-	var lock sync.Mutex
-	var g sync.WaitGroup
-	var ii = 1
-	for i := 0; i < 5; i++ {
-		g.Add(1)
-		go WithLockContext(&lock, func() {
-			time.Sleep(100 * time.Millisecond)
-			diffTime := time.Since(now)
-			expect := time.Duration(ii) * 100 * time.Millisecond
-			el := (diffTime) > expect
-			t.Log(diffTime, expect)
-			tt.Equal(true, el)
-			ii++
-			g.Done()
-		})
-	}
-	g.Wait()
-}
 
 func TestWithRunTimeContext(T *testing.T) {
 	t := zlsgo.NewTest(T)
@@ -93,7 +70,6 @@ func TestTryCatch(tt *testing.T) {
 
 	err = TryCatch(func() error {
 		panic(123)
-		return nil
 	})
 	tt.Log(err)
 	t.EqualTrue(err != nil)

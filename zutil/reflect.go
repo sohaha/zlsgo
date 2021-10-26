@@ -3,9 +3,10 @@ package zutil
 import (
 	"errors"
 	"fmt"
-	"github.com/sohaha/zlsgo/ztype"
 	"reflect"
 	"strconv"
+
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (err error) {
@@ -40,7 +41,7 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 		vValueOf.SetUint(v)
 	case reflect.Float32, reflect.Float64:
 		var v float64
-		v, err = strconv.ParseFloat(vString, 10)
+		v, err = strconv.ParseFloat(vString, 64)
 		if err != nil {
 			err = errors.New("must be decimal")
 		} else if vValueOf.OverflowFloat(v) {

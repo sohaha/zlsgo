@@ -5,15 +5,8 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"sync"
 	"time"
 )
-
-func WithLockContext(mu *sync.Mutex, fn func()) {
-	mu.Lock()
-	defer mu.Unlock()
-	fn()
-}
 
 func WithRunTimeContext(handler func()) time.Duration {
 	start := time.Now()
