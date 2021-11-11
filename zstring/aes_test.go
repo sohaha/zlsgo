@@ -50,6 +50,9 @@ func TestAes(t *testing.T) {
 	cypted, err = zstring.AesEncrypt(str, key)
 	tt.EqualNil(err)
 	str, err = zstring.AesDecrypt(cypted, key)
+	if err != nil {
+		t.Log(err)
+	}
 	t.Log(string(origdata), string(str))
 
 	_, err = zstring.AesDecrypt([]byte("123"), "")
@@ -99,7 +102,7 @@ func TestAesString(t *testing.T) {
 	t.Log(crypt)
 
 	orig, err = zstring.AesDecryptString("crypt", key)
-	tt.Log(err)
+	tt.Log(orig,err)
 	tt.EqualTrue(err != nil)
 
 }

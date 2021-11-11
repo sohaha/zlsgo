@@ -177,8 +177,14 @@ func ProgramPath(addSlash ...bool) (path string) {
 	ePath, err := os.Executable()
 	if err != nil {
 		ePath = ProjectPath
+	} else {
+		ePath = filepath.Dir(ePath)
 	}
-	path = RealPath(filepath.Dir(ePath), addSlash...)
+	realPath, err := filepath.EvalSymlinks(ePath)
+	if err == nil {
+		ePath = realPath
+	}
+	path = RealPath(ePath, addSlash...)
 
 	return
 }
