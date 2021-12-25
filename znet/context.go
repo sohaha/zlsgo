@@ -5,8 +5,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
-
-	"github.com/sohaha/zlsgo/zstring"
 )
 
 // Host Get the current Host
@@ -30,13 +28,12 @@ func (c *Context) CompletionLink(link string) string {
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		return link
 	}
-	finalLink := zstring.Buffer()
-	finalLink.WriteString(c.Host())
+	finalLink := c.Host()
 	if !strings.HasPrefix(link, "/") {
-		finalLink.WriteString("/")
+		finalLink = finalLink + "/"
 	}
-	finalLink.WriteString(link)
-	return finalLink.String()
+	finalLink = finalLink + link
+	return finalLink
 }
 
 // IsWebsocket Is Websocket

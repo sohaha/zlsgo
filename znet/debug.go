@@ -40,15 +40,13 @@ func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 
 func templatesDebug(t *template.Template) {
 	l := len(t.Templates())
-	buf := zstring.Buffer(l)
+	var buf string
 	for _, t := range t.Templates() {
 		n := t.Name()
 		if n == "" {
 			continue
 		}
-		buf.WriteString("\t  - ")
-		buf.WriteString(n)
-		buf.WriteString("\n")
+		buf = "\t  - " + n + "\n"
 	}
-	Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf.String())
+	Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf)
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
-	"github.com/sohaha/zlsgo/zstring"
 )
 
 func getAddr(addr string) string {
@@ -37,7 +36,7 @@ func getHostname(addr string, isTls bool) string {
 
 func completionPath(path, prefix string) string {
 	if path != "" {
-		tmp := zstring.Buffer()
+		var tmp string
 		// prefixHasSuffix := strings.HasSuffix(prefix, "/")
 		pathHasPrefix := strings.HasPrefix(path, "/")
 		if prefix == "" && !pathHasPrefix {
@@ -46,14 +45,14 @@ func completionPath(path, prefix string) string {
 			prefix = strings.TrimSuffix(prefix, "/")
 		}
 		if prefix != "" && !strings.HasPrefix(prefix, "/") {
-			tmp.WriteString("/")
+			tmp = "/"
 		}
-		tmp.WriteString(prefix)
+		tmp = tmp + prefix
 		if !strings.HasSuffix(prefix, "/") {
-			tmp.WriteString("/")
+			tmp = tmp + "/"
 		}
-		tmp.WriteString(strings.TrimPrefix(path, "/"))
-		path = tmp.String()
+		tmp = tmp + strings.TrimPrefix(path, "/")
+		path = tmp
 	} else {
 		path = prefix
 	}
@@ -108,13 +107,13 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 func parsPattern(res []string, prefix string) (string, []string) {
 	var (
 		matchName []string
-		pattern   = zstring.Buffer()
+		pattern   string
 	)
 	for _, str := range res {
 		if str == "" {
 			continue
 		}
-		pattern.WriteString(prefix)
+		pattern = pattern + prefix
 		l := len(str) - 1
 		i := strings.Index(str, "}")
 		i2 := strings.Index(str, "{")
@@ -126,14 +125,12 @@ func parsPattern(res []string, prefix string) (string, []string) {
 				matchStr := str[1:l]
 				res := strings.Split(matchStr, ":")
 				matchName = append(matchName, res[0])
-				pattern.WriteString("(")
-				pattern.WriteString(res[1])
-				pattern.WriteString(")")
+				pattern = pattern + "(" + res[1] + ")"
 			} else {
 				if i2 != 0 {
 					p, m := parsPattern([]string{str[:i2]}, "")
 					if p != "" {
-						pattern.WriteString(p)
+						pattern = pattern + p
 						matchName = append(matchName, m...)
 					}
 					str = str[i2:]
@@ -143,16 +140,14 @@ func parsPattern(res []string, prefix string) (string, []string) {
 					matchStr := str[1:ni]
 					res := strings.Split(matchStr, ":")
 					matchName = append(matchName, res[0])
-					pattern.WriteString("(")
-					pattern.WriteString(res[1])
-					pattern.WriteString(")")
+					pattern = pattern + "(" + res[1] + ")"
 					p, m := parsPattern([]string{str[ni+1:]}, "")
 					if p != "" {
-						pattern.WriteString(p)
+						pattern = pattern + p
 						matchName = append(matchName, m...)
 					}
 				} else {
-					pattern.WriteString(str)
+					pattern = pattern + str
 				}
 			}
 
@@ -165,28 +160,20 @@ func parsPattern(res []string, prefix string) (string, []string) {
 			}
 			matchName = append(matchName, key)
 			if key == idKey {
-				pattern.WriteString("(")
-				pattern.WriteString(idPattern)
-				pattern.WriteString(")")
+				pattern = pattern + "(" + idPattern + ")"
 			} else if key == allKey {
-				pattern.WriteString("(")
-				pattern.WriteString(allPattern)
-				pattern.WriteString(")")
+				pattern = pattern + "(" + allPattern + ")"
 			} else {
-				pattern.WriteString("(")
-				pattern.WriteString(defaultPattern)
-				pattern.WriteString(")")
+				pattern = pattern + "(" + defaultPattern + ")"
 			}
 		} else if firstChar == "*" {
-			pattern.WriteString("(")
-			pattern.WriteString(allPattern)
-			pattern.WriteString(")")
+			pattern = pattern + "(" + allPattern + ")"
 			matchName = append(matchName, allKey)
 		} else {
-			pattern.WriteString(str)
+			pattern = pattern + str
 		}
 	}
-	return pattern.String(), matchName
+	return pattern, matchName
 }
 
 type tlsRedirectHandler struct {

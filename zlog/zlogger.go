@@ -13,7 +13,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 )
 
@@ -385,12 +384,9 @@ func (log *Logger) Track(logTip string, v ...int) {
 	if max == 0 {
 		max = 9999
 	}
-	b := zstring.Buffer()
 	track := TrackCurrent(max, depth)
-	b.WriteString(logTip)
-	b.WriteString("\n")
-	b.WriteString(strings.Join(track, "\n"))
-	_ = log.outPut(LogDebug, b.String(), true, nil)
+	b := logTip + "\n" + strings.Join(track, "\n")
+	_ = log.outPut(LogDebug, b, true, nil)
 }
 
 func TrackCurrent(max, depth int) (track []string) {

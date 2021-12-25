@@ -102,7 +102,7 @@ func TestAesString(t *testing.T) {
 	t.Log(crypt)
 
 	orig, err = zstring.AesDecryptString("crypt", key)
-	tt.Log(orig,err)
+	tt.Log(orig, err)
 	tt.EqualTrue(err != nil)
 
 }

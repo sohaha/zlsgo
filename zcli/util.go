@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/sohaha/zlsgo/zlog"
-	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
 	"github.com/sohaha/zlsgo/zutil"
 	"github.com/sohaha/zlsgo/zutil/daemon"
@@ -48,11 +47,8 @@ func numOfGlobalFlags() (count int) {
 func Error(format string, v ...interface{}) {
 	Log.Errorf(format, v...)
 	if !HidePrompt {
-		tip := zstring.Buffer()
-		tip.WriteString("\nPlease use ")
-		tip.WriteString(tipText("%s --help"))
-		tip.WriteString(" for more information")
-		Log.Printf(tip.String(), FirstParameter)
+		tip := "\nPlease use " + tipText("%s --help") + " for more information"
+		Log.Printf(tip, FirstParameter)
 	}
 	osExit(1)
 }
@@ -83,11 +79,7 @@ func showLogo() bool {
 
 func showFlagsHelp() {
 	if !HideHelp {
-		help := zstring.Buffer()
-		help.WriteString(warnText(fmt.Sprintf("    -%-12s", "help")))
-		help.WriteString("\t")
-		help.WriteString(GetLangText("help"))
-		Log.Println(help.String())
+		Log.Println(warnText(fmt.Sprintf("    -%-12s", "help")) + "\t" + GetLangText("help"))
 	}
 }
 

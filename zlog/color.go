@@ -2,9 +2,10 @@ package zlog
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zutil"
 	"os"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zutil"
 
 	"github.com/sohaha/zlsgo/zstring"
 )
@@ -112,7 +113,6 @@ func OutAllColor() {
 			all.WriteString(ColorBackgroundWrap(cv, v, ck+" => "))
 			all.WriteString(ColorBackgroundWrap(cv, v, OpTextWrap(OpBold, "Bold ")))
 			all.WriteString(ColorBackgroundWrap(cv, v, OpTextWrap(OpUnderscore, "Under")))
-
 			all.WriteString(ColorBackgroundWrap(cv, v, " | "))
 		}
 		all.WriteString("\n")
