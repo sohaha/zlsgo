@@ -711,7 +711,7 @@ func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
 }
 
 func testRouterNotFound(r *Engine, t *zlsgo.TestUtil) {
-	expectedText := "404 page not found\n"
+	expectedText := "404 page not found"
 	w := newRequest(r, "GET", "/404", "")
 	t.Equal(404, w.Code)
 	t.Equal(expectedText, w.Body.String())

@@ -70,6 +70,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 			g.Any(path, fn)
 			return nil
 		}
+
 		g.Handle(method, path, fn)
 		return nil
 	})

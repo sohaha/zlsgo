@@ -11,26 +11,31 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-var (
-	r *znet.Engine
-)
-
-func init() {
-	r = znet.New()
-	r.SetMode(znet.ProdMode)
-}
-
 func TestNewAllowHeaders(t *testing.T) {
 	tt := zls.NewTest(t)
 
+	r := znet.New("TestNewAllowHeaders")
+	r.SetMode(znet.ProdMode)
+
 	addAllowHeader, h := cors.NewAllowHeaders()
-	r.Any("/TestNewAllowHeaders", func(c *znet.Context) {
+	r.Use(h)
+	r.GET("/TestNewAllowHeaders", func(c *znet.Context) {
+		c.Log.Debug("ok")
 		c.String(200, zstring.Rand(10, "abc"))
-	}, h)
+	})
 	addAllowHeader("AllowTest")
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/TestNewAllowHeaders", nil)
 	req.Header.Add("AllowTest", "https://qq.com")
+	req.Header.Add("Origin", "https://qq.com")
+	r.ServeHTTP(w, req)
+	tt.Equal(http.StatusNoContent, w.Code)
+	tt.Equal(0, w.Body.Len())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/TestNewAllowHeaders", nil)
+	req.Header.Add("AllowTest", "https://qq.com")
+	req.Header.Add("Origin", "https://qq.com")
 	r.ServeHTTP(w, req)
 	tt.Equal(http.StatusOK, w.Code)
 	tt.Equal(10, w.Body.Len())
@@ -38,6 +43,9 @@ func TestNewAllowHeaders(t *testing.T) {
 
 func TestDefault(t *testing.T) {
 	tt := zls.NewTest(t)
+
+	r := znet.New("TestDefault")
+	r.SetMode(znet.ProdMode)
 
 	r.Any("/cors", func(c *znet.Context) {
 		c.String(200, zstring.Rand(10, "abc"))

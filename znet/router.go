@@ -224,15 +224,19 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		middleware: e.router.middleware,
 	}
 	engine = &Engine{
+		router:              route,
 		webMode:             e.webMode,
 		webModeName:         e.webModeName,
 		MaxMultipartMemory:  e.MaxMultipartMemory,
 		customMethodType:    e.customMethodType,
-		router:              route,
 		Log:                 e.Log,
 		Cache:               e.Cache,
-		BindStructDelimiter: BindStructDelimiter,
-		BindStructSuffix:    BindStructSuffix,
+		BindStructDelimiter: e.BindStructDelimiter,
+		BindStructSuffix:    e.BindStructSuffix,
+		templateFuncMap:     e.templateFuncMap,
+	}
+	engine.pool.New = func() interface{} {
+		return e.NewContext(nil, nil)
 	}
 	if len(groupHandle) > 0 {
 		groupHandle[0](engine)
@@ -320,9 +324,14 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		e.router.trees[method] = tree
 	}
 	path = completionPath(path, e.router.prefix)
+	if path[0] != uint8(47) {
+		path = "/" + path
+	}
+
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
+
 	if e.IsDebug() {
 		e.Log.Debug(showRouteDebug(e.Log, "%s --> %s", method, path))
 	}
@@ -454,8 +463,7 @@ func (e *Engine) HandleNotFound(c *Context) {
 		return
 	}
 	handle(c, func(_ *Context) {
-		c.Abort(0)
-		http.NotFound(c.Writer, c.Request)
+		c.Byte(404, []byte("404 page not found"))
 	}, middleware)
 }
 

@@ -87,7 +87,7 @@ type (
 	}
 	// HandlerFunc HandlerFunc
 	HandlerFunc func(c *Context)
-	// MiddlewareFunc MiddlewareFunc
+	// MiddlewareFunc Middleware Func
 	MiddlewareFunc func(c *Context, fn HandlerFunc)
 	// PanicFunc PanicFunc
 	PanicFunc func(c *Context, err error)
