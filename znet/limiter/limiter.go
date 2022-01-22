@@ -13,7 +13,7 @@ type Rule struct {
 	rules []*singleRule
 }
 
-// New New limiter
+// New Newlimiter
 func New(allowed uint64, overflow ...func(c *znet.Context)) znet.HandlerFunc {
 	r := NewRule()
 	f := func(c *znet.Context) {

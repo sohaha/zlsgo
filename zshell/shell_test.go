@@ -2,10 +2,11 @@ package zshell
 
 import (
 	"context"
-	"github.com/sohaha/zlsgo/zutil"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/sohaha/zlsgo/zutil"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -31,10 +32,10 @@ func TestPipe(t *testing.T) {
 
 	Dir = "../"
 	code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{{"ls"}})
-	t.Log(outStr, errStr, err)
+	t.Log(code, outStr, errStr, err)
 
 	code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{})
-	t.Log(outStr, errStr, err)
+	t.Log(code, outStr, errStr, err)
 }
 
 func TestBash(t *testing.T) {
@@ -65,6 +66,7 @@ func TestBash(t *testing.T) {
 
 	_, res, _, err = Run("ls -a /Applications/Google\\ Chrome.app")
 	t.Log(res)
+	t.Log(err)
 
 	err = BgRun("")
 	tt.EqualExit(true, err != nil)

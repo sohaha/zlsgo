@@ -126,30 +126,30 @@ func TestPassword(t *testing.T) {
 	str, err := New().Verifi(`123`).EncryptPassword().String()
 	tt.EqualNil(err)
 	t.Log(str)
-	t.Log("time", time.Now().Sub(now).Seconds())
+	t.Log("time", time.Since(now).Seconds())
 
 	now = time.Now()
 	str, err = New().Verifi(`123`).CheckPassword(str).String()
 	tt.EqualNil(err)
 	t.Log(str)
-	t.Log("time", time.Now().Sub(now).Seconds())
+	t.Log("time", time.Since(now).Seconds())
 
 	now = time.Now()
 	str, err = New().Verifi(`1231`).CheckPassword(str).String()
 	t.Log(str, err)
-	t.Log("time", time.Now().Sub(now).Seconds())
+	t.Log("time", time.Since(now).Seconds())
 
 	now = time.Now()
 	str, err = New().Verifi(`123`).EncryptPassword(14).String()
 	tt.EqualNil(err)
 	t.Log(str)
-	t.Log("time", time.Now().Sub(now).Seconds())
+	t.Log("time", time.Since(now).Seconds())
 
 	now = time.Now()
 	str, err = New().Verifi(`123`).EncryptPassword(4).String()
 	tt.EqualNil(err)
 	t.Log(str)
-	t.Log("time", time.Now().Sub(now).Seconds())
+	t.Log("time", time.Since(now).Seconds())
 }
 
 func BenchmarkStr(b *testing.B) {

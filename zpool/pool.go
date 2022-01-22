@@ -3,7 +3,6 @@ package zpool
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -240,17 +239,14 @@ func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
 		for {
 			select {
 			case job := <-w.jobQueue:
-				zutil.Try(job, func(err interface{}) {
-					if handler != nil {
-						errMsg, ok := err.(error)
-						if !ok {
-							errMsg = errors.New(fmt.Sprint(err))
-						}
-						handler(errMsg)
-					}
-				}, func() {
-					q <- w
+				err := zutil.TryCatch(func() error {
+					job()
+					return nil
 				})
+				if err != nil && handler != nil {
+					handler(err)
+				}
+				q <- w
 			// case parameter := <-w.Parameter:
 			// 	q <- w
 			case <-w.stop:

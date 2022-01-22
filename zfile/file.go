@@ -164,12 +164,13 @@ func CopyFile(source string, dest string) (err error) {
 	defer destfile.Close()
 	_, err = io.Copy(destfile, sourcefile)
 	if err == nil {
-		sourceinfo, err := os.Stat(source)
+		var sourceinfo os.FileInfo
+		sourceinfo, err = os.Stat(source)
 		if err == nil {
 			err = os.Chmod(dest, sourceinfo.Mode())
 		}
 	}
-	return nil
+	return
 }
 
 // ProgramPath program directory path

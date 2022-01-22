@@ -128,7 +128,7 @@ func setRawValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value s
 		}
 		targetValueOf.Elem().SetUint(v)
 	case reflect.Float32, reflect.Float64:
-		v, err := strconv.ParseFloat(value, 10)
+		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return errors.New("必须是小数")
 		}

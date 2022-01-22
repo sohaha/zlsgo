@@ -3,8 +3,6 @@ package limiter
 import (
 	"sync"
 	"time"
-
-	"github.com/sohaha/zlsgo/znet"
 )
 
 type singleRule struct {
@@ -74,16 +72,7 @@ func (r *singleRule) remainingVisits(key interface{}) int {
 	return r.allowed
 }
 
-// remainingVisitsIP Remaining access times of an IP
-func (r *singleRule) remainingVisitsIP(ip string) int {
-	i, _ := znet.IPToLong(ip)
-	if i == 0 {
-		return 0
-	}
-	return r.remainingVisits(i)
-}
-
-// add Add an access record
+// add access record
 func (r *singleRule) add(key interface{}) (err error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
@@ -109,14 +98,9 @@ func (r *singleRule) add(key interface{}) (err error) {
 
 // deleteExpired Delete expired data
 func (r *singleRule) deleteExpired() {
-	finished := true
 	for range time.Tick(r.cleanupInterval) {
-		if finished {
-			finished = false
-			r.deleteExpiredOnce()
-			r.recovery()
-			finished = true
-		}
+		r.deleteExpiredOnce()
+		r.recovery()
 	}
 }
 

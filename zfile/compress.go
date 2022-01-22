@@ -47,7 +47,7 @@ func GzCompress(currentPath, dest string) (err error) {
 }
 
 func walkFile(currentPath string, dest string, err error, writer func(path string, info *os.FileInfo) error) error {
-	err = filepath.Walk(currentPath,
+	return filepath.Walk(currentPath,
 		func(path string, info os.FileInfo, err error) error {
 			path = RealPath(path)
 			if info == nil || err != nil {
@@ -59,7 +59,6 @@ func walkFile(currentPath string, dest string, err error, writer func(path strin
 
 			return writer(path, &info)
 		})
-	return err
 }
 
 // GzDeCompress unzip tar.gz

@@ -61,7 +61,7 @@ func ExecCommandHandle(ctx context.Context, command []string,
 		Env = nil
 	}
 	if Debug {
-		fmt.Println(fmt.Sprintf("[Command]: %s", strings.Join(command, " ")))
+		fmt.Println("[Command]:", strings.Join(command, " "))
 	}
 	bef(cmd)
 	err = cmd.Start()
@@ -197,8 +197,7 @@ func BgRun(command string) (err error) {
 	cmd := exec.Command(arr[0], arr[1:]...)
 	err = cmd.Start()
 	if Debug {
-		fmt.Println(fmt.Sprintf("[Command]: %s",
-			command))
+		fmt.Println("[Command]: ", command)
 		if err != nil {
 			fmt.Println("[Fail]", err.Error())
 		}
