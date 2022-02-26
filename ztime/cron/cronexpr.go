@@ -13,7 +13,6 @@ import (
 
 type (
 	Expression struct {
-		expression             string
 		secondList             []int
 		minuteList             []int
 		hourList               []int

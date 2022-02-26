@@ -8,19 +8,14 @@ import (
 	"time"
 )
 
-func WithRunTimeContext(handler func()) time.Duration {
-	start := time.Now()
-	handler()
-	return time.Since(start)
-}
-
-func WithRunMemContext(handler func()) uint64 {
-	var mem = runtime.MemStats{}
+// WithRunContext function execution time and memory
+func WithRunContext(handler func()) (time.Duration, uint64) {
+	start, mem := time.Now(), runtime.MemStats{}
 	runtime.ReadMemStats(&mem)
 	curMem := mem.TotalAlloc
 	handler()
 	runtime.ReadMemStats(&mem)
-	return mem.TotalAlloc - curMem
+	return time.Since(start), mem.TotalAlloc - curMem
 }
 
 // IfVal Simulate ternary calculations, pay attention to handling no variables or indexing problems

@@ -27,7 +27,7 @@ func TestPool(t *testing.T) {
 		var now time.Time
 		runtime.GC()
 		now = time.Now()
-		curMem = zutil.WithRunMemContext(func() {
+		_, curMem = zutil.WithRunContext(func() {
 			now = time.Now()
 			for i := 0; i < count; i++ {
 				ii := i
@@ -44,7 +44,7 @@ func TestPool(t *testing.T) {
 		runtime.GC()
 		p := zpool.New(workerNum)
 		now = time.Now()
-		curMem = zutil.WithRunMemContext(func() {
+		_, curMem = zutil.WithRunContext(func() {
 			for i := 0; i < count; i++ {
 				ii := i
 				g.Add(1)

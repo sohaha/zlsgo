@@ -5,30 +5,15 @@ import (
 	"math"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-func TestWithRunTimeContext(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	now := time.Now().UnixNano()
-	for i := 0; i < 5; i++ {
-		duration := WithRunTimeContext(func() {
-			time.Sleep(1 * time.Millisecond)
-			newNow := time.Now()
-			t.Equal(true, (newNow.UnixNano()-now) > 1000000)
-			now = newNow.UnixNano()
-		})
-		t.Log(duration.String())
-	}
-}
-
-func TestWithRunMemContext(t *testing.T) {
+func TestWithRunContext(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	mem := WithRunMemContext(func() {
+	duration, mem := WithRunContext(func() {
 		var b = zstring.Buffer()
 		size := 110000
 		count := math.Ceil(float64(size) / 1000)
@@ -47,6 +32,7 @@ func TestWithRunMemContext(t *testing.T) {
 	})
 
 	tt.EqualExit(true, mem > 60000)
+	t.Log(duration)
 	t.Log(zfile.SizeFormat(mem))
 }
 
