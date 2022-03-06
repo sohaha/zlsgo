@@ -57,6 +57,7 @@ var (
 	// FirstParameter First Parameter
 	FirstParameter   = os.Args[0]
 	flagHelp         = new(bool)
+	flagDetach       = new(bool)
 	flagVersion      = new(bool)
 	osExit           = os.Exit
 	cmds             = make(map[string]*cmdCont)
@@ -72,6 +73,7 @@ var (
 	Name         string
 	Version      string
 	HideHelp     bool
+	EnableDetach bool
 	HidePrompt   bool
 	Lang         = defaultLang
 	varsKey      = map[string]*v{}
@@ -82,6 +84,7 @@ var (
 			"command_empty": "Command name cannot be empty",
 			"help":          "Show Command help",
 			"version":       "View version",
+			"detach":        "Running in the background",
 			"test":          "Test",
 			"restart":       "Restart service",
 			"stop":          "Stop service",
@@ -94,6 +97,7 @@ var (
 			"command_empty": "命令名不能为空",
 			"help":          "显示帮助信息",
 			"version":       "查看版本信息",
+			"detach":        "后台运行",
 			"restart":       "重启服务",
 			"stop":          "停止服务",
 			"start":         "开始服务",

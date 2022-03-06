@@ -177,12 +177,12 @@ func (c *Context) SetContent(data *PrevData) {
 }
 
 func (c *Context) File(path string) {
-	fileExist := zfile.FileExist(path)
+	path = zfile.RealPath(path)
+	f, err := os.Stat(path)
+	fileExist := err == nil
 	code := zutil.IfVal(fileExist, 200, 404).(int)
 	if fileExist {
-		if f, err := os.Stat(path); err == nil {
-			c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
-		}
+		c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
 	}
 	c.renderProcessing(code, &renderFile{Data: path, FileExist: fileExist})
 }

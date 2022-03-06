@@ -70,10 +70,10 @@ func ReadLineFile(path string, handle func(line int,
 	for {
 		i++
 		line, lerr := rd.ReadBytes('\n')
-		if lerr != nil || io.EOF == lerr {
+		if err = handle(i, line); err != nil {
 			break
 		}
-		if err = handle(i, line); err != nil {
+		if lerr != nil || io.EOF == lerr {
 			break
 		}
 	}

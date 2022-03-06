@@ -91,3 +91,8 @@ func TestUtil(T *testing.T) {
 	Error("%s", "err")
 	argsIsHelp([]string{"-h"})
 }
+
+func TestDetach(t *testing.T) {
+	t.Log(isDetach("detach"))
+	t.Log(isDetach("dd"))
+}

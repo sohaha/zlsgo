@@ -10,6 +10,8 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
+var runCmd = []string{os.Args[0]}
+
 func parse(outHelp bool) {
 	parseCommand(outHelp)
 	parseSubcommand(flag.Args())
@@ -45,6 +47,9 @@ func Parse(arg ...[]string) {
 	if Version != "" {
 		flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()
 	}
+	if EnableDetach {
+		flagDetach = SetVar("detach", GetLangText("detach")).short("D").Bool()
+	}
 	var argsData []string
 	if len(arg) == 1 {
 		argsData = arg[0]
@@ -53,10 +58,13 @@ func Parse(arg ...[]string) {
 	}
 	for k := range argsData {
 		s := argsData[k]
+		if !isDetach(s) {
+			runCmd = append(runCmd, s)
+		}
 		if len(s) < 2 || s[0] != '-' {
 			continue
 		}
-		var prefix = "-"
+		prefix := "-"
 		if s[1] == '-' {
 			s = s[2:]
 			prefix = "--"
@@ -76,10 +84,12 @@ func Parse(arg ...[]string) {
 	}
 
 	_ = flag.CommandLine.Parse(argsData)
-	var v *bool
-	var ok bool
-	if v, ok = ShortValues["V"].(*bool); ok && *v {
+	v, ok := ShortValues["V"].(*bool)
+	if ok && *v {
 		*flagVersion = *v
+	}
+	if d, ok := ShortValues["D"].(*bool); ok && *d {
+		*flagDetach = *d
 	}
 	if *flagVersion {
 		showVersionNum(*v)

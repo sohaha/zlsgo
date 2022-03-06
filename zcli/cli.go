@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zshell"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
 )
@@ -71,7 +72,7 @@ func usage() {
 	}
 }
 
-// ShowFlags ShowFlags
+// ShowFlags Show Flags
 func ShowFlags(fg *flag.FlagSet) {
 	Log.Printf("\noptional flags:")
 	max := 40
@@ -131,8 +132,15 @@ func ShowFlags(fg *flag.FlagSet) {
 	Log.Println(flagsItems.String())
 }
 
-// Start Start
+// Start app
 func Start(runFunc ...runFunc) {
+	if *flagDetach {
+		err := zshell.BgRun(strings.Join(runCmd, " "))
+		if err != nil {
+			Error(err.Error())
+		}
+		return
+	}
 	if matchingCmd != nil {
 		if *flagHelp {
 			showSubcommandUsage(flag.CommandLine, matchingCmd)

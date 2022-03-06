@@ -168,3 +168,12 @@ func CheckErr(err error, exit ...bool) {
 func IsDoubleClickStartUp() bool {
 	return zutil.IsDoubleClickStartUp()
 }
+
+func isDetach(a string) bool {
+	for _, v := range []string{"D","detach"} {
+		if strings.TrimLeft(a, "-") == v {
+			return true
+		}
+	}
+	return false
+}
