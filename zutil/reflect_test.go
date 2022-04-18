@@ -12,13 +12,14 @@ import (
 type TestSt struct {
 	Name string
 	I    int `z:"iii"`
+	Note int `json:"note,omitempty"`
 }
 
 func (*TestSt) RunTest(t *testing.T) {
 	t.Log("RunTest")
 }
 
-func (*TestSt) RunTest2() {}
+func (TestSt) RunTest2() {}
 
 type TestSt2 struct {
 	Name  string
@@ -49,13 +50,16 @@ func TestRunAllMethod(t *testing.T) {
 
 func TestGetAllMethod(t *testing.T) {
 	tt := zlsgo.NewTest(t)
+	i := 0
 	err := GetAllMethod(&TestSt{}, func(numMethod int, m reflect.Method) error {
 		t.Log(m.Name)
+		i++
 		if m.Name != "RunTest" && m.Name != "RunTest2" {
 			return errors.New("mismatch")
 		}
 		return nil
 	})
+	tt.Equal(2, i)
 	tt.Equal(true, err == nil)
 
 	err = GetAllMethod("test", nil)
@@ -104,40 +108,6 @@ func TestReflectForNumField(t *testing.T) {
 		return nil
 	})
 	tt.EqualNil(err)
-}
-
-func TestNonzero(tt *testing.T) {
-	t := zlsgo.NewTest(tt)
-	v := reflect.ValueOf(0)
-	t.EqualTrue(!Nonzero(v))
-
-	v = reflect.ValueOf(10.00)
-	t.EqualTrue(Nonzero(v))
-
-	v = reflect.ValueOf(false)
-	t.EqualTrue(!Nonzero(v))
-}
-
-func TestCanInline(tt *testing.T) {
-	t := zlsgo.NewTest(tt)
-	v := reflect.TypeOf(0)
-	t.EqualTrue(CanInline(v))
-
-	v = reflect.TypeOf(&TestSt{})
-	t.EqualTrue(!CanInline(v))
-
-	v = reflect.TypeOf(TestSt{Name: "yes"})
-	t.EqualTrue(CanInline(v))
-
-	v = reflect.TypeOf(map[string]interface{}{"d": 10, "a": "zz"})
-	t.EqualTrue(!CanInline(v))
-
-	v = reflect.TypeOf([...]int{10, 256})
-	t.EqualTrue(CanInline(v))
-
-	v = reflect.TypeOf(func() {})
-	t.EqualTrue(!CanInline(v))
-
 }
 
 func TestSetValue(tt *testing.T) {

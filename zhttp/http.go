@@ -530,7 +530,11 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 		var upload func(io.Writer, io.Reader) error
 
 		if m.uploadProgress != nil {
-			var total int64
+			var (
+				total    int64
+				current  int64
+				lastTime time.Time
+			)
 			for _, up := range m.uploads {
 				if file, ok := up.File.(*os.File); ok {
 					stat, err := file.Stat()
@@ -540,9 +544,7 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 					total += stat.Size()
 				}
 			}
-			var current int64
-			buf := make([]byte, 1024)
-			var lastTime time.Time
+			duration, buf := 200*time.Millisecond, make([]byte, 1024)
 			upload = func(w io.Writer, r io.Reader) error {
 				for {
 					n, err := r.Read(buf)
@@ -552,12 +554,13 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 							return _err
 						}
 						current += int64(n)
-						if now := time.Now(); now.Sub(lastTime) > 200*time.Millisecond {
+						if now := time.Now(); now.Sub(lastTime) > duration {
 							lastTime = now
 							m.uploadProgress(current, total)
 						}
 					}
 					if err == io.EOF {
+						m.uploadProgress(total, total)
 						return nil
 					}
 					if err != nil {

@@ -1,7 +1,7 @@
 package zlsgo
 
 import (
-	"path"
+	"fmt"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -29,7 +29,7 @@ func (u *TestUtil) GetCallerInfo() string {
 			break
 		}
 
-		basename := path.Base(file)
+		basename := file
 		if !strings.HasSuffix(basename, "_test.go") {
 			continue
 		}
@@ -47,10 +47,11 @@ func (u *TestUtil) GetCallerInfo() string {
 		if index := strings.IndexByte(funcName, '.'); index > -1 {
 			funcName = funcName[:index]
 			info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
+			info = basename + ":" + strconv.Itoa(line)
 			continue
 		}
 
-		info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
+		info = basename + ":" + strconv.Itoa(line)
 		break
 	}
 
@@ -63,7 +64,8 @@ func (u *TestUtil) GetCallerInfo() string {
 // Equal Equal
 func (u *TestUtil) Equal(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
-		u.T.Errorf("%s 期待:%v (type %v) - 结果:%v (type %v)", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+		u.T.Fail()
 	}
 }
 
@@ -77,16 +79,25 @@ func (u *TestUtil) EqualNil(actual interface{}) {
 	u.Equal(nil, actual)
 }
 
+// ErrorNil ErrorNil
+func (u *TestUtil) ErrorNil(actual interface{}) {
+	if actual == nil {
+		return
+	}
+	fmt.Printf("        %s Error: %v\n", u.PrintMyName(), actual)
+	u.T.Fail()
+}
+
 // EqualExit EqualExit
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
-		u.T.Fatalf("%s 期待:%v (type %v) - 结果:%v (type %v)", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
 	}
 }
 
 // Log log
 func (u *TestUtil) Log(v ...interface{}) {
-	tip := []interface{}{"\n  " + u.PrintMyName()}
+	tip := []interface{}{"    " + u.PrintMyName()}
 	va := append(tip, v...)
 	u.T.Log(va...)
 }
@@ -101,4 +112,11 @@ func (u *TestUtil) Fatal(v ...interface{}) {
 // PrintMyName PrintMyName
 func (u *TestUtil) PrintMyName() string {
 	return "@" + u.GetCallerInfo()
+}
+
+func (u *TestUtil) Run(name string, f func(t *testing.T, tt *TestUtil)) {
+	u.T.Run(name, func(t *testing.T) {
+		tt := NewTest(t)
+		f(t, tt)
+	})
 }

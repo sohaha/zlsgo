@@ -4,10 +4,33 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zvalid"
 )
 
-func TestContextValid(tt *testing.T) {
-	t := zlsgo.NewTest(tt)
+func TestBindValid(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	_ = newRequest(r, "POST", []string{"/TestBindValid", `{"id":666,"Pid":100,"name":"HelloWorld","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情","p":[{"id":1},{"id":2}]}}]}`, mimeJSON}, "/TestBindValid", func(c *Context) {
+		var s SS
+		r := c.ValidRule().Required()
+		err := c.BindValid(&s, map[string]zvalid.Engine{
+			"id": r.IsNumber().Customize(func(rawValue string, err error) (newValue string, newErr error) {
+				newValue = "1999"
+				return
+			}),
+			"name": r.CamelCaseToSnakeCase(),
+		})
+		t.Logf("%+v", s)
+		t.Log(err)
+		tt.EqualNil(err)
+		tt.Equal("hello_world", s.Name)
+		tt.Equal(1, s.IDs[0].Gg.P[0].ID)
+	})
+
+}
+
+func TestContextValid(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	r := newServer()
 	w := newRequest(r, "POST", []string{
 		"/TestContext_Valid?body2=b2",
@@ -18,28 +41,28 @@ func TestContextValid(tt *testing.T) {
 
 		v, err := c.Valid(rule, "body", "内容").MinLength(5).IsNumber().String()
 
-		t.Equal(true, err != nil)
-		tt.Log(v, err)
+		tt.Equal(true, err != nil)
+		t.Log(v, err)
 
 		v, err = c.Valid(rule, "body2", "内容2").Required().MinLength(5).String()
-		t.Equal(true, err != nil)
-		tt.Log(v, err)
+		tt.Equal(true, err != nil)
+		t.Log(v, err)
 
 		_, _ = c.ValidParam(rule, "body2").Required().String()
 
 		err = c.ValidQuery(rule, "body2", "内容2-2").Required().Error()
-		t.Equal(true, err == nil)
-		tt.Log(err)
+		tt.Equal(true, err == nil)
+		t.Log(err)
 
 		rbool, err = c.ValidForm(rule, "body", "内容1-2").Required().Trim().Bool()
-		t.Equal(true, err == nil)
-		t.Equal(true, rbool)
-		tt.Log(rbool, err)
+		tt.Equal(true, err == nil)
+		tt.Equal(true, rbool)
+		t.Log(rbool, err)
 
 		c.String(200, expected)
 	})
-	t.Equal(200, w.Code)
-	t.Equal(expected, w.Body.String())
+	tt.Equal(200, w.Code)
+	tt.Equal(expected, w.Body.String())
 }
 
 func TestContextBatchValid(tt *testing.T) {

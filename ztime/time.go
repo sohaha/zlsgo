@@ -43,3 +43,8 @@ func MonthRange(year int, month int) (beginTime, endTime int64, err error) {
 func Parse(str string, format ...string) (time.Time, error) {
 	return newZtime.Parse(str, format...)
 }
+
+// Unix int to time
+func Unix(tt int64) time.Time {
+	return newZtime.Unix(tt)
+}

@@ -25,3 +25,7 @@ func TestEnv(T *testing.T) {
 	t.Log(zutil.Getenv("myos"))
 	t.Log(zutil.Getenv("我不存在", "66"))
 }
+
+func TestGOROOT(t *testing.T) {
+	t.Log(zutil.GOROOT())
+}

@@ -32,7 +32,7 @@ func newClient() *http.Client {
 	return &http.Client{
 		Jar:       jar,
 		Transport: transport,
-		Timeout:   2 * time.Minute,
+		Timeout:   10 * time.Minute,
 	}
 }
 

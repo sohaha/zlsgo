@@ -2,7 +2,7 @@
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/sohaha/zlsgo?tab=subdirectories)
 ![flat](https://img.shields.io/github/languages/top/sohaha/zlsgo.svg?style=flat)
-[![Build Status](https://www.travis-ci.com/sohaha/zlsgo.svg?branch=master)](https://www.travis-ci.com/sohaha/zlsgo)
+[![UnitTest](https://github.com/sohaha/zlsgo/actions/workflows/go.yml/badge.svg)](https://github.com/sohaha/zlsgo/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sohaha/zlsgo)](https://goreportcard.com/report/github.com/sohaha/zlsgo)
 [![codecov](https://codecov.io/gh/sohaha/zlsgo/branch/master/graph/badge.svg)](https://codecov.io/gh/sohaha/zlsgo)
 

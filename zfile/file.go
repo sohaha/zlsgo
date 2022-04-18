@@ -54,14 +54,17 @@ func FileExist(path string) bool {
 
 // FileSize file size
 func FileSize(file string) (size string) {
+	return SizeFormat(FileSizeUint(file))
+}
+
+// FileSizeUint file size to uint64
+func FileSizeUint(file string) (size uint64) {
 	file = RealPath(file)
 	fileInfo, err := os.Stat(file)
 	if err != nil {
-		size = SizeFormat(0)
-	} else {
-		size = SizeFormat(uint64(fileInfo.Size()))
+		return 0
 	}
-	return
+	return uint64(fileInfo.Size())
 }
 
 // SizeFormat Format file size
@@ -114,7 +117,7 @@ func SafePath(path string, pathRange ...string) string {
 	} else {
 		base = RealPath(pathRange[0], true)
 	}
-	return strings.TrimPrefix(RealPath(path, true), base)
+	return strings.TrimPrefix(RealPath(path, false), base)
 }
 
 // RealPath get an absolute path
@@ -139,7 +142,7 @@ func RealPathMkdir(path string, addSlash ...bool) string {
 	return realPath
 }
 
-// Rmdir rmdir,support to keep the current directory
+// Rmdir support to keep the current directory
 func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 	realPath := RealPath(path)
 	err := os.RemoveAll(realPath)
@@ -148,6 +151,12 @@ func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 		_ = os.Mkdir(path, os.ModePerm)
 	}
 	return
+}
+
+// Remove removes the named file or (empty) directory
+func Remove(path string) error {
+	realPath := RealPath(path)
+	return os.Remove(realPath)
 }
 
 // CopyFile copies the source file to the dest file.

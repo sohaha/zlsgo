@@ -97,8 +97,8 @@ func WriteFile(path string, b []byte, isAppend ...bool) (err error) {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = file.Write(b)
+	file.Close()
 	return err
 }
 

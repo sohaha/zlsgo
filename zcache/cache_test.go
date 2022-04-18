@@ -233,9 +233,10 @@ func TestAccessCount(t *testing.T) {
 	i, err = cache.GetInt("TestOther")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
-	time.Sleep(110 * 4 * time.Millisecond)
+	time.Sleep(110 * 5 * time.Millisecond)
 	i, err = cache.GetInt("TestOther")
-	tt.Equal(true, err != nil)
+	t.Log(i, err)
+	tt.EqualTrue(err != nil)
 	tt.Equal(0, i)
 }
 

@@ -26,9 +26,6 @@ func ToString(i interface{}) string {
 	if i == nil {
 		return ""
 	}
-	if f, ok := i.(appString); ok {
-		return f.String()
-	}
 	switch value := i.(type) {
 	case int:
 		return strconv.Itoa(value)
@@ -65,7 +62,7 @@ func ToString(i interface{}) string {
 			return f.String()
 		}
 		jsonContent, _ := json.Marshal(value)
-		return string(jsonContent)
+		return zstring.Bytes2String(jsonContent)
 	}
 }
 

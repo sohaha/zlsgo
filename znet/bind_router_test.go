@@ -1,6 +1,8 @@
 package znet
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,12 +49,13 @@ func (t *testController) OPTIONSUserInfo(_ *Context) {
 
 }
 
-func (t *testController) AnyOk(_ *Context) {
-
+func (t *testController) AnyOk(c *Context) error {
+	fmt.Println(c.Request.Method)
+	return errors.New("ok")
 }
 
-func (t *testController) No(_ *Context) {
-
+func (t *testController) No(_ *Context) error {
+	return nil
 }
 
 func (t *testController) IDGet(_ *Context) {
@@ -70,6 +73,9 @@ func (t *testController) FullGetFile(_ *Context) {
 func TestBindStruct(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
+	r.PanicHandler(func(c *Context, err error) {
+		t.Log("PanicHandler", err)
+	})
 	prefix := "/test"
 	err := r.BindStruct(prefix, &testController{}, func(c *Context) {
 		t.Log("go", c.Request.URL)
@@ -101,6 +107,7 @@ func TestBindStruct(t *testing.T) {
 		{"GET", prefix + "/User/233"},
 		{"GET", prefix + "/File/File233"},
 		{"GET", prefix + "/file/File233"},
+		{"GET", prefix + "/ok"},
 	}
 	for _, v := range methods {
 		w := httptest.NewRecorder()

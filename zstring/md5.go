@@ -8,9 +8,13 @@ import (
 	"os"
 )
 
-func Md5(str string) string {
+func Md5(s string) string {
+	return Md5Byte(String2Bytes(s))
+}
+
+func Md5Byte(s []byte) string {
 	h := md5.New()
-	_, _ = h.Write(String2Bytes(str))
+	_, _ = h.Write(s)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -19,9 +23,10 @@ func Md5File(path string) (encrypt string, err error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	// r := bufio.NewReader(f)
 	h := md5.New()
 	_, err = io.Copy(h, f)
+	f.Close()
 	if err != nil {
 		return "", err
 	}

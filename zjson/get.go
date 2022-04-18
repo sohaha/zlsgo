@@ -3,15 +3,16 @@ package zjson
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
@@ -262,6 +263,25 @@ func (r Res) Map() map[string]Res {
 	return rr.o
 }
 
+func (r Res) MapKeys(exclude ...string) (keys []string) {
+	m := r.Map()
+	keys = make([]string, 0, len(m))
+	for k := range m {
+		skip := false
+		for i := range exclude {
+			if k == exclude[i] {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	return
+}
+
 func (r Res) Get(path string) Res {
 	return Get(r.Raw, path)
 }
@@ -275,11 +295,13 @@ type arrayOrMapResult struct {
 }
 
 func (r Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
-	var j = r.Raw
-	var i int
-	var value Res
-	var count int
-	var key Res
+	var (
+		value Res
+		count int
+		key   Res
+		i     int
+		j     = r.Raw
+	)
 	if vc == 0 {
 		for ; i < len(j); i++ {
 			if j[i] == '{' || j[i] == '[' {
@@ -1827,46 +1849,40 @@ func GetMultipleBytes(json []byte, path ...string) []Res {
 }
 
 var (
-	fieldsmu sync.RWMutex
-	fields   = make(map[string]map[string]int)
+	fieldsmu  sync.RWMutex
+	fieldsMap sync.Map
+	fields    = make(map[string]map[string]int)
 )
 
 func assign(jsval Res, val reflect.Value) {
 	if jsval.Type == Null {
 		return
 	}
+	t := val.Type()
 	switch val.Kind() {
 	default:
 	case reflect.Ptr:
 		if !val.IsNil() {
-			newval := reflect.New(val.Elem().Type())
-			assign(jsval, newval.Elem())
-			val.Elem().Set(newval.Elem())
+			elem := val.Elem()
+			assign(jsval, elem)
 		} else {
-			newval := reflect.New(val.Type().Elem())
+			newval := reflect.New(t.Elem())
 			assign(jsval, newval.Elem())
 			val.Set(newval)
 		}
 	case reflect.Struct:
 		fieldsmu.RLock()
-		sf := fields[val.Type().String()]
+		name := t.String()
+		sf := fields[name]
 		fieldsmu.RUnlock()
 		if sf == nil {
 			fieldsmu.Lock()
 			sf = make(map[string]int)
-			for i := 0; i < val.Type().NumField(); i++ {
-				f := val.Type().Field(i)
-				tag := strings.Split(f.Tag.Get("json"), ",")[0]
-				if tag != "-" {
-					if tag != "" {
-						sf[tag] = i
-						sf[f.Name] = i
-					} else {
-						sf[f.Name] = i
-					}
-				}
+			for i := 0; i < t.NumField(); i++ {
+				sf[zreflect.GetStructTag(t.Field(i))] = i
 			}
-			fields[val.Type().String()] = sf
+			// fieldsMap.Store(t.String(), sf)
+			fields[name] = sf
 			fieldsmu.Unlock()
 		}
 		jsval.ForEach(func(key, value Res) bool {
@@ -1879,14 +1895,15 @@ func assign(jsval Res, val reflect.Value) {
 			return true
 		})
 	case reflect.Slice:
-		if val.Type().Elem().Kind() == reflect.Uint8 &&
+		if t.Elem().Kind() == reflect.Uint8 &&
 			jsval.Type == String {
 			data, _ := base64.StdEncoding.DecodeString(jsval.String())
 			val.Set(reflect.ValueOf(data))
 		} else {
 			jsvals := jsval.Array()
-			slice := reflect.MakeSlice(val.Type(), len(jsvals), len(jsvals))
-			for i := 0; i < len(jsvals); i++ {
+			l := len(jsvals)
+			slice := reflect.MakeSlice(t, l, l)
+			for i := 0; i < l; i++ {
 				assign(jsvals[i], slice.Index(i))
 			}
 			val.Set(slice)
@@ -1902,8 +1919,8 @@ func assign(jsval Res, val reflect.Value) {
 			return true
 		})
 	case reflect.Map:
-		if val.Type().Key().Kind() == reflect.String &&
-			val.Type().Elem().Kind() == reflect.Interface {
+		if t.Key().Kind() == reflect.String &&
+			t.Elem().Kind() == reflect.Interface {
 			val.Set(reflect.ValueOf(jsval.Value()))
 		}
 	case reflect.Interface:
@@ -1921,7 +1938,7 @@ func assign(jsval Res, val reflect.Value) {
 	case reflect.String:
 		val.SetString(jsval.String())
 	}
-	if len(val.Type().PkgPath()) > 0 {
+	if len(t.PkgPath()) > 0 {
 		v := val.Addr()
 		if v.Type().NumMethod() > 0 {
 			if u, ok := v.Interface().(json.Unmarshaler); ok {
@@ -1931,17 +1948,8 @@ func assign(jsval Res, val reflect.Value) {
 	}
 }
 
-var validate uintptr = 1
-
-func UnmarshalValidationEnabled(enabled bool) {
-	if enabled {
-		atomic.StoreUintptr(&validate, 1)
-	} else {
-		atomic.StoreUintptr(&validate, 0)
-	}
-}
-
 func Unmarshal(json, v interface{}) error {
+
 	var data []byte
 	switch v := json.(type) {
 	case string:
@@ -1949,16 +1957,15 @@ func Unmarshal(json, v interface{}) error {
 	case []byte:
 		data = v
 	}
-	if atomic.LoadUintptr(&validate) == 1 {
-		_, ok := validPayload(data, 0)
-		if !ok {
-			return ErrInvalidJSON
-		}
-	}
 	if v := reflect.ValueOf(v); v.Kind() == reflect.Ptr {
-		assign(ParseBytes(data), v)
+		r := ParseBytes(data)
+		if r.String() == "" {
+			return errors.New("invalid json")
+		}
+		assign(r, v)
+		return nil
 	}
-	return nil
+	return errors.New("assignment must be a pointer")
 }
 
 func validPayload(data []byte, i int) (outi int, ok bool) {

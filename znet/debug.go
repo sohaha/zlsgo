@@ -13,7 +13,7 @@ func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 	var mtd string
 	min := 6
 	if mLen < min {
-		mtd = zstring.Pad(method, min, " ", 1)
+		mtd = zstring.Pad(method, min, " ", zstring.PadLeft)
 	} else {
 		mtd = zstring.Substr(method, 0, min)
 	}
@@ -31,10 +31,12 @@ func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
 	case "OPTIONS":
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
+	case "FILE":
+		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
 	default:
 		method = log.ColorTextWrap(zlog.ColorDefault, mtd)
 	}
-
+	path = zstring.Pad(path, 20, " ", zstring.PadRight)
 	return fmt.Sprintf(tf, method, path)
 }
 

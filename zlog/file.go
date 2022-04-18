@@ -10,44 +10,32 @@ import (
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/ztime"
-	"github.com/sohaha/zlsgo/ztime/cron"
 )
 
-func openFile(filepa string, archive bool) (file *os.File, fileName, fileDir string, err error) {
+func openFile(filepa string, archive bool) (file *zfile.MemoryFile, fileName, fileDir string, err error) {
 	fullPath := zfile.RealPath(filepa)
 	fileDir, fileName = filepath.Split(fullPath)
+	opt := []zfile.MemoryFileOption{zfile.MemoryFileAutoFlush(1)}
 	if archive {
-		archiveName := ztime.FormatTime(time.Now(), "Y-m-d")
 		ext := filepath.Ext(fileName)
 		base := strings.TrimSuffix(fileName, ext)
 		fileDir = zfile.RealPathMkdir(fileDir+base, true)
-		fileName = archiveName + ext
 		fullPath = fileDir + fileName
+		opt = append(opt, zfile.MemoryFileFlushBefore(func(f *zfile.MemoryFile) error {
+			archiveName := ztime.FormatTime(time.Now(), "Y-m-d")
+			fileName = archiveName + ext
+			f.SetName(fileDir + fileName)
+			return nil
+		}))
 	}
-	_ = mkdirLog(fileDir)
-	if zfile.FileExist(fullPath) {
-		file, err = os.OpenFile(fullPath, os.O_APPEND|os.O_RDWR, 0644)
-	} else {
-		file, err = os.OpenFile(fullPath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
-	}
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	return
+	f := zfile.NewMemoryFile(fullPath, opt...)
+	return f, fileName, fileDir, nil
 }
 
 // SetFile Setting log file output
 func (log *Logger) SetFile(filepath string, archive ...bool) {
 	log.DisableConsoleColor()
 	logArchive := len(archive) > 0 && archive[0]
-	if logArchive {
-		c := cron.New()
-		_, _ = c.Add("0 0 * * *", func() {
-			log.setLogfile(filepath, logArchive)
-		})
-		c.Run()
-	}
 	log.setLogfile(filepath, logArchive)
 }
 

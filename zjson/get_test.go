@@ -10,14 +10,20 @@ import (
 )
 
 type Demo struct {
-	I       int    `json:"i"`
-	Quality string `json:"quality"`
+	I        int `json:"i"`
+	F        float64
+	Children []string `json:"children"`
+	Quality  string   `json:"quality"`
+	User     struct {
+		Name string `json:"name"`
+	} `json:"user"`
+	Friends []struct {
+		Name string `json:"name"`
+	} `json:"friends"`
 }
 
 func TestGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	UnmarshalValidationEnabled(false)
-	UnmarshalValidationEnabled(true)
 	SetModifiersState(true)
 	quality := Get(demo, "quality")
 	tt.EqualExit("highLevel", quality.String())
@@ -84,6 +90,7 @@ func TestGet(t *testing.T) {
 
 	parseData := Parse(demo)
 	tt.Log(parseData.Map())
+	tt.Log(parseData.MapKeys())
 
 	other.ForEach(func(key, value Res) bool {
 		return true
@@ -144,19 +151,17 @@ func TestGet(t *testing.T) {
 	tt.Log(parseData.Get("@reverse").String())
 }
 
-func TestGetFormat(T *testing.T) {
+func TestGetFormat(t *testing.T) {
 	SetModifiersState(true)
-	t := zlsgo.NewTest(T)
 	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
 }
 
-func TestModifiers(T *testing.T) {
+func TestModifiers(t *testing.T) {
 	SetModifiersState(true)
-	t := zlsgo.NewTest(T)
-	t.Log(Get(demo, "enemy").String())
-	t.Log(Get(demo, "enemy|@reverse").String())
-	t.Log(Get(demo, "enemy|@ugly").String())
-	t.Log(Get(demo, "enemy|@format").String())
+	t.Log(Get(demo, "friends").String())
+	t.Log(Get(demo, "friends|@reverse").String())
+	t.Log(Get(demo, "friends|@ugly").String())
+	t.Log(Get(demo, "friends|@format").String())
 }
 
 func BenchmarkGet(b *testing.B) {

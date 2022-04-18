@@ -12,7 +12,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/sohaha/zlsgo/zutil"
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 type indentWriter struct {
@@ -189,8 +189,8 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 			_, _ = io.WriteString(p, t.String())
 		}
 		writeByte(p, '{')
-		if zutil.Nonzero(v) {
-			expand := !zutil.CanInline(v.Type())
+		if zreflect.Nonzero(v) {
+			expand := !zreflect.CanInline(v.Type())
 			pp := p
 			if expand {
 				writeByte(p, '\n')
@@ -234,8 +234,8 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 			_, _ = io.WriteString(p, t.String())
 		}
 		writeByte(p, '{')
-		if zutil.Nonzero(v) {
-			expand := !zutil.CanInline(v.Type())
+		if zreflect.Nonzero(v) {
+			expand := !zreflect.CanInline(v.Type())
 			pp := p
 			if expand {
 				writeByte(p, '\n')
@@ -249,9 +249,9 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 					if expand {
 						writeByte(pp, '\t')
 					}
-					showTypeInStruct = zutil.LabelType(f.Type)
+					showTypeInStruct = zreflect.IsLabelType(f.Type)
 				}
-				pp.printValue(zutil.GetField(v, i), showTypeInStruct, true)
+				pp.printValue(zreflect.GetInterfaceField(v, i), showTypeInStruct, true)
 				if expand {
 					_, _ = io.WriteString(pp, ",\n")
 				} else if i < v.NumField()-1 {
@@ -289,7 +289,7 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 			break
 		}
 		writeByte(p, '{')
-		expand := !zutil.CanInline(v.Type())
+		expand := !zreflect.CanInline(v.Type())
 		pp := p
 		if expand {
 			writeByte(p, '\n')

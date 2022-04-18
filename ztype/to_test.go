@@ -1,4 +1,4 @@
-package ztype
+package ztype_test
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	zls "github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 type st interface {
@@ -28,9 +29,6 @@ type (
 		type1
 		S1 type1
 		S2 *type1
-	}
-	type3 struct {
-		Name string
 	}
 )
 
@@ -60,7 +58,7 @@ var (
 )
 
 func (s *j) String() string {
-	return ToString(s.Key)
+	return ztype.ToString(s.Key)
 }
 
 func (s *j) Set(v string) {
@@ -68,106 +66,106 @@ func (s *j) Set(v string) {
 }
 
 func TestTo(t *testing.T) {
-	T := zls.NewTest(t)
+	tt := zls.NewTest(t)
 	var sst st = new(j)
 	sst.Set(str)
 	jj := j{Name: "123"}
 
-	T.Equal([]byte(str), ToByte(str))
-	T.Equal([]byte(str), ToByte(i))
+	tt.Equal([]byte(str), ztype.ToByte(str))
+	tt.Equal([]byte(str), ztype.ToByte(i))
 
-	T.Equal(0, ToInt(ni))
-	T.Equal(i, ToInt(str))
-	T.Equal(i, ToInt(i))
-	T.Equal(i8, ToInt8(str))
-	T.Equal(i8, ToInt8(i8))
-	T.Equal(i16, ToInt16(str))
-	T.Equal(i16, ToInt16(i16))
-	T.Equal(i32, ToInt32(str))
-	T.Equal(i32, ToInt32(i32))
+	tt.Equal(0, ztype.ToInt(ni))
+	tt.Equal(i, ztype.ToInt(str))
+	tt.Equal(i, ztype.ToInt(i))
+	tt.Equal(i8, ztype.ToInt8(str))
+	tt.Equal(i8, ztype.ToInt8(i8))
+	tt.Equal(i16, ztype.ToInt16(str))
+	tt.Equal(i16, ztype.ToInt16(i16))
+	tt.Equal(i32, ztype.ToInt32(str))
+	tt.Equal(i32, ztype.ToInt32(i32))
 
-	T.Equal(i64, ToInt64(str))
-	T.Equal(i64, ToInt64(i))
-	T.Equal(i64, ToInt64(i8))
-	T.Equal(i64, ToInt64(i16))
-	T.Equal(i64, ToInt64(i32))
-	T.Equal(i64, ToInt64(i64))
-	T.Equal(i64, ToInt64(ui8))
-	T.Equal(i64, ToInt64(ui))
-	T.Equal(i64, ToInt64(ui16))
-	T.Equal(i64, ToInt64(ui32))
-	T.Equal(i64, ToInt64(ui64))
-	T.Equal(i64, ToInt64(f3))
-	T.Equal(i64, ToInt64(f6))
+	tt.Equal(i64, ztype.ToInt64(str))
+	tt.Equal(i64, ztype.ToInt64(i))
+	tt.Equal(i64, ztype.ToInt64(i8))
+	tt.Equal(i64, ztype.ToInt64(i16))
+	tt.Equal(i64, ztype.ToInt64(i32))
+	tt.Equal(i64, ztype.ToInt64(i64))
+	tt.Equal(i64, ztype.ToInt64(ui8))
+	tt.Equal(i64, ztype.ToInt64(ui))
+	tt.Equal(i64, ztype.ToInt64(ui16))
+	tt.Equal(i64, ztype.ToInt64(ui32))
+	tt.Equal(i64, ztype.ToInt64(ui64))
+	tt.Equal(i64, ztype.ToInt64(f3))
+	tt.Equal(i64, ztype.ToInt64(f6))
 	// 无法转换直接换成0
-	T.Equal(ToInt64(0), ToInt64(jj))
-	T.Equal(i64, ToInt64("0x7b"))
-	T.Equal(i64, ToInt64("0173"))
-	T.Equal(ToInt64(1), ToInt64(b))
-	T.Equal(ToInt64(0), ToInt64(false))
+	tt.Equal(ztype.ToInt64(0), ztype.ToInt64(jj))
+	tt.Equal(i64, ztype.ToInt64("0x7b"))
+	tt.Equal(i64, ztype.ToInt64("0173"))
+	tt.Equal(ztype.ToInt64(1), ztype.ToInt64(b))
+	tt.Equal(ztype.ToInt64(0), ztype.ToInt64(false))
 
-	T.Equal(ToUint(0), ToUint(ni))
-	T.Equal(ui, ToUint(str))
-	T.Equal(ui, ToUint(ui))
-	T.Equal(ui8, ToUint8(str))
-	T.Equal(ui8, ToUint8(ui8))
-	T.Equal(ui16, ToUint16(str))
-	T.Equal(ui16, ToUint16(ui16))
-	T.Equal(ui32, ToUint32(str))
-	T.Equal(ui32, ToUint32(ui32))
+	tt.Equal(ztype.ToUint(0), ztype.ToUint(ni))
+	tt.Equal(ui, ztype.ToUint(str))
+	tt.Equal(ui, ztype.ToUint(ui))
+	tt.Equal(ui8, ztype.ToUint8(str))
+	tt.Equal(ui8, ztype.ToUint8(ui8))
+	tt.Equal(ui16, ztype.ToUint16(str))
+	tt.Equal(ui16, ztype.ToUint16(ui16))
+	tt.Equal(ui32, ztype.ToUint32(str))
+	tt.Equal(ui32, ztype.ToUint32(ui32))
 
-	T.Equal(ui64, ToUint64(i64))
-	T.Equal(ui64, ToUint64(str))
-	T.Equal(ui64, ToUint64(i))
-	T.Equal(ui64, ToUint64(i8))
-	T.Equal(ui64, ToUint64(i16))
-	T.Equal(ui64, ToUint64(i32))
-	T.Equal(ui64, ToUint64(ui))
-	T.Equal(ui64, ToUint64(ui8))
-	T.Equal(ui64, ToUint64(ui16))
-	T.Equal(ui64, ToUint64(ui32))
-	T.Equal(ui64, ToUint64(ui64))
-	T.Equal(ui64, ToUint64(f3))
-	T.Equal(ui64, ToUint64(f6))
+	tt.Equal(ui64, ztype.ToUint64(i64))
+	tt.Equal(ui64, ztype.ToUint64(str))
+	tt.Equal(ui64, ztype.ToUint64(i))
+	tt.Equal(ui64, ztype.ToUint64(i8))
+	tt.Equal(ui64, ztype.ToUint64(i16))
+	tt.Equal(ui64, ztype.ToUint64(i32))
+	tt.Equal(ui64, ztype.ToUint64(ui))
+	tt.Equal(ui64, ztype.ToUint64(ui8))
+	tt.Equal(ui64, ztype.ToUint64(ui16))
+	tt.Equal(ui64, ztype.ToUint64(ui32))
+	tt.Equal(ui64, ztype.ToUint64(ui64))
+	tt.Equal(ui64, ztype.ToUint64(f3))
+	tt.Equal(ui64, ztype.ToUint64(f6))
 	// 无法转换直接换成0
-	T.Equal(ToUint64(0), ToUint64(jj))
-	T.Equal(ui64, ToUint64("0x7b"))
-	T.Equal(ui64, ToUint64("0173"))
-	T.Equal(ToUint64(1), ToUint64(b))
-	T.Equal(ToUint64(0), ToUint64(false))
+	tt.Equal(ztype.ToUint64(0), ztype.ToUint64(jj))
+	tt.Equal(ui64, ztype.ToUint64("0x7b"))
+	tt.Equal(ui64, ztype.ToUint64("0173"))
+	tt.Equal(ztype.ToUint64(1), ztype.ToUint64(b))
+	tt.Equal(ztype.ToUint64(0), ztype.ToUint64(false))
 
-	T.Equal(str, ToString(sst))
-	T.Equal("", ToString(ni))
-	T.Equal("true", ToString(b))
-	T.Equal(str, ToString(str))
-	T.Equal(str, ToString(i8))
-	T.Equal(str, ToString(ui))
-	T.Equal(str, ToString(i))
-	T.Equal(str, ToString(i8))
-	T.Equal(str, ToString(i16))
-	T.Equal(str, ToString(i32))
-	T.Equal(str, ToString(i64))
-	T.Equal(str, ToString(ui8))
-	T.Equal(str, ToString(ui16))
-	T.Equal(str, ToString(ui32))
-	T.Equal(str, ToString(ui64))
-	T.Equal(str, ToString(f6))
-	T.Equal(str, ToString(f3))
-	T.Equal(str, ToString(ToByte(i)))
-	T.Equal("{\"Name\":\"123\",\"Key\":\"\",\"age\":0}", ToString(jj))
-	T.Equal(f6, ToFloat64(i))
-	T.Equal(f6, ToFloat64(f3))
-	T.Equal(f6, ToFloat64(f6))
-	T.Equal(ToFloat64(0), ToFloat64(ni))
+	tt.Equal(str, ztype.ToString(sst))
+	tt.Equal("", ztype.ToString(ni))
+	tt.Equal("true", ztype.ToString(b))
+	tt.Equal(str, ztype.ToString(str))
+	tt.Equal(str, ztype.ToString(i8))
+	tt.Equal(str, ztype.ToString(ui))
+	tt.Equal(str, ztype.ToString(i))
+	tt.Equal(str, ztype.ToString(i8))
+	tt.Equal(str, ztype.ToString(i16))
+	tt.Equal(str, ztype.ToString(i32))
+	tt.Equal(str, ztype.ToString(i64))
+	tt.Equal(str, ztype.ToString(ui8))
+	tt.Equal(str, ztype.ToString(ui16))
+	tt.Equal(str, ztype.ToString(ui32))
+	tt.Equal(str, ztype.ToString(ui64))
+	tt.Equal(str, ztype.ToString(f6))
+	tt.Equal(str, ztype.ToString(f3))
+	tt.Equal(str, ztype.ToString(ztype.ToByte(i)))
+	tt.Equal("{\"Name\":\"123\",\"Key\":\"\",\"age\":0}", ztype.ToString(jj))
+	tt.Equal(f6, ztype.ToFloat64(i))
+	tt.Equal(f6, ztype.ToFloat64(f3))
+	tt.Equal(f6, ztype.ToFloat64(f6))
+	tt.Equal(ztype.ToFloat64(0), ztype.ToFloat64(ni))
 
-	T.Equal(f3, ToFloat32(i))
-	T.Equal(f3, ToFloat32(f3))
-	T.Equal(f3, ToFloat32(f6))
-	T.Equal(ToFloat32(0), ToFloat32(ni))
+	tt.Equal(f3, ztype.ToFloat32(i))
+	tt.Equal(f3, ztype.ToFloat32(f3))
+	tt.Equal(f3, ztype.ToFloat32(f6))
+	tt.Equal(ztype.ToFloat32(0), ztype.ToFloat32(ni))
 
-	T.Equal(true, ToBool(b))
-	T.Equal(true, ToBool(str))
-	T.Equal(false, ToBool(ni))
+	tt.Equal(true, ztype.ToBool(b))
+	tt.Equal(true, ztype.ToBool(str))
+	tt.Equal(false, ztype.ToBool(ni))
 
 }
 
@@ -181,32 +179,15 @@ func TestTo(t *testing.T) {
 func BenchmarkToString1(b *testing.B) {
 	s := true
 	for i := 0; i < b.N; i++ {
-		_ = ToString(s)
+		_ = ztype.ToString(s)
 	}
-	// type a struct {
-	// Na string `json:"n"`
-	// }
-
-	// n := &a{
-	// Na: "hi",
-	// }
-	// b.Log(ToString(n))
-	// b.Log(ToString(*n))
 }
+
 func BenchmarkToString2(b *testing.B) {
 	s := true
 	for i := 0; i < b.N; i++ {
 		_ = String(s)
 	}
-	// type a struct {
-	// Na string `json:"n"`
-	// }
-
-	// n := &a{
-	// Na: "hi",
-	// }
-	// b.Log(String(n))
-	// b.Log(String(*n))
 }
 func String(val interface{}) string {
 	if val == nil {
@@ -270,21 +251,21 @@ func TestStructToMap(tt *testing.T) {
 			B: "Ss",
 		},
 	}
-	r := StructToMap(v)
+	r := ztype.StructToMap(v)
 	t.Log(v, r)
 	j, err := zjson.Marshal(r)
 	t.EqualNil(err)
 	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"A":2,"B":"S1"},"S2":{"A":3,"B":"Ss"},"type1":{"A":1,"B":"type1"}}`, string(j))
 
 	v2 := []string{"1", "2", "more"}
-	r = StructToMap(v2)
+	r = ztype.StructToMap(v2)
 	t.Log(v2, r)
 	j, err = zjson.Marshal(v2)
 	t.EqualNil(err)
 	t.EqualExit(`["1","2","more"]`, string(j))
 
 	v3 := "ok"
-	r = StructToMap(v3)
+	r = ztype.StructToMap(v3)
 	t.Log(v3, r)
 	j, err = zjson.Marshal(v3)
 	t.EqualNil(err)

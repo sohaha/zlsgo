@@ -22,7 +22,7 @@ type (
 		defaultValue interface{}
 		result       bool
 	}
-	queueT func(v Engine) Engine
+	queueT func(v *Engine) *Engine
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	ErrNoValidationValueSet = errors.New("未设置验证值")
 )
 
-// New new valid
+// New  valid
 func New() Engine {
 	return Engine{
 		queue: list.New(),
@@ -56,26 +56,26 @@ func Text(value string, name ...string) Engine {
 
 // Required Must have a value (zero values ​​other than "" are allowed). If this rule is not used, when the parameter value is "", data validation does not take effect by default
 func (v Engine) Required(customError ...string) Engine {
-	return pushQueue(v, func(v Engine) Engine {
+	return pushQueue(&v, func(v *Engine) *Engine {
 		if v.value == "" {
-			v.err = setError(&v, "不能为空", customError...)
+			v.err = setError(v, "不能为空", customError...)
 		}
 		return v
-	}, true)
+	})
 }
 
 // Customize customize valid
 func (v Engine) Customize(fn func(rawValue string, err error) (newValue string, newErr error)) Engine {
-	return pushQueue(v, func(v Engine) Engine {
+	return pushQueue(&v, func(v *Engine) *Engine {
 		v.value, v.err = fn(v.value, v.err)
 		return v
 	}, true)
 }
 
-func pushQueue(v Engine, fn queueT, DisableCheckErr ...bool) Engine {
+func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) Engine {
 	pFn := fn
 	if !(len(DisableCheckErr) > 0 && DisableCheckErr[0]) {
-		pFn = func(v Engine) Engine {
+		pFn = func(v *Engine) *Engine {
 			if v.err != nil {
 				return v
 			}
@@ -86,7 +86,7 @@ func pushQueue(v Engine, fn queueT, DisableCheckErr ...bool) Engine {
 	queue.PushBackList(v.queue)
 	queue.PushBack(pFn)
 	v.queue = queue
-	return v
+	return *v
 }
 
 func ignore(v *Engine) bool {
@@ -101,5 +101,9 @@ func setError(v *Engine, msg string, customError ...string) error {
 	if len(customError) > 0 {
 		return errors.New(customError[0])
 	}
-	return errors.New(v.name + msg)
+	if v.name != "" {
+		msg = v.name + msg
+	}
+
+	return errors.New(msg)
 }

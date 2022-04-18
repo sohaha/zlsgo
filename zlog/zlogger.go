@@ -8,24 +8,25 @@ import (
 	"os"
 	"reflect"
 	"runtime"
-	"strings"
 	"sync"
 	"text/tabwriter"
 	"time"
 
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 // Log header information tag bit, using bitmap mode
 const (
-	BitDate         = 1 << iota                         // Date marker  2019/01/23
-	BitTime                                             // Time Label Bit  01:23:12
-	BitMicroSeconds                                     // Microsecond label bit 01:23:12.111222
-	BitLongFile                                         // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
-	BitShortFile                                        // Final File name   doc.go
-	BitLevel                                            // Current log level
-	BitStdFlag      = BitDate | BitTime                 // Standard header log format
-	BitDefault      = BitLevel | BitShortFile | BitTime // Default log header format
+	BitDate         int                                 = 1 << iota // Date marker  2019/01/23
+	BitTime                                                         // Time Label Bit  01:23:12
+	BitMicroSeconds                                                 // Microsecond label bit 01:23:12.111222
+	BitLongFile                                                     // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
+	BitShortFile                                                    // Final File name   doc.go
+	BitLevel                                                        // Current log level
+	BitStdFlag      = BitDate | BitTime                             // Standard header log format
+	BitDefault      = BitLevel | BitShortFile | BitTime             // Default log header format
 	// LogMaxBuf LogMaxBuf
 	LogMaxBuf = 1024 * 1024
 )
@@ -34,6 +35,7 @@ const (
 const (
 	LogFatal = iota
 	LogPanic
+	LogTrack
 	LogError
 	LogWarn
 	LogTips
@@ -47,6 +49,7 @@ const (
 var Levels = []string{
 	"[FATAL]",
 	"[PANIC]",
+	"[TRACK]",
 	"[ERROR]",
 	"[WARN] ",
 	"[TIPS] ",
@@ -59,6 +62,7 @@ var Levels = []string{
 var LevelColous = []Color{
 	ColorRed,
 	ColorLightRed,
+	ColorLightYellow,
 	ColorRed,
 	ColorYellow,
 	ColorWhite,
@@ -76,7 +80,7 @@ type (
 		flag          int
 		out           io.Writer
 		buf           bytes.Buffer
-		file          *os.File
+		file          *zfile.MemoryFile
 		calldDepth    int
 		level         int
 		color         bool
@@ -246,7 +250,7 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 	return err
 }
 
-// Printf Printf
+// Printf formats according to a format specifier and writes to standard output
 func (log *Logger) Printf(format string, v ...interface{}) {
 	_ = log.outPut(LogNot, fmt.Sprintf(format+"\r\n", v...), false, nil)
 }
@@ -266,7 +270,7 @@ func (log *Logger) Debug(v ...interface{}) {
 	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, nil)
 }
 
-// Dump Dump
+// Dump pretty print format
 func (log *Logger) Dump(v ...interface{}) {
 	if log.level < LogDump {
 		return
@@ -283,128 +287,128 @@ func (log *Logger) Dump(v ...interface{}) {
 	_ = log.outPut(LogDump, fmt.Sprintln(args...), true, nil)
 }
 
-// Successf Successf
+// Successf output Success
 func (log *Logger) Successf(format string, v ...interface{}) {
 	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, nil)
 }
 
-// Success Success
+// Success output Success
 func (log *Logger) Success(v ...interface{}) {
 	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, nil)
 }
 
-// Infof Infof
+// Infof output Info
 func (log *Logger) Infof(format string, v ...interface{}) {
 	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, nil)
 }
 
-// Info Info
+// Info output Info
 func (log *Logger) Info(v ...interface{}) {
 	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, nil)
 }
 
-// Tipsf Tipsf
+// Tipsf output Tips
 func (log *Logger) Tipsf(format string, v ...interface{}) {
 	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, nil)
 }
 
-// Tips Tips
+// Tips output Tips
 func (log *Logger) Tips(v ...interface{}) {
 	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, nil)
 }
 
-// Warnf Warnf
+// Warnf output Warn
 func (log *Logger) Warnf(format string, v ...interface{}) {
 	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, nil)
 }
 
-// Warn Warn
+// Warn output Warn
 func (log *Logger) Warn(v ...interface{}) {
 	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, nil)
 }
 
-// Errorf Errorf
+// Errorf output Error
 func (log *Logger) Errorf(format string, v ...interface{}) {
 	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, nil)
 }
 
-// Error Error
+// Error output Error
 func (log *Logger) Error(v ...interface{}) {
 	_ = log.outPut(LogError, fmt.Sprintln(v...), true, nil)
 }
 
-// Fatalf Fatalf
+// Fatalf output Fatal
 func (log *Logger) Fatalf(format string, v ...interface{}) {
 	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, nil)
 	osExit(1)
 }
 
-// Fatal Fatal
+// Fatal output Fatal
 func (log *Logger) Fatal(v ...interface{}) {
 	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, nil)
 	osExit(1)
 }
 
-// Panicf Panicf
+// Panicf output Panic
 func (log *Logger) Panicf(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
 	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, nil)
 	panic(s)
 }
 
-// panic panic
+// Panic output panic
 func (log *Logger) Panic(v ...interface{}) {
 	s := fmt.Sprintln(v...)
 	_ = log.outPut(LogPanic, s, true, nil)
 	panic(s)
 }
 
-// Stack Stack
-func (log *Logger) Stack(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	s += "\n"
-	buf := make([]byte, LogMaxBuf)
-	n := runtime.Stack(buf, true)
-	s += string(buf[:n])
-	s += "\n"
-	_ = log.outPut(LogError, s, true, nil)
+// Stack output Stack
+func (log *Logger) Stack(v interface{}) {
+	var s string
+	switch e := v.(type) {
+	case error:
+		s = fmt.Sprintf("%+v", e)
+	case string:
+		s = e
+	default:
+		s = fmt.Sprintf("%v", e)
+	}
+	_ = log.outPut(LogTrack, s, true, nil)
 }
 
-// Track Track
-func (log *Logger) Track(logTip string, v ...int) {
-	depth := log.calldDepth
-	max := 1
-	l := len(v)
-	if l == 1 {
-		max = v[0]
-	} else if l > 1 {
-		depth = depth + v[1]
-		max = v[0]
-	}
-	if max == 0 {
-		max = 9999
-	}
-	track := TrackCurrent(max, depth)
-	b := logTip + "\n" + strings.Join(track, "\n")
-	_ = log.outPut(LogDebug, b, true, nil)
-}
-
-func TrackCurrent(max, depth int) (track []string) {
-	stop := func() bool {
-		if max == -1 {
-			return false
+// Track output Track
+func (log *Logger) Track(v string, i ...int) {
+	b, skip, max, index := zutil.GetBuff(), 4, 1, 1
+	il := len(i)
+	if il > 0 {
+		max = i[0]
+		if il == 2 {
+			skip = skip + i[1]
 		}
-		max--
-		return max <= -1
 	}
-	for skip := depth; ; skip++ {
-		name, file, line, ok := callerName(skip)
-		if !ok || stop() {
-			break
+	s := zutil.Callers(skip)
+	l := len(s)
+	if max >= l {
+		max = l
+	}
+	s = s[:max]
+	space := "  "
+	b.WriteString(v + "\n")
+	s.Format(func(fn *runtime.Func, file string, line int) bool {
+		if index > 9 {
+			space = " "
 		}
-		track = append(track, fmt.Sprintf("%v:%d %v", file, line, name))
-	}
-	return
+		b.WriteString(fmt.Sprintf(
+			"   %d).%s%s\n    \t%s:%d\n",
+			index, space, fn.Name(), file, line,
+		))
+		index++
+		return true
+	})
+	text := b.String()
+	zutil.PutBuff(b)
+	_ = log.outPut(LogTrack, text, true, nil)
 }
 
 func callerName(skip int) (name, file string, line int, ok bool) {

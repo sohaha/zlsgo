@@ -2,10 +2,10 @@ package zutil
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -127,7 +127,7 @@ func ReflectStructField(v reflect.Type, fn func(
 func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
 	kind reflect.Kind, field reflect.Value) error, tag ...string) error {
 	var err error
-	tagKey := "z"
+	tagKey := zreflect.Tag
 	if len(tag) > 0 {
 		tagKey = tag[0]
 	}
@@ -159,125 +159,18 @@ func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
 	return err
 }
 
-func Nonzero(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Bool:
-		return v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() != 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() != 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() != 0
-	case reflect.Complex64, reflect.Complex128:
-		return v.Complex() != complex(0, 0)
-	case reflect.String:
-		return v.String() != ""
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			if Nonzero(GetField(v, i)) {
-				return true
-			}
-		}
-		return false
-	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
-			if Nonzero(v.Index(i)) {
-				return true
-			}
-		}
-		return false
-	case reflect.Map, reflect.Interface, reflect.Slice, reflect.Ptr, reflect.Chan, reflect.Func:
-		return !v.IsNil()
-	case reflect.UnsafePointer:
-		return v.Pointer() != 0
-	}
-	return true
-}
-
-func GetField(v reflect.Value, i int) reflect.Value {
-	val := v.Field(i)
-	if val.Kind() == reflect.Interface && !val.IsNil() {
-		val = val.Elem()
-	}
-	return val
-}
-
-func CanInline(t reflect.Type) bool {
-	switch t.Kind() {
-	case reflect.Map:
-		return !CanExpand(t.Elem())
-	case reflect.Struct:
-		for i := 0; i < t.NumField(); i++ {
-			if CanExpand(t.Field(i).Type) {
-				return false
-			}
-		}
-		return true
-	case reflect.Interface:
-		return false
-	case reflect.Array, reflect.Slice:
-		return !CanExpand(t.Elem())
-	case reflect.Ptr:
-		return false
-	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		return false
-	}
-	return true
-}
-
-func CanExpand(t reflect.Type) bool {
-	switch t.Kind() {
-	case reflect.Map, reflect.Struct,
-		reflect.Interface, reflect.Array, reflect.Slice,
-		reflect.Ptr:
-		return true
-	}
-	return false
-}
-
-func LabelType(t reflect.Type) bool {
-	switch t.Kind() {
-	case reflect.Interface, reflect.Struct:
-		return true
-	}
-	return false
-}
-
 // GetAllMethod get all methods of struct
-func GetAllMethod(st interface{}, fn func(numMethod int, m reflect.Method) error) error {
-	if st == nil || fn == nil {
+func GetAllMethod(s interface{}, fn func(numMethod int, m reflect.Method) error) error {
+	typ, err := zreflect.NewVal(reflect.ValueOf(s))
+	if err != nil {
+		return err
+	}
+	if fn == nil {
 		return nil
 	}
-	typeOf := reflect.TypeOf(st)
-	if typeOf.Kind() != reflect.Ptr {
-		return errors.New("please use pointer")
-	}
-	if typeOf.Elem().Kind() != reflect.Struct {
-		return errors.New("must be struct")
-	}
-
-	// valueOf := reflect.ValueOf(st)
-	numMethod := typeOf.NumMethod()
-	if numMethod == 0 {
-		return errors.New("method cannot be obtained")
-	}
-	var err error
-	for i := 0; i < numMethod; i++ {
-		Try(func() {
-			err = fn(i, typeOf.Method(i)) // valueOf.Method(i)
-		}, func(e interface{}) {
-			var ok bool
-			err, ok = e.(error)
-			if !ok {
-				err = fmt.Errorf("%v", e)
-			}
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return typ.ForEachMethod(func(index int, method reflect.Method, value reflect.Value) error {
+		return fn(index, method)
+	})
 }
 
 // RunAllMethod run all methods of struct
@@ -298,8 +191,11 @@ func RunAssignMethod(st interface{}, filter func(methodName string) bool, args .
 		for _, v := range args {
 			values = append(values, reflect.ValueOf(v))
 		}
-		valueOf.Method(numMethod).Call(values)
-		return nil
+
+		return TryCatch(func() error {
+			valueOf.Method(numMethod).Call(values)
+			return nil
+		})
 	})
 
 	return

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/sohaha/zlsgo/zstring"
@@ -67,7 +69,7 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 
 func (e *Engine) StaticFS(relativePath string, fs http.FileSystem) {
 	var urlPattern string
-	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, fmt.Sprintf("%%s --> %%s ->> %s", fs), "Static", relativePath))
+	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", relativePath))
 	fileServer := http.StripPrefix(relativePath, http.FileServer(fs))
 	handler := func(c *Context) {
 		fileServer.ServeHTTP(c.Writer, c.Request)
@@ -95,14 +97,14 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 	handler := func(c *Context) {
 		c.File(filepath)
 	}
-	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s --> %s ->> "+filepath, "File", relativePath))
+	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s %-40s -> "+filepath, "FILE", relativePath))
 	e.GET(relativePath, handler)
 	e.HEAD(relativePath, handler)
 	log()
 }
 
-func (e *Engine) Any(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s --> %s", "Any", completionPath(path, e.router.prefix)))
+func (e *Engine) Any(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	log := temporarilyTurnOffTheLog(e, showRouteDebug(e.Log, "%s  %s", "Any", completionPath(path, e.router.prefix)))
 	e.GET(path, handle, moreHandler...)
 	e.POST(path, handle, moreHandler...)
 	e.PUT(path, handle, moreHandler...)
@@ -113,110 +115,111 @@ func (e *Engine) Any(path string, handle HandlerFunc, moreHandler ...HandlerFunc
 	e.CONNECT(path, handle, moreHandler...)
 	e.TRACE(path, handle, moreHandler...)
 	log()
+	return e
 }
 
-func (e *Engine) Customize(method, path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
+func (e *Engine) Customize(method, path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
 	method = strings.ToUpper(method)
-	e.Handle(method, path, handle, moreHandler...)
+	return e.Handle(method, path, handle, moreHandler...)
 }
 
-func (e *Engine) GET(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodGet, path, handle, moreHandler...)
+func (e *Engine) GET(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodGet, path, handle, moreHandler...)
 }
 
-func (e *Engine) POST(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodPost, path, handle, moreHandler...)
+func (e *Engine) POST(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodPost, path, handle, moreHandler...)
 }
 
-func (e *Engine) DELETE(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodDelete, path, handle, moreHandler...)
+func (e *Engine) DELETE(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodDelete, path, handle, moreHandler...)
 }
 
-func (e *Engine) PUT(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodPut, path, handle, moreHandler...)
+func (e *Engine) PUT(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodPut, path, handle, moreHandler...)
 }
 
-func (e *Engine) PATCH(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodPatch, path, handle, moreHandler...)
+func (e *Engine) PATCH(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodPatch, path, handle, moreHandler...)
 }
 
-func (e *Engine) HEAD(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodHead, path, handle, moreHandler...)
+func (e *Engine) HEAD(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodHead, path, handle, moreHandler...)
 }
 
-func (e *Engine) OPTIONS(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodOptions, path, handle, moreHandler...)
+func (e *Engine) OPTIONS(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodOptions, path, handle, moreHandler...)
 }
 
-func (e *Engine) CONNECT(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodConnect, path, handle, moreHandler...)
+func (e *Engine) CONNECT(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodConnect, path, handle, moreHandler...)
 }
 
-func (e *Engine) TRACE(path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
-	e.Handle(http.MethodTrace, path, handle, moreHandler...)
+func (e *Engine) TRACE(path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.Handle(http.MethodTrace, path, handle, moreHandler...)
 }
 
-func (e *Engine) GETAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) GETAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.GET(path, handle)
+	return e.GET(path, handle)
 }
 
-func (e *Engine) POSTAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) POSTAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.POST(path, handle)
+	return e.POST(path, handle)
 }
 
-func (e *Engine) DELETEAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) DELETEAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.DELETE(path, handle)
+	return e.DELETE(path, handle)
 }
 
-func (e *Engine) PUTAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) PUTAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.PUT(path, handle)
+	return e.PUT(path, handle)
 }
 
-func (e *Engine) PATCHAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) PATCHAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.PATCH(path, handle)
+	return e.PATCH(path, handle)
 }
 
-func (e *Engine) HEADAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) HEADAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.HEAD(path, handle)
+	return e.HEAD(path, handle)
 }
 
-func (e *Engine) OPTIONSAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) OPTIONSAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.OPTIONS(path, handle)
+	return e.OPTIONS(path, handle)
 }
 
-func (e *Engine) CONNECTAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) CONNECTAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.CONNECT(path, handle)
+	return e.CONNECT(path, handle)
 }
 
-func (e *Engine) TRACEAndName(path string, handle HandlerFunc, routeName string) {
+func (e *Engine) TRACEAndName(path string, handle HandlerFunc, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
-	e.TRACE(path, handle)
+	return e.TRACE(path, handle)
 }
 
 func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *Engine) {
+	if prefix == "" {
+		return e
+	}
 	rprefix := e.router.prefix
 	if rprefix != "" {
-		if strings.HasSuffix(rprefix, "/") && strings.HasPrefix(prefix, "/") {
-			prefix = strings.TrimPrefix(prefix, "/")
-		}
-		prefix = rprefix + prefix
+		prefix = completionPath(prefix, rprefix)
 	}
 	route := &router{
 		prefix:     prefix,
@@ -255,9 +258,11 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 		return "", ErrNotFoundRoute
 	}
 
-	var segments []string
-	res := strings.Split(route.path, "/")
-	for _, segment := range res {
+	ps := strings.Split(route.path, "/")
+	l := len(ps)
+	segments := make([]string, 0, l)
+	for i := 0; i < l; i++ {
+		segment := ps[i]
 		if segment != "" {
 			if string(segment[0]) == ":" {
 				key := params[segment[1:]]
@@ -293,7 +298,8 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 
 		continue
 	}
-	return "/" + strings.Join(segments, "/"), nil
+
+	return strings.Join(segments, "/"), nil
 }
 
 func (e *Engine) PreHandler(preHandler func(context *Context) (stop bool)) {
@@ -314,7 +320,11 @@ func (e *Engine) GetTrees() map[string]*Tree {
 }
 
 // Handle registers new request handler
-func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHandler ...HandlerFunc) {
+func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
+	return e.handle(method, path, runtime.FuncForPC(reflect.ValueOf(handle).Pointer()).Name(), handle, moreHandler...)
+}
+
+func (e *Engine) handle(method string, path string, handleName string, handle HandlerFunc, moreHandler ...HandlerFunc) *Engine {
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
@@ -324,23 +334,31 @@ func (e *Engine) Handle(method string, path string, handle HandlerFunc, moreHand
 		e.router.trees[method] = tree
 	}
 	path = completionPath(path, e.router.prefix)
-	if path[0] != uint8(47) {
-		path = "/" + path
-	}
-
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
-
-	if e.IsDebug() {
-		e.Log.Debug(showRouteDebug(e.Log, "%s --> %s", method, path))
+	nodes := tree.Find(path, false)
+	if len(nodes) > 0 {
+		node := nodes[0]
+		if node.path == path && node.handle != nil {
+			e.Log.Track("duplicate route definition: ["+method+"]"+path, 3, 1)
+			return e
+		}
 	}
+
 	middleware := e.router.middleware
 	if len(moreHandler) > 0 {
 		middleware = append(middleware, moreHandler...)
 	}
+
+	if e.IsDebug() {
+		ft := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, len(middleware)+1)
+		e.Log.Debug(showRouteDebug(e.Log, ft, method, path))
+	}
+
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
+	return e
 }
 
 func (e *Engine) GetPanicHandler() PanicFunc {
@@ -399,24 +417,16 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
-
-	nodes := e.router.trees[req.Method].Find(requestURL, false)
-	p := requestURL
-	if len(p) > 0 {
-		p = requestURL[1:]
+	t, ok := e.router.trees[req.Method]
+	if !ok {
+		return true
 	}
-	if len(nodes) > 0 {
-		node := nodes[0]
+	nodes := t.Find(requestURL, false)
+
+	for i := range nodes {
+		node := nodes[i]
 		if node.handle != nil {
 			if node.path == requestURL {
-				if applyMiddleware {
-					handle(rw, node.handle, node.middleware)
-				} else {
-					handle(rw, node.handle, []HandlerFunc{})
-				}
-				return
-			}
-			if node.path == p {
 				if applyMiddleware {
 					handle(rw, node.handle, node.middleware)
 				} else {
@@ -429,7 +439,7 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 
 	if len(nodes) == 0 {
 		res := strings.Split(requestURL, "/")
-		nodes := e.router.trees[req.Method].Find(res[1], true)
+		nodes := t.Find(res[1], true)
 		for _, node := range nodes {
 			if handler := node.handle; handler != nil && node.path != requestURL {
 				if matchParamsMap, ok := e.matchAndParse(requestURL, node.path); ok {

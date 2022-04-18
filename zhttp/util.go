@@ -63,6 +63,20 @@ func BodyXML(v interface{}) *bodyXml {
 func File(path string, field ...string) interface{} {
 	var matches []string
 	path = zfile.RealPath(path)
+	uploads := make([]FileUpload, 0)
+	fieldName := "media"
+	if len(field) > 0 {
+		fieldName = field[0]
+	}
+	s, err := os.Stat(path)
+	if err == nil && !s.IsDir() {
+		file, _ := os.Open(path)
+		return []FileUpload{{
+			File:      file,
+			FileName:  filepath.Base(path),
+			FieldName: fieldName,
+		}}
+	}
 	m, err := filepath.Glob(path)
 	if err != nil {
 		return err
@@ -71,11 +85,7 @@ func File(path string, field ...string) interface{} {
 	if len(matches) == 0 {
 		return ErrNoMatched
 	}
-	uploads := make([]FileUpload, 0)
-	fieldName := "media"
-	if len(field) > 0 {
-		fieldName = field[0]
-	}
+
 	for _, match := range matches {
 		if s, e := os.Stat(match); e != nil || s.IsDir() {
 			continue

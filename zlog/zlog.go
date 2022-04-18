@@ -3,8 +3,9 @@ package zlog
 
 import (
 	"fmt"
-	"github.com/sohaha/zlsgo/zutil"
 	"os"
+
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 var (
@@ -179,13 +180,13 @@ func Panic(v ...interface{}) {
 }
 
 // Track Track
-func Track(logTip string, v ...int) {
-	Log.Track(logTip, v...)
+func Track(v string, i ...int) {
+	Log.Track(v, i...)
 }
 
 // Stack Stack
-func Stack(v ...interface{}) {
-	Log.Stack(v...)
+func Stack(v interface{}) {
+	Log.Stack(v)
 }
 
 // Discard Discard

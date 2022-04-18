@@ -47,9 +47,15 @@ func NewTree() *Tree {
 func (t *Tree) Add(pattern string, handle HandlerFunc, middleware ...HandlerFunc) {
 	var currentNode = t.root
 	if pattern != currentNode.key {
-		pattern = strings.TrimPrefix(pattern, "/")
 		res := strings.Split(pattern, "/")
-		for _, key := range res {
+		end := len(res) - 1
+		for i, key := range res {
+			if key == "" {
+				if i != end {
+					continue
+				}
+				key = "/"
+			}
 			node, ok := currentNode.children[key]
 			if !ok {
 				node = NewNode(key, currentNode.depth+1)
@@ -79,18 +85,16 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 		node  = t.root
 		queue []*Node
 	)
-	l := len(pattern)
 	if pattern == node.path {
 		nodes = append(nodes, node)
 		return
 	}
-	if !isRegex && l >= 1 {
-		pattern = strings.TrimPrefix(pattern, "/")
-	}
-
 	res := strings.Split(pattern, "/")
 	for i := range res {
 		key := res[i]
+		if key == "" {
+			continue
+		}
 		child, ok := node.children[key]
 		if !ok && isRegex {
 			break

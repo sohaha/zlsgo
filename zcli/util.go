@@ -170,7 +170,7 @@ func IsDoubleClickStartUp() bool {
 }
 
 func isDetach(a string) bool {
-	for _, v := range []string{"D","detach"} {
+	for _, v := range []string{"D", "detach"} {
 		if strings.TrimLeft(a, "-") == v {
 			return true
 		}

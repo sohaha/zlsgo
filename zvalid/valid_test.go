@@ -28,7 +28,8 @@ func TestValidNew(tt *testing.T) {
 	tt.Log(str, err)
 
 	validObj.SetAlias("测试 1")
-	v := validObj.Verifi("test1", "测试1").valid()
+	verifi := validObj.Verifi("test1", "测试1")
+	v := verifi.valid()
 
 	t.Equal(nil, v.err)
 	tt.Log(v.value, v.err)
@@ -155,16 +156,8 @@ func TestPassword(t *testing.T) {
 func BenchmarkStr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		s := "test"
-		if strings.HasPrefix(s, "t") {
-			if strings.Contains(s, "e") {
-				if strings.Contains(s, "s") {
-					if strings.Contains(s, "t") {
-						b.Log(true)
-					}
-				}
-			}
-		} else {
-			b.Log(false)
+		if !strings.HasPrefix(s, "t") {
+			b.Fatal()
 		}
 	}
 }
@@ -172,10 +165,8 @@ func BenchmarkStr(b *testing.B) {
 func BenchmarkStr2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		s := "test"
-		if ok := Text(s).HasPrefix("t").Ok(); ok {
-			b.Log(true)
-		} else {
-			b.Log(false)
+		if ok := Text(s).HasPrefix("t").Ok(); !ok {
+			b.Fatal()
 		}
 	}
 }

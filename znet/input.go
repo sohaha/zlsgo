@@ -14,6 +14,13 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+func (c *Context) initQuery() {
+	if c.cacheQuery != nil {
+		return
+	}
+	c.cacheQuery = c.Request.URL.Query()
+}
+
 // GetParam Get the value of the param inside the route
 func (c *Context) GetParam(key string) string {
 	return c.GetAllParam()[key]
@@ -30,13 +37,15 @@ func (c *Context) GetAllParam() ParamsMapType {
 
 // GetAllQueryst Get All Queryst
 func (c *Context) GetAllQueryst() url.Values {
-	return c.Request.URL.Query()
+	c.initQuery()
+	return c.cacheQuery
 }
 
 // GetAllQuerystMaps Get All Queryst Maps
 func (c *Context) GetAllQuerystMaps() map[string]string {
+	c.initQuery()
 	arr := map[string]string{}
-	for key, v := range c.Request.URL.Query() {
+	for key, v := range c.cacheQuery {
 		arr[key] = v[0]
 	}
 	return arr
@@ -44,7 +53,8 @@ func (c *Context) GetAllQuerystMaps() map[string]string {
 
 // GetQueryArray Get Query Array
 func (c *Context) GetQueryArray(key string) ([]string, bool) {
-	if values, ok := c.Request.URL.Query()[key]; ok && len(values) > 0 {
+	c.initQuery()
+	if values, ok := c.cacheQuery[key]; ok && len(values) > 0 {
 		return values, true
 	}
 	return []string{}, false
@@ -64,6 +74,17 @@ func (c *Context) DefaultQuery(key string, def string) string {
 		return value
 	}
 	return def
+}
+
+// GetQueryMap Get Query Map
+func (c *Context) GetQueryMap(key string) (map[string]string, bool) {
+	return c.get(c.cacheQuery, key)
+}
+
+// QueryMap Get Query Map
+func (c *Context) QueryMap(key string) map[string]string {
+	v, _ := c.get(c.cacheQuery, key)
+	return v
 }
 
 // DefaultPostForm Get Form Or Default
@@ -109,8 +130,7 @@ func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 func (c *Context) GetPostFormAll() (value url.Values, err error) {
 	req := c.Request
 	if req.PostForm == nil {
-		if c.ContentType() == MIMEMultipartPOSTForm {
-			// if c.Request.Method == "DELETE" {}
+		if c.ContentType() == mimeMultipartPOSTForm {
 			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
 		} else {
 			err = req.ParseForm()
@@ -122,8 +142,8 @@ func (c *Context) GetPostFormAll() (value url.Values, err error) {
 
 // PostFormMap PostForm Map
 func (c *Context) PostFormMap(key string) map[string]string {
-	dicts, _ := c.GetPostFormMap(key)
-	return dicts
+	v, _ := c.GetPostFormMap(key)
+	return v
 }
 
 // GetPostFormMap Get PostForm Map
@@ -147,6 +167,9 @@ func (c *Context) GetJSON(key string) zjson.Res {
 
 // GetJSONs Get JSONs
 func (c *Context) GetJSONs() (json zjson.Res, err error) {
+	if c.cacheJSON != nil {
+		return *c.cacheJSON, nil
+	}
 	var body string
 	body, err = c.GetDataRaw()
 	if err != nil {
@@ -157,6 +180,7 @@ func (c *Context) GetJSONs() (json zjson.Res, err error) {
 		return
 	}
 	json = zjson.Parse(body)
+	c.cacheJSON = &json
 	return
 }
 
@@ -179,21 +203,22 @@ func (c *Context) GetDataRaw() (string, error) {
 }
 
 func (c *Context) get(m map[string][]string, key string) (map[string]string, bool) {
-	dicts := make(map[string]string)
-	exist := false
+	d := make(map[string]string)
+	e := false
 	for k, v := range m {
 		if i := strings.IndexByte(k, '['); i >= 1 && k[0:i] == key {
 			if j := strings.IndexByte(k[i+1:], ']'); j >= 1 {
-				exist = true
-				dicts[k[i+1:][:j]] = v[0]
+				e = true
+				d[k[i+1:][:j]] = v[0]
 			}
 		}
 	}
-	return dicts, exist
+	return d, e
 }
 
 // FormFile FormFile
 func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
+	_, _ = c.MultipartForm()
 	_, fh, err := c.Request.FormFile(name)
 	return fh, err
 }

@@ -3,6 +3,8 @@ package zutil
 import (
 	"os"
 	"runtime"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 func GetOs() string {
@@ -31,4 +33,8 @@ func Getenv(name string, def ...string) string {
 		val = def[0]
 	}
 	return val
+}
+
+func GOROOT() string {
+	return zfile.RealPath(runtime.GOROOT())
 }

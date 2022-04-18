@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+type Stack []uintptr
+
+const (
+	maxStackDepth = 1 << 5
+)
+
 // WithRunContext function execution time and memory
 func WithRunContext(handler func()) (time.Duration, uint64) {
 	start, mem := time.Now(), runtime.MemStats{}
@@ -41,7 +47,7 @@ func TryCatch(fn func() error) (err error) {
 	return
 }
 
-// Deprecated: please use TryCatch
+// Deprecated: please use zerror.TryCatch
 // Try exception capture
 func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	if len(finally) > 0 {
@@ -61,7 +67,8 @@ func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	fn()
 }
 
-// CheckErr CheckErr
+// Deprecated: please use zerror.Panic
+// CheckErr Check Err
 func CheckErr(err error, exit ...bool) {
 	if err != nil {
 		if len(exit) > 0 && exit[0] {
@@ -70,5 +77,30 @@ func CheckErr(err error, exit ...bool) {
 			return
 		}
 		panic(err)
+	}
+}
+
+func Callers(skip ...int) Stack {
+	var (
+		pcs [maxStackDepth]uintptr
+		n   = 0
+	)
+	if len(skip) > 0 {
+		n += skip[0]
+	}
+	return pcs[:runtime.Callers(n, pcs[:])]
+}
+
+func (s Stack) Format(f func(fn *runtime.Func, file string, line int) bool) {
+	if s == nil {
+		return
+	}
+	for _, p := range s {
+		if fn := runtime.FuncForPC(p - 1); fn != nil {
+			file, line := fn.FileLine(p - 1)
+			if !f(fn, file, line) {
+				break
+			}
+		}
 	}
 }

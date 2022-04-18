@@ -182,13 +182,14 @@ func (r *Res) ToFile(name string) error {
 }
 
 func (r *Res) download(file *os.File) error {
-	p := make([]byte, 1024)
-	b := r.resp.Body
+	var (
+		current  int64
+		lastTime time.Time
+	)
+	p, b := make([]byte, 1024), r.resp.Body
+	duration, total := 200*time.Millisecond, r.resp.ContentLength
 	//noinspection GoUnhandledErrorResult
 	defer b.Close()
-	total := r.resp.ContentLength
-	var current int64
-	var lastTime time.Time
 	for {
 		l, err := b.Read(p)
 		if l > 0 {
@@ -197,13 +198,14 @@ func (r *Res) download(file *os.File) error {
 				return _err
 			}
 			current += int64(l)
-			if now := time.Now(); now.Sub(lastTime) > 200*time.Millisecond {
+			if now := time.Now(); now.Sub(lastTime) > duration {
 				lastTime = now
 				r.downloadProgress(current, total)
 			}
 		}
 		if err != nil {
 			if err == io.EOF {
+				r.downloadProgress(total, total)
 				return nil
 			}
 			return err

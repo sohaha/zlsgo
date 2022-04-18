@@ -14,14 +14,38 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
-	"github.com/sohaha/zlsgo/zvalid"
-
-	"github.com/sohaha/zlsgo"
 )
+
+type GG struct {
+	Info string
+	P    []AA `json:"p"`
+}
+
+type AA struct {
+	ID   int `json:"id"`
+	Name string
+	Gg   GG `json:"g"`
+}
+
+type SS struct {
+	Name     string `json:"name"`
+	Abc      int
+	Gg       GG  `json:"g"`
+	ID       int `json:"id"`
+	Pid      uint
+	To       []string `json:"t"`
+	To2      int      `json:"t2"`
+	IDs      []AA     `json:"ids"`
+	Property struct {
+		Name string `json:"n"`
+		Key  float64
+	} `json:"p"`
+}
 
 var (
 	expected = "hi"
@@ -165,8 +189,8 @@ func TestGroup(t *testing.T) {
 	tt.Equal("isGroup2", w.Body.String())
 
 	r = newServer()
-	g = r.Group("y")
-	g.GET("isGroup3", func(c *Context) {
+	g = r.Group("/y/")
+	g.GET("//isGroup3", func(c *Context) {
 		c.String(200, "isGroup3")
 	})
 	w = httptest.NewRecorder()
@@ -197,7 +221,7 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, ok)
 	g := r.Group("/testGet")
 	g.GET("", func(c *Context) {
-		c.String(200, "")
+		c.String(200, "empty")
 	})
 	g.GET("/", func(c *Context) {
 		c.String(200, "/")
@@ -211,6 +235,20 @@ func TestGet(t *testing.T) {
 	g.GET("/ii", func(c *Context) {
 		c.String(200, "/ii")
 	})
+	g.GET("/xxx/xxx/", func(c *Context) {
+		c.String(200, "xxx/xxx/")
+	})
+
+	g.GET("/xxx/xxx", func(c *Context) {
+		c.String(200, "xxx/xxx")
+	})
+
+	g.GET("/xxx/xxx/2", func(c *Context) {
+		c.String(200, "/ii")
+	})
+	g.GET("/xxx/xxx/a3", func(c *Context) {
+		c.String(200, "/ii")
+	})
 
 	var w *httptest.ResponseRecorder
 	var req *http.Request
@@ -220,21 +258,20 @@ func TestGet(t *testing.T) {
 	req.Host = host
 	r.ServeHTTP(w, req)
 	tt.Equal(200, w.Code)
-	tt.Equal("/ii", w.Body.String())
+	tt.Equal("//ii", w.Body.String())
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/testGet//ii", nil)
 	req.Host = host
 	r.ServeHTTP(w, req)
-	tt.Equal(200, w.Code)
-	tt.Equal("//ii", w.Body.String())
+	tt.Equal(404, w.Code)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/testGet", nil)
 	req.Host = host
 	r.ServeHTTP(w, req)
 	tt.Equal(200, w.Code)
-	tt.Equal("", w.Body.String())
+	tt.Equal("empty", w.Body.String())
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/testGet/", nil)
@@ -242,6 +279,20 @@ func TestGet(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal(200, w.Code)
 	tt.Equal("/", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet/xxx/xxx", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("xxx/xxx", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/testGet/xxx/xxx/", nil)
+	req.Host = host
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	tt.Equal("xxx/xxx/", w.Body.String())
 }
 
 func TestFile(tt *testing.T) {
@@ -263,7 +314,8 @@ func TestFile(tt *testing.T) {
 		c.File(path)
 	}, func(c *Context) {
 		c.Next()
-		tt.Log("PrevContent", c.PrevContent())
+		content := c.PrevContent()
+		tt.Log("PrevContent len", len(content.Content))
 	})
 	T.EqualExit(200, w.Code)
 	tt.Log(len(w.Body.String()))
@@ -394,11 +446,11 @@ func TestMore(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
 	r.SetMode(DebugMode)
-	ShutdownDone = func() {
+	SetShutdown(func() {
 
-	}
+	})
 	CloseHotRestart = true
-	w := newRequest(r, "delete", []string{"/", `{"Na":"is json","Name2":"222","U":{"Name3":"333"}}`, ContentTypeJSON}, "/", func(c *Context) {
+	w := newRequest(r, "delete", []string{"/", `{"Na":"is json","Name2":"222","U":{"name3":"333"},"N2":{"Name2":2002,"U.Name3":"333","S":[14.1,20]}}`, ContentTypeJSON}, "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
 		c.GetAllQuerystMaps()
@@ -407,9 +459,10 @@ func TestMore(tt *testing.T) {
 		type U2 struct {
 			N2    int `json:"U.Name3"`
 			Name2 int
+			S     []float64
 		}
 		type U3 struct {
-			Name3 string `json:"U.Name3"`
+			Name3 string `json:"name3"`
 		}
 		var u struct {
 			Name string `json:"Na"`
@@ -421,7 +474,7 @@ func TestMore(tt *testing.T) {
 		c.Log.Dump(u)
 		t.Equal("333", u.U.Name3)
 		t.Equal(333, u.N2)
-		t.Equal(222, u.Name2)
+		t.Equal(2002, u.Name2)
 	})
 	t.Equal(200, w.Code)
 	t.Equal(expected, w.Body.String())
@@ -477,7 +530,7 @@ func TestTemplateLoad(t *testing.T) {
 
 	r.LoadHTMLGlob("tmpTemplate/*")
 
-	w := newRequest(r, "GET", "/Template-define", "/Template-define",
+	w := newRequest(r, "GET", "/Template-define-1", "/Template-define-1",
 		func(c *Context) {
 			c.Template(200, "user/index.html", Data{"title": "ZlsGo"})
 		})
@@ -487,7 +540,7 @@ func TestTemplateLoad(t *testing.T) {
 	temple, _ := template.New("tmpTemplate/tpl-html.html").Parse(`{{.title}}`)
 	r.SetHTMLTemplate(temple)
 
-	w = newRequest(r, "GET", "/Template-define", "/Template-define",
+	w = newRequest(r, "GET", "/Template-define-2", "/Template-define-2",
 		func(c *Context) {
 			c.Template(200, "tmpTemplate/tpl-html.html", Data{"title": "ZlsGo"})
 		})
@@ -527,23 +580,8 @@ func TestBind(t *testing.T) {
 func TestShouldBindStruct(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
-	type GG struct {
-		Info string
-	}
-	type AA struct {
-		ID   int `json:"id"`
-		Name string
-		Gg   GG `json:"g"`
-	}
-	type SS struct {
-		Name string `json:"name"`
-		Abc  int
-		Gg   GG  `json:"g"`
-		ID   int `json:"id"`
-		Pid  uint
-		IDs  []AA `json:"ids"`
-	}
-	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct1", `{"id":666,"Pid":100,"name":"名字","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情"}}]}`, MIMEJSON}, "/TestShouldBindStruct1", func(c *Context) {
+
+	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct1", `{"id":666,"Pid":100,"name":"名字","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情"}}]}`, mimeJSON}, "/TestShouldBindStruct1", func(c *Context) {
 		var ss SS
 		err := c.Bind(&ss)
 		tt.Log(err, ss)
@@ -554,106 +592,13 @@ func TestShouldBindStruct(tt *testing.T) {
 		t.EqualExit("详情", ss.IDs[0].Gg.Info)
 	})
 
-	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct2", `id=666&&g[Info]=基础`, MIMEPOSTForm}, "/TestShouldBindStruct2", func(c *Context) {
+	_ = newRequest(r, "POST", []string{"/TestShouldBindStruct2", `id=666&&g[Info]=基础`, mimePOSTForm}, "/TestShouldBindStruct2", func(c *Context) {
 		var ss SS
 		err := c.Bind(&ss)
 		tt.Log(err, ss)
 		t.EqualExit(666, ss.ID)
 		t.EqualExit("基础", ss.Gg.Info)
 	})
-}
-
-func TestShouldBind(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	r := newServer()
-	w := newRequest(r, "POST", []string{"/?id=666666666&c=999",
-		"d[C][Cc]=88&d.z=566&arr=1&arr=2&d[a]=1&d[A]=1a&a=123a&b=abc&name=seekwe&s=true&Abc=123&d[b]=9", MIMEPOSTForm}, "/", func(c *Context) {
-		ct := c.ContentType()
-		t.Equal(MIMEPOSTForm, ct)
-		_ = c.DefaultFormOrQuery("ok", "yes")
-		all, err := c.GetPostFormAll()
-		T.Log(all, err)
-		r, e := c.GetDataRaw()
-		T.Log(r, e)
-		r, _ = c.GetPostForm("b")
-		d, _ := c.GetPostFormMap("d")
-		T.Log(d)
-		arr2, _ := c.GetPostFormArray("arr")
-		T.Log("arr2", arr2)
-		t.EqualExit("abc", r)
-		r, _ = c.GetQuery("c")
-		t.EqualExit("999", r)
-		ss := struct {
-			Abc int
-			d1  int
-			Arr struct {
-				A string `json:"a"`
-				B string `json:"b"`
-				C int    `json:"C"`
-				Z string `json:"A"`
-			} `json:"d"`
-			Arr2   []string `json:"arr"`
-			Status bool     `json:"s"`
-			Name   string   `json:"name"`
-		}{
-			d1:   99,
-			Name: "是我",
-		}
-		err = c.Bind(&ss)
-		T.Log(fmt.Sprintf("%v", ss), err)
-		t.EqualExit(123, ss.Abc)
-		t.EqualExit(88, ss.Arr.C)
-		t.EqualExit("1a", ss.Arr.A)
-		t.EqualExit([]string{"1", "2"}, ss.Arr2)
-		t.EqualExit(true, ss.Status)
-		T.Log(ss.Arr)
-
-		var bind struct {
-			Name string `json:"name"`
-			Abc  int
-			ID   uint   `json:"id"`
-			A    string `json:"a"`
-		}
-
-		rule := c.ValidRule().Required()
-		err = c.BindValid(&bind, map[string]zvalid.Engine{
-			"name": rule.SetAlias("name"),
-			"Abc":  rule.SetAlias("Abc").IsNumber(),
-		})
-		T.Log(bind, bind.Name, err)
-		t.EqualNil(err)
-		t.Equal(bind.Name, "seekwe")
-
-		var bind2 struct {
-			Name string
-			Abc  int
-			A    string
-		}
-
-		err = c.BindValid(&bind2, map[string]zvalid.Engine{
-			"name": rule.SetAlias("用户名"),
-			"Abc":  rule.IsNumber(),
-		})
-		T.Log(bind2, err)
-		t.Equal(bind2.Name, "")
-
-		var bind3 struct {
-			Name string
-			Abc  int
-			A    string
-		}
-
-		c.Engine.BindTag = ""
-		err = c.BindValid(&bind3, map[string]zvalid.Engine{
-			"name": rule,
-			"Abc":  rule.SetAlias("Abc").IsNumber(),
-		})
-		T.Log(bind3, err)
-		t.Equal(bind3.Name, "seekwe")
-		c.String(210, expected)
-	})
-	t.EqualExit(210, w.Code)
-	t.EqualExit(expected, w.Body.String())
 }
 
 func TestSetMode(T *testing.T) {
@@ -687,18 +632,18 @@ func TestMoreMatchingRouter(t *testing.T) {
 
 func TestWebRouter(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	mux := newServer()
+	r := newServer()
 
-	testRouterNotFound(mux, t)
-	testRouterCustomNotFound(mux, t)
-	testRouterCustomPanicHandler(mux, t)
-	testRouterGET(mux, t)
+	testRouterNotFound(r, t)
+	testRouterCustomNotFound(r, t)
+	testRouterCustomPanicHandler(r, t)
+	testRouterGET(r, t)
 }
 
 func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
 	randString := zstring.Rand(5)
 
-	w := newRequest(r, "GET", "/?id="+randString, "/", func(c *Context) {
+	w := newRequest(r, "GET", "/RouterGET?id="+randString, "/RouterGET", func(c *Context) {
 		id := c.DefaultQuery("id", "not")
 		host := c.Host()
 		u := c.Host(true)
@@ -712,7 +657,7 @@ func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
 
 func testRouterNotFound(r *Engine, t *zlsgo.TestUtil) {
 	expectedText := "404 page not found"
-	w := newRequest(r, "GET", "/404", "")
+	w := newRequest(r, "GET", "/RouterNotFound", "")
 	t.Equal(404, w.Code)
 	t.Equal(expectedText, w.Body.String())
 }

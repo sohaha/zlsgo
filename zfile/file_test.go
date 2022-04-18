@@ -10,64 +10,76 @@ import (
 	. "github.com/sohaha/zlsgo"
 )
 
-func TestFile(tt *testing.T) {
-	t := NewTest(tt)
+func TestFile(t *testing.T) {
+	tt := NewTest(t)
 
-	tt.Log("c:" + RealPath("/"+"d"))
+	t.Log("c:" + RealPath("/"+"d"))
 
 	baseDir := "c:\\test"
 	fileName := "isPic"
-	tt.Log(filepath.Join(baseDir, fileName))
-	tt.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
-	tt.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
+	t.Log(filepath.Join(baseDir, fileName))
+	t.Log(RealPath(baseDir + "/" + "d" + "/" + "fileName" + ".jpg"))
+	t.Log(RealPath(strings.Join([]string{"a", "b", "c", "dd\\ddd", ".jpg"}, "/")))
 
-	_ = WriteFile("./tmp.tmp", []byte(""))
-	defer os.RemoveAll("./tmp.tmp")
+	tmpFile := RealPath("./tmp.tmp")
+	_ = WriteFile(tmpFile, []byte(""))
+	defer Remove(tmpFile)
 
 	filePath := "./tmp.tmp"
 	tIsFile := FileExist(filePath)
-	t.Equal(true, tIsFile)
+	tt.Equal(true, tIsFile)
+
+	err := MoveFile(filePath, filePath+".new")
+	tt.EqualNil(err)
+	tt.EqualTrue(!FileExist(filePath))
+	tt.EqualTrue(FileExist(filePath + ".new"))
+	_ = WriteFile("./tmp.tmp", []byte(""))
+	err = MoveFile(filePath, filePath+".new", true)
+	tt.EqualNil(err)
+	err = MoveFile(filePath+".new", filePath+".new", true)
+	tt.EqualNil(err)
+	_ = MoveFile(filePath+".new", filePath)
 
 	notPath := "zlsgo.php"
 	status, _ := PathExist(notPath)
-	t.Equal(0, status)
+	tt.Equal(0, status)
 
 	size := FileSize(filePath)
-	tt.Log(size)
-	t.Equal("0 B" == size, true)
+	t.Log(size)
+	tt.Equal("0 B" == size, true)
 
 	RealPath("")
 
-	tt.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
+	t.Log(filepath.Glob(RealPath("/Users/seekwe/Code/Go/zlsgo\\*\\file.go")))
 
 	dirPath := RealPathMkdir("../zfile", true)
-	tt.Log(dirPath)
+	t.Log(dirPath)
 	tIsDir := DirExist(dirPath)
-	t.Equal(true, tIsDir)
+	tt.Equal(true, tIsDir)
 
 	dirPath = SafePath(dirPath, RealPath(".."))
-	tt.Log(dirPath, SafePath(dirPath))
-	t.Equal("zfile/", dirPath)
+	t.Log(dirPath, SafePath(dirPath))
+	tt.Equal("zfile", dirPath)
 
 	tmpPath := TmpPath("")
-	t.EqualTrue(tmpPath != "")
-	tt.Log(tmpPath, TmpPath("666"))
+	tt.EqualTrue(tmpPath != "")
+	t.Log(tmpPath, TmpPath("666"))
 
 	path := RealPathMkdir("../tmp")
 	path2 := RealPathMkdir(path + "/ooo")
-	tt.Log(path, path2)
-	t.Equal(true, Rmdir(path, true))
-	t.Equal(true, Rmdir(path))
+	t.Log(path, path2)
+	tt.Equal(true, Rmdir(path, true))
+	tt.Equal(true, Rmdir(path))
 	ePath := ProgramPath(true)
 	ProjectPath = ePath
 	path = RealPathMkdir("../ppppp")
 	testPath := ePath + "../ppppp"
-	tt.Log(path, testPath)
-	t.EqualTrue(DirExist(path))
-	t.EqualTrue(DirExist(testPath))
+	t.Log(path, testPath)
+	tt.EqualTrue(DirExist(path))
+	tt.EqualTrue(DirExist(testPath))
 	ok := Rmdir(testPath)
 	Rmdir(path)
-	tt.Log(path, testPath, ok)
+	t.Log(path, testPath, ok)
 }
 
 func TestPut(t *testing.T) {

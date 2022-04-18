@@ -63,6 +63,13 @@ func TestFormatTlp(tt *testing.T) {
 	t.Equal("06-01-02 00:00:00", FormatTlp("y-m-d \\0\\0:\\0\\0:\\0\\0"))
 }
 
+func TestUnix(t *testing.T) {
+	t.Log(Unix(1648879934))
+
+	ti := New(2)
+	t.Log(ti.Unix(1648879934))
+}
+
 func TestParse(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	date, err := Parse("2020-02-04 09:38:19")

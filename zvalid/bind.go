@@ -22,7 +22,7 @@ func (v Engine) Silent() Engine {
 
 // Default if a filtering error occurs, the default value is assigned to the variable
 func (v Engine) Default(value interface{}) Engine {
-	return pushQueue(v, func(v Engine) Engine {
+	return pushQueue(&v, func(v *Engine) *Engine {
 		v.defaultValue = value
 		return v
 	}, true)
@@ -40,7 +40,11 @@ func (v Engine) Separator(sep string) Engine {
 // Batch assign multiple filtered results to the specified object
 func Batch(elements ...*ValidEle) error {
 	for k := range elements {
-		err := Var(elements[k].target, elements[k].source)
+		e := elements[k]
+		if e == nil {
+			return nil
+		}
+		err := Var(e.target, e.source)
 		if err != nil {
 			return err
 		}
@@ -58,7 +62,7 @@ func BatchVar(target interface{}, source Engine) *ValidEle {
 
 // Var assign the filtered result to the specified variable
 func Var(target interface{}, source Engine, name ...string) error {
-	source = source.valid()
+	source = *source.valid()
 	if len(name) > 0 {
 		source.name = name[0]
 	}
@@ -68,32 +72,43 @@ func Var(target interface{}, source Engine, name ...string) error {
 		}
 		return source.err
 	}
-	targetValueOf := reflect.ValueOf(target)
-	if targetValueOf.Kind() != reflect.Ptr {
-		if source.silent {
-			return nil
+	var (
+		val reflect.Value
+		k   reflect.Kind
+	)
+	val, ok := target.(reflect.Value)
+	if !ok {
+		val = reflect.ValueOf(target)
+		if val.Kind() != reflect.Ptr {
+			if source.silent {
+				return nil
+			}
+			return fmt.Errorf("parameter must pass in a pointer type: %s", source.name)
 		}
-		return fmt.Errorf("parameter must pass in a pointer type: %s", source.name)
-	}
-	if !targetValueOf.Elem().CanSet() {
-		if source.silent {
-			return nil
+		if !val.Elem().CanSet() {
+			if source.silent {
+				return nil
+			}
+			return fmt.Errorf("target value of the variable cannot be changed: %s", source.name)
 		}
-		return fmt.Errorf("target value of the variable cannot be changed: %s", source.name)
+		val = val.Elem()
+		k = val.Type().Kind()
+	} else {
+		k = val.Type().Kind()
 	}
-	targetTypeOf := targetValueOf.Elem().Type().Kind()
 
 	if source.err == nil && source.value != "" {
-		source.err = setRawValue(targetTypeOf, targetValueOf, source.value, source.sep)
+		source.err = setRawValue(k, val, source.value, source.sep)
 	}
+
 	if source.err != nil && source.defaultValue != nil {
-		if err := setDefaultValue(targetTypeOf, targetValueOf, source.defaultValue); err != nil {
+		if err := setDefaultValue(k, val, source.defaultValue); err != nil {
 			if source.silent {
 				return nil
 			}
 			return err
 		}
-		return source.err
+		return nil
 	} else if source.err != nil {
 		if source.silent {
 			return nil
@@ -104,51 +119,51 @@ func Var(target interface{}, source Engine, name ...string) error {
 	return nil
 }
 
-func setRawValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value string, sep string) error {
-	typeErr := errors.New("不能用" + targetTypeOf.String() + "类型赋值")
-	switch targetTypeOf {
+func setRawValue(k reflect.Kind, val reflect.Value, value string, sep string) error {
+	typeErr := errors.New("不能用" + k.String() + "类型赋值")
+	switch k {
 	case reflect.String:
-		targetValueOf.Elem().SetString(value)
+		val.SetString(value)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		v, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return errors.New("必须是整数")
 		}
-		if targetValueOf.Elem().OverflowInt(v) {
+		if val.OverflowInt(v) {
 			return typeErr
 		}
-		targetValueOf.Elem().SetInt(v)
+		val.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		v, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return errors.New("必须是无符号整数")
 		}
-		if targetValueOf.Elem().OverflowUint(v) {
+		if val.OverflowUint(v) {
 			return typeErr
 		}
-		targetValueOf.Elem().SetUint(v)
+		val.SetUint(v)
 	case reflect.Float32, reflect.Float64:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return errors.New("必须是小数")
 		}
-		if targetValueOf.Elem().OverflowFloat(v) {
+		if val.OverflowFloat(v) {
 			return typeErr
 		}
-		targetValueOf.Elem().SetFloat(v)
+		val.SetFloat(v)
 	case reflect.Bool:
 		v, err := strconv.ParseBool(value)
 		if err != nil {
 			return errors.New("必须是布尔值")
 		}
-		targetValueOf.Elem().SetBool(v)
+		val.SetBool(v)
 	case reflect.Slice:
-		sliceType := targetValueOf.Elem().Type().String()
+		sliceType := val.Type().String()
 		if sliceType == "[]string" {
 			if sep == "" {
 				return errors.New("过滤规则的分隔符参数(sep)未定义")
 			}
-			targetValueOf.Elem().Set(reflect.ValueOf(strings.Split(value, sep)))
+			val.Set(reflect.ValueOf(strings.Split(value, sep)))
 		}
 	default:
 		return typeErr
@@ -158,10 +173,10 @@ func setRawValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value s
 }
 
 func setDefaultValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value interface{}) error {
-	valueTypeOf := reflect.TypeOf(value)
+	valueTypeOf := reflect.ValueOf(value)
 	if valueTypeOf.Kind() != targetTypeOf {
-		return errors.New("值类型默认值类型不相同")
+		return errors.New("值类型默认值类型不相同" + valueTypeOf.String() + "/" + targetTypeOf.String())
 	}
-	targetValueOf.Elem().Set(reflect.ValueOf(value))
+	targetValueOf.Set(valueTypeOf)
 	return nil
 }

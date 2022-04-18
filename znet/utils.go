@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 func getAddr(addr string) string {
@@ -35,29 +36,34 @@ func getHostname(addr string, isTls bool) string {
 }
 
 func completionPath(path, prefix string) string {
-	if path != "" {
-		var tmp string
-		// prefixHasSuffix := strings.HasSuffix(prefix, "/")
-		pathHasPrefix := strings.HasPrefix(path, "/")
-		if prefix == "" && !pathHasPrefix {
-			prefix = "/"
-		} else if pathHasPrefix && strings.HasSuffix(prefix, "/") {
-			prefix = strings.TrimSuffix(prefix, "/")
+	if path == "/" {
+		if prefix == "/" {
+			return prefix
 		}
-		if prefix != "" && !strings.HasPrefix(prefix, "/") {
-			tmp = "/"
-		}
-		tmp = tmp + prefix
-		if !strings.HasSuffix(prefix, "/") {
-			tmp = tmp + "/"
-		}
-		tmp = tmp + strings.TrimPrefix(path, "/")
-		path = tmp
-	} else {
-		path = prefix
+		return prefix + path
+	} else if path == "" {
+		return prefix
 	}
-
-	return path
+	n := zstring.TrimSpace(strings.Join([]string{prefix, path}, "/"))
+	l := len(n)
+	b := zstring.Buffer(l)
+	b.WriteByte('/')
+	for i := 1; i < l; i++ {
+		if n[i] == '/' {
+			if i == 0 || i == l-1 {
+				continue
+			}
+			if n[i-1] == '/' {
+				continue
+			}
+		}
+		b.WriteByte(n[i])
+	}
+	n = b.String()
+	if strings.HasSuffix(path, "/") {
+		n = n + "/"
+	}
+	return n
 }
 
 func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {
@@ -219,6 +225,8 @@ func (e *Engine) releaseContext(c *Context) {
 	c.customizeData = map[string]interface{}{}
 	c.header = map[string][]string{}
 	c.render = nil
+	c.cacheJSON = nil
+	c.cacheQuery = nil
 	c.rawData = c.rawData[0:0]
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain

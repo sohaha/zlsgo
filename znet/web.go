@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zcli"
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zjson"
 
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
@@ -25,6 +27,7 @@ type (
 	Context struct {
 		stopHandle    bool
 		rawData       string
+		cacheJSON     *zjson.Res
 		startTime     time.Time
 		middleware    []HandlerFunc
 		customizeData map[string]interface{}
@@ -37,6 +40,7 @@ type (
 		Log           *zlog.Logger
 		Cache         *zcache.Table
 		l             sync.RWMutex
+		cacheQuery    url.Values
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
@@ -154,7 +158,8 @@ func New(serverName ...string) *Engine {
 	log.SetLogLevel(zlog.LogInfo)
 
 	route := &router{
-		trees: make(map[string]*Tree),
+		prefix: "/",
+		trees:  make(map[string]*Tree),
 	}
 	r := &Engine{
 		Log:                 log,
@@ -193,6 +198,11 @@ func Server(serverName ...string) (engine *Engine, ok bool) {
 		engine = New(name)
 	}
 	return
+}
+
+// SetShutdown Set Shutdown Func
+func SetShutdown(done func()) {
+	ShutdownDone = done
 }
 
 // SetAddr SetAddr

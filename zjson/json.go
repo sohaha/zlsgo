@@ -24,44 +24,6 @@ type stringHeader struct {
 	len  int
 }
 
-type sliceHeader struct {
-	data unsafe.Pointer
-	len  int
-	cap  int
-}
-
-func getBytes(json []byte, path string) Res {
-	var result Res
-	if json != nil {
-		result = Get(*(*string)(unsafe.Pointer(&json)), path)
-		raw := *(*stringHeader)(unsafe.Pointer(&result.Raw))
-		str := *(*stringHeader)(unsafe.Pointer(&result.Str))
-		rawh := sliceHeader{data: raw.data, len: raw.len, cap: raw.len}
-		strh := sliceHeader{data: str.data, len: str.len, cap: raw.len}
-		if strh.data == nil {
-			if rawh.data == nil {
-				result.Raw = ""
-			} else {
-				result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-			}
-			result.Str = ""
-		} else if rawh.data == nil {
-			result.Raw = ""
-			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
-		} else if uintptr(strh.data) >= uintptr(rawh.data) &&
-			uintptr(strh.data)+uintptr(strh.len) <=
-				uintptr(rawh.data)+uintptr(rawh.len) {
-			start := uintptr(strh.data) - uintptr(rawh.data)
-			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-			result.Str = result.Raw[start : start+uintptr(strh.len)]
-		} else {
-			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
-		}
-	}
-	return result
-}
-
 func fillIndex(json string, c *parseContext) {
 	if len(c.value.Raw) > 0 && !c.calcd {
 		jhdr := *(*stringHeader)(unsafe.Pointer(&json))

@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"strconv"
 	"strings"
+
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 // Ok not err
@@ -26,13 +28,13 @@ func (v Engine) Value() (value string) {
 
 // String to string
 func (v Engine) String() (string, error) {
-	v = v.valid()
+	v.valid()
 	return v.value, v.err
 }
 
 // Bool to bool
 func (v Engine) Bool() (bool, error) {
-	v = v.valid()
+	v.valid()
 	if ignore(&v) {
 		return false, v.err
 	}
@@ -45,7 +47,7 @@ func (v Engine) Bool() (bool, error) {
 
 // Int convert to int
 func (v Engine) Int() (int, error) {
-	v = v.valid()
+	v.valid()
 	if ignore(&v) {
 		return 0, v.err
 	}
@@ -62,7 +64,7 @@ func (v Engine) Int() (int, error) {
 
 // Float64 convert to float64
 func (v Engine) Float64() (float64, error) {
-	v = v.valid()
+	v.valid()
 	if ignore(&v) {
 		return 0, v.err
 	}
@@ -79,7 +81,7 @@ func (v Engine) Float64() (float64, error) {
 
 // Split converted to [] string
 func (v Engine) Split(sep string) ([]string, error) {
-	v = v.valid()
+	v.valid()
 	if ignore(&v) {
 		return []string{}, v.err
 	}
@@ -91,7 +93,7 @@ func (v Engine) Split(sep string) ([]string, error) {
 }
 
 // Valid get the final value, or an notEmpty string if an error occurs
-func (v Engine) valid() Engine {
+func (v *Engine) valid() *Engine {
 	if v.result {
 		return v
 	}
@@ -132,4 +134,19 @@ func (v Engine) Verifi(value string, name ...string) Engine {
 		v.name = name[0]
 	}
 	return v
+}
+
+// VerifiAny validate specified data
+func (v Engine) VerifiAny(value interface{}, name ...string) Engine {
+	var s string
+	switch value.(type) {
+	case string:
+		s = value.(string)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+		s = ztype.ToString(value)
+	default:
+		s = ""
+		v.err = setError(&v, "unsupported type")
+	}
+	return v.Verifi(s, name...)
 }

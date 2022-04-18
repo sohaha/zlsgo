@@ -16,7 +16,7 @@ func getBigJSON() string {
 	return s
 }
 
-func BenchmarkUnmarshal(b *testing.B) {
+func BenchmarkUnmarshal1(b *testing.B) {
 	var demoData Demo
 	demoByte := zstring.String2Bytes(demo)
 	b.ResetTimer()
@@ -31,52 +31,5 @@ func BenchmarkGolangUnmarshal(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = json.Unmarshal(demoByte, &demoData)
-	}
-}
-
-func BenchmarkMarshal(b *testing.B) {
-	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = Marshal(demoData)
-	}
-}
-
-func BenchmarkSetMarshal(b *testing.B) {
-	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = SetBytesOptions([]byte("{}"), "", demoData, &Options{
-			Optimistic: true,
-		})
-	}
-}
-
-func BenchmarkSet2Marshal(b *testing.B) {
-	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = Set("{}", "", demoData)
-	}
-}
-
-func BenchmarkGolangMarshal(b *testing.B) {
-	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = json.Marshal(demoData)
-	}
-}
-
-func BenchmarkStringify(b *testing.B) {
-	var demoData Demo
-	_ = Unmarshal(zstring.String2Bytes(demo), &demoData)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		Stringify(demoData)
 	}
 }

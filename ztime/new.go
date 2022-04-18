@@ -63,7 +63,7 @@ func Zone(zone ...int) *time.Location {
 	return time.Local
 }
 
-// FormatTlp FormatTlp
+// FormatTlp format template
 func FormatTlp(format string) string {
 	runes := []rune(format)
 	buffer := bytes.NewBuffer(nil)
@@ -136,6 +136,11 @@ func (e *TimeEngine) FormatTime(t time.Time, format ...string) string {
 // FormatTimestamp convert UNIX time to time string
 func (e *TimeEngine) FormatTimestamp(timestamp int64, format ...string) string {
 	return e.FormatTime(time.Unix(timestamp, 0), format...)
+}
+
+// Unix int to time
+func (e *TimeEngine) Unix(tt int64) time.Time {
+	return e.in(time.Unix(tt, 0))
 }
 
 // Parse Parse
