@@ -4,13 +4,13 @@ go test -race ./zpool -v
 package zpool_test
 
 import (
-	"errors"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zerror"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zpool"
 	"github.com/sohaha/zlsgo/zutil"
@@ -140,7 +140,7 @@ func TestPoolCap(t *testing.T) {
 func TestPoolPanicFunc(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	p := zpool.New(1)
-	defErr := errors.New("test panic")
+	defErr := zerror.New(0, "test panic")
 	var g sync.WaitGroup
 	p.PanicFunc(func(err error) {
 		g.Done()
@@ -151,7 +151,7 @@ func TestPoolPanicFunc(t *testing.T) {
 
 	g.Add(1)
 	_ = p.Do(func() {
-		zutil.CheckErr(defErr)
+		zerror.Panic(defErr)
 		i++
 	})
 	g.Wait()
@@ -160,7 +160,7 @@ func TestPoolPanicFunc(t *testing.T) {
 	g.Add(1)
 	_ = p.Do(func() {
 		i++
-		zutil.CheckErr(defErr)
+		zerror.Panic(defErr)
 		i++
 	})
 	g.Wait()
@@ -185,7 +185,7 @@ func TestPoolPanicFunc(t *testing.T) {
 	g.Add(1)
 	_ = p.Do(func() {
 		i++
-		zutil.CheckErr(defErr)
+		zerror.Panic(defErr)
 		i++
 	})
 	g.Wait()

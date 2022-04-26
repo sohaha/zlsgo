@@ -33,14 +33,14 @@ type (
 )
 
 var (
-	service    daemon.ServiceIfe
+	service    daemon.ServiceIface
 	serviceErr error
 	once       sync.Once
 )
 
 var s = make(chan struct{})
 
-func (a *app) Start(daemon.ServiceIfe) error {
+func (a *app) Start(daemon.ServiceIface) error {
 	a.status = true
 	go func() {
 		a.run()
@@ -49,7 +49,7 @@ func (a *app) Start(daemon.ServiceIfe) error {
 	return nil
 }
 
-func (a *app) Stop(daemon.ServiceIfe) error {
+func (a *app) Stop(daemon.ServiceIface) error {
 	if !a.status {
 		return nil
 	}
@@ -127,7 +127,7 @@ func LaunchServiceRun(name string, description string, fn func(), config ...*dae
 }
 
 // LaunchService Launch Service
-func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIfe, error) {
+func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIface, error) {
 
 	once.Do(func() {
 		var daemonConfig *daemon.Config
@@ -139,7 +139,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			daemonConfig = &daemon.Config{
 				Name:        name,
 				Description: description,
-				Option: zarray.DefData{
+				Option:      zarray.DefData{
 					// "UserService": true,
 				},
 			}

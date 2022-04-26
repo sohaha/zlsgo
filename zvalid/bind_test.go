@@ -67,17 +67,17 @@ func TestVarDefault(t *testing.T) {
 	err = Var(&email, Text("email").Silent().IsMail().Default("qq@qq.com"))
 	t.Log(email, err)
 	tt.EqualExit("qq@qq.com", email)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 
 	err = Var(&email, Text("email").IsMail().Default("qq@qq.com"))
 	t.Log(email, err)
 	tt.EqualExit(email, "qq@qq.com")
-	tt.ErrorNil(err)
+	tt.NoError(err)
 
 	var nu int
 	err = Var(&nu, Text("Number").IsNumber().Default(123))
 	t.Log(nu, err)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 	tt.EqualExit(nu, 123)
 
 	var b bool
@@ -89,12 +89,12 @@ func TestVarDefault(t *testing.T) {
 	var i uint
 	err = Var(&i, Text("true").IsNumber().Default(uint(123)))
 	t.Log(b, err)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 	tt.EqualExit(uint(123), i)
 
 	var f float32
 	err = Var(&f, Text("true").IsNumber().Default(float32(123)))
 	t.Log(b, err)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 	tt.EqualExit(float32(123), f)
 }

@@ -15,6 +15,7 @@ func TestMain(m *testing.M) {
 	_ = Remove("6.txt")
 	_ = Remove("7.txt")
 	_ = Remove("8.txt")
+	os.Exit(0)
 }
 
 func TestMemoryFile(t *testing.T) {
@@ -38,19 +39,19 @@ func TestMemoryFile(t *testing.T) {
 		go func(i int) {
 			_, err := f.Write([]byte(strconv.Itoa(i) + "\n"))
 			wg.Done()
-			tt.ErrorNil(err)
+			tt.NoError(err)
 		}(i)
 	}
 
 	b := []byte("--\n")
 	_, err := f.Write(b)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 	t.Log(len(f.Bytes()))
 	wg.Wait()
 	t.Log(len(f.Bytes()))
-	tt.ErrorNil(f.Close())
+	tt.NoError(f.Close())
 	t.Log(FileSize("7.txt"))
-	tt.ErrorNil(f.Close())
+	tt.NoError(f.Close())
 }
 
 func BenchmarkFileMem6(b *testing.B) {

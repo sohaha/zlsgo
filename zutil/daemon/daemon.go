@@ -20,8 +20,8 @@ const (
 )
 
 type (
-	// ServiceIfe represents a service that can be run or controlled
-	ServiceIfe interface {
+	// ServiceIface represents a service that can be run or controlled
+	ServiceIface interface {
 		Run() error
 		Start() error
 		Stop() error
@@ -31,17 +31,17 @@ type (
 		Status() string
 		String() string
 	}
-	Ife interface {
-		Start(s ServiceIfe) error
-		Stop(s ServiceIfe) error
+	Iface interface {
+		Start(s ServiceIface) error
+		Stop(s ServiceIface) error
 	}
-	SystemIfe interface {
+	SystemIface interface {
 		String() string
 		Interactive() bool
 		Detect() bool
-		New(i Ife, c *Config) (ServiceIfe, error)
+		New(i Iface, c *Config) (ServiceIface, error)
 	}
-	// Config provides the setup for a ServiceIfe. The Name field is required.
+	// Config provides the setup for a ServiceIface. The Name field is required.
 	Config struct {
 		Name        string
 		DisplayName string
@@ -66,8 +66,8 @@ type (
 )
 
 var (
-	system                     SystemIfe
-	systemRegistry             []SystemIfe
+	system                     SystemIface
+	systemRegistry             []SystemIface
 	ErrNameFieldRequired       = errors.New("config.name field is required")
 	ErrNoServiceSystemDetected = errors.New("no service system detected")
 	ErrNotAnRootUser           = errors.New("need to execute with sudo permission")
@@ -75,7 +75,7 @@ var (
 )
 
 // New creates a new service based on a service interface and configuration
-func New(i Ife, c *Config) (ServiceIfe, error) {
+func New(i Iface, c *Config) (ServiceIface, error) {
 	if len(c.Name) == 0 {
 		return nil, ErrNameFieldRequired
 	}
@@ -85,7 +85,7 @@ func New(i Ife, c *Config) (ServiceIfe, error) {
 	return system.New(i, c)
 }
 
-func newSystem() SystemIfe {
+func newSystem() SystemIface {
 	for _, choice := range systemRegistry {
 		if !choice.Detect() {
 			continue
@@ -95,7 +95,7 @@ func newSystem() SystemIfe {
 	return nil
 }
 
-func chooseSystem(a ...SystemIfe) {
+func chooseSystem(a ...SystemIface) {
 	systemRegistry = a
 	system = newSystem()
 }

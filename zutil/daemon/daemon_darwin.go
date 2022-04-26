@@ -12,13 +12,13 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/sohaha/zlsgo/zutil"
+	"github.com/sohaha/zlsgo/zerror"
 )
 
 type (
 	darwinSystem         struct{}
 	darwinLaunchdService struct {
-		i Ife
+		i Iface
 		*Config
 		userService bool
 	}
@@ -40,7 +40,7 @@ func (darwinSystem) Interactive() bool {
 	return interactive
 }
 
-func (darwinSystem) New(i Ife, c *Config) (s ServiceIfe, err error) {
+func (darwinSystem) New(i Iface, c *Config) (s ServiceIface, err error) {
 	userService := c.Option.Bool(optionUserService, optionUserServiceDefault)
 	s = &darwinLaunchdService{
 		i:           i,
@@ -57,7 +57,7 @@ func init() {
 	var err error
 	chooseSystem(darwinSystem{})
 	interactive, err = isInteractive()
-	zutil.CheckErr(err, true)
+	zerror.Panic(err)
 }
 
 func isInteractive() (bool, error) {

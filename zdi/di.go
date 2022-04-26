@@ -1,70 +1,70 @@
 package zdi
 
 import (
-	"errors"
-	"sync"
+	"reflect"
 )
 
-// IfeDi IfeDi
-type IfeDi interface {
-	Remove(name string)
-	Exist(name string) bool
-	Make(name string) interface{}
-	Bind(name string, v interface{})
-	SoftMake(name string, v interface{}) (err error)
+type (
+	Injector interface {
+		Construct
+		Invoker
+		TypeMapper
+		SetParent(Injector)
+	}
+	Invoker interface {
+		Invoke(interface{}) ([]reflect.Value, error)
+	}
+	TypeMapper interface {
+		Map(interface{}, ...Option) reflect.Type
+		Maps(...interface{}) []reflect.Type
+		Provide(interface{}, ...Option) []reflect.Type
+		Set(reflect.Type, reflect.Value) TypeMapper
+		Get(reflect.Type) (reflect.Value, bool)
+	}
+)
+
+type (
+	Pointer   interface{}
+	Option    func(*mapOption)
+	mapOption struct {
+		key reflect.Type
+	}
+	injector struct {
+		values    map[reflect.Type]reflect.Value
+		providers map[reflect.Type]reflect.Value
+		parent    Injector
+	}
+)
+
+func New(parent ...Injector) Injector {
+	inj := &injector{
+		values:    make(map[reflect.Type]reflect.Value),
+		providers: make(map[reflect.Type]reflect.Value),
+	}
+	if len(parent) > 0 {
+		inj.parent = parent[0]
+	}
+	return inj
 }
 
-// Di Di
-type Di struct {
-	store map[string]interface{}
-	mutex sync.RWMutex
+func (inj *injector) SetParent(parent Injector) {
+	inj.parent = parent
 }
 
-// New create a di instance
-func New() IfeDi {
-	d := new(Di)
-	d.store = make(map[string]interface{})
-	return d
+func WithInterface(ifacePtr Pointer) Option {
+	return func(opt *mapOption) {
+		opt.key = ifeOf(ifacePtr)
+	}
 }
 
-// SoftMake Register if the container does not exist
-func (d *Di) SoftMake(name string, v interface{}) (err error) {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	if _, ok := d.store[name]; ok {
-		return errors.New("container is set")
+func ifeOf(value interface{}) reflect.Type {
+	t := reflect.TypeOf(value)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
 	}
 
-	d.store[name] = v
-	return
-}
-
-// Bind Registration container
-func (d *Di) Bind(name string, v interface{}) {
-	d.mutex.Lock()
-	d.store[name] = v
-	d.mutex.Unlock()
-}
-
-// Make Make the specified container, return nil if it does not exist
-func (d *Di) Make(name string) interface{} {
-	d.mutex.RLock()
-	v := d.store[name]
-	d.mutex.RUnlock()
-	return v
-}
-
-// Exist whether the container exists
-func (d *Di) Exist(name string) bool {
-	d.mutex.RLock()
-	_, ok := d.store[name]
-	d.mutex.RUnlock()
-	return ok
-}
-
-// Remove Unbind container
-func (d *Di) Remove(name string) {
-	d.mutex.Lock()
-	delete(d.store, name)
-	d.mutex.Unlock()
+	if t.Kind() != reflect.Interface {
+		panic("called inject.key with a value that is not a pointer to an interface. (*MyInterface)(nil)")
+	}
+	return t
 }

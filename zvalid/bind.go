@@ -37,6 +37,17 @@ func (v Engine) Separator(sep string) Engine {
 	return v
 }
 
+// BatchError  multiple error
+func BatchError(rules ...Engine) error {
+	for i := range rules {
+		err := rules[i].Error()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Batch assign multiple filtered results to the specified object
 func Batch(elements ...*ValidEle) error {
 	for k := range elements {

@@ -14,7 +14,7 @@ func TestTyper_ForEachMethod(t *testing.T) {
 	tp, _ := zreflect.ValueOf(&demo)
 
 	typ, err := zreflect.NewVal(tp)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 
 	err = typ.ForEachMethod(func(index int, method reflect.Method, value reflect.Value) error {
 		fn, ok := value.Interface().(func())
@@ -23,5 +23,5 @@ func TestTyper_ForEachMethod(t *testing.T) {
 		}
 		return nil
 	})
-	tt.ErrorNil(err)
+	tt.NoError(err)
 }

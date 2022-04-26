@@ -1849,9 +1849,8 @@ func GetMultipleBytes(json []byte, path ...string) []Res {
 }
 
 var (
-	fieldsmu  sync.RWMutex
-	fieldsMap sync.Map
-	fields    = make(map[string]map[string]int)
+	fieldsmu sync.RWMutex
+	fields   = make(map[string]map[string]int)
 )
 
 func assign(jsval Res, val reflect.Value) {

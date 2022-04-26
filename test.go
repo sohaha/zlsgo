@@ -11,7 +11,7 @@ import (
 
 // TestUtil Test aid
 type TestUtil struct {
-	T *testing.T
+	*testing.T
 }
 
 // NewTest testing object
@@ -36,7 +36,7 @@ func (u *TestUtil) GetCallerInfo() string {
 
 		funcName := runtime.FuncForPC(pc).Name()
 		index := strings.LastIndex(funcName, ".Test")
-		if -1 == index {
+		if index == -1 {
 			index = strings.LastIndex(funcName, ".Benchmark")
 			if index == -1 {
 				continue
@@ -46,7 +46,7 @@ func (u *TestUtil) GetCallerInfo() string {
 
 		if index := strings.IndexByte(funcName, '.'); index > -1 {
 			funcName = funcName[:index]
-			info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
+			// info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
 			info = basename + ":" + strconv.Itoa(line)
 			continue
 		}
@@ -62,11 +62,13 @@ func (u *TestUtil) GetCallerInfo() string {
 }
 
 // Equal Equal
-func (u *TestUtil) Equal(expected, actual interface{}) {
+func (u *TestUtil) Equal(expected, actual interface{}) bool {
 	if !reflect.DeepEqual(expected, actual) {
 		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
 		u.T.Fail()
+		return false
 	}
+	return true
 }
 
 // EqualTrue EqualTrue
@@ -79,13 +81,14 @@ func (u *TestUtil) EqualNil(actual interface{}) {
 	u.Equal(nil, actual)
 }
 
-// ErrorNil ErrorNil
-func (u *TestUtil) ErrorNil(actual interface{}) {
+// NoError NoError
+func (u *TestUtil) NoError(actual interface{}) bool {
 	if actual == nil {
-		return
+		return true
 	}
-	fmt.Printf("        %s Error: %v\n", u.PrintMyName(), actual)
+	fmt.Printf("    %s Error: %v\n", u.PrintMyName(), actual)
 	u.T.Fail()
+	return false
 }
 
 // EqualExit EqualExit

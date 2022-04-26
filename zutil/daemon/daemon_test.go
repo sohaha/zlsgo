@@ -12,7 +12,7 @@ type ss struct {
 	I int
 }
 
-func (p *ss) Start(s ServiceIfe) error {
+func (p *ss) Start(s ServiceIface) error {
 	p.run()
 	return nil
 }
@@ -22,7 +22,7 @@ func (p *ss) run() {
 	p.I = p.I + 1
 }
 
-func (p *ss) Stop(s ServiceIfe) error {
+func (p *ss) Stop(s ServiceIface) error {
 	return nil
 }
 

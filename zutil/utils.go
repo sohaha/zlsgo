@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -98,6 +99,10 @@ func (s Stack) Format(f func(fn *runtime.Func, file string, line int) bool) {
 	for _, p := range s {
 		if fn := runtime.FuncForPC(p - 1); fn != nil {
 			file, line := fn.FileLine(p - 1)
+			name := fn.Name()
+			if !strings.HasSuffix(file, "_test.go") && strings.Contains(name, "github.com/sohaha") {
+				continue
+			}
 			if !f(fn, file, line) {
 				break
 			}

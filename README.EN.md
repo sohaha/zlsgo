@@ -111,6 +111,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] Terminal application
 - [x] Goroutine pool
 - [x] HTML Parse
+- [x] Injection
 - [ ] [Database](https://github.com/sohaha/zdb)
 - [ ] ...
 

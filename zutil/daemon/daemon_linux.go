@@ -15,10 +15,10 @@ type (
 		name        string
 		detect      func() bool
 		interactive func() bool
-		new         func(i Ife, c *Config) (ServiceIfe, error)
+		new         func(i Iface, c *Config) (ServiceIface, error)
 	}
 	systemd struct {
-		i Ife
+		i Iface
 		*Config
 	}
 )
@@ -54,7 +54,7 @@ func (sc linuxSystemService) Interactive() bool {
 	return sc.interactive()
 }
 
-func (sc linuxSystemService) New(i Ife, c *Config) (s ServiceIfe, err error) {
+func (sc linuxSystemService) New(i Iface, c *Config) (s ServiceIface, err error) {
 	s, err = sc.new(i, c)
 	if err == nil {
 		err = isSudo()
@@ -82,7 +82,7 @@ func isSystemd() bool {
 	return false
 }
 
-func newSystemdService(i Ife, c *Config) (ServiceIfe, error) {
+func newSystemdService(i Iface, c *Config) (ServiceIface, error) {
 	s := &systemd{
 		i:      i,
 		Config: c,

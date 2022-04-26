@@ -89,7 +89,7 @@ var (
 			"restart":       "Restart service",
 			"stop":          "Stop service",
 			"start":         "Start service",
-			"status":        "ServiceIfe status",
+			"status":        "Service status",
 			"uninstall":     "Uninstall service",
 			"install":       "Install service",
 		},

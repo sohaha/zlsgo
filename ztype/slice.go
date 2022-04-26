@@ -14,3 +14,12 @@ func Slice(value interface{}) (m []interface{}) {
 	}
 	return m
 }
+
+// SliceStrToIface  []string to []interface{}
+func SliceStrToIface(slice []string) []interface{} {
+	ifeSlice := make([]interface{}, 0, len(slice))
+	for _, val := range slice {
+		ifeSlice = append(ifeSlice, val)
+	}
+	return ifeSlice
+}

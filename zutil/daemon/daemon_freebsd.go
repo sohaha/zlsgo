@@ -14,7 +14,7 @@ import (
 
 type (
 	freebsdRcdService struct {
-		i Ife
+		i Iface
 		*Config
 		userService bool
 	}
@@ -46,7 +46,7 @@ func (freebsdSystem) Interactive() bool {
 	return interactive
 }
 
-func (freebsdSystem) New(i Ife, c *Config) (ServiceIfe, error) {
+func (freebsdSystem) New(i Iface, c *Config) (ServiceIface, error) {
 	s := &freebsdRcdService{
 		i:      i,
 		Config: c,

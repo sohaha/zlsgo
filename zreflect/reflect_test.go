@@ -112,10 +112,10 @@ func TestNewVal(t *testing.T) {
 	var demo DemoSt
 
 	v, err := zreflect.ValueOf(&demo)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 
 	val, err := zreflect.NewVal(v)
-	tt.ErrorNil(err)
+	tt.NoError(err)
 
 	t.Log(val.Name())
 
@@ -128,7 +128,7 @@ func TestNewVal(t *testing.T) {
 		}
 		return nil
 	})
-	tt.ErrorNil(err)
+	tt.NoError(err)
 	tt.Equal("zlsgo", demo.Name)
 	tt.Equal(true, demo.Child.IsChildName)
 

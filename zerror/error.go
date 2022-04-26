@@ -30,6 +30,20 @@ func New(code ErrCode, text string) error {
 	}
 }
 
+// Reuse the error
+func Reuse(err error) error {
+	if err == nil {
+		return nil
+	}
+	if e, ok := err.(*Error); ok {
+		return e
+	}
+	return &Error{
+		err:   err,
+		stack: zutil.Callers(3),
+	}
+}
+
 // Wrap wraps err with code
 func Wrap(err error, code ErrCode, text string) error {
 	if err == nil {
@@ -41,6 +55,28 @@ func Wrap(err error, code ErrCode, text string) error {
 		code:    code,
 		stack:   zutil.Callers(3),
 		err:     errors.New(text),
+	}
+}
+
+// SupText wraps err with text, no tracking
+func SupText(err error, text string) error {
+	if err == nil {
+		return nil
+	}
+
+	if _, ok := err.(*Error); !ok {
+		err = &Error{
+			err:   err,
+			stack: zutil.Callers(3),
+		}
+	}
+
+	return &Error{
+		wrapErr: &Error{
+			err:   errors.New(text),
+			stack: zutil.Callers(3),
+		},
+		err: err,
 	}
 }
 

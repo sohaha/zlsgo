@@ -46,7 +46,7 @@ func TestFile(t *testing.T) {
 
 	size := FileSize(filePath)
 	t.Log(size)
-	tt.Equal("0 B" == size, true)
+	tt.Equal("0 B", size)
 
 	RealPath("")
 

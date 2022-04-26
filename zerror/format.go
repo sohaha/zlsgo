@@ -15,6 +15,7 @@ func (e *Error) Error() string {
 	if e == nil || e.err == nil {
 		return "<nil>"
 	}
+
 	return e.err.Error()
 }
 
@@ -37,7 +38,8 @@ func (e *Error) Format(s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = io.WriteString(s, e.Error()+"\n"+e.Stack())
+			tip := strings.Join(UnwrapErrors(e), ": ")
+			_, _ = io.WriteString(s, tip+"\n"+e.Stack())
 		default:
 			_, _ = io.WriteString(s, e.Error())
 		}
@@ -56,16 +58,22 @@ func (e *Error) Stack() string {
 		if loop == nil {
 			break
 		}
-		buffer.WriteString(fmt.Sprintf("%d. %-v\n", i, loop))
-		i++
 		e, ok := loop.(*Error)
 		if ok {
-			formatSubStack(e.stack, buffer)
+			if e.stack != nil {
+				buffer.WriteString(fmt.Sprintf("%d. %-v\n", i, loop))
+				i++
+				formatSubStack(e.stack, buffer)
+			}
 			if e.wrapErr != nil {
-				if e, ok := e.wrapErr.(*Error); ok {
-					loop = e
+				if en, ok := e.wrapErr.(*Error); ok {
+					loop = en
 				} else {
-					buffer.WriteString(fmt.Sprintf("%d. %s\n", i, e.err.Error()))
+					loop = e.wrapErr
+					if loop == nil {
+						break
+					}
+					buffer.WriteString(fmt.Sprintf("%d. %s\n", i, e.wrapErr.Error()))
 					i++
 					break
 				}
@@ -85,9 +93,6 @@ func formatSubStack(st zutil.Stack, buffer *bytes.Buffer) {
 	index := 1
 	space := "  "
 	st.Format(func(fn *runtime.Func, file string, line int) bool {
-		if strings.HasSuffix(file, "zerror/error.go") {
-			return true
-		}
 		if strings.Contains(file, "<") {
 			return true
 		}
@@ -97,6 +102,7 @@ func formatSubStack(st zutil.Stack, buffer *bytes.Buffer) {
 		if index > 9 {
 			space = " "
 		}
+
 		buffer.WriteString(fmt.Sprintf(
 			"   %d).%s%s\n    \t%s:%d\n",
 			index, space, fn.Name(), file, line,

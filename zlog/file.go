@@ -79,30 +79,3 @@ func (log *Logger) CloseFile() {
 		log.out = os.Stderr
 	}
 }
-
-// func oldLogFile(fileDir, fileName string) string {
-// 	ext := path.Ext(fileName)
-// 	name := strings.TrimSuffix(fileName, ext)
-// 	timeStr := time.Now().Format("2006-01-02")
-// 	oldLogFile := fileDir + "/" + name + "." + timeStr + ext
-// judge:
-// 	for {
-// 		if !zfile.FileExist(oldLogFile) {
-// 			break judge
-// 		} else {
-// 			oldLogFile = fileDir + "/" + name + "." + timeStr + "_" + strconv.Itoa(int(time.Now().UnixNano())) + ext
-// 		}
-// 	}
-//
-// 	return oldLogFile
-// }
-
-func mkdirLog(dir string) (e error) {
-	if zfile.DirExist(dir) {
-		return
-	}
-	if err := os.MkdirAll(dir, 0775); err != nil && os.IsPermission(err) {
-		e = err
-	}
-	return
-}

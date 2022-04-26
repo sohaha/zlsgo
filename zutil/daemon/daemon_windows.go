@@ -21,7 +21,7 @@ import (
 type (
 	windowsSystem  struct{}
 	windowsService struct {
-		i Ife
+		i Iface
 		*Config
 
 		errSync      sync.Mutex
@@ -54,7 +54,7 @@ func (windowsSystem) Interactive() bool {
 	return interactive
 }
 
-func (windowsSystem) New(i Ife, c *Config) (ServiceIfe, error) {
+func (windowsSystem) New(i Iface, c *Config) (ServiceIface, error) {
 	ws := &windowsService{
 		i:      i,
 		Config: c,

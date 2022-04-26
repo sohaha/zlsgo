@@ -139,11 +139,11 @@ func (v Engine) Verifi(value string, name ...string) Engine {
 // VerifiAny validate specified data
 func (v Engine) VerifiAny(value interface{}, name ...string) Engine {
 	var s string
-	switch value.(type) {
+	switch vv := value.(type) {
 	case string:
-		s = value.(string)
+		s = vv
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
-		s = ztype.ToString(value)
+		s = ztype.ToString(vv)
 	default:
 		s = ""
 		v.err = setError(&v, "unsupported type")

@@ -22,9 +22,9 @@ func newErr() error {
 }
 
 func wrap500Err(err error) error {
-	return zerror.Wrap(err, 500, "Wrap 500 ErrorNil")
+	return zerror.Wrap(err, 500, "Wrap 500 NoError")
 }
 
 func wrap999Err(err error) error {
-	return zerror.Wrap(err, 999, "Unknown ErrorNil")
+	return zerror.Wrap(err, 999, "Unknown NoError")
 }

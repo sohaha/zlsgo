@@ -1,6 +1,7 @@
 package zerror_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -102,4 +103,31 @@ func TestError(t *testing.T) {
 		tt.Equal([]string{err404.Error(), err500.Error()}, zerror.UnwrapErrors(err404))
 		tt.Equal([]string{err500.Error()}, zerror.UnwrapErrors(err500))
 	})
+}
+
+func TestRawErr(t *testing.T) {
+	err := errors.New("is error")
+	err = zerror.Reuse(err)
+	err = zerror.Wrap(err, -1, "The is Wrap")
+
+	t.Log(err)
+	t.Logf("%+v", err)
+
+	err = errors.New("is error")
+	err = zerror.Wrap(err, -1, "The is Wrap")
+
+	t.Log(err)
+	t.Logf("%+v", err)
+
+	err = errors.New("is error")
+	err = zerror.SupText(err, "The is Wrap")
+
+	t.Log(err)
+	t.Logf("%+v", err)
+
+	err = zerror.New(-1, "is error")
+	err = zerror.SupText(err, "The is Wrap")
+
+	t.Log(err)
+	t.Logf("%+v", err)
 }
