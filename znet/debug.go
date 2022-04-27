@@ -8,7 +8,7 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-func showRouteDebug(log *zlog.Logger, tf, method, path string) string {
+func routeLog(log *zlog.Logger, tf, method, path string) string {
 	mLen := zstring.Len(method)
 	var mtd string
 	min := 6

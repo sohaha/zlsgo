@@ -3,7 +3,6 @@ package znet
 import (
 	"fmt"
 	"reflect"
-	"runtime"
 	"strings"
 
 	"github.com/sohaha/zlsgo/zreflect"
@@ -11,7 +10,7 @@ import (
 )
 
 // BindStruct Bind Struct
-func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc) error {
+func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) error {
 	g := e.Group(prefix)
 	if len(handle) > 0 {
 		for _, v := range handle {
@@ -27,7 +26,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 	if initFn.IsValid() {
 		before, ok := initFn.Interface().(func(e *Engine))
 		if !ok {
-			return fmt.Errorf("func: [%s] is not an effective routing method\n", "Init")
+			return fmt.Errorf("func: [%s] is not an effective routing method", "Init")
 		}
 		before(g)
 	}
@@ -46,25 +45,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 		path := info[3]
 		method := strings.ToUpper(info[2])
 		key := strings.ToLower(info[1])
-		fn, ok := value.Interface().(func(*Context))
-		handleName = runtime.FuncForPC(value.Pointer()).Name()
+		fn := value.Interface()
 		handleName = strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
-		if !ok {
-			if errFn, ok := value.Interface().(func(*Context) error); !ok {
-				return fmt.Errorf("func: [%s] is not an effective routing method\n", m.Name)
-			} else {
-				fn = func(c *Context) {
-					if err := errFn(c); err != nil {
-						if e.router.panic != nil {
-							e.router.panic(c, err)
-						} else {
-							panic(err)
-						}
-					}
-				}
-			}
-		}
-		// valueOf.Method(numMethod).Call([]reflect.Value{reflect.ValueOf(c)})
 		if e.BindStructDelimiter != "" {
 			path = zstring.CamelCaseToSnakeCase(path, e.BindStructDelimiter)
 		}
@@ -89,7 +71,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...HandlerFunc)
 			return nil
 		}
 
-		_ = g.handle(method, path, handleName, fn)
+		_ = g.handle(method, path, handleName, handlerFunc(fn))
 		return nil
 	})
 }

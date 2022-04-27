@@ -49,14 +49,14 @@ type (
 	}
 	// ApiData unified return api format
 	ApiData struct {
-		Code int         `json:"code" example:"200"`
+		Code int32       `json:"code" example:"200"`
 		Msg  string      `json:"msg"`
 		Data interface{} `json:"data"`
 	}
 	// Data map string
 	Data     map[string]interface{}
 	PrevData struct {
-		Code    int
+		Code    *zutil.Int32
 		Type    string
 		Content []byte
 	}
@@ -71,12 +71,12 @@ var (
 	ContentTypeJSON = "application/json; charset=utf-8"
 )
 
-func (c *Context) renderProcessing(code int, r render) {
-	c.l.Lock()
-	c.prevData.Code = code
+func (c *Context) renderProcessing(code int32, r render) {
+	c.prevData.Code.Store(code)
+	c.stopHandle.Store(true)
+	c.mu.Lock()
 	c.render = r
-	c.stopHandle = true
-	c.l.Unlock()
+	c.mu.Unlock()
 }
 
 func (r *renderByte) Content(c *Context) []byte {
@@ -161,51 +161,56 @@ func (r *renderHTML) Content(c *Context) []byte {
 	return r.ContentDate
 }
 
-func (c *Context) Byte(code int, value []byte) {
+func (c *Context) Byte(code int32, value []byte) {
 	c.renderProcessing(code, &renderByte{Data: value})
 }
 
-func (c *Context) String(code int, format string, values ...interface{}) {
+func (c *Context) String(code int32, format string, values ...interface{}) {
 	c.renderProcessing(code, &renderString{Format: format, Data: values})
 }
 
 // Deprecated: You can directly modify the return value of PrevContent()
 func (c *Context) SetContent(data *PrevData) {
-	c.l.Lock()
+	c.mu.Lock()
 	c.prevData = data
-	c.l.Unlock()
+	c.mu.Unlock()
 }
 
 func (c *Context) File(path string) {
 	path = zfile.RealPath(path)
 	f, err := os.Stat(path)
 	fileExist := err == nil
-	code := zutil.IfVal(fileExist, 200, 404).(int)
+	var code int32
+	if fileExist {
+		code = http.StatusOK
+	} else {
+		code = http.StatusNotFound
+	}
 	if fileExist {
 		c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
 	}
 	c.renderProcessing(code, &renderFile{Data: path, FileExist: fileExist})
 }
 
-func (c *Context) JSON(code int, values interface{}) {
+func (c *Context) JSON(code int32, values interface{}) {
 	c.renderProcessing(code, &renderJSON{Data: values})
 }
 
 // ApiJSON ApiJSON
-func (c *Context) ApiJSON(code int, msg string, data interface{}) {
+func (c *Context) ApiJSON(code int32, msg string, data interface{}) {
 	c.renderProcessing(http.StatusOK, &renderJSON{Data: ApiData{Code: code, Data: data,
 		Msg: msg}})
 }
 
 // HTML export html
-func (c *Context) HTML(code int, html string) {
+func (c *Context) HTML(code int32, html string) {
 	c.renderProcessing(code, &renderHTML{
 		Data: html,
 	})
 }
 
 // Template export tpl
-func (c *Context) Template(code int, name string, data interface{}, funcMap ...map[string]interface{}) {
+func (c *Context) Template(code int32, name string, data interface{}, funcMap ...map[string]interface{}) {
 	var fn template.FuncMap
 	if len(funcMap) > 0 {
 		fn = funcMap[0]
@@ -216,7 +221,7 @@ func (c *Context) Template(code int, name string, data interface{}, funcMap ...m
 		FuncMap:   fn,
 	})
 }
-func (c *Context) Templates(code int, templates []string, data interface{}, funcMap ...map[string]interface{}) {
+func (c *Context) Templates(code int32, templates []string, data interface{}, funcMap ...map[string]interface{}) {
 	var fn template.FuncMap
 	if len(funcMap) > 0 {
 		fn = funcMap[0]
@@ -228,29 +233,28 @@ func (c *Context) Templates(code int, templates []string, data interface{}, func
 	})
 }
 
-// Abort Abort
-func (c *Context) Abort(code ...int) {
-	c.l.Lock()
-	c.stopHandle = true
-	c.l.Unlock()
+// Abort stop executing subsequent handlers
+func (c *Context) Abort(code ...int32) {
+	c.stopHandle.Store(true)
 	if len(code) > 0 {
-		c.SetStatus(code[0])
+		c.prevData.Code.Store(code[0])
 	}
-	c.render = nil
 }
 
 // Redirect Redirect
-func (c *Context) Redirect(link string, statusCode ...int) {
+func (c *Context) Redirect(link string, statusCode ...int32) {
 	c.Writer.Header().Set("Location", c.CompletionLink(link))
-	code := http.StatusFound
+	var code int32
 	if len(statusCode) > 0 {
 		code = statusCode[0]
+	} else {
+		code = http.StatusFound
 	}
 	c.SetStatus(code)
 }
 
-func (c *Context) SetStatus(code int) *Context {
-	c.prevData.Code = code
+func (c *Context) SetStatus(code int32) *Context {
+	c.prevData.Code.Store(code)
 	return c
 }
 
@@ -260,8 +264,8 @@ func (c *Context) SetContentType(contentType string) *Context {
 }
 
 func (c *Context) hasContentType() bool {
-	c.l.RLock()
-	defer c.l.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if _, ok := c.header["Content-Type"]; ok {
 		return true
 	}

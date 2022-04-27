@@ -19,11 +19,10 @@ func TestWebTimeout(tt *testing.T) {
 	w1 := newRequest(r, "GET", "/timeout_1", func(c *znet.Context) {
 		tt.Log("timeout_1")
 		c.String(201, "timeout_1")
-	}, New(1*time.Second), func(c *znet.Context) {
-		tt.Log("==1==")
+	}, New(2*time.Second, func(c *znet.Context) {
+		tt.Log("timeout_1 Second")
+	}), func(c *znet.Context) {
 		c.Next()
-		tt.Log("--1--")
-		tt.Log("PrevContent:", c.PrevContent())
 	})
 	body = w1.Body.String()
 	tt.Log("code:", w1.Code)
@@ -33,6 +32,7 @@ func TestWebTimeout(tt *testing.T) {
 
 	w2 := newRequest(r, "GET", "/timeout_2", func(c *znet.Context) {
 		time.Sleep(2 * time.Second)
+		t.Log("run 2")
 		c.String(200, "timeout_2")
 	}, New(1*time.Second))
 	t.Equal(504, w2.Code)
@@ -42,6 +42,7 @@ func TestWebTimeout(tt *testing.T) {
 		time.Sleep(2 * time.Second)
 		c.String(200, "timeout_3")
 	}, New(1*time.Second, func(c *znet.Context) {
+		tt.Log("3 timeout")
 		c.String(210, "is timeout")
 	}))
 	t.Equal(210, w3.Code)
@@ -56,6 +57,14 @@ func TestWebTimeout(tt *testing.T) {
 	}))
 	t.Equal(211, w4.Code)
 	t.Equal("ok", w4.Body.String())
+
+	w5 := newRequest(r, "GET", "/timeout_5", func(c *znet.Context) {
+		c.String(200, "timeout_5")
+	}, New(1*time.Second, func(c *znet.Context) {
+		c.String(211, "ok")
+	}))
+	t.Equal(200, w5.Code)
+	t.Equal("timeout_5", w5.Body.String())
 }
 
 var (
@@ -71,7 +80,7 @@ func newServer() *znet.Engine {
 	return Engine
 }
 
-func newRequest(r *znet.Engine, method string, path string, handler ...znet.HandlerFunc) *httptest.ResponseRecorder {
+func newRequest(r *znet.Engine, method string, path string, handler ...znet.Handler) *httptest.ResponseRecorder {
 	method = strings.ToUpper(method)
 	if len(handler) > 0 {
 		firstHandler := handler[0]

@@ -78,8 +78,7 @@ func (c *Context) BindForm(obj interface{}) error {
 			if sliceTyp == reflect.Struct {
 				// todo follow up support
 			} else {
-				v, _ := q[tag]
-				m[tag] = v
+				m[tag], _ = q[tag]
 			}
 		} else {
 			v, ok := q[tag]

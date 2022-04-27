@@ -47,7 +47,7 @@ func New(conf Config) znet.HandlerFunc {
 			_ = g.Flush()
 
 			c.SetHeader("Content-Encoding", "gzip")
-			c.Byte(p.Code, be.Bytes())
+			c.Byte(p.Code.Load(), be.Bytes())
 		}
 	}
 }

@@ -67,20 +67,19 @@ func (c *Context) GetHeader(key string) string {
 // SetHeader Set Header
 func (c *Context) SetHeader(key, value string) {
 	key = textproto.CanonicalMIMEHeaderKey(key)
-	c.l.Lock()
+	c.mu.Lock()
 	if value == "" {
 		delete(c.header, key)
 	} else {
 		c.header[key] = append(c.header[key], value)
 	}
-	c.l.Unlock()
+	c.mu.Unlock()
 }
 
 func (c *Context) done() {
+	c.Next()
 	data := c.PrevContent()
-	if data.Code == 0 {
-		data.Code = http.StatusInternalServerError
-	}
+	data.Code.CAS(0, http.StatusInternalServerError)
 	for key, value := range c.header {
 		for i := range value {
 			header := value[i]
@@ -92,29 +91,48 @@ func (c *Context) done() {
 		}
 	}
 	if len(data.Content) > 0 {
-		c.Writer.WriteHeader(data.Code)
+		c.Writer.WriteHeader(int(data.Code.Load()))
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {
 			c.Log.Error(err)
 		}
-	} else if data.Code != 0 && data.Code != 200 {
-		c.Writer.WriteHeader(data.Code)
+	} else {
+		code := data.Code.Load()
+		if code != 0 && code != 200 {
+			c.Writer.WriteHeader(int(code))
+		}
 	}
 }
 
-// Next Next Handler
-func (c *Context) Next() (next HandlerFunc) {
-	c.l.RLock()
-	if !c.stopHandle && len(c.middleware) > 0 {
-		next = c.middleware[0]
-		c.middleware = c.middleware[1:]
-		c.l.RUnlock()
-		next(c)
-	} else {
-		c.l.RUnlock()
+// Next Handler
+func (c *Context) Next() {
+	for {
+		if c.stopHandle.Load() {
+			break
+		}
+		// c.mu.RLock()
+		n := len(c.middleware) > 0
+		// c.mu.RUnlock()
+		if !n {
+			break
+		}
+		c.next()
 	}
+}
 
-	return
+func (c *Context) next() {
+	if c.stopHandle.Load() {
+		return
+	}
+	c.mu.Lock()
+	n := c.middleware[0]
+	c.middleware = c.middleware[1:]
+	c.mu.Unlock()
+	err := n(c)
+	if err != nil {
+		c.Abort()
+		c.renderError(c, err)
+	}
 }
 
 // SetCookie Set Cookie
@@ -172,19 +190,19 @@ func (c *Context) ContentType(contentText ...string) string {
 
 // WithValue context sharing data
 func (c *Context) WithValue(key string, value interface{}) *Context {
-	c.l.Lock()
+	c.mu.Lock()
 	c.customizeData[key] = value
-	c.l.Unlock()
+	c.mu.Unlock()
 	return c
 }
 
 // Value get context sharing data
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
-	c.l.RLock()
+	c.mu.RLock()
 	value, ok = c.customizeData[key]
 	if !ok && (len(def) > 0) {
 		value = def[0]
 	}
-	c.l.RUnlock()
+	c.mu.RUnlock()
 	return
 }

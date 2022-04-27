@@ -12,12 +12,12 @@ type (
 		routes     map[string]*Node
 	}
 
-	// Node records any URL params, and executes an end handler.
+	// Node records any URL params, and executes an end handlerFn.
 	Node struct {
 		key string
 		// path records a request path
 		path   string
-		handle HandlerFunc
+		handle handlerFn
 		// depth records Node's depth
 		depth int
 		// children records Node's children node
@@ -25,7 +25,7 @@ type (
 		// isPattern flag
 		isPattern bool
 		// middleware records middleware stack
-		middleware []HandlerFunc
+		middleware []handlerFn
 	}
 )
 
@@ -44,7 +44,7 @@ func NewTree() *Tree {
 	}
 }
 
-func (t *Tree) Add(pattern string, handle HandlerFunc, middleware ...HandlerFunc) {
+func (t *Tree) Add(pattern string, handle handlerFn, middleware ...handlerFn) {
 	var currentNode = t.root
 	if pattern != currentNode.key {
 		res := strings.Split(pattern, "/")

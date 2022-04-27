@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zcli"
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zutil"
 
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
@@ -25,11 +27,11 @@ import (
 type (
 	// Context context
 	Context struct {
-		stopHandle    bool
+		stopHandle    *zutil.Bool
 		rawData       string
 		cacheJSON     *zjson.Res
 		startTime     time.Time
-		middleware    []HandlerFunc
+		middleware    []handlerFn
 		customizeData map[string]interface{}
 		header        map[string][]string
 		render        render
@@ -39,8 +41,10 @@ type (
 		Engine        *Engine
 		Log           *zlog.Logger
 		Cache         *zcache.Table
-		l             sync.RWMutex
+		mu            sync.RWMutex
 		cacheQuery    url.Values
+		Injector      zdi.Injector
+		renderError   ErrHandlerFunc
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
@@ -58,12 +62,13 @@ type (
 		customMethodType    string
 		addr                []addrSt
 		router              *router
-		preHandler          func(context *Context) bool
+		preHandler          Handler
 		pool                sync.Pool
 		templateFuncMap     template.FuncMap
 		BindStructDelimiter string
 		BindStructSuffix    string
 		template            *tpl
+		Injector            zdi.Injector
 	}
 	TlsCfg struct {
 		Cert           string
@@ -83,20 +88,22 @@ type (
 	}
 	router struct {
 		prefix     string
-		middleware []HandlerFunc
+		middleware []handlerFn
 		trees      map[string]*Tree
 		parameters Parameters
-		notFound   HandlerFunc
-		panic      PanicFunc
+		notFound   handlerFn
 	}
-	// HandlerFunc HandlerFunc
+	// Handler handler func
+	Handler interface{}
+	// HandlerFunc old handler func
 	HandlerFunc func(c *Context)
+	handlerFn   func(c *Context) error
 	// MiddlewareFunc Middleware Func
-	MiddlewareFunc func(c *Context, fn HandlerFunc)
-	// PanicFunc PanicFunc
-	PanicFunc func(c *Context, err error)
+	MiddlewareFunc func(c *Context, fn Handler)
+	// ErrHandlerFunc ErrHandlerFunc
+	ErrHandlerFunc func(c *Context, err error)
 	// MiddlewareType is a public type that is used for middleware
-	MiddlewareType HandlerFunc
+	MiddlewareType Handler
 	// Parameters records some parameters
 	Parameters struct {
 		routeName string
@@ -114,9 +121,12 @@ const (
 	// ProdMode release
 	ProdMode = "prod"
 	// TestMode test
-	TestMode          = "test"
+	TestMode = "test"
+	// QuietMode quiet
+	QuietMode         = "quiet"
 	defaultServerName = "Z"
 	defaultBindTag    = "json"
+	quietCode         = -1
 	prodCode          = 0
 	debugCode         = iota
 	testCode
@@ -126,9 +136,9 @@ var (
 	// Log Log
 	Log   = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
 	Cache = zcache.New("__ZNET__")
-	// Shutdown Done executed after shutting down the server
+	// ShutdownDone Shutdown Done executed after shutting down the server
 	ShutdownDone func()
-	// CloseHotRestart
+	// CloseHotRestart Close Hot Restart
 	CloseHotRestart bool
 	fileMd5         string
 	zservers        = map[string]*Engine{}
@@ -175,6 +185,7 @@ func New(serverName ...string) *Engine {
 		webMode:             prodCode,
 		addr:                []addrSt{defaultAddr},
 		templateFuncMap:     template.FuncMap{},
+		Injector:            zdi.New(),
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)
@@ -218,11 +229,11 @@ func (e *Engine) AddAddr(addrString string, tlsConfig ...TlsCfg) {
 }
 
 // GetMiddleware GetMiddleware
-func (e *Engine) GetMiddleware() []HandlerFunc {
-	return e.router.middleware
-}
+// func (e *Engine) GetMiddleware() []handlerFn {
+// 	return e.router.middleware
+// }
 
-// SetCustomMethodField SetCustomMethodField
+// SetCustomMethodField Set Custom Method Field
 func (e *Engine) SetCustomMethodField(field string) {
 	e.customMethodType = field
 }
@@ -274,6 +285,9 @@ func (e *Engine) SetMode(value string) {
 	case ProdMode, "":
 		level = zlog.LogSuccess
 		e.webMode = prodCode
+	case QuietMode:
+		level = zlog.LogPanic
+		e.webMode = quietCode
 	case DebugMode:
 		level = zlog.LogDump
 		e.webMode = debugCode
@@ -295,7 +309,7 @@ func (e *Engine) IsDebug() bool {
 	return e.webMode > prodCode
 }
 
-// SetTimeout setTimeout
+// SetTimeout set Timeout
 func (e *Engine) SetTimeout(Timeout time.Duration, WriteTimeout ...time.Duration) {
 	if len(WriteTimeout) > 0 {
 		e.writeTimeout = WriteTimeout[0]

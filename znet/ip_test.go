@@ -57,7 +57,7 @@ func TestGetIPV(tt *testing.T) {
 	t.EqualExit(4, GetIPv("127.0.0.1"))
 	t.EqualExit(4, GetIPv("172.31.255.255"))
 	t.EqualExit(6, GetIPv("2001:db8:1:2::1"))
-	t.EqualTrue(4 != GetIPv("2001:db8:1:2::1"))
+	t.EqualTrue(GetIPv("2001:db8:1:2::1") != 4)
 }
 
 func TestIP2(tt *testing.T) {

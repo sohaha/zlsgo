@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -64,15 +65,23 @@ func newServer() *Engine {
 		engine.AddAddr("3787")
 		engine.SetAddr("3788")
 		engine.SetTimeout(3 * time.Second)
-		engine.PreHandler(func(context *Context) (stop bool) {
-			return
-		})
 		CloseHotRestartFileMd5()
 	})
 	return engine
 }
 
-func newRequest(r *Engine, method string, urlAndBody interface{}, path string, handler ...HandlerFunc) *httptest.ResponseRecorder {
+func request(r *Engine, method, url string, body io.Reader, opt ...func(w *httptest.ResponseRecorder, req *http.Request)) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(method, url, body)
+	req.Host = host
+	for _, o := range opt {
+		o(w, req)
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func newRequest(r *Engine, method string, urlAndBody interface{}, path string, handler ...Handler) *httptest.ResponseRecorder {
 	var (
 		body        io.Reader
 		_url        string
@@ -101,15 +110,11 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 			r.Customize(method, path, firstHandler, handlers...)
 		}
 	}
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(method, _url, body)
-	req.Host = host
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-
-	r.ServeHTTP(w, req)
-	return w
+	return request(r, method, _url, body, func(w *httptest.ResponseRecorder, req *http.Request) {
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+	})
 }
 
 func TestWeb(t *testing.T) {
@@ -129,7 +134,20 @@ func TestWeb(t *testing.T) {
 	})
 	tt.Equal(200, w.Code)
 	tt.Equal(expected, w.Body.String())
-	r.GetMiddleware()
+	// r.GetMiddleware()
+
+	w = newRequest(r, "PUT", "/", "/", func(c *Context) {
+		t.Log("run")
+		c.String(200, expected)
+	}, func(c *Context) {
+		t.Log(1)
+	}, func(c *Context) {
+		t.Log(2)
+		c.Next()
+		t.Log(3)
+	})
+	tt.Equal(200, w.Code)
+	tt.Equal(expected, w.Body.String())
 }
 
 func TestMoreMethod(t *testing.T) {
@@ -424,6 +442,33 @@ func TestCustomMethod(t *testing.T) {
 	tt.Equal("put", w.Body.String())
 }
 
+func TestPreHandler(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	r := New("TestPreHandler")
+	r.PreHandler(func(c *Context) (stop bool) {
+		c.String(210, "stop")
+		return true
+	})
+	w := request(r, "GET", "/", nil)
+	t.Equal(210, w.Code)
+	t.Equal("stop", w.Body.String())
+
+	r.PreHandler(func(c *Context) error {
+		c.String(210, "stop")
+		return errors.New("stop handler")
+	})
+	i := 0
+	w = newRequest(r, "GET", "/TestPreHandler", "/TestPreHandler", func(c *Context) {
+		c.String(200, "ok")
+	}, func() {
+		i++
+		tt.Log("TestPreHandler")
+	})
+	t.Equal(0, i)
+	t.Equal(500, w.Code)
+	t.Equal("stop handler", w.Body.String())
+}
+
 func TestHTML(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
@@ -702,7 +747,6 @@ func TestGetInput(T *testing.T) {
 
 	t.Equal(200, w.Code)
 	t.Equal(expected, w.Body.String())
-	r.GetPanicHandler()
 }
 
 func TestRecovery(t *testing.T) {
@@ -734,7 +778,7 @@ func TestSetContent(t *testing.T) {
 	}, func(c *Context) {
 		c.Next()
 		data := c.PrevContent()
-		data.Code = 404
+		data.Code.Store(404)
 	})
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/SetContent", nil)

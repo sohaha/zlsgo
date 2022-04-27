@@ -3,16 +3,44 @@ package znet
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-// Recovery Recovery
-func Recovery(r *Engine, handler PanicFunc) HandlerFunc {
-	r.router.panic = handler
+type (
+	invokerCodeText func() (int, string)
+)
+
+var (
+	_ zdi.PreInvoker = (*invokerCodeText)(nil)
+)
+
+func (h invokerCodeText) Invoke(_ []interface{}) ([]reflect.Value, error) {
+	code, text := h()
+	return []reflect.Value{reflect.ValueOf(code), reflect.ValueOf(text)}, nil
+}
+
+func defErrorHandler() ErrHandlerFunc {
+	return func(c *Context, err error) {
+		c.String(500, err.Error())
+	}
+}
+
+// RewriteErrorHandler rewrite error handler
+func RewriteErrorHandler(handler ErrHandlerFunc) Handler {
+	return func(c *Context) {
+		c.renderError = handler
+		c.Next()
+	}
+}
+
+// Recovery is a middleware that recovers from panics anywhere in the chain
+func Recovery(handler ErrHandlerFunc) Handler {
 	return func(c *Context) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -31,16 +59,12 @@ func requestLog(c *Context) {
 	if c.Engine.IsDebug() {
 		var status string
 		end := time.Now()
-		c.l.RLock()
 		statusCode := zutil.GetBuff()
-		defer func() {
-			c.l.RUnlock()
-			zutil.PutBuff(statusCode)
-		}()
+		defer zutil.PutBuff(statusCode)
 		latency := end.Sub(c.startTime)
-		code := c.prevData.Code
+		code := c.prevData.Code.Load()
 		statusCode.WriteString(" ")
-		statusCode.WriteString(strconv.Itoa(code))
+		statusCode.WriteString(strconv.FormatInt(int64(code), 10))
 		statusCode.WriteString(" ")
 		s := statusCode.String()
 		switch {
@@ -56,6 +80,6 @@ func requestLog(c *Context) {
 			clientIP = "unknown"
 		}
 		ft := fmt.Sprintf("%s %15s %15v %%s %%s", status, clientIP, latency)
-		c.Log.Success(showRouteDebug(c.Log, ft, c.Request.Method, c.Request.RequestURI))
+		c.Log.Success(routeLog(c.Log, ft, c.Request.Method, c.Request.RequestURI))
 	}
 }

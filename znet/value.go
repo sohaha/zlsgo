@@ -8,8 +8,6 @@ import (
 	"github.com/sohaha/zlsgo/zvalid"
 )
 
-type setValueFunc func(kind reflect.Kind, field reflect.Value, fieldName, fieldTag string, value interface{}) error
-
 type reqType uint8
 
 // Content-Type MIME of the most common data formats

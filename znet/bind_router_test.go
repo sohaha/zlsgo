@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 type testController struct {
 }
 
 func (t *testController) Init(e *Engine) {
-	e.Log.Debug("优先初始化")
+	e.Log.Debug("initialization")
 }
 
 func (t *testController) GetUser(_ *Context) {
@@ -52,10 +53,6 @@ func (t *testController) OPTIONSUserInfo(_ *Context) {
 func (t *testController) AnyOk(c *Context) error {
 	fmt.Println(c.Request.Method)
 	return errors.New("ok")
-}
-
-func (t *testController) No(_ *Context) error {
-	return nil
 }
 
 func (t *testController) IDGet(_ *Context) {
@@ -96,7 +93,7 @@ func TestBindStruct(t *testing.T) {
 	methods := [][]string{
 		{"GET", prefix + "/user"},
 		{"GET", prefix + "/get-user"},
-		{"POST", prefix + "/ok"},
+		{"POST", prefix + "/ok", "500"},
 		{"POST", prefix + "/user-info"},
 		{"PUT", prefix + "/user-info"},
 		{"DELETE", prefix + "/user-info"},
@@ -107,14 +104,19 @@ func TestBindStruct(t *testing.T) {
 		{"GET", prefix + "/User/233"},
 		{"GET", prefix + "/File/File233"},
 		{"GET", prefix + "/file/File233"},
-		{"GET", prefix + "/ok"},
+		{"GET", prefix + "/ok", "500"},
 	}
 	for _, v := range methods {
 		w := httptest.NewRecorder()
 		t.Log("Test:", v[0], v[1])
 		req, _ := http.NewRequest(v[0], v[1], nil)
 		r.ServeHTTP(w, req)
-		tt.Equal(200, w.Code)
+		code := 200
+		if len(v) > 2 {
+			code = ztype.ToInt(v[2])
+		}
+		tt.Equal(code, w.Code)
+		t.Log(w.Body.String())
 	}
 
 	err = r.BindStruct(prefix, nil)

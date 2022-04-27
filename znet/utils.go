@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func getAddr(addr string) string {
@@ -126,7 +128,7 @@ func parsPattern(res []string, prefix string) (string, []string) {
 		firstChar := string(str[0])
 		// todo Need to optimize
 		if i2 != -1 && i != -1 {
-			// lastChar := string(str[l])
+			// lastChar := string(str[mu])
 			if i == l && i2 == 0 {
 				matchStr := str[1:l]
 				res := strings.Split(matchStr, ":")
@@ -187,7 +189,7 @@ type tlsRedirectHandler struct {
 }
 
 func (t *tlsRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, t.Domain+r.URL.String(), 301)
+	http.Redirect(w, r, t.Domain+r.URL.String(), http.StatusMovedPermanently)
 }
 
 func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -200,17 +202,22 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		startTime:     time.Time{},
 		header:        map[string][]string{},
 		customizeData: map[string]interface{}{},
+		stopHandle:    zutil.NewBool(false),
 		prevData: &PrevData{
-			Code: http.StatusOK,
+			Code: zutil.NewInt32(http.StatusOK),
 			Type: ContentTypePlain,
 		},
 	}
 }
 
-func (c *Context) reset(w http.ResponseWriter, r *http.Request) {
+func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	c.Writer = w
+	c.Injector = zdi.New(c.Engine.Injector)
+	c.Injector.Maps(c)
 	c.startTime = time.Now()
+	c.renderError = defErrorHandler()
+	c.stopHandle.Store(false)
 }
 
 func (e *Engine) acquireContext() *Context {
@@ -218,18 +225,19 @@ func (e *Engine) acquireContext() *Context {
 }
 
 func (e *Engine) releaseContext(c *Context) {
-	c.l.Lock()
-	c.prevData.Code = http.StatusOK
-	c.stopHandle = false
+	c.prevData.Code.Store(http.StatusOK)
+	c.mu.Lock()
 	c.middleware = c.middleware[0:0]
 	c.customizeData = map[string]interface{}{}
 	c.header = map[string][]string{}
 	c.render = nil
+	c.renderError = nil
 	c.cacheJSON = nil
 	c.cacheQuery = nil
+	c.Injector = nil
 	c.rawData = c.rawData[0:0]
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain
-	c.l.Unlock()
+	c.mu.Unlock()
 	e.pool.Put(c)
 }
