@@ -9,7 +9,12 @@ import (
 	"time"
 )
 
-type Stack []uintptr
+type (
+	// Stack uintptr array
+	Stack []uintptr
+	// Nocmp is an uncomparable struct
+	Nocmp [0]func()
+)
 
 const (
 	maxStackDepth = 1 << 5
