@@ -2,11 +2,13 @@
 
 Package zlsgo is golang daily development of some commonly used functions set
 
-See http://docs.73zls.com/
+See https://docs.73zls.com/zlsgo/#/
 
-znet(Web development) https://godoc.org/github.com/sohaha/zlsgo/znet
+znet(Web development) ttps://pkg.go.dev/github.com/sohaha/zlsgo/znet
 
-ztype(Type correlation) https://godoc.org/github.com/sohaha/zlsgo/ztype
+ztype(Type correlation) ttps://pkg.go.dev/github.com/sohaha/zlsgo/ztype
+
+zpool(Goroutine pool) https://pkg.go.dev/github.com/sohaha/zlsgo/zpool
 
 */
 package zlsgo

@@ -1,3 +1,4 @@
+// Package zpool provides golang worker pool, Concurrency limiting goroutine pool
 package zpool
 
 import (
