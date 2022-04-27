@@ -97,9 +97,9 @@ func TestError(t *testing.T) {
 	})
 
 	tt.Run("UnwrapErrors", func(t *testing.T, tt *zlsgo.TestUtil) {
-		errors := zerror.UnwrapErrors(err401)
-		t.Log(strings.Join(errors, ", "))
-		tt.Equal([]string{err401.Error(), err404.Error(), err500.Error()}, errors)
+		errs := zerror.UnwrapErrors(err401)
+		t.Log(strings.Join(errs, ", "))
+		tt.Equal([]string{err401.Error(), err404.Error(), err500.Error()}, errs)
 		tt.Equal([]string{err404.Error(), err500.Error()}, zerror.UnwrapErrors(err404))
 		tt.Equal([]string{err500.Error()}, zerror.UnwrapErrors(err500))
 	})

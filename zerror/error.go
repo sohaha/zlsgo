@@ -64,13 +64,6 @@ func SupText(err error, text string) error {
 		return nil
 	}
 
-	if _, ok := err.(*Error); !ok {
-		err = &Error{
-			err:   err,
-			stack: zutil.Callers(3),
-		}
-	}
-
 	return &Error{
 		wrapErr: &Error{
 			err:   errors.New(text),
