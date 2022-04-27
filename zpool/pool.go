@@ -3,11 +3,11 @@ package zpool
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
-	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
