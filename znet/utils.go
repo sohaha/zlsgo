@@ -213,7 +213,7 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	c.Writer = w
-	c.Injector = zdi.New(c.Engine.Injector)
+	c.Injector = zdi.New(c.Engine.injector)
 	c.Injector.Maps(c)
 	c.startTime = time.Now()
 	c.renderError = defErrorHandler()

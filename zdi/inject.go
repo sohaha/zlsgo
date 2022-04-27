@@ -9,13 +9,13 @@ func (inj *injector) Invoke(f interface{}) ([]reflect.Value, error) {
 	t := reflect.TypeOf(f)
 	switch v := f.(type) {
 	case PreInvoker:
-		return inj.fastInvoke(v, t, t.NumIn())
+		return inj.fast(v, t, t.NumIn())
 	default:
-		return inj.callInvoke(f, t, t.NumIn())
+		return inj.call(f, t, t.NumIn())
 	}
 }
 
-func (inj *injector) callInvoke(f interface{}, t reflect.Type, numIn int) ([]reflect.Value, error) {
+func (inj *injector) call(f interface{}, t reflect.Type, numIn int) ([]reflect.Value, error) {
 	var in []reflect.Value
 	if numIn > 0 {
 		in = make([]reflect.Value, numIn)
@@ -59,9 +59,8 @@ func (inj *injector) Maps(values ...interface{}) (override []reflect.Type) {
 	return
 }
 
-func (inj *injector) Set(typ reflect.Type, val reflect.Value) TypeMapper {
+func (inj *injector) Set(typ reflect.Type, val reflect.Value) {
 	inj.values[typ] = val
-	return inj
 }
 
 func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {

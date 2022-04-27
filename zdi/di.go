@@ -9,6 +9,8 @@ type (
 		Construct
 		Invoker
 		TypeMapper
+		Set(reflect.Type, reflect.Value)
+		Get(reflect.Type) (reflect.Value, bool)
 		SetParent(Injector)
 	}
 	Invoker interface {
@@ -18,8 +20,6 @@ type (
 		Map(interface{}, ...Option) reflect.Type
 		Maps(...interface{}) []reflect.Type
 		Provide(interface{}, ...Option) []reflect.Type
-		Set(reflect.Type, reflect.Value) TypeMapper
-		Get(reflect.Type) (reflect.Value, bool)
 	}
 )
 

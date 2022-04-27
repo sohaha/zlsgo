@@ -1,4 +1,3 @@
-// Package zpool provides golang worker pool, Concurrency limiting goroutine pool
 package zpool
 
 import (
@@ -7,12 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
 	// Task Define function callbacks
-	Task     func()
+	Task     interface{}
+	taskfn   func() error
 	WorkPool struct {
 		workers   sync.Pool
 		closed    bool
@@ -21,10 +22,12 @@ type (
 		minIdle   uint
 		usedNum   uint
 		maxIdle   uint
+		injector  zdi.Injector
 		panicFunc PanicFunc
+		New       func()
 	}
 	worker struct {
-		jobQueue  chan Task
+		jobQueue  chan taskfn
 		stop      chan struct{}
 		Parameter chan []interface{}
 	}
@@ -50,12 +53,13 @@ func New(min int, max ...int) *WorkPool {
 	}
 
 	w := &WorkPool{
-		minIdle: minIdle,
-		maxIdle: maxIdle,
-		queue:   make(chan *worker, maxIdle),
+		minIdle:  minIdle,
+		maxIdle:  maxIdle,
+		injector: zdi.New(),
+		queue:    make(chan *worker, maxIdle),
 		workers: sync.Pool{New: func() interface{} {
 			return &worker{
-				jobQueue:  make(chan Task),
+				jobQueue:  make(chan taskfn),
 				Parameter: make(chan []interface{}),
 				stop:      make(chan struct{}),
 			}
@@ -66,21 +70,21 @@ func New(min int, max ...int) *WorkPool {
 
 // Do Add to the workpool and implement
 func (wp *WorkPool) Do(fn Task) error {
-	return wp.do(context.Background(), fn, nil)
+	return wp.do(context.Background(), wp.handlerFunc(fn), nil)
 }
 
 func (wp *WorkPool) DoWithTimeout(fn Task, t time.Duration) error {
 	ctx, canle := context.WithTimeout(context.Background(), t)
 	defer canle()
-	return wp.do(ctx, fn, nil)
+	return wp.do(ctx, wp.handlerFunc(fn), nil)
 }
 
-// Do Add to the workpool and implement
+// PanicFunc Do Add to the workpool and implement
 func (wp *WorkPool) PanicFunc(handler PanicFunc) {
 	wp.panicFunc = handler
 }
 
-func (wp *WorkPool) do(cxt context.Context, fn Task, param []interface{}) error {
+func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) error {
 	if wp.IsClosed() {
 		return ErrPoolClosed
 	}
@@ -147,7 +151,7 @@ func (wp *WorkPool) IsClosed() bool {
 	return b
 }
 
-// Close close the pool
+// Close  the pool
 func (wp *WorkPool) Close() {
 	if wp.IsClosed() {
 		return
@@ -167,7 +171,7 @@ func (wp *WorkPool) Pause() {
 	wp.AdjustSize(0)
 }
 
-// Continue continue
+// Continue to work
 func (wp *WorkPool) Continue(workerNum ...int) {
 	num := int(wp.maxIdle)
 	if len(workerNum) > 0 {
@@ -233,6 +237,13 @@ func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
+				err, ok := r.(error)
+				if !ok {
+					err = fmt.Errorf("%v", r)
+				}
+				if err != nil && handler != nil {
+					handler(err)
+				}
 				w.createGoroutines(q, handler)
 				q <- w
 			}
@@ -240,10 +251,7 @@ func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
 		for {
 			select {
 			case job := <-w.jobQueue:
-				err := zutil.TryCatch(func() error {
-					job()
-					return nil
-				})
+				err := job()
 				if err != nil && handler != nil {
 					handler(err)
 				}

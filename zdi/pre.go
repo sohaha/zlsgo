@@ -14,7 +14,7 @@ func IsPreInvoker(handler interface{}) bool {
 	return ok
 }
 
-func (inj *injector) fastInvoke(f PreInvoker, t reflect.Type, numIn int) ([]reflect.Value, error) {
+func (inj *injector) fast(f PreInvoker, t reflect.Type, numIn int) ([]reflect.Value, error) {
 	var in []interface{}
 	if numIn > 0 {
 		in = make([]interface{}, numIn)

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zdi"
@@ -83,6 +84,9 @@ func TestInjectMiddleware(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
 
+	now := time.Now()
+	r.Injector().Map(now)
+
 	w := newRequest(r, "GET", "/TestInjectMiddleware", "/TestInjectMiddleware", func() (int, string) {
 		t.Log("run")
 		return 403, "Inject"
@@ -90,7 +94,8 @@ func TestInjectMiddleware(t *testing.T) {
 		zlog.Error("Recovery", err)
 	}), func(c *Context) {
 		c.Next()
-	}, func() error {
+	}, func(n time.Time) error {
+		tt.Equal(now, n)
 		return errors.New("return exit")
 	})
 	tt.Equal(500, w.Code)

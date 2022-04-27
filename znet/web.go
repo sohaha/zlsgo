@@ -68,7 +68,7 @@ type (
 		BindStructDelimiter string
 		BindStructSuffix    string
 		template            *tpl
-		Injector            zdi.Injector
+		injector            zdi.Injector
 	}
 	TlsCfg struct {
 		Cert           string
@@ -185,7 +185,7 @@ func New(serverName ...string) *Engine {
 		webMode:             prodCode,
 		addr:                []addrSt{defaultAddr},
 		templateFuncMap:     template.FuncMap{},
-		Injector:            zdi.New(),
+		injector:            zdi.New(),
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)
@@ -246,6 +246,11 @@ func CloseHotRestartFileMd5() {
 // SetTemplateFuncMap Set Template Func
 func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
 	e.templateFuncMap = funcMap
+}
+
+// Injector Call injector
+func (e *Engine) Injector() zdi.TypeMapper {
+	return e.injector
 }
 
 // SetHTMLTemplate Set HTML Template

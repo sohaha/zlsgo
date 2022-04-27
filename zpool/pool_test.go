@@ -12,9 +12,32 @@ import (
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zerror"
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zpool"
 	"github.com/sohaha/zlsgo/zutil"
 )
+
+func TestBase(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	workerNum := 5
+	p := zpool.New(workerNum)
+	var wg sync.WaitGroup
+	p.PanicFunc(func(err error) {
+		zlog.Printf("panic: %v", err)
+	})
+	for i := 0; i < workerNum*2; i++ {
+		ii := i
+		wg.Add(1)
+		err := p.Do(func() {
+			_ = ii
+			time.Sleep(time.Millisecond)
+			wg.Done()
+		})
+		tt.EqualNil(err)
+	}
+
+	wg.Wait()
+}
 
 func TestPool(t *testing.T) {
 	tt := zlsgo.NewTest(t)
@@ -179,7 +202,6 @@ func TestPoolPanicFunc(t *testing.T) {
 	p.PanicFunc(func(err error) {
 		t.Log("send again")
 		defer g.Done()
-		panic("send again")
 	})
 	p.Continue()
 	g.Add(1)
