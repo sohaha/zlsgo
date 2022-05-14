@@ -4,6 +4,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -37,35 +38,27 @@ func getHostname(addr string, isTls bool) string {
 	return hostname + resolveHostname(addr)
 }
 
-func completionPath(path, prefix string) string {
-	if path == "/" {
+func CompletionPath(p, prefix string) string {
+	if p == "/" {
 		if prefix == "/" {
 			return prefix
 		}
-		return prefix + path
-	} else if path == "" {
+		return prefix + p
+	} else if p == "" {
+		if prefix[0] != '/' {
+			return "/" + prefix
+		}
 		return prefix
 	}
-	n := zstring.TrimSpace(strings.Join([]string{prefix, path}, "/"))
-	l := len(n)
-	b := zstring.Buffer(l)
-	b.WriteByte('/')
-	for i := 1; i < l; i++ {
-		if n[i] == '/' {
-			if i == 0 || i == l-1 {
-				continue
-			}
-			if n[i-1] == '/' {
-				continue
-			}
-		}
-		b.WriteByte(n[i])
+	suffix := false
+	if p[len(p)-1] == '/' {
+		suffix = true
 	}
-	n = b.String()
-	if strings.HasSuffix(path, "/") {
-		n = n + "/"
+	p = zstring.TrimSpace(path.Join("/", prefix, p))
+	if suffix {
+		p = p + "/"
 	}
-	return n
+	return p
 }
 
 func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {
@@ -213,8 +206,8 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	c.Writer = w
-	c.Injector = zdi.New(c.Engine.injector)
-	c.Injector.Maps(c)
+	c.injector = zdi.New(c.Engine.injector)
+	c.injector.Maps(c)
 	c.startTime = time.Now()
 	c.renderError = defErrorHandler()
 	c.stopHandle.Store(false)
@@ -234,7 +227,8 @@ func (e *Engine) releaseContext(c *Context) {
 	c.renderError = nil
 	c.cacheJSON = nil
 	c.cacheQuery = nil
-	c.Injector = nil
+	c.cacheForm = nil
+	c.injector = nil
 	c.rawData = c.rawData[0:0]
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain

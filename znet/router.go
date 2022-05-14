@@ -104,7 +104,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s  %s", "Any", completionPath(path, e.router.prefix)))
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s  %s", "Any", CompletionPath(path, e.router.prefix)))
 	e.GET(path, action, moreHandler...)
 	e.POST(path, action, moreHandler...)
 	e.PUT(path, action, moreHandler...)
@@ -219,12 +219,14 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 	}
 	rprefix := e.router.prefix
 	if rprefix != "" {
-		prefix = completionPath(prefix, rprefix)
+		prefix = CompletionPath(prefix, rprefix)
 	}
+	middleware := make([]handlerFn, len(e.router.middleware))
+	copy(middleware, e.router.middleware)
 	route := &router{
 		prefix:     prefix,
 		trees:      e.router.trees,
-		middleware: e.router.middleware,
+		middleware: middleware,
 	}
 	engine = &Engine{
 		router:              route,
@@ -330,12 +332,13 @@ func (e *Engine) handle(method string, path string, handleName string, handle ha
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
+
 	tree, ok := e.router.trees[method]
 	if !ok {
 		tree = NewTree()
 		e.router.trees[method] = tree
 	}
-	path = completionPath(path, e.router.prefix)
+	path = CompletionPath(path, e.router.prefix)
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
@@ -348,9 +351,12 @@ func (e *Engine) handle(method string, path string, handleName string, handle ha
 		}
 	}
 
-	middleware := e.router.middleware
-	if len(moreHandler) > 0 {
-		middleware = append(middleware, moreHandler...)
+	middleware := make([]handlerFn, len(e.router.middleware))
+	{
+		copy(middleware, e.router.middleware)
+		if len(moreHandler) > 0 {
+			middleware = append(middleware, moreHandler...)
+		}
 	}
 
 	if e.IsDebug() {

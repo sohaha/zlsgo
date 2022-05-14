@@ -319,6 +319,7 @@ func TestFile(t *testing.T) {
 		return
 	}
 	tt.Equal("上传成功", res.String())
+	tt.EqualTrue(zfile.FileSizeUint("./my2.jpg") > 120)
 	zfile.Rmdir("./my2.jpg")
 
 	_ = SetTransport(func(transport *http.Transport) {

@@ -10,12 +10,14 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-// Error returns the msg of e
+// Error returns msg
 func (e *Error) Error() string {
 	if e == nil || e.err == nil {
 		return "<nil>"
 	}
-
+	if e.inner && e.wrapErr != nil {
+		return e.wrapErr.Error()
+	}
 	return e.err.Error()
 }
 
@@ -27,12 +29,7 @@ func (e *Error) Unwrap() error {
 	return e.wrapErr
 }
 
-// Format formats the frame according to the fmt.Formatter interface.
-//
-// %v, %s   : Print all the error string;
-// %-v, %-s : Print current level error string;
-// %+s      : Print full stack error list;
-// %+v      : Print the error string and full stack error list;
+// Format formats the frame according to the fmt.Formatter interface
 func (e *Error) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
@@ -43,11 +40,12 @@ func (e *Error) Format(s fmt.State, verb rune) {
 		default:
 			_, _ = io.WriteString(s, e.Error())
 		}
+	case 's':
+		_, _ = io.WriteString(s, strings.Join(UnwrapErrors(e), ": "))
 	}
 }
 
-// Stack returns the stack callers as string.
-// It returns an empty string if the `err` does not support stacks.
+// Stack returns the stack callers as string
 func (e *Error) Stack() string {
 	if e == nil {
 		return ""
@@ -85,7 +83,7 @@ func (e *Error) Stack() string {
 	return buffer.String()
 }
 
-// formatSubStack formats the stack for error.
+// formatSubStack formats the stack for error
 func formatSubStack(st zutil.Stack, buffer *bytes.Buffer) {
 	if st == nil {
 		return

@@ -36,7 +36,6 @@ func BenchmarkTryCatch_panic(b *testing.B) {
 		_ = zerror.TryCatch(func() error {
 			e := strconv.Itoa(i)
 			panic(e)
-			return nil
 		})
 	}
 }

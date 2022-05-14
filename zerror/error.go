@@ -15,6 +15,7 @@ type (
 		wrapErr error
 		code    ErrCode
 		stack   zutil.Stack
+		inner   bool
 	}
 )
 
@@ -58,18 +59,23 @@ func Wrap(err error, code ErrCode, text string) error {
 	}
 }
 
-// SupText wraps err with text, no tracking
+// Deprecated: please use zerror.InnerText
+// SupText returns the error text
 func SupText(err error, text string) error {
+	return InnerText(err, text)
+}
+
+// InnerText returns the inner error's text
+func InnerText(err error, text string) error {
 	if err == nil {
 		return nil
 	}
 
 	return &Error{
-		wrapErr: &Error{
-			err:   errors.New(text),
-			stack: zutil.Callers(3),
-		},
-		err: err,
+		wrapErr: err,
+		inner:   true,
+		stack:   zutil.Callers(3),
+		err:     errors.New(text),
 	}
 }
 
@@ -140,6 +146,7 @@ func UnwrapErrors(err error) (errs []string) {
 
 		e, ok := err.(*Error)
 		if !ok {
+			errs = append(errs, err.Error())
 			return
 		}
 

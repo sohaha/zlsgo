@@ -81,12 +81,14 @@ func redirectPprof(c *znet.Context) {
 
 func authDebug(token string) znet.HandlerFunc {
 	return func(c *znet.Context) {
-		getToken := c.DefaultQuery("token", c.GetCookie("debug-token"))
-		c.SetCookie("debug-token", token, 600)
-		if token == "" || getToken == token {
-			c.Next()
-		} else {
-			c.Byte(401, []byte("No permission"))
+		if token != "" {
+			getToken := c.DefaultQuery("token", c.GetCookie("debug-token"))
+			c.SetCookie("debug-token", token, 600)
+			if getToken != token {
+				c.Abort()
+				c.Byte(401, []byte("No permission"))
+			}
 		}
+		c.Next()
 	}
 }

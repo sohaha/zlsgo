@@ -5,6 +5,8 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zdi"
 )
 
 // Host Get the current Host
@@ -110,9 +112,7 @@ func (c *Context) Next() {
 		if c.stopHandle.Load() {
 			break
 		}
-		// c.mu.RLock()
 		n := len(c.middleware) > 0
-		// c.mu.RUnlock()
 		if !n {
 			break
 		}
@@ -205,4 +205,8 @@ func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok b
 	}
 	c.mu.RUnlock()
 	return
+}
+
+func (c *Context) Injector() zdi.Injector {
+	return c.injector
 }

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"mime"
 	"mime/multipart"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -21,6 +23,29 @@ func (c *Context) initQuery() {
 	c.cacheQuery = c.Request.URL.Query()
 }
 
+func (c *Context) initPostForm() {
+	if c.cacheForm != nil {
+		return
+	}
+	form := make(url.Values)
+	if c.Request.PostForm == nil {
+		(func() {
+			_, err := c.GetDataRaw()
+			if err != nil {
+				return
+			}
+			values, _ := url.ParseQuery(c.rawData)
+			c.Request.PostForm = values
+			v := c.ContentType()
+			if v == mimeMultipartPOSTForm {
+				_ = c.ParseMultipartForm()
+			}
+			form = c.Request.PostForm
+		})()
+	}
+	c.cacheForm = form
+}
+
 // GetParam Get the value of the param inside the route
 func (c *Context) GetParam(key string) string {
 	return c.GetAllParam()[key]
@@ -35,14 +60,14 @@ func (c *Context) GetAllParam() ParamsMapType {
 	return nil
 }
 
-// GetAllQueryst Get All Queryst
-func (c *Context) GetAllQueryst() url.Values {
+// GetAllQuery Get All Queryst
+func (c *Context) GetAllQuery() url.Values {
 	c.initQuery()
 	return c.cacheQuery
 }
 
-// GetAllQuerystMaps Get All Queryst Maps
-func (c *Context) GetAllQuerystMaps() map[string]string {
+// GetAllQueryMaps Get All Queryst Maps
+func (c *Context) GetAllQueryMaps() map[string]string {
 	c.initQuery()
 	arr := map[string]string{}
 	for key, v := range c.cacheQuery {
@@ -114,7 +139,7 @@ func (c *Context) DefaultFormOrQuery(key string, def string) string {
 // GetPostFormArray Get Post FormArray
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 	req := c.Request
-	postForm, _ := c.GetPostFormAll()
+	postForm := c.GetPostFormAll()
 	if values := postForm[key]; len(values) > 0 {
 		return values, true
 	}
@@ -127,16 +152,9 @@ func (c *Context) GetPostFormArray(key string) ([]string, bool) {
 }
 
 // GetPostFormAll Get PostForm All
-func (c *Context) GetPostFormAll() (value url.Values, err error) {
-	req := c.Request
-	if req.PostForm == nil {
-		if c.ContentType() == mimeMultipartPOSTForm {
-			err = req.ParseMultipartForm(c.Engine.MaxMultipartMemory)
-		} else {
-			err = req.ParseForm()
-		}
-	}
-	value = req.PostForm
+func (c *Context) GetPostFormAll() (value url.Values) {
+	c.initPostForm()
+	value = c.cacheForm
 	return
 }
 
@@ -148,11 +166,10 @@ func (c *Context) PostFormMap(key string) map[string]string {
 
 // GetPostFormMap Get PostForm Map
 func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
-	req := c.Request
-	postForm, _ := c.GetPostFormAll()
+	postForm := c.GetPostFormAll()
 	dicts, exist := c.get(postForm, key)
-	if !exist && req.MultipartForm != nil && req.MultipartForm.File != nil {
-		dicts, exist = c.get(req.MultipartForm.Value, key)
+	if !exist && c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
+		dicts, exist = c.get(c.Request.MultipartForm.Value, key)
 	}
 
 	return dicts, exist
@@ -225,7 +242,7 @@ func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
 
 // MultipartForm MultipartForm
 func (c *Context) MultipartForm() (*multipart.Form, error) {
-	err := c.Request.ParseMultipartForm(c.Engine.MaxMultipartMemory)
+	err := c.ParseMultipartForm()
 	return c.Request.MultipartForm, err
 }
 
@@ -249,4 +266,49 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) erro
 	}
 
 	return nil
+}
+
+func (c *Context) ParseMultipartForm() error {
+	if c.Request.MultipartForm != nil {
+		return nil
+	}
+
+	mr, err := c.multipartReader(false)
+	if err != nil {
+		return err
+	}
+
+	f, err := mr.ReadForm(c.Engine.MaxMultipartMemory)
+	if err != nil {
+		return err
+	}
+
+	if c.Request.PostForm == nil {
+		c.Request.PostForm = make(url.Values)
+	}
+
+	for k, v := range f.Value {
+		c.Request.PostForm[k] = append(c.Request.PostForm[k], v...)
+	}
+
+	c.Request.MultipartForm = f
+	return nil
+}
+
+func (c *Context) multipartReader(allowMixed bool) (*multipart.Reader, error) {
+	v := c.Request.Header.Get("Content-Type")
+	if v == "" {
+		return nil, http.ErrNotMultipart
+	}
+	d, params, err := mime.ParseMediaType(v)
+	if err != nil || !(d == "multipart/form-data" || allowMixed && d == "multipart/mixed") {
+		return nil, http.ErrNotMultipart
+	}
+	boundary, ok := params["boundary"]
+	if !ok {
+		return nil, http.ErrMissingBoundary
+	}
+	_, _ = c.GetDataRaw()
+	body := strings.NewReader(c.rawData)
+	return multipart.NewReader(body, boundary), nil
 }

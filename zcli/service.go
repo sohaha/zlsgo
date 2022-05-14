@@ -139,7 +139,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			daemonConfig = &daemon.Config{
 				Name:        name,
 				Description: description,
-				Option:      zarray.DefData{
+				Option: zarray.DefData{
 					// "UserService": true,
 				},
 			}

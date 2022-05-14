@@ -498,8 +498,8 @@ func TestMore(tt *testing.T) {
 	w := newRequest(r, "delete", []string{"/", `{"Na":"is json","Name2":"222","U":{"name3":"333"},"N2":{"Name2":2002,"U.Name3":"333","S":[14.1,20]}}`, ContentTypeJSON}, "/", func(c *Context) {
 		_, _ = c.GetDataRaw()
 		c.String(200, expected)
-		c.GetAllQuerystMaps()
-		c.GetAllQueryst()
+		c.GetAllQueryMaps()
+		c.GetAllQuery()
 		c.Log.Debug(c.GetJSON("Name"))
 		type U2 struct {
 			N2    int `json:"U.Name3"`
@@ -643,6 +643,7 @@ func TestShouldBindStruct(tt *testing.T) {
 		tt.Log(err, ss)
 		t.EqualExit(666, ss.ID)
 		t.EqualExit("基础", ss.Gg.Info)
+		t.Equal("666", c.DefaultPostForm("id", ""))
 	})
 }
 
@@ -656,6 +657,7 @@ func TestSetMode(T *testing.T) {
 	r := newServer()
 	r.SetMode(DebugMode)
 	t.Equal(true, r.IsDebug())
+	t.Equal(DebugMode, r.GetMode())
 	r.SetMode(TestMode)
 	r.SetMode(ProdMode)
 	t.Equal(false, r.IsDebug())
@@ -737,7 +739,7 @@ func TestGetInput(T *testing.T) {
 		t.EqualExit(false, c.IsAjax())
 		a, _ := c.GetQuery("a")
 		name := c.GetParam("name")
-		GetAllQueryst := c.GetAllQueryst()
+		GetAllQueryst := c.GetAllQuery()
 		t.Log(GetAllQueryst)
 		t.Equal(getA, a)
 		t.Equal(getA, name)

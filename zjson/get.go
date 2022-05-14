@@ -1948,16 +1948,16 @@ func assign(jsval Res, val reflect.Value) {
 }
 
 func Unmarshal(json, v interface{}) error {
-
-	var data []byte
+	var r Res
 	switch v := json.(type) {
 	case string:
-		data = zstring.String2Bytes(v)
+		r = Parse(v)
 	case []byte:
-		data = v
+		r = ParseBytes(v)
+	case Res:
+		r = v
 	}
 	if v := reflect.ValueOf(v); v.Kind() == reflect.Ptr {
-		r := ParseBytes(data)
 		if r.String() == "" {
 			return errors.New("invalid json")
 		}

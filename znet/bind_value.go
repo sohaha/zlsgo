@@ -28,7 +28,7 @@ func (c *Context) BindJSON(obj interface{}) error {
 }
 
 func (c *Context) BindQuery(obj interface{}) (err error) {
-	q := c.GetAllQuerystMaps()
+	q := c.GetAllQueryMaps()
 	if err != nil {
 		return err
 	}
@@ -60,10 +60,7 @@ func (c *Context) BindQuery(obj interface{}) (err error) {
 }
 
 func (c *Context) BindForm(obj interface{}) error {
-	q, err := c.GetPostFormAll()
-	if err != nil {
-		return err
-	}
+	q := c.GetPostFormAll()
 	typ, err := zreflect.NewTyp(reflect.TypeOf(obj))
 	if err != nil {
 		return err

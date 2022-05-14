@@ -1,10 +1,12 @@
 package zcli
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"os"
 	"testing"
+	"time"
 
 	zls "github.com/sohaha/zlsgo"
 )
@@ -66,16 +68,32 @@ func testOther(t *testing.T) {
 	Help()
 }
 
-func TestUtil(T *testing.T) {
+func TestSignal(t *testing.T) {
+	tt := zls.NewTest(t)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	tip := "test"
+	signalChan := SignalChan()
+	now := time.Now()
+	select {
+	case <-ctx.Done():
+		tip = "timeout"
+	case <-signalChan:
+		tip = "signal"
+	}
+	t.Log(time.Since(now), tip)
+	tt.Equal("timeout", tip)
+}
+
+func TestUtil(t *testing.T) {
 	BuildGoVersion = "--"
 	BuildTime = "--"
 	showVersionNum(true)
 	Version = ""
 	showVersion()
 	IsDoubleClickStartUp()
-	go func() {
-		KillSignal()
-	}()
+
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {

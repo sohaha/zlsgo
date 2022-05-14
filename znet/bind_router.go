@@ -33,6 +33,9 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 	handleName := "reflect.methodValueCall"
 	typeOf := typ.TypeOf()
 	return typ.ForEachMethod(func(i int, m reflect.Method, value reflect.Value) error {
+		if m.Name == "Init" {
+			return nil
+		}
 		info, err := zstring.RegexExtract(
 			`^(ID|Full){0,}(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
 		infoLen := len(info)

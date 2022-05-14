@@ -9,7 +9,7 @@ import (
 func TestContext_Bind(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
-	_ = newRequest(r, "POST", []string{"/TestContext_BindJSON", `{"id":666,"Pid":100,"name":"名字","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情","p":[{"id":1},{"id":2}]}}]}`, mimeJSON}, "/TestContext_BindJSON", func(c *Context) {
+	_ = newRequest(r, "POST", []string{"/TestContext_Bind", `{"id":666,"Pid":100,"name":"名字","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情","p":[{"id":1},{"id":2}]}}]}`, mimeJSON}, "/TestContext_Bind", func(c *Context) {
 		var s SS
 		err := c.Bind(&s)
 		t.Logf("%+v", s)

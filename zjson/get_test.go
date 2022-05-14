@@ -128,7 +128,7 @@ func TestGet(t *testing.T) {
 	var demoData Demo
 	demoJson := Ugly(zstring.String2Bytes(demo))
 	err := Unmarshal(demoJson, &demoData)
-	t.Log(err, demoData)
+	t.Log(err, demoData, string(demoJson))
 
 	err = Unmarshal(zstring.String2Bytes(demo), &demoData)
 	tt.EqualExit(true, err == nil)

@@ -2,120 +2,113 @@ package ztype
 
 import (
 	"reflect"
+	"strings"
 )
 
-type StructEngin struct {
-	Fields        []interface{}
-	Result        []map[string]interface{}
-	TagName       string
-	TagIgnoreName string
-	ExtraCols     []string
-}
-
-func Struct() *StructEngin {
-	s := new(StructEngin)
-	s.TagName = "z"
-	s.TagIgnoreName = "ignore"
-	return s
-}
-
-func (s *StructEngin) GetStructFields(data interface{}) []interface{} {
-	val := reflect.Indirect(reflect.ValueOf(data))
-	for i := 0; i < val.NumField(); i++ {
-		valueField := val.Field(i)
-		switch valueField.Kind() {
-		case reflect.Struct:
-			s.GetStructFields(valueField.Addr().Interface())
-		default:
-			s.AppendFields(valueField.Addr().Interface())
-		}
+type (
+	StructBuilder struct {
+		fields map[string]*StructField
+		typ    int
+		key    interface{}
 	}
-	return s.GetFields()
-}
-
-func (s *StructEngin) ToMap(data interface{}) []map[string]interface{} {
-	val := reflect.Indirect(reflect.ValueOf(data))
-	switch val.Kind() {
-	case reflect.Struct:
-		s.get(val)
-	case reflect.Slice:
-		for i := 0; i < val.Len(); i++ {
-			s.get(reflect.Indirect(val.Index(i)))
-		}
+	StructField struct {
+		typ interface{}
+		tag string
 	}
-	return s.GetResult()
-}
+)
 
-func (s *StructEngin) get(val reflect.Value) {
-	valType := val.Type()
-	var mapTmp = make(map[string]interface{})
-	for i := 0; i < val.NumField(); i++ {
-		valueField := val.Field(i)
-		typeField := valType.Field(i)
-		switch valueField.Kind() {
-		case reflect.Struct:
-			continue
-		default:
-			fieldName := typeField.Tag.Get(s.GetTagName())
-			if fieldName != s.GetTagIgnoreName() {
-				if fieldName == "" {
-					fieldName = typeField.Name
-				}
-				if ToBool(valueField.Interface()) {
-					mapTmp[fieldName] = valueField.Interface()
-				} else {
-					if InArray(fieldName, s.ExtraCols) {
-						mapTmp[fieldName] = valueField.Interface()
-					}
-				}
-			}
-		}
+const (
+	typeStruct = iota
+	typeMapStruct
+	typeSliceStruct
+)
+
+func NewStruct() *StructBuilder {
+	return &StructBuilder{
+		typ:    typeStruct,
+		fields: map[string]*StructField{},
 	}
-	s.AppendResult(mapTmp)
 }
 
-func (s *StructEngin) AppendFields(arg interface{}) {
-	s.Fields = append(s.Fields, arg)
+func NewMapStruct(key interface{}) *StructBuilder {
+	return &StructBuilder{
+		typ:    typeMapStruct,
+		key:    key,
+		fields: map[string]*StructField{},
+	}
 }
 
-func (s *StructEngin) SetFields(arg []interface{}) {
-	s.Fields = arg
-}
-func (s *StructEngin) SetExtraCols(args []string) *StructEngin {
-	s.ExtraCols = args
-	return s
-}
-
-func (s *StructEngin) GetFields() []interface{} {
-	return s.Fields
+func NewtSliceStruct() *StructBuilder {
+	return &StructBuilder{
+		typ:    typeSliceStruct,
+		fields: map[string]*StructField{},
+	}
 }
 
-func (s *StructEngin) AppendResult(arg map[string]interface{}) {
-	s.Result = append(s.Result, arg)
+func (b *StructBuilder) AddField(name string, fieldType interface{}, tag ...string) *StructBuilder {
+	var t string
+	if len(tag) > 0 {
+		t = strings.Join(tag, " ")
+	}
+	b.fields[name] = &StructField{
+		typ: fieldType,
+		tag: t,
+	}
+	return b
 }
 
-func (s *StructEngin) SetResult(arg []map[string]interface{}) {
-	s.Result = arg
+func (b *StructBuilder) RemoveField(name string) *StructBuilder {
+	delete(b.fields, name)
+
+	return b
 }
 
-func (s *StructEngin) GetResult() []map[string]interface{} {
-	return s.Result
+func (b *StructBuilder) HasField(name string) bool {
+	_, ok := b.fields[name]
+	return ok
 }
 
-func (s *StructEngin) SetTagName(arg string) *StructEngin {
-	s.TagName = arg
-	return s
+func (b *StructBuilder) GetField(name string) *StructField {
+	if !b.HasField(name) {
+		return nil
+	}
+	return b.fields[name]
 }
 
-func (s *StructEngin) GetTagName() string {
-	return s.TagName
+func (b *StructBuilder) Interface() interface{} {
+	return b.Value().Interface()
 }
 
-func (s *StructEngin) SetTagIgnoreName(arg string) *StructEngin {
-	s.TagIgnoreName = arg
-	return s
+func (b *StructBuilder) Value() reflect.Value {
+	var structFields []reflect.StructField
+	for name, field := range b.fields {
+		t, ok := field.typ.(reflect.Type)
+		if !ok {
+			t = reflect.TypeOf(field.typ)
+		}
+		structFields = append(structFields, reflect.StructField{
+			Name: name,
+			Type: t,
+			Tag:  reflect.StructTag(field.tag),
+		})
+	}
+	v := reflect.StructOf(structFields)
+	switch b.typ {
+	case typeStruct:
+		return reflect.New(v)
+	case typeMapStruct:
+		return reflect.New(reflect.MapOf(reflect.Indirect(reflect.ValueOf(b.key)).Type(), v))
+	default:
+		return reflect.New(reflect.SliceOf(v))
+	}
 }
 
-func (s *StructEngin) GetTagIgnoreName() string {
-	return s.TagIgnoreName
+func (f *StructField) SetType(typ interface{}) *StructField {
+	f.typ = typ
+	return f
+}
+
+func (f *StructField) SetTag(tag string) *StructField {
+	f.tag = tag
+	return f
 }

@@ -1,4 +1,4 @@
-package zutil
+package zutil_test
 
 import (
 	"errors"
@@ -9,11 +9,12 @@ import (
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestWithRunContext(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	duration, mem := WithRunContext(func() {
+	duration, mem := zutil.WithRunContext(func() {
 		var b = zstring.Buffer()
 		size := 110000
 		count := math.Ceil(float64(size) / 1000)
@@ -38,23 +39,23 @@ func TestWithRunContext(t *testing.T) {
 
 func TestIfVal(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	i := IfVal(true, 1, 2)
+	i := zutil.IfVal(true, 1, 2)
 	t.EqualExit(1, i)
-	i = IfVal(false, 1, 2)
+	i = zutil.IfVal(false, 1, 2)
 	t.EqualExit(2, i)
 }
 
 func TestTryCatch(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	errMsg := errors.New("test error")
-	err := TryCatch(func() error {
+	err := zutil.TryCatch(func() error {
 		return errMsg
 	})
 	tt.Log(err)
 	t.EqualTrue(err != nil)
 	t.Equal(errMsg, err)
 
-	err = TryCatch(func() error {
+	err = zutil.TryCatch(func() error {
 		panic(123)
 	})
 	tt.Log(err)
@@ -72,7 +73,7 @@ func TestTryError(tt *testing.T) {
 		}
 	}()
 
-	Try(func() {
+	zutil.Try(func() {
 		panic("test")
 	}, func(e interface{}) {
 		if err, ok := e.(error); ok {
@@ -82,15 +83,15 @@ func TestTryError(tt *testing.T) {
 		t.Log("TestTryError ok")
 	})
 
-	Try(func() {
-		CheckErr(errors.New("test"))
+	zutil.Try(func() {
+		zutil.CheckErr(errors.New("test"))
 	}, func(e interface{}) {
 		if err, ok := e.(error); ok {
 			t.EqualExit("test", err.Error())
 		}
 	})
 
-	Try(func() {
+	zutil.Try(func() {
 		panic(t)
 	}, func(e interface{}) {
 		if err, ok := e.(error); ok {
@@ -98,17 +99,17 @@ func TestTryError(tt *testing.T) {
 		}
 	})
 
-	Try(func() {
+	zutil.Try(func() {
 		panic("test")
 	}, nil)
 }
 
 func TestUtil(t *testing.T) {
-	_, _ = GetParentProcessName()
-	IsDoubleClickStartUp()
+	_, _ = zutil.GetParentProcessName()
+	zutil.IsDoubleClickStartUp()
 }
 
 func TestMaximizeOpenFileLimit(t *testing.T) {
-	l, err := MaxRlimit()
+	l, err := zutil.MaxRlimit()
 	t.Log(l, err)
 }

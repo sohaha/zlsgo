@@ -17,15 +17,17 @@ func TestListenAndServe(t *testing.T) {
 func TestRegister(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := znet.New("pprof-test")
+	r.SetMode(znet.DebugMode)
 	Register(r, "666")
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/debug?token=666", strings.NewReader(""))
 	r.ServeHTTP(w, req)
-	tt.Equal(200, w.Code)
 	t.Log(w.Body.String())
+	tt.Equal(200, w.Code)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/debug", nil)
 	r.ServeHTTP(w, req)
+	t.Log(w.Body.String())
 	tt.Equal(401, w.Code)
 }

@@ -119,7 +119,7 @@ func TestInjectMiddleware(t *testing.T) {
 		c.Next()
 		pc = append(pc, 7)
 		var s string
-		err := c.Injector.Resolve(&s)
+		err := c.Injector().Resolve(&s)
 		tt.NoError(err)
 		tt.Equal("test", s)
 		return nil
@@ -130,7 +130,7 @@ func TestInjectMiddleware(t *testing.T) {
 		pc = append(pc, 6)
 	}, func(c *Context) {
 		pc = append(pc, 5)
-		c.Injector.Map("test")
+		c.Injector().Map("test")
 		c.Next()
 	})
 	tt.Equal(403, w.Code)

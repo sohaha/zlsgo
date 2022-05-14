@@ -49,7 +49,7 @@ func handlerFunc(h Handler) (fn handlerFn) {
 		return v
 	case zdi.PreInvoker:
 		return func(c *Context) error {
-			v, err := c.Injector.Invoke(v)
+			v, err := c.injector.Invoke(v)
 			if err != nil {
 				return err
 			}
@@ -60,13 +60,13 @@ func handlerFunc(h Handler) (fn handlerFn) {
 		}
 	case func() (int, string):
 		return func(c *Context) error {
-			v, err := c.Injector.Invoke(invokerCodeText(v))
+			v, err := c.injector.Invoke(invokerCodeText(v))
 			c.String(int32(v[0].Int()), v[1].String())
 			return err
 		}
 	default:
 		return func(c *Context) error {
-			v, err := c.Injector.Invoke(v)
+			v, err := c.injector.Invoke(v)
 			if err != nil {
 				return err
 			}

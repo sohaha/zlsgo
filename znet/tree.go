@@ -44,10 +44,11 @@ func NewTree() *Tree {
 	}
 }
 
-func (t *Tree) Add(pattern string, handle handlerFn, middleware ...handlerFn) {
+func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) {
 	var currentNode = t.root
-	if pattern != currentNode.key {
-		res := strings.Split(pattern, "/")
+	wareLen := len(middleware)
+	if path != currentNode.key {
+		res := strings.Split(path, "/")
 		end := len(res) - 1
 		for i, key := range res {
 			if key == "" {
@@ -59,25 +60,29 @@ func (t *Tree) Add(pattern string, handle handlerFn, middleware ...handlerFn) {
 			node, ok := currentNode.children[key]
 			if !ok {
 				node = NewNode(key, currentNode.depth+1)
-				if len(middleware) > 0 {
+				if wareLen > 0 && i == end {
 					node.middleware = append(node.middleware, middleware...)
 				}
 				currentNode.children[key] = node
+			} else if node.handle == nil {
+				if wareLen > 0 && i == end {
+					node.middleware = append(node.middleware, middleware...)
+				}
 			}
 			currentNode = node
 		}
 	}
 
-	if len(middleware) > 0 && currentNode.depth == 1 {
+	if wareLen > 0 && currentNode.depth == 1 {
 		currentNode.middleware = append(currentNode.middleware, middleware...)
 	}
+	
 	currentNode.handle = handle
 	currentNode.isPattern = true
-	currentNode.path = pattern
+	currentNode.path = path
 	if routeName := t.parameters.routeName; routeName != "" {
 		t.routes[routeName] = currentNode
 	}
-
 }
 
 func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {

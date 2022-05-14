@@ -45,7 +45,7 @@ func (u *TestUtil) GetCallerInfo() string {
 		funcName = funcName[index+1:]
 
 		if index := strings.IndexByte(funcName, '.'); index > -1 {
-			funcName = funcName[:index]
+			// funcName = funcName[:index]
 			// info = funcName + "(" + basename + ":" + strconv.Itoa(line) + ")"
 			info = basename + ":" + strconv.Itoa(line)
 			continue
@@ -82,12 +82,11 @@ func (u *TestUtil) EqualNil(actual interface{}) {
 }
 
 // NoError NoError
-func (u *TestUtil) NoError(actual interface{}) bool {
-	if actual == nil {
+func (u *TestUtil) NoError(err error) bool {
+	if err == nil {
 		return true
 	}
-	fmt.Printf("    %s Error: %v\n", u.PrintMyName(), actual)
-	u.T.Fail()
+	u.T.Fatalf("    %s Error: %s\n", u.PrintMyName(), err)
 	return false
 }
 
@@ -95,6 +94,7 @@ func (u *TestUtil) NoError(actual interface{}) bool {
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
 		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+		u.T.Fatal()
 	}
 }
 
@@ -114,7 +114,7 @@ func (u *TestUtil) Fatal(v ...interface{}) {
 
 // PrintMyName PrintMyName
 func (u *TestUtil) PrintMyName() string {
-	return "@" + u.GetCallerInfo()
+	return u.GetCallerInfo()
 }
 
 func (u *TestUtil) Run(name string, f func(t *testing.T, tt *TestUtil)) {

@@ -1,9 +1,13 @@
-package zlsgo
+package zlsgo_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/sohaha/zlsgo"
+)
 
 func TestNewTest(t *testing.T) {
-	tt := NewTest(t)
+	tt := zlsgo.NewTest(t)
 
 	tt.Equal(1, 1)
 	tt.EqualExit(1, 1)

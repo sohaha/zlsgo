@@ -43,7 +43,8 @@ type (
 		Cache         *zcache.Table
 		mu            sync.RWMutex
 		cacheQuery    url.Values
-		Injector      zdi.Injector
+		cacheForm     url.Values
+		injector      zdi.Injector
 		renderError   ErrHandlerFunc
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
@@ -228,11 +229,6 @@ func (e *Engine) AddAddr(addrString string, tlsConfig ...TlsCfg) {
 	e.addr = append(e.addr, resolveAddr(addrString, tlsConfig...))
 }
 
-// GetMiddleware GetMiddleware
-// func (e *Engine) GetMiddleware() []handlerFn {
-// 	return e.router.middleware
-// }
-
 // SetCustomMethodField Set Custom Method Field
 func (e *Engine) SetCustomMethodField(field string) {
 	e.customMethodType = field
@@ -248,7 +244,7 @@ func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
 	e.templateFuncMap = funcMap
 }
 
-// Injector Call injector
+// Injector Call Injector
 func (e *Engine) Injector() zdi.TypeMapper {
 	return e.injector
 }
@@ -307,6 +303,22 @@ func (e *Engine) SetMode(value string) {
 	}
 	e.webModeName = value
 	e.Log.SetLogLevel(level)
+}
+
+// GetMode Get Mode
+func (e *Engine) GetMode() string {
+	switch e.webMode {
+	case prodCode:
+		return ProdMode
+	case quietCode:
+		return QuietMode
+	case debugCode:
+		return DebugMode
+	case testCode:
+		return TestMode
+	default:
+		return "unknown"
+	}
 }
 
 // IsDebug IsDebug

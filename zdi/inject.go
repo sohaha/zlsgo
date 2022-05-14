@@ -74,7 +74,6 @@ func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {
 		if err != nil {
 			panic(err)
 		}
-
 		for _, result := range results {
 			resultType := result.Type()
 			inj.values[resultType] = result
