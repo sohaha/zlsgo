@@ -59,14 +59,14 @@ func Wrap(err error, code ErrCode, text string) error {
 	}
 }
 
-// Deprecated: please use zerror.InnerText
+// Deprecated: please use zerror.With
 // SupText returns the error text
 func SupText(err error, text string) error {
-	return InnerText(err, text)
+	return With(err, text)
 }
 
-// InnerText returns the inner error's text
-func InnerText(err error, text string) error {
+// With returns the inner error's text
+func With(err error, text string) error {
 	if err == nil {
 		return nil
 	}
