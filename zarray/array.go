@@ -4,16 +4,17 @@ package zarray
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 )
 
-// Array Array insert, delete, random access according to the subscript operation, the data is interface type
+// Array insert, delete, random access according to the subscript operation, the data is interface type
 type Array struct {
 	data []interface{}
 	size int
 }
 
-// ERR_ILLEGAL_INDEX illegal index
-var ERR_ILLEGAL_INDEX = errors.New("illegal index")
+// ErrIllegalIndex illegal index
+var ErrIllegalIndex = errors.New("illegal index")
 
 // New array initialization memory
 func New(capacity ...int) (array *Array) {
@@ -28,11 +29,10 @@ func New(capacity ...int) (array *Array) {
 			size: 0,
 		}
 	}
-
 	return
 }
 
-// Copy copy an array
+// Copy an array
 func Copy(arr interface{}) (array *Array, err error) {
 	data, ok := arr.([]interface{})
 	if ok {
@@ -44,13 +44,12 @@ func Copy(arr interface{}) (array *Array, err error) {
 	} else {
 		err = errors.New("type of error")
 	}
-
 	return
 }
 
 // determine whether the index is out of bounds
-func (array *Array) checkIndex(index int) (bool, int) {
-	size := array.size
+func (arr *Array) checkIndex(index int) (bool, int) {
+	size := arr.size
 	if index < 0 || index >= size {
 		return true, size
 	}
@@ -59,102 +58,102 @@ func (array *Array) checkIndex(index int) (bool, int) {
 }
 
 // array expansion
-func (array *Array) resize(capacity int) {
+func (arr *Array) resize(capacity int) {
 	newArray := make([]interface{}, capacity)
-	for i := 0; i < array.size; i++ {
-		newArray[i] = array.data[i]
+	for i := 0; i < arr.size; i++ {
+		newArray[i] = arr.data[i]
 	}
-	array.data = newArray
+	arr.data = newArray
 }
 
 // CapLength get array capacity
-func (array *Array) CapLength() int {
-	return cap(array.data)
+func (arr *Array) CapLength() int {
+	return cap(arr.data)
 }
 
 // Length get array length
-func (array *Array) Length() int {
-	return array.size
+func (arr *Array) Length() int {
+	return arr.size
 }
 
 // IsEmpty determine whether the array is empty
-func (array *Array) IsEmpty() bool {
-	return array.size == 0
+func (arr *Array) IsEmpty() bool {
+	return arr.size == 0
 }
 
 // Unshift insert element into array header
-func (array *Array) Unshift(value interface{}) error {
-	return array.Add(0, value)
+func (arr *Array) Unshift(value interface{}) error {
+	return arr.Add(0, value)
 }
 
 // Push insert element to end of array
-func (array *Array) Push(values ...interface{}) {
+func (arr *Array) Push(values ...interface{}) {
 	for i := 0; i < len(values); i++ {
-		_ = array.Add(array.size, values[i])
+		_ = arr.Add(arr.size, values[i])
 	}
 }
 
-// Set in the index position insert the element
-func (array *Array) Add(index int, value interface{}) (err error) {
-	if index < 0 || index > array.size {
+// Add in the index position insert the element
+func (arr *Array) Add(index int, value interface{}) (err error) {
+	if index < 0 || index > arr.size {
 		err = errors.New("sdd failed. Require index >= 0 and index <= size")
 		return
 	}
 
-	// If the current number of elements is equal to the array capacity,
-	// the array will be expanded to twice the original size
-	capLen := array.CapLength()
-	if array.size == capLen {
-		array.resize(capLen * 2)
+	// If the current number of elements is equal to the arr capacity,
+	// the arr will be expanded to twice the original size
+	capLen := arr.CapLength()
+	if arr.size == capLen {
+		arr.resize(capLen * 2)
 	}
 
-	for i := array.size - 1; i >= index; i-- {
-		array.data[i+1] = array.data[i]
+	for i := arr.size - 1; i >= index; i-- {
+		arr.data[i+1] = arr.data[i]
 	}
 
-	array.data[index] = value
-	array.size++
+	arr.data[index] = value
+	arr.size++
 	return
 }
 
-// ForEcho traversing generates a new array
-func (array *Array) Map(fn func(interface{}) interface{}) *Array {
-	values, _ := Copy(array.data)
+// Map ForEcho traversing generates a new array
+func (arr *Array) Map(fn func(int, interface{}) interface{}) *Array {
+	values, _ := Copy(arr.data)
 	for i := 0; i < values.Length(); i++ {
 		value, _ := values.Get(i)
-		_ = values.Set(i, fn(value))
+		_ = values.Set(i, fn(i, value))
 	}
 	return values
 }
 
-// Get Gets the element corresponding to the index position
-func (array *Array) Get(index int, def ...interface{}) (value interface{}, err error) {
-	if r, _ := array.checkIndex(index); r {
-		err = ERR_ILLEGAL_INDEX
-		if dValue, dErr := GetInterface(def, 0, nil); dErr == nil {
+// Get the element corresponding to the index position
+func (arr *Array) Get(index int, def ...interface{}) (value interface{}, err error) {
+	if r, _ := arr.checkIndex(index); r {
+		err = ErrIllegalIndex
+		if dValue, dErr := GetInf(def, 0, nil); dErr == nil {
 			value = dValue
 		}
 		return
 	}
 
-	value = array.data[index]
+	value = arr.data[index]
 	return
 }
 
 // Set modify the element at the index position
-func (array *Array) Set(index int, value interface{}) (err error) {
-	if r, _ := array.checkIndex(index); r {
-		return ERR_ILLEGAL_INDEX
+func (arr *Array) Set(index int, value interface{}) (err error) {
+	if r, _ := arr.checkIndex(index); r {
+		return ErrIllegalIndex
 	}
 
-	array.data[index] = value
+	arr.data[index] = value
 	return
 }
 
 // Contains find if there are elements in the array
-func (array *Array) Contains(value interface{}) bool {
-	for i := 0; i < array.size; i++ {
-		if array.data[i] == value {
+func (arr *Array) Contains(value interface{}) bool {
+	for i := 0; i < arr.size; i++ {
+		if arr.data[i] == value {
 			return true
 		}
 	}
@@ -162,10 +161,10 @@ func (array *Array) Contains(value interface{}) bool {
 	return false
 }
 
-// Index Find array by index, index range [0, n-1] (not found, return - 1)
-func (array *Array) Index(value interface{}) int {
-	for i := 0; i < array.size; i++ {
-		if array.data[i] == value {
+// Index find array by index, index range [0, n-1] (not found, return - 1)
+func (arr *Array) Index(value interface{}) int {
+	for i := 0; i < arr.size; i++ {
+		if arr.data[i] == value {
 			return i
 		}
 	}
@@ -174,11 +173,11 @@ func (array *Array) Index(value interface{}) int {
 }
 
 // Remove delete the element at index position and return
-func (array *Array) Remove(index int, l ...int) (value []interface{}, err error) {
-	r, size := array.checkIndex(index)
+func (arr *Array) Remove(index int, l ...int) (value []interface{}, err error) {
+	r, size := arr.checkIndex(index)
 
 	if r {
-		err = ERR_ILLEGAL_INDEX
+		err = ErrIllegalIndex
 		return
 	}
 	removeL := 1
@@ -187,57 +186,59 @@ func (array *Array) Remove(index int, l ...int) (value []interface{}, err error)
 	}
 
 	value = make([]interface{}, removeL)
-	copy(value, array.data[index:index+removeL])
-	for i := index + removeL; i < array.size; i++ {
-		array.data[i-removeL] = array.data[i]
-		array.data[i] = nil
+	copy(value, arr.data[index:index+removeL])
+	for i := index + removeL; i < arr.size; i++ {
+		arr.data[i-removeL] = arr.data[i]
+		arr.data[i] = nil
 	}
 
-	array.size = size - removeL
-	capLen := array.CapLength()
-	if array.size == capLen/4 && capLen/2 != 0 {
-		array.resize(capLen / 2)
+	arr.size = size - removeL
+	capLen := arr.CapLength()
+	if arr.size == capLen/4 && capLen/2 != 0 {
+		arr.resize(capLen / 2)
 	}
 	return
 }
 
 // Shift delete the first element of the array
-func (array *Array) Shift() (interface{}, error) {
-	return array.Remove(0)
+func (arr *Array) Shift() (interface{}, error) {
+	return arr.Remove(0)
 }
 
 // Pop delete end element
-func (array *Array) Pop() (interface{}, error) {
-	return array.Remove(array.size - 1)
+func (arr *Array) Pop() (interface{}, error) {
+	return arr.Remove(arr.size - 1)
 }
 
 // RemoveValue removes the specified element from the array
-func (array *Array) RemoveValue(value interface{}) (e interface{}, err error) {
-	index := array.Index(value)
+func (arr *Array) RemoveValue(value interface{}) (e interface{}, err error) {
+	index := arr.Index(value)
 	if index != -1 {
-		e, err = array.Remove(index)
+		e, err = arr.Remove(index)
 	}
 	return
 }
 
-// Clear clear array
-func (array *Array) Clear() {
-	array.data = make([]interface{}, array.size)
-	array.size = 0
+// Clear array
+func (arr *Array) Clear() {
+	arr.data = make([]interface{}, arr.size)
+	arr.size = 0
 }
 
 // Raw original array
-func (array *Array) Raw() []interface{} {
-	return array.data[:array.size]
+func (arr *Array) Raw() []interface{} {
+	v := make([]interface{}, arr.size)
+	copy(v, arr.data)
+	return v
 }
 
 // Format output sequence
-func (array *Array) Format() (format string) {
-	format = fmt.Sprintf("Array: size = %d , capacity = %d\n", array.size, cap(array.data))
+func (arr *Array) Format() (format string) {
+	format = fmt.Sprintf("Array: size = %d , capacity = %d\n", arr.size, cap(arr.data))
 	format += "["
-	for i := 0; i < array.Length(); i++ {
-		format += fmt.Sprintf("%+v", array.data[i])
-		if i != array.size-1 {
+	for i := 0; i < arr.Length(); i++ {
+		format += fmt.Sprintf("%+v", arr.data[i])
+		if i != arr.size-1 {
 			format += ", "
 		}
 	}
@@ -245,13 +246,23 @@ func (array *Array) Format() (format string) {
 	return
 }
 
-// GetInterface  Get the element corresponding to the index position of [] interface {}
-func GetInterface(arr []interface{}, index int, def ...interface{}) (value interface{}, err error) {
+// Shuffle creates an slice of shuffled values
+func (arr *Array) Shuffle() (array *Array) {
+	data := arr.Raw()
+	rand.Shuffle(len(data), func(i, j int) {
+		data[i], data[j] = data[j], data[i]
+	})
+	array, _ = Copy(data)
+	return
+}
+
+// GetInf Get the element corresponding to the index position of [] interface {}
+func GetInf(arr []interface{}, index int, def ...interface{}) (value interface{}, err error) {
 	arrLen := len(arr)
 	if arrLen > 0 && index < arrLen {
 		value = arr[index]
 	} else {
-		err = ERR_ILLEGAL_INDEX
+		err = ErrIllegalIndex
 		var dValue interface{}
 		if len(def) > 0 {
 			dValue = def[0]

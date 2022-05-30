@@ -91,7 +91,7 @@ func TestRetry(tt *testing.T) {
 		t := time.Duration(100*2*i+1) * time.Millisecond
 		h.SetTimeout(t)
 		tt.Log("Retry", i, t)
-		res, err := h.Get("https://cdn.jsdelivr.net/")
+		res, err := h.Get("https://unpkg.com/")
 		i++
 
 		return res, err
@@ -102,7 +102,7 @@ func TestRetry(tt *testing.T) {
 
 func TestToHTML(tt *testing.T) {
 	t := zls.NewTest(tt)
-	res, err := Get("https://cdn.jsdelivr.net/")
+	res, err := Get("https://unpkg.com/")
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -202,7 +202,7 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 
 func TestRes(t *testing.T) {
 	tt := zls.NewTest(t)
-	u := "https://cdn.jsdelivr.net/"
+	u := "https://unpkg.com/"
 	// res, err := Get("https://www.npmjs.com/package/zls-vue-spa/")
 	res, err := Get(u)
 	t.Log(u, err)
@@ -241,7 +241,7 @@ func TestHttpProxy(t *testing.T) {
 	}
 	tt.Equal(true, err != nil)
 
-	res, err = Get("https://cdn.jsdelivr.net/npm/zls-vue-spa@1.1.29/package.json")
+	res, err = Get("https://unpkg.com/zls-vue-spa@1.1.29/package.json")
 	if err == nil {
 		tt.Log(res.Response().Status)
 	} else {
@@ -272,13 +272,13 @@ func TestFile(t *testing.T) {
 	downloadProgress := func(current, total int64) {
 		t.Log("downloadProgress", current, total)
 	}
-	res, err := Get("https://cdn.jsdelivr.net/gh/sohaha/uniapp-template/src/static/my.jpg", downloadProgress)
+	res, err := Get("https://unpkg.com/zls-vue-spa@1.1.29/package.json", downloadProgress)
 	tt.EqualNil(err)
 	if err == nil {
-		err = res.ToFile(`../zhttp\test\my.jpg`)
+		err = res.ToFile(`../zhttp\test\package.json`)
 		tt.EqualNil(err)
 		t.Log(len(res.String()))
-		err = res.ToFile(`../zhttp\test\my2.jpg`)
+		err = res.ToFile(`../zhttp\test\package2.json`)
 		tt.Log(err)
 		tt.EqualNil(err)
 	}
@@ -290,7 +290,7 @@ func TestFile(t *testing.T) {
 		t.Log(c.GetPostFormAll())
 		tt.EqualExit("upload", c.GetHeader("type"))
 		if err == nil {
-			err = c.SaveUploadedFile(file, "./my2.jpg")
+			err = c.SaveUploadedFile(file, "./package.json")
 			tt.EqualNil(err)
 			c.String(200, "上传成功")
 		}
@@ -313,14 +313,14 @@ func TestFile(t *testing.T) {
 	}
 	res, err = Post("http://127.0.0.1:7878/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), Host("http://127.0.0.1:7878"), v, q, File("test\\my.jpg", "file"))
+	}), Host("http://127.0.0.1:7878"), v, q, File("test\\package.json", "file"))
 	if err != nil {
 		tt.EqualNil(err)
 		return
 	}
 	tt.Equal("上传成功", res.String())
-	tt.EqualTrue(zfile.FileSizeUint("./my2.jpg") > 120)
-	zfile.Rmdir("./my2.jpg")
+	tt.EqualTrue(zfile.FileSizeUint("./package.json") > 120)
+	zfile.Rmdir("./package.json")
 
 	_ = SetTransport(func(transport *http.Transport) {
 		transport.MaxIdleConnsPerHost = 100
@@ -331,10 +331,10 @@ func TestFile(t *testing.T) {
 
 	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), v, q, context.Background(), File("./test//my.jpg", "file"))
+	}), v, q, context.Background(), File("./test//package2.json", "file"))
 	tt.EqualNil(err)
 	tt.Equal("上传成功", res.String())
-	zfile.Rmdir("./my2.jpg")
+	zfile.Rmdir("./package2.json")
 }
 
 func TestRandomUserAgent(T *testing.T) {
@@ -355,7 +355,7 @@ func TestGetCode(t *testing.T) {
 
 	c := newClient()
 	SetClient(c)
-	r, err := Get("https://cdn.jsdelivr.net/gh/sohaha/uniapp-template@master/README.md")
+	r, err := Get("https://unpkg.com/zls-vue-spa@1.1.29/package.json")
 	if err != nil {
 		t.Fatal(err)
 	}

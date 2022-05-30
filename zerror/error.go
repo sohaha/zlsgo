@@ -100,9 +100,15 @@ func Unwrap(err error, code ErrCode) (error, bool) {
 }
 
 // Is returns if err is Error and its code == code
-func Is(err error, code ErrCode) bool {
-	_, ok := Unwrap(err, code)
-	return ok
+func Is(err error, code ...ErrCode) bool {
+	for i := range code {
+		_, ok := Unwrap(err, code[i])
+		if ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // UnwrapCode Returns the current error code

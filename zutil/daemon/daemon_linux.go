@@ -99,7 +99,11 @@ func (s *systemd) String() string {
 }
 
 func (s *systemd) configPath() (cp string, err error) {
-	if s.Option.Bool(optionUserService, optionUserServiceDefault) {
+	userService := optionUserServiceDefault
+	if u, ok := s.Option[optionUserService]; ok {
+		userService = u.(bool)
+	}
+	if userService {
 		err = errNoUserServiceSystemd
 		return
 	}
@@ -125,7 +129,14 @@ func (s *systemd) Install() error {
 		return err
 	}
 	defer f.Close()
-
+	reloadSignal := ""
+	if v, ok := s.Option[optionReloadSignal]; ok {
+		reloadSignal, _ = v.(string)
+	}
+	pidFile := ""
+	if v, ok := s.Option[optionPIDFile]; ok {
+		pidFile, _ = v.(string)
+	}
 	path := s.execPath()
 	var to = &struct {
 		*Config
@@ -135,8 +146,8 @@ func (s *systemd) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.String(optionReloadSignal, ""),
-		s.Option.String(optionPIDFile, ""),
+		reloadSignal,
+		pidFile,
 	}
 
 	err = s.template().Execute(f, to)
@@ -173,11 +184,16 @@ func (s *systemd) Run() (err error) {
 		return err
 	}
 
-	s.Option.FuncSingle(optionRunWait, func() {
+	runWait := func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		<-sigChan
-	})()
+	}
+	if v, ok := s.Option[optionRunWait]; ok {
+		runWait, _ = v.(func())
+	}
+
+	runWait()
 
 	return s.i.Stop(s)
 }

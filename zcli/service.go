@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zshell"
 	"github.com/sohaha/zlsgo/zutil/daemon"
@@ -139,7 +138,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			daemonConfig = &daemon.Config{
 				Name:        name,
 				Description: description,
-				Option: zarray.DefData{
+				Option:      map[string]interface{}{
 					// "UserService": true,
 				},
 			}

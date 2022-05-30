@@ -41,7 +41,10 @@ func (darwinSystem) Interactive() bool {
 }
 
 func (darwinSystem) New(i Iface, c *Config) (s ServiceIface, err error) {
-	userService := c.Option.Bool(optionUserService, optionUserServiceDefault)
+	userService := optionUserServiceDefault
+	if s, ok := c.Option[optionUserService]; ok {
+		userService, _ = s.(bool)
+	}
 	s = &darwinLaunchdService{
 		i:           i,
 		Config:      c,
@@ -118,6 +121,20 @@ func (s *darwinLaunchdService) Install() error {
 		return err
 	}
 	defer f.Close()
+
+	keepAlive := optionKeepAliveDefault
+	if v, ok := s.Option[optionKeepAlive]; ok {
+		keepAlive, _ = v.(bool)
+	}
+	load := optionRunAtLoadDefault
+	if v, ok := s.Option[optionRunAtLoad]; ok {
+		load, _ = v.(bool)
+	}
+	sessionCreate := optionSessionCreateDefault
+	if v, ok := s.Option[optionSessionCreate]; ok {
+		sessionCreate, _ = v.(bool)
+	}
+
 	path := s.execPath()
 	to := &struct {
 		*Config
@@ -128,9 +145,9 @@ func (s *darwinLaunchdService) Install() error {
 	}{
 		Config:        s.Config,
 		Path:          path,
-		KeepAlive:     s.Option.Bool(optionKeepAlive, optionKeepAliveDefault),
-		RunAtLoad:     s.Option.Bool(optionRunAtLoad, optionRunAtLoadDefault),
-		SessionCreate: s.Option.Bool(optionSessionCreate, optionSessionCreateDefault),
+		KeepAlive:     keepAlive,
+		RunAtLoad:     load,
+		SessionCreate: sessionCreate,
 	}
 
 	functions := template.FuncMap{
@@ -208,11 +225,16 @@ func (s *darwinLaunchdService) Run() error {
 	if err != nil {
 		return err
 	}
-	s.Option.FuncSingle(optionRunWait, func() {
+	runWait := func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		<-sigChan
-	})()
+	}
+	if v, ok := s.Option[optionRunWait]; ok {
+		runWait, _ = v.(func())
+	}
+
+	runWait()
 	return s.i.Stop(s)
 }
 

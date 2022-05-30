@@ -3,8 +3,6 @@ package daemon
 
 import (
 	"errors"
-
-	"github.com/sohaha/zlsgo/zarray"
 )
 
 const (
@@ -61,7 +59,7 @@ type (
 		//    - RunWait      func() (wait for SIGNAL) - Do not install signal but wait for this function to return.
 		//    - ReloadSignal string () [USR1, ...] - Signal to send on reaload.
 		//    - PIDFile     string () [/run/prog.pid] - Location of the PID file.
-		Option zarray.DefData
+		Option map[string]interface{}
 	}
 )
 

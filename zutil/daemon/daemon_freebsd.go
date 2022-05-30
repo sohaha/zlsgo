@@ -2,10 +2,7 @@ package daemon
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log/syslog"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -47,11 +44,14 @@ func (freebsdSystem) Interactive() bool {
 }
 
 func (freebsdSystem) New(i Iface, c *Config) (ServiceIface, error) {
+	userService := optionUserServiceDefault
+	if s, ok := c.Option[optionUserService]; ok {
+		userService, _ = s.(bool)
+	}
 	s := &freebsdRcdService{
-		i:      i,
-		Config: c,
-
-		userService: c.Option.Bool(optionUserService, optionUserServiceDefault),
+		i:           i,
+		Config:      c,
+		userService: userService,
 	}
 
 	return s, nil
@@ -101,6 +101,19 @@ func (s *freebsdRcdService) Install() error {
 	}
 	defer f.Close()
 
+	keepAlive := optionKeepAliveDefault
+	if v, ok := s.Option[optionKeepAlive]; ok {
+		keepAlive, _ = v.(bool)
+	}
+	load := optionRunAtLoadDefault
+	if v, ok := s.Option[optionRunAtLoad]; ok {
+		load, _ = v.(bool)
+	}
+	sessionCreate := optionSessionCreateDefault
+	if v, ok := s.Option[optionSessionCreate]; ok {
+		sessionCreate, _ = v.(bool)
+	}
+
 	path := s.execPath()
 	to := &struct {
 		*Config
@@ -111,9 +124,9 @@ func (s *freebsdRcdService) Install() error {
 	}{
 		Config:        s.Config,
 		Path:          path,
-		KeepAlive:     s.Option.Bool(optionKeepAlive, optionKeepAliveDefault),
-		RunAtLoad:     s.Option.Bool(optionRunAtLoad, optionRunAtLoadDefault),
-		SessionCreate: s.Option.Bool(optionSessionCreate, optionSessionCreateDefault),
+		KeepAlive:     keepAlive,
+		RunAtLoad:     load,
+		SessionCreate: sessionCreate,
 	}
 
 	functions := template.FuncMap{
@@ -150,7 +163,7 @@ func (s *freebsdRcdService) Install() error {
 		rcdScript = rcdScriptAgentUninstall
 		file, err := os.OpenFile("/etc/rc.conf", os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			fmt.Println("failed opening file: %s", err)
+			fmt.Printf("failed opening file: %s\n", err)
 		}
 		defer file.Close()
 		data := "agent_uninstall_enable=" + `"` + "YES" + `"`
@@ -204,13 +217,15 @@ func (s *freebsdRcdService) Run() error {
 	if err != nil {
 		return err
 	}
-
-	s.Option.FuncSingle(optionRunWait, func() {
+	runWait := func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		<-sigChan
-	})()
-
+	}
+	if v, ok := s.Option[optionRunWait]; ok {
+		runWait, _ = v.(func())
+	}
+	runWait()
 	return s.i.Stop(s)
 }
 
@@ -323,73 +338,3 @@ test_stop() {
 load_rc_config $name
 run_rc_command "$1"
 `
-
-func newSysLogger(name string, errs chan<- error) (Logger, error) {
-	w, err := syslog.New(syslog.LOG_INFO, name)
-	if err != nil {
-		return nil, err
-	}
-	return sysLogger{w, errs}, nil
-}
-
-type sysLogger struct {
-	*syslog.Writer
-	errs chan<- error
-}
-
-func (s sysLogger) send(err error) error {
-	if err != nil && s.errs != nil {
-		s.errs <- err
-	}
-	return err
-}
-
-func (s sysLogger) Error(v ...interface{}) error {
-	return s.send(s.Writer.Err(fmt.Sprint(v...)))
-}
-
-func (s sysLogger) Warning(v ...interface{}) error {
-	return s.send(s.Writer.Warning(fmt.Sprint(v...)))
-}
-
-func (s sysLogger) Info(v ...interface{}) error {
-	return s.send(s.Writer.Info(fmt.Sprint(v...)))
-}
-
-func (s sysLogger) Errorf(format string, a ...interface{}) error {
-	return s.send(s.Writer.Err(fmt.Sprintf(format, a...)))
-}
-
-func (s sysLogger) Warningf(format string, a ...interface{}) error {
-	return s.send(s.Writer.Warning(fmt.Sprintf(format, a...)))
-}
-
-func (s sysLogger) Infof(format string, a ...interface{}) error {
-	return s.send(s.Writer.Info(fmt.Sprintf(format, a...)))
-}
-
-func run(command string, arguments ...string) error {
-	cmd := exec.Command(command, arguments...)
-	stderr, err := cmd.StderrPipe()
-
-	if err != nil {
-		return fmt.Errorf("%q failed to connect stderr pipe: %v", command, err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("%q failed: %v", command, err)
-	}
-
-	if command == "launchctl" {
-		slurp, _ := ioutil.ReadAll(stderr)
-		if len(slurp) > 0 {
-			return fmt.Errorf("%q failed with stderr: %s", command, slurp)
-		}
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("%q failed: %v", command, err)
-	}
-
-	return nil
-}

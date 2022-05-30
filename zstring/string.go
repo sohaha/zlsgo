@@ -24,20 +24,21 @@ type (
 	ru struct {
 		x uint32
 	}
+	PadType uint8
 )
 
 const (
 	// PadRight Right padding character
-	PadRight int = iota
+	PadRight PadType = iota
 	// PadLeft Left padding character
 	PadLeft
 	// PadSides Two-sided padding characters,If the two sides are not equal, the right side takes precedence.
 	PadSides
-	letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterBytes = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 // Pad String padding
-func Pad(raw string, length int, padStr string, padType int) string {
+func Pad(raw string, length int, padStr string, padType PadType) string {
 	l := length - Len(raw)
 	if l <= 0 {
 		return raw

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/zarray"
 )
 
 type ss struct {
@@ -32,7 +31,7 @@ func TestDaemon(t *testing.T) {
 	}
 	s, err := New(o, &Config{
 		Name:   "zlsgo_daemon_test",
-		Option: zarray.DefData{"UserService": false},
+		Option: map[string]interface{}{"UserService": false},
 	})
 	if err != nil {
 		return
