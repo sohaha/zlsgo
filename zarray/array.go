@@ -18,18 +18,15 @@ var ErrIllegalIndex = errors.New("illegal index")
 
 // New array initialization memory
 func New(capacity ...int) (array *Array) {
+	c := 5
 	if len(capacity) >= 1 && capacity[0] != 0 {
-		array = &Array{
-			data: make([]interface{}, capacity[0]),
-			size: 0,
-		}
-	} else {
-		array = &Array{
-			data: make([]interface{}, 10),
-			size: 0,
-		}
+		c = capacity[0]
 	}
-	return
+
+	return &Array{
+		data: make([]interface{}, c),
+		size: 0,
+	}
 }
 
 // Copy an array

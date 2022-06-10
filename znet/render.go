@@ -282,7 +282,9 @@ func (c *Context) PrevContent() *PrevData {
 	if hasType {
 		c.prevData.Type = ctype[0]
 	}
+	c.mu.Lock()
 	c.render = nil
+	c.mu.Unlock()
 	return c.prevData
 }
 

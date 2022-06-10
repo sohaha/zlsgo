@@ -69,6 +69,10 @@ func (t *Typer) TypeOf() reflect.Type {
 	return t.typ
 }
 
+func (t *Typer) Interface() interface{} {
+	return reflect.New(t.typ).Interface()
+}
+
 func (t *Typer) CheckExistsField(name string) (int, bool) {
 	if t.fields == nil {
 		return CheckExistsField(t.name, name)

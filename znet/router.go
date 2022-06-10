@@ -104,7 +104,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s  %s", "Any", CompletionPath(path, e.router.prefix)))
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s %s", "Any", CompletionPath(path, e.router.prefix)))
 	e.GET(path, action, moreHandler...)
 	e.POST(path, action, moreHandler...)
 	e.PUT(path, action, moreHandler...)

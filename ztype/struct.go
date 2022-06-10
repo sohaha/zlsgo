@@ -6,12 +6,13 @@ import (
 )
 
 type (
-	StructBuilder struct {
-		fields map[string]*StructField
-		typ    int
-		key    interface{}
+	StruBuilder struct {
+		fieldKeys []string
+		fields    map[string]*StruField
+		typ       int
+		key       reflect.Type
 	}
-	StructField struct {
+	StruField struct {
 		typ interface{}
 		tag string
 	}
@@ -23,92 +24,167 @@ const (
 	typeSliceStruct
 )
 
-func NewStruct() *StructBuilder {
-	return &StructBuilder{
+func NewStruct() *StruBuilder {
+	return &StruBuilder{
 		typ:    typeStruct,
-		fields: map[string]*StructField{},
+		fields: map[string]*StruField{},
 	}
 }
 
-func NewMapStruct(key interface{}) *StructBuilder {
-	return &StructBuilder{
+func NewMapStruct(key interface{}) *StruBuilder {
+	var k reflect.Type
+	if v, ok := key.(reflect.Type); ok {
+		k = v
+	} else {
+		k = reflect.TypeOf(key)
+	}
+	return &StruBuilder{
 		typ:    typeMapStruct,
-		key:    key,
-		fields: map[string]*StructField{},
+		key:    k,
+		fields: map[string]*StruField{},
 	}
 }
 
-func NewtSliceStruct() *StructBuilder {
-	return &StructBuilder{
+func NewSliceStruct() *StruBuilder {
+	return &StruBuilder{
 		typ:    typeSliceStruct,
-		fields: map[string]*StructField{},
+		fields: map[string]*StruField{},
 	}
 }
 
-func (b *StructBuilder) AddField(name string, fieldType interface{}, tag ...string) *StructBuilder {
+func (b *StruBuilder) Copy(v *StruBuilder) *StruBuilder {
+	typ := b.typ
+	val := *v
+	*b = val
+	b.typ = typ
+	return b
+}
+
+func (b *StruBuilder) Merge(values ...interface{}) *StruBuilder {
+	for _, value := range values {
+		valueOf := reflect.Indirect(reflect.ValueOf(value))
+		typeOf := valueOf.Type()
+		for i := 0; i < valueOf.NumField(); i++ {
+			fval := valueOf.Field(i)
+			ftyp := typeOf.Field(i)
+			b.AddField(ftyp.Name, fval.Interface(), string(ftyp.Tag))
+		}
+	}
+
+	return b
+}
+
+// func (b *StruBuilder) AddFunc(name string, fieldType interface{}, tag ...string) *StruBuilder {
+// 	reflect.MakeFunc()
+// 	return b
+// }
+
+func (b *StruBuilder) AddField(name string, fieldType interface{}, tag ...string) *StruBuilder {
 	var t string
 	if len(tag) > 0 {
 		t = strings.Join(tag, " ")
 	}
-	b.fields[name] = &StructField{
+	if b.typ == typeStruct {
+		nkey := make([]string, 0, len(b.fieldKeys))
+		for i := range b.fieldKeys {
+			if b.fieldKeys[i] != name {
+				nkey = append(nkey, b.fieldKeys[i])
+			}
+		}
+		b.fieldKeys = append(nkey, name)
+	}
+	b.fields[name] = &StruField{
 		typ: fieldType,
 		tag: t,
 	}
 	return b
 }
 
-func (b *StructBuilder) RemoveField(name string) *StructBuilder {
+func (b *StruBuilder) RemoveField(name string) *StruBuilder {
 	delete(b.fields, name)
-
+	if b.typ == typeStruct {
+		nkey := make([]string, 0, len(b.fieldKeys))
+		for i := range b.fieldKeys {
+			if b.fieldKeys[i] != name {
+				nkey = append(nkey, b.fieldKeys[i])
+			}
+		}
+		b.fieldKeys = nkey
+	}
 	return b
 }
 
-func (b *StructBuilder) HasField(name string) bool {
+func (b *StruBuilder) HasField(name string) bool {
 	_, ok := b.fields[name]
 	return ok
 }
 
-func (b *StructBuilder) GetField(name string) *StructField {
+func (b *StruBuilder) GetField(name string) *StruField {
 	if !b.HasField(name) {
 		return nil
 	}
 	return b.fields[name]
 }
 
-func (b *StructBuilder) Interface() interface{} {
+func (b *StruBuilder) Interface() interface{} {
 	return b.Value().Interface()
 }
 
-func (b *StructBuilder) Value() reflect.Value {
-	var structFields []reflect.StructField
-	for name, field := range b.fields {
-		t, ok := field.typ.(reflect.Type)
-		if !ok {
+func (b *StruBuilder) Type() reflect.Type {
+	var fields []reflect.StructField
+	fn := func(name string, field *StruField) {
+		var t reflect.Type
+		switch v := field.typ.(type) {
+		case *StruBuilder:
+			t = v.Type()
+		case reflect.Type:
+			t = v
+		default:
 			t = reflect.TypeOf(field.typ)
 		}
-		structFields = append(structFields, reflect.StructField{
+
+		fields = append(fields, reflect.StructField{
 			Name: name,
 			Type: t,
 			Tag:  reflect.StructTag(field.tag),
 		})
 	}
-	v := reflect.StructOf(structFields)
+	if b.typ == typeStruct {
+		for i := range b.fieldKeys {
+			name := b.fieldKeys[i]
+			if field, ok := b.fields[name]; ok {
+				fn(name, field)
+			}
+		}
+	} else {
+		for name := range b.fields {
+			field := b.fields[name]
+			fn(name, field)
+		}
+	}
+
+	typ := reflect.StructOf(fields)
+
 	switch b.typ {
-	case typeStruct:
-		return reflect.New(v)
+	case typeSliceStruct:
+		return reflect.SliceOf(typ)
 	case typeMapStruct:
-		return reflect.New(reflect.MapOf(reflect.Indirect(reflect.ValueOf(b.key)).Type(), v))
+		return reflect.MapOf(b.key, typ)
 	default:
-		return reflect.New(reflect.SliceOf(v))
+		return typ
 	}
 }
 
-func (f *StructField) SetType(typ interface{}) *StructField {
+func (b *StruBuilder) Value() reflect.Value {
+	return reflect.New(b.Type())
+}
+
+func (f *StruField) SetType(typ interface{}) *StruField {
 	f.typ = typ
 	return f
 }
 
-func (f *StructField) SetTag(tag string) *StructField {
+func (f *StruField) SetTag(tag string) *StruField {
 	f.tag = tag
 	return f
 }

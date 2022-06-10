@@ -98,7 +98,7 @@ func notEmpty(v *Engine) bool {
 }
 
 func setError(v *Engine, msg string, customError ...string) error {
-	if len(customError) > 0 {
+	if len(customError) > 0 && customError[0] != "" {
 		return errors.New(customError[0])
 	}
 	if v.name != "" {

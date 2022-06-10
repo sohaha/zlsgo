@@ -13,6 +13,19 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+// Regex regular expression match
+func (v Engine) Regex(pattern string, customError ...string) Engine {
+	return pushQueue(&v, func(v *Engine) *Engine {
+		if ignore(v) {
+			return v
+		}
+		if !zstring.RegexMatch(pattern, v.value) {
+			v.err = setError(v, "格式不正确", customError...)
+		}
+		return v
+	})
+}
+
 // IsBool boolean value
 func (v Engine) IsBool(customError ...string) Engine {
 	return pushQueue(&v, func(v *Engine) *Engine {
@@ -80,8 +93,21 @@ func (v Engine) IsNumber(customError ...string) Engine {
 		if ignore(v) {
 			return v
 		}
-		if _, err := strconv.Atoi(v.value); err != nil {
+		if _, err := strconv.ParseFloat(v.value, 64); err != nil {
 			v.err = setError(v, "必须是数字", customError...)
+		}
+		return v
+	})
+}
+
+// IsInteger is integer
+func (v Engine) IsInteger(customError ...string) Engine {
+	return pushQueue(&v, func(v *Engine) *Engine {
+		if ignore(v) {
+			return v
+		}
+		if _, err := strconv.Atoi(v.value); err != nil {
+			v.err = setError(v, "必须是整数", customError...)
 		}
 		return v
 	})

@@ -1880,7 +1880,6 @@ func assign(jsval Res, val reflect.Value) {
 			for i := 0; i < t.NumField(); i++ {
 				sf[zreflect.GetStructTag(t.Field(i))] = i
 			}
-			// fieldsMap.Store(t.String(), sf)
 			fields[name] = sf
 			fieldsmu.Unlock()
 		}
@@ -1918,9 +1917,24 @@ func assign(jsval Res, val reflect.Value) {
 			return true
 		})
 	case reflect.Map:
-		if t.Key().Kind() == reflect.String &&
-			t.Elem().Kind() == reflect.Interface {
-			val.Set(reflect.ValueOf(jsval.Value()))
+		key := t.Key()
+		s := key.Kind() == reflect.String
+		if s {
+			kind := t.Elem().Kind()
+			switch kind {
+			case reflect.Interface:
+				val.Set(reflect.ValueOf(jsval.Value()))
+			case reflect.Struct, reflect.Ptr:
+				v := reflect.MakeMap(t)
+				jsval.ForEach(func(key, value Res) bool {
+					newval := reflect.New(t.Elem())
+					elem := newval.Elem()
+					assign(value, elem)
+					v.SetMapIndex(reflect.ValueOf(key.Value()), elem)
+					return true
+				})
+				val.Set(v)
+			}
 		}
 	case reflect.Interface:
 		val.Set(reflect.ValueOf(jsval.Value()))
