@@ -25,6 +25,10 @@ type (
 		Num   float64
 		Index int
 	}
+	fieldMaps struct {
+		mu sync.RWMutex
+		m  map[string]map[string]int
+	}
 )
 
 const (
@@ -1848,12 +1852,7 @@ func GetMultipleBytes(json []byte, path ...string) []Res {
 	return res
 }
 
-var (
-	fieldsmu sync.RWMutex
-	fields   = make(map[string]map[string]int)
-)
-
-func assign(jsval Res, val reflect.Value) {
+func assign(jsval Res, val reflect.Value, fmap *fieldMaps) {
 	if jsval.Type == Null {
 		return
 	}
@@ -1863,31 +1862,31 @@ func assign(jsval Res, val reflect.Value) {
 	case reflect.Ptr:
 		if !val.IsNil() {
 			elem := val.Elem()
-			assign(jsval, elem)
+			assign(jsval, elem, fmap)
 		} else {
 			newval := reflect.New(t.Elem())
-			assign(jsval, newval.Elem())
+			assign(jsval, newval.Elem(), fmap)
 			val.Set(newval)
 		}
 	case reflect.Struct:
-		fieldsmu.RLock()
+		fmap.mu.RLock()
 		name := t.String()
-		sf := fields[name]
-		fieldsmu.RUnlock()
+		sf := fmap.m[name]
+		fmap.mu.RUnlock()
 		if sf == nil {
-			fieldsmu.Lock()
+			fmap.mu.Lock()
 			sf = make(map[string]int)
 			for i := 0; i < t.NumField(); i++ {
 				sf[zreflect.GetStructTag(t.Field(i))] = i
 			}
-			fields[name] = sf
-			fieldsmu.Unlock()
+			fmap.m[name] = sf
+			fmap.mu.Unlock()
 		}
 		jsval.ForEach(func(key, value Res) bool {
 			if idx, ok := sf[key.Str]; ok {
 				f := val.Field(idx)
 				if f.CanSet() {
-					assign(value, f)
+					assign(value, f, fmap)
 				}
 			}
 			return true
@@ -1902,7 +1901,7 @@ func assign(jsval Res, val reflect.Value) {
 			l := len(jsvals)
 			slice := reflect.MakeSlice(t, l, l)
 			for i := 0; i < l; i++ {
-				assign(jsvals[i], slice.Index(i))
+				assign(jsvals[i], slice.Index(i), fmap)
 			}
 			val.Set(slice)
 		}
@@ -1912,7 +1911,7 @@ func assign(jsval Res, val reflect.Value) {
 			if i == n {
 				return false
 			}
-			assign(value, val.Index(i))
+			assign(value, val.Index(i), fmap)
 			i++
 			return true
 		})
@@ -1929,7 +1928,7 @@ func assign(jsval Res, val reflect.Value) {
 				jsval.ForEach(func(key, value Res) bool {
 					newval := reflect.New(t.Elem())
 					elem := newval.Elem()
-					assign(value, elem)
+					assign(value, elem, fmap)
 					v.SetMapIndex(reflect.ValueOf(key.Value()), elem)
 					return true
 				})
@@ -1975,7 +1974,7 @@ func Unmarshal(json, v interface{}) error {
 		if r.String() == "" {
 			return errors.New("invalid json")
 		}
-		assign(r, v)
+		assign(r, v, &fieldMaps{m: make(map[string]map[string]int)})
 		return nil
 	}
 	return errors.New("assignment must be a pointer")

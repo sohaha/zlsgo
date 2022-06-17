@@ -76,7 +76,7 @@ func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) {
 	if wareLen > 0 && currentNode.depth == 1 {
 		currentNode.middleware = append(currentNode.middleware, middleware...)
 	}
-
+	
 	currentNode.handle = handle
 	currentNode.isPattern = true
 	currentNode.path = path

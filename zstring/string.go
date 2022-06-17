@@ -11,15 +11,6 @@ import (
 )
 
 type (
-	sliceT struct {
-		arr unsafe.Pointer
-		len int
-		cap int
-	}
-	stringS struct {
-		str unsafe.Pointer
-		len int
-	}
 	// ru is a pseudorandom number generator
 	ru struct {
 		x uint32
@@ -103,16 +94,15 @@ func Bytes2String(b []byte) string {
 // String2Bytes string to bytes
 // remark: read only, the structure of runtime changes will be affected, the role of unsafe.Pointer will be changed, and it will also be affected
 func String2Bytes(s string) []byte {
-	var b []byte
-	str := (*stringS)(unsafe.Pointer(&s))
-	pbytes := (*sliceT)(unsafe.Pointer(&b))
-	pbytes.arr = str.str
-	pbytes.len = str.len
-	pbytes.cap = str.len
-	return b
+	return *(*[]byte)(unsafe.Pointer(
+		&struct {
+			string
+			Cap int
+		}{s, len(s)},
+	))
 }
 
-// Ucfirst Ucfirst
+// Ucfirst First letters capitalize
 func Ucfirst(str string) string {
 	for i, v := range str {
 		return string(unicode.ToUpper(v)) + str[i+1:]
@@ -120,7 +110,7 @@ func Ucfirst(str string) string {
 	return ""
 }
 
-// Lcfirst Lcfirst
+// Lcfirst First letters lowercase
 func Lcfirst(str string) string {
 	for i, v := range str {
 		return string(unicode.ToLower(v)) + str[i+1:]

@@ -89,8 +89,8 @@ func TestGet(t *testing.T) {
 	}
 
 	parseData := Parse(demo)
-	tt.Log(parseData.Map())
-	tt.Log(parseData.MapKeys())
+	t.Log(parseData.Map())
+	t.Log(parseData.MapKeys())
 
 	other.ForEach(func(key, value Res) bool {
 		return true
@@ -117,9 +117,9 @@ func TestGet(t *testing.T) {
 	AddModifier("case", modifierFn)
 	tt.EqualExit(true, ModifierExists("case"))
 	tt.EqualExit("HIGHLEVEL", Get(demo, "quality|@case:upper|@reverse").String())
-	tt.Log(Get(demo, "friends").String())
-	tt.Log(Get(demo, "friends|@reverse|@case:upper").String())
-	tt.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
+	t.Log(Get(demo, "friends").String())
+	t.Log(Get(demo, "friends|@reverse|@case:upper").String())
+	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
 
 	type Demo struct {
 		I       int    `json:"i"`

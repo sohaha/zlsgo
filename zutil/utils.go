@@ -13,8 +13,20 @@ type (
 	// Stack uintptr array
 	Stack []uintptr
 	// Nocmp is an uncomparable struct
-	Nocmp [0]func()
+	Nocmp     [0]func()
+	namedArgs struct {
+		name string
+		arg  interface{}
+	}
 )
+
+// Named creates a named argument
+func Named(name string, arg interface{}) interface{} {
+	return namedArgs{
+		name: name,
+		arg:  arg,
+	}
+}
 
 const (
 	maxStackDepth = 1 << 5

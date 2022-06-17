@@ -1,9 +1,10 @@
 package zjson
 
 import (
-	"github.com/sohaha/zlsgo/zstring"
 	"strconv"
 	"testing"
+
+	"github.com/sohaha/zlsgo/zstring"
 
 	"github.com/sohaha/zlsgo"
 )

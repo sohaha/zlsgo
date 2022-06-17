@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -58,14 +57,15 @@ func TestPad(T *testing.T) {
 
 func TestFirst(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	str := "my Name"
+	str := "myName"
 	str = Ucfirst(str)
 	t.Equal(true, IsUcfirst(str))
 	t.Equal(false, IsLcfirst(str))
-	t.Equal("My Name", str)
+	t.Equal("MyName", str)
 	str = Lcfirst(str)
 	t.Equal(true, IsLcfirst(str))
 	t.Equal(false, IsUcfirst(str))
+	t.Equal("myName", str)
 }
 
 func TestSnakeCaseCamelCase(T *testing.T) {
@@ -129,17 +129,7 @@ func BenchmarkStrBuffer(b *testing.B) {
 	_ = s.String()
 }
 
-func TestTo(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	s := "我是中国人"
-	b := String2Bytes(s)
-	b2 := TrimBOM(b)
-	s2 := Bytes2String(b)
-	t.Equal(s, s2)
-	T.Log(s, s2, string(b), string(b2))
-}
-
-func BenchmarkTo(b *testing.B) {
+func BenchmarkTo1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		s := "我是中国人"
 		b := String2Bytes(s)
@@ -155,18 +145,10 @@ func BenchmarkTo2(b *testing.B) {
 	}
 }
 
-func BenchmarkTo3(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		s := "我是中国人"
-		b := []byte(s)
-		_ = string(*(*[]byte)(unsafe.Pointer(&b)))
-	}
-}
-
 func getRandomString(l int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyz"
 	bytes := []byte(str)
-	result := []byte{}
+	var result []byte
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < l; i++ {
 		result = append(result, bytes[r.Intn(len(bytes))])

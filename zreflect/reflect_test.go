@@ -171,6 +171,8 @@ func TestNewTyp(t *testing.T) {
 	})
 	tt.EqualNil(err)
 	tt.EqualTrue(total > totalSkipStruct)
+
+	t.Log(typ.Interface())
 }
 
 func initBenchmarkMaps(demo interface{}) (*zreflect.Typer, map[string]interface{}) {

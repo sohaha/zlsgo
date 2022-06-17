@@ -172,13 +172,13 @@ func SetBytesOptions(json []byte, path string, value interface{},
 		res, err = set(jstr, path, strconv.FormatUint(uint64(v), 10),
 			false, false, optimistic, inplace)
 	case uint64:
-		res, err = set(jstr, path, strconv.FormatUint(uint64(v), 10),
+		res, err = set(jstr, path, strconv.FormatUint(v, 10),
 			false, false, optimistic, inplace)
 	case float32:
 		res, err = set(jstr, path, strconv.FormatFloat(float64(v), 'f', -1, 64),
 			false, false, optimistic, inplace)
 	case float64:
-		res, err = set(jstr, path, strconv.FormatFloat(float64(v), 'f', -1, 64),
+		res, err = set(jstr, path, strconv.FormatFloat(v, 'f', -1, 64),
 			false, false, optimistic, inplace)
 	}
 	if err == ErrNoChange {
