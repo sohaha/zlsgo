@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -15,16 +16,17 @@ type (
 	Task     interface{}
 	taskfn   func() error
 	WorkPool struct {
-		workers   sync.Pool
-		closed    bool
-		mu        sync.RWMutex
-		queue     chan *worker
-		minIdle   uint
-		usedNum   uint
-		maxIdle   uint
-		injector  zdi.Injector
-		panicFunc PanicFunc
-		New       func()
+		workers     sync.Pool
+		closed      bool
+		mu          sync.RWMutex
+		queue       chan *worker
+		minIdle     uint
+		maxIdle     uint
+		usedNum     *zutil.Int64
+		injector    zdi.Injector
+		panicFunc   PanicFunc
+		releaseTime time.Duration
+		New         func()
 	}
 	worker struct {
 		jobQueue  chan taskfn
@@ -38,6 +40,7 @@ var (
 	ErrPoolClosed  = errors.New("pool has been closed")
 	ErrWaitTimeout = errors.New("pool wait timeout")
 )
+
 
 func New(min int, max ...int) *WorkPool {
 	minIdle := uint(min)
@@ -53,10 +56,12 @@ func New(min int, max ...int) *WorkPool {
 	}
 
 	w := &WorkPool{
-		minIdle:  minIdle,
-		maxIdle:  maxIdle,
-		injector: zdi.New(),
-		queue:    make(chan *worker, maxIdle),
+		minIdle:     minIdle,
+		maxIdle:     maxIdle,
+		injector:    zdi.New(),
+		queue:       make(chan *worker, maxIdle),
+		usedNum:     zutil.NewInt64(0),
+		releaseTime: time.Second * 60,
 		workers: sync.Pool{New: func() interface{} {
 			return &worker{
 				jobQueue:  make(chan taskfn),
@@ -95,10 +100,10 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 		}
 	}
 	add := func() *worker {
-		wp.usedNum++
+		wp.usedNum.Add(1)
 		wp.mu.Unlock()
 		w := wp.workers.Get().(*worker)
-		w.createGoroutines(wp.queue, wp.panicFunc)
+		go w.createGoroutines(wp, wp.queue, wp.panicFunc)
 		return w
 	}
 	select {
@@ -111,13 +116,13 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 		}
 	default:
 		switch {
-		case wp.usedNum >= wp.minIdle:
+		case uint(wp.usedNum.Load()) >= wp.minIdle:
 			wp.mu.Unlock()
 			// todo 超时处理
 			select {
 			case <-cxt.Done():
 				wp.mu.Lock()
-				if wp.usedNum >= wp.maxIdle {
+				if uint(wp.usedNum.Load()) >= wp.maxIdle {
 					wp.mu.Unlock()
 					return ErrWaitTimeout
 				}
@@ -131,9 +136,8 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 				} else {
 					return ErrPoolClosed
 				}
-
 			}
-		case wp.usedNum < wp.minIdle:
+		case uint(wp.usedNum.Load()) < wp.minIdle:
 			w := add()
 			run(w)
 		default:
@@ -158,8 +162,8 @@ func (wp *WorkPool) Close() {
 	}
 	wp.mu.Lock()
 	wp.closed = true
-	for 0 < wp.usedNum {
-		wp.usedNum--
+	for 0 < uint(wp.usedNum.Load()) {
+		wp.usedNum.Sub(1)
 		worker := <-wp.queue
 		worker.close()
 	}
@@ -182,9 +186,7 @@ func (wp *WorkPool) Continue(workerNum ...int) {
 
 // Cap get the number of coroutines
 func (wp *WorkPool) Cap() uint {
-	wp.mu.RLock()
-	defer wp.mu.RUnlock()
-	return wp.usedNum
+	return uint(wp.usedNum.Load())
 }
 
 // AdjustSize adjust the pool size
@@ -203,15 +205,15 @@ func (wp *WorkPool) AdjustSize(workSize int) {
 	wp.minIdle = newSize
 
 	if workSize > 0 && oldSize < wp.minIdle {
-		for wp.usedNum < wp.minIdle {
-			wp.usedNum++
+		for uint(wp.usedNum.Load()) < wp.minIdle {
+			wp.usedNum.Add(1)
 			w := wp.workers.Get().(*worker)
-			w.createGoroutines(wp.queue, wp.panicFunc)
+			go w.createGoroutines(wp, wp.queue, wp.panicFunc)
 			wp.queue <- w
 		}
 	}
-	for wp.minIdle < wp.usedNum {
-		wp.usedNum--
+	for wp.minIdle < uint(wp.usedNum.Load()) {
+		wp.usedNum.Sub(1)
 		worker := <-wp.queue
 		worker.stop <- struct{}{}
 		wp.workers.Put(worker)
@@ -223,31 +225,54 @@ func (wp *WorkPool) PreInit() error {
 		return ErrPoolClosed
 	}
 	wp.mu.Lock()
-	for wp.usedNum < wp.minIdle {
-		wp.usedNum++
+	for uint(wp.usedNum.Load()) < wp.minIdle {
+		wp.usedNum.Add(1)
 		w := wp.workers.Get().(*worker)
-		w.createGoroutines(wp.queue, wp.panicFunc)
+		go w.createGoroutines(wp, wp.queue, wp.panicFunc)
 		wp.queue <- w
 	}
 	wp.mu.Unlock()
 	return nil
 }
 
-func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err, ok := r.(error)
-				if !ok {
-					err = fmt.Errorf("%v", r)
-				}
+func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicFunc) {
+	defer func() {
+		if r := recover(); r != nil {
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+			if err != nil && handler != nil {
+				handler(err)
+			}
+			go w.createGoroutines(wp, q, handler)
+			q <- w
+		}
+	}()
+	if wp.releaseTime > 0 {
+		timer := time.NewTimer(wp.releaseTime)
+		defer timer.Stop()
+		for {
+			select {
+			case job := <-w.jobQueue:
+				timer.Stop()
+				err := job()
 				if err != nil && handler != nil {
 					handler(err)
 				}
-				w.createGoroutines(q, handler)
 				q <- w
+				timer.Reset(wp.releaseTime)
+			// case parameter := <-w.Parameter:
+			// 	q <- w
+			case <-timer.C:
+				<-wp.queue
+				wp.usedNum.Sub(1)
+				return
+			case <-w.stop:
+				return
 			}
-		}()
+		}
+	} else {
 		for {
 			select {
 			case job := <-w.jobQueue:
@@ -256,13 +281,11 @@ func (w *worker) createGoroutines(q chan<- *worker, handler PanicFunc) {
 					handler(err)
 				}
 				q <- w
-			// case parameter := <-w.Parameter:
-			// 	q <- w
 			case <-w.stop:
 				return
 			}
 		}
-	}()
+	}
 }
 
 func (w *worker) close() {
