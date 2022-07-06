@@ -7,11 +7,16 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+var (
+	codeKey = "zHrM9pyM_RrvFf_fpssoJDEO5TatkhDh"
+	text    = "待加密数据"
+)
+
 func TestAes(t *testing.T) {
 	tt := zls.NewTest(t)
 
-	key := "DIS"
-	str := zstring.String2Bytes("me")
+	key := codeKey
+	str := zstring.String2Bytes(text)
 
 	cypted, err := zstring.AesEncrypt(str, key)
 	tt.EqualNil(err)
@@ -63,10 +68,9 @@ func TestAes(t *testing.T) {
 func TestAesString(t *testing.T) {
 	tt := zls.NewTest(t)
 
-	key := "DIS"
-	str := "待加密数据"
-
-	crypt, err := zstring.AesEncryptString(str, key)
+	key := codeKey
+	s := text
+	crypt, err := zstring.AesEncryptString(s, key)
 	tt.EqualNil(err)
 	t.Log(crypt)
 
@@ -74,10 +78,10 @@ func TestAesString(t *testing.T) {
 	tt.EqualNil(err)
 	t.Log(orig)
 
-	tt.EqualExit(str, orig)
+	tt.EqualExit(s, orig)
 
-	str = `{"ip":"11.11.11.11"}`
-	crypt, err = zstring.AesEncryptString(str, "a234567890123456", "kkmbfgyuiedslpau")
+	s = `{"ip":"11.11.11.11"}`
+	crypt, err = zstring.AesEncryptString(s, "a234567890123456", "kkmbfgyuiedslpau")
 	tt.EqualNil(err)
 	t.Log(crypt)
 
@@ -85,11 +89,11 @@ func TestAesString(t *testing.T) {
 	tt.EqualNil(err)
 	t.Log(orig)
 
-	tt.EqualExit(str, orig)
+	tt.EqualExit(s, orig)
 
 	key = ""
-	str = ""
-	crypt, err = zstring.AesEncryptString(str, key)
+	s = ""
+	crypt, err = zstring.AesEncryptString(s, key)
 	tt.EqualNil(err)
 	t.Log(crypt)
 
@@ -97,7 +101,7 @@ func TestAesString(t *testing.T) {
 	tt.EqualNil(err)
 	t.Log(orig)
 
-	tt.EqualExit(str, orig)
+	tt.EqualExit(s, orig)
 
 	t.Log(crypt)
 
@@ -105,4 +109,19 @@ func TestAesString(t *testing.T) {
 	tt.Log(orig, err)
 	tt.EqualTrue(err != nil)
 
+}
+
+func TestAesGCM(t *testing.T) {
+	tt := zls.NewTest(t)
+	key := codeKey
+
+	crypt, err := zstring.AesGCMEncryptString(text, key)
+	tt.NoError(err)
+
+	plain, err := zstring.AesGCMDecryptString(crypt, key)
+	tt.NoError(err)
+	tt.Equal(text, plain)
+
+	plain, err = zstring.AesGCMDecryptString("oXvYLL+PNB6/rLAuQKpBIyysS1PnGNpm4F8ahVt7aYWp4AlIzCC512WShQ==", key)
+	tt.Equal(text, plain)
 }

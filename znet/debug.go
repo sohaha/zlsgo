@@ -27,7 +27,7 @@ func routeLog(log *zlog.Logger, tf, method, path string) string {
 		method = log.ColorTextWrap(zlog.ColorLightGreen, mtd)
 	case "DELETE":
 		method = log.ColorTextWrap(zlog.ColorRed, mtd)
-	case "Any":
+	case "ANY":
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
 	case "OPTIONS":
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)

@@ -51,12 +51,12 @@ func (c *Context) BindQuery(obj interface{}) (err error) {
 			}
 		}
 
-		return zreflect.ErrSkipStruct
+		return zreflect.SkipStruct
 	})
 	if err != nil {
 		return err
 	}
-	return zreflect.MapToStruct(m, obj)
+	return zreflect.Map2Struct(m, obj)
 }
 
 func (c *Context) BindForm(obj interface{}) error {
@@ -84,10 +84,10 @@ func (c *Context) BindForm(obj interface{}) error {
 			}
 		}
 
-		return zreflect.ErrSkipStruct
+		return zreflect.SkipStruct
 	})
 	if err != nil {
 		return err
 	}
-	return zreflect.MapToStruct(m, obj)
+	return zreflect.Map2Struct(m, obj)
 }

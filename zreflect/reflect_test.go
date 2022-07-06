@@ -159,7 +159,7 @@ func TestNewTyp(t *testing.T) {
 		t.Log(parent, index, tag, field)
 		tt.EqualTrue(len(parent) == 0)
 		totalSkipStruct++
-		return zreflect.ErrSkipStruct
+		return zreflect.SkipStruct
 	})
 	tt.EqualNil(err)
 

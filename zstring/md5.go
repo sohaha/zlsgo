@@ -26,7 +26,7 @@ func Md5File(path string) (encrypt string, err error) {
 	// r := bufio.NewReader(f)
 	h := md5.New()
 	_, err = io.Copy(h, f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return "", err
 	}

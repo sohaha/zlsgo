@@ -251,21 +251,21 @@ func TestStructToMap(tt *testing.T) {
 			B: "Ss",
 		},
 	}
-	r := ztype.StructToMap(v)
+	r := ztype.ToMapString(v)
 	t.Log(v, r)
 	j, err := zjson.Marshal(r)
 	t.EqualNil(err)
-	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"A":2,"B":"S1"},"S2":{"A":3,"B":"Ss"},"type1":{"A":1,"B":"type1"}}`, string(j))
+	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"A":2,"B":"S1","C1":0},"S2":{"A":3,"B":"Ss","C1":0}}`, string(j))
 
 	v2 := []string{"1", "2", "more"}
-	r = ztype.StructToMap(v2)
+	r = ztype.ToMapString(v2)
 	t.Log(v2, r)
 	j, err = zjson.Marshal(v2)
 	t.EqualNil(err)
 	t.EqualExit(`["1","2","more"]`, string(j))
 
 	v3 := "ok"
-	r = ztype.StructToMap(v3)
+	r = ztype.ToMapString(v3)
 	t.Log(v3, r)
 	j, err = zjson.Marshal(v3)
 	t.EqualNil(err)

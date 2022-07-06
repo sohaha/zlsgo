@@ -1,6 +1,7 @@
 package zstring
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -11,13 +12,59 @@ import (
 	"math/big"
 )
 
+// GenRSAKey RSA public key private key generation
+func GenRSAKey(bits ...int) (prvkey, pubkey []byte, err error) {
+	l := 1024
+	if len(bits) > 0 {
+		l = bits[0]
+	}
+	privateKey, err := rsa.GenerateKey(rand.Reader, l)
+	if err != nil {
+		return nil, nil, err
+	}
+	derStream := x509.MarshalPKCS1PrivateKey(privateKey)
+	block := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: derStream,
+	}
+	prvkey = pem.EncodeToMemory(block)
+	publicKey := &privateKey.PublicKey
+	derPkix, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	block = &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: derPkix,
+	}
+	pubkey = pem.EncodeToMemory(block)
+	return
+}
+
 // RSAEncrypt RSA Encrypt
-func RSAEncrypt(plainText []byte, publicKey string) ([]byte, error) {
+func RSAEncrypt(plainText []byte, publicKey string, bits ...int) ([]byte, error) {
 	pub, err := pubKey(String2Bytes(publicKey))
 	if err != nil {
 		return nil, err
 	}
-	cipherText, err := rsa.EncryptPKCS1v15(rand.Reader, pub, plainText)
+	return RSAKeyEncrypt(plainText, pub, bits...)
+}
+
+// RSAKeyEncrypt RSA Encrypt
+func RSAKeyEncrypt(plainText []byte, publicKey *rsa.PublicKey, bits ...int) ([]byte, error) {
+	if len(bits) > 0 && bits[0] > 100 {
+		buf := splitBytes(plainText, bits[0]/8-11)
+		buffer := bytes.NewBufferString("")
+		for i := range buf {
+			b, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, buf[i])
+			if err != nil {
+				return nil, err
+			}
+			buffer.Write(b)
+		}
+		return Base64Encode(buffer.Bytes()), nil
+	}
+	cipherText, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, plainText)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +82,11 @@ func RSAEncryptString(plainText string, publicKey string) (string, error) {
 
 // RSAPriKeyEncrypt RSA PriKey Encrypt
 func RSAPriKeyEncrypt(plainText []byte, privateKey string) ([]byte, error) {
-	pri, err := priKey(String2Bytes(privateKey))
+	prv, err := priKey(String2Bytes(privateKey))
 	if err != nil {
 		return nil, err
 	}
-	cipherText, err := rsa.SignPKCS1v15(nil, pri, crypto.Hash(0), plainText)
+	cipherText, err := rsa.SignPKCS1v15(nil, prv, crypto.Hash(0), plainText)
 	if err != nil {
 		return nil, err
 	}
@@ -56,17 +103,30 @@ func RSAPriKeyEncryptString(plainText string, privateKey string) (string, error)
 }
 
 // RSADecrypt RSA Decrypt
-func RSADecrypt(cipherText []byte, privateKey string) ([]byte, error) {
-	pri, err := priKey(String2Bytes(privateKey))
+func RSADecrypt(cipherText []byte, privateKey string, bits ...int) ([]byte, error) {
+	prv, err := priKey(String2Bytes(privateKey))
 	if err != nil {
 		return nil, err
 	}
+	return RSAKeyDecrypt(cipherText, prv, bits...)
+}
+
+// RSAKeyDecrypt RSA Decrypt
+func RSAKeyDecrypt(cipherText []byte, privateKey *rsa.PrivateKey, bits ...int) ([]byte, error) {
 	cipherText, _ = Base64Decode(cipherText)
-	plainText, err := rsa.DecryptPKCS1v15(rand.Reader, pri, cipherText)
-	if err != nil {
-		return nil, err
+	if len(bits) > 0 && bits[0] > 100 {
+		buf := splitBytes(cipherText, bits[0]/8)
+		buffer := bytes.NewBufferString("")
+		for i := range buf {
+			b, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, buf[i])
+			if err != nil {
+				return nil, err
+			}
+			buffer.Write(b)
+		}
+		return buffer.Bytes(), nil
 	}
-	return plainText, nil
+	return rsa.DecryptPKCS1v15(rand.Reader, privateKey, cipherText)
 }
 
 // RSADecryptString RSA Decrypt to String
@@ -125,7 +185,22 @@ func priKey(privateKey []byte) (*rsa.PrivateKey, error) {
 	if block == nil {
 		return nil, errors.New("private key is illegal")
 	}
-	return x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	switch block.Type {
+	case "PRIVATE KEY":
+		// pkcs8
+		parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err == nil {
+			parsed, ok := parsedKey.(*rsa.PrivateKey)
+			if !ok {
+				return nil, errors.New("private key is invalid")
+			}
+			return parsed, nil
+		}
+		return nil, err
+	default:
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+	}
 }
 
 func leftPad(input []byte, size int) (out []byte) {
@@ -154,4 +229,17 @@ func unLeftPad(input []byte) (out []byte) {
 	out = make([]byte, n-t)
 	copy(out, input[t:])
 	return
+}
+
+func splitBytes(buf []byte, lim int) [][]byte {
+	var chunk []byte
+	chunks := make([][]byte, 0, len(buf)/lim+1)
+	for len(buf) >= lim {
+		chunk, buf = buf[:lim], buf[lim:]
+		chunks = append(chunks, chunk)
+	}
+	if len(buf) > 0 {
+		chunks = append(chunks, buf[:])
+	}
+	return chunks
 }

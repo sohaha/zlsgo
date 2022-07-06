@@ -9,11 +9,12 @@ import (
 )
 
 type Typer struct {
-	typ    reflect.Type
-	val    reflect.Value
-	fields map[string]int
-	name   string
-	ptr    uintptr
+	typ           reflect.Type
+	val           reflect.Value
+	fieldsMapping map[string]int
+	fields        map[string]int
+	name          string
+	ptr           uintptr
 }
 
 var (
@@ -46,15 +47,24 @@ func NewVal(val reflect.Value) (*Typer, error) {
 	if val.Kind() != reflect.Ptr {
 		return nil, errors.New("not ptr")
 	}
-	ptr := val.Pointer()
-	val = val.Elem()
-	t, err := registerValue(val.Type())
+	return newVal(val.Elem())
+}
+
+func newVal(val reflect.Value) (*Typer, error) {
+	ot, err := registerValue(val.Type())
 	if err != nil {
 		return nil, err
 	}
+	t := *ot
 	t.val = val
-	t.ptr = ptr
-	return t, nil
+	return &t, nil
+}
+
+func (t *Typer) Fields() map[string]int {
+	if t.fields == nil {
+
+	}
+	return t.fields
 }
 
 func (t *Typer) Field(i int) reflect.StructField {
@@ -74,10 +84,10 @@ func (t *Typer) Interface() interface{} {
 }
 
 func (t *Typer) CheckExistsField(name string) (int, bool) {
-	if t.fields == nil {
+	if t.fieldsMapping == nil {
 		return CheckExistsField(t.name, name)
 	}
-	i, ok := t.fields[GetFieldTypName(t.name, name)]
+	i, ok := t.fieldsMapping[GetFieldTypName(t.name, name)]
 	return i, ok
 }
 
@@ -95,7 +105,7 @@ func getTyper() *Typer {
 
 func putTyper(t *Typer) {
 	t.typ = nil
-	t.fields = nil
+	t.fieldsMapping = nil
 	t.name = ""
 	pool.Put(t)
 }
@@ -129,18 +139,18 @@ func registerValue(typ reflect.Type) (*Typer, error) {
 	if typ.Kind() != reflect.Struct {
 		return nil, errors.New("only registered structure")
 	}
-	can := typ.Name() != ""
 	var t *Typer
+	can, typName := typ.Name() != "", ""
 	if can {
-		typName := typ.String()
-		if _, ok := registerMap.Load(typName); ok {
-			return &Typer{typ: typ, name: typName}, nil
+		typName = typ.String()
+		if v, ok := registerMap.Load(typName); ok {
+			if t, ok = v.(*Typer); ok {
+				return t, nil
+			}
 		}
-		t = &Typer{typ: typ, name: typName}
-	} else {
-
-		t = &Typer{typ: typ, name: "", fields: map[string]int{}}
 	}
+
+	t = &Typer{typ: typ, name: typName, fieldsMapping: map[string]int{}, fields: map[string]int{}}
 
 	var register func(typ reflect.Type, name string)
 	register = func(r reflect.Type, name string) {
@@ -149,14 +159,14 @@ func registerValue(typ reflect.Type) (*Typer, error) {
 			if zstring.IsLcfirst(field.Name) {
 				continue
 			}
-			mapFieldName := GetFieldTypName(name, GetStructTag(field))
+			tag := GetStructTag(field)
+			mapFieldName := GetFieldTypName(name, tag)
 			typ := field.Type
 			if can {
-				mapFieldName = GetFieldTypName(name, GetStructTag(field))
 				fieldTagMap.Store(mapFieldName, i)
-			} else {
-				t.fields[mapFieldName] = i
 			}
+			t.fieldsMapping[mapFieldName] = i
+			t.fields[tag] = i
 			if typ.Kind() == reflect.Struct {
 				register(typ, mapFieldName)
 			}
@@ -164,7 +174,7 @@ func registerValue(typ reflect.Type) (*Typer, error) {
 	}
 	register(typ, t.name)
 	if can {
-		registerMap.Store(t.name, struct{}{})
+		registerMap.Store(t.name, t)
 	}
 	return t, nil
 }

@@ -17,21 +17,18 @@ func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	return ok
 }
 
-// ToSliceMapString ToSliceMapString
-func ToSliceMapString(value interface{}, tags ...string) []map[string]interface{} {
+// ToSliceMapString to SliceMapString
+func ToSliceMapString(value interface{}) []map[string]interface{} {
 	if r, ok := value.([]map[string]interface{}); ok {
 		return r
 	}
 	ref := reflect.Indirect(reflect.ValueOf(value))
-	m := []map[string]interface{}{}
-	// switch ref.Kind() {
-	// case reflect.Slice:
+	m := make([]map[string]interface{}, 0)
 	l := ref.Len()
 	v := ref.Slice(0, l)
 	for i := 0; i < l; i++ {
 		m = append(m, ToMapString(v.Index(i).Interface()))
 	}
-	// }
 	return m
 }
 
@@ -161,7 +158,7 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 				m[name] = rv.Field(i).Interface()
 			}
 		default:
-			return nil
+			m["0"] = value
 		}
 	}
 	return m

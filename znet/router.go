@@ -104,17 +104,11 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s %s", "Any", CompletionPath(path, e.router.prefix)))
-	e.GET(path, action, moreHandler...)
-	e.POST(path, action, moreHandler...)
-	e.PUT(path, action, moreHandler...)
-	e.DELETE(path, action, moreHandler...)
-	e.PATCH(path, action, moreHandler...)
-	e.HEAD(path, action, moreHandler...)
-	e.OPTIONS(path, action, moreHandler...)
-	e.CONNECT(path, action, moreHandler...)
-	e.TRACE(path, action, moreHandler...)
-	log()
+	l, ok := e.handleAny(path, handlerFunc(action), handlerFuncs(moreHandler)...)
+
+	if ok && e.IsDebug() {
+		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), "ANY", CompletionPath(path, e.router.prefix)))
+	}
 	return e
 }
 
@@ -239,6 +233,8 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		BindStructDelimiter: e.BindStructDelimiter,
 		BindStructSuffix:    e.BindStructSuffix,
 		templateFuncMap:     e.templateFuncMap,
+		template:            e.template,
+		injector:            e.injector,
 	}
 	engine.pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
@@ -325,10 +321,18 @@ func (e *Engine) GetTrees() map[string]*Tree {
 
 // Handle registers new request handlerFn
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
-	return e.handle(method, path, runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), handlerFunc(action), handlerFuncs(moreHandler)...)
+	l, ok := e.handle(method, path, handlerFunc(action), handlerFuncs(moreHandler)...)
+	if !ok {
+		return e
+	}
+
+	if e.IsDebug() {
+		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), method, path))
+	}
+	return e
 }
 
-func (e *Engine) handle(method string, path string, handleName string, handle handlerFn, moreHandler ...handlerFn) *Engine {
+func (e *Engine) handle(method string, path string, handle handlerFn, moreHandler ...handlerFn) (int, bool) {
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
@@ -347,7 +351,7 @@ func (e *Engine) handle(method string, path string, handleName string, handle ha
 		node := nodes[0]
 		if e.webMode != quietCode && node.path == path && node.handle != nil {
 			e.Log.Track("duplicate route definition: ["+method+"]"+path, 3, 1)
-			return e
+			return 0, false
 		}
 	}
 
@@ -359,14 +363,19 @@ func (e *Engine) handle(method string, path string, handleName string, handle ha
 		}
 	}
 
-	if e.IsDebug() {
-		ft := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, len(middleware)+1)
-		e.Log.Debug(routeLog(e.Log, ft, method, path))
-	}
-
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
-	return e
+	return len(middleware) + 1, true
+}
+
+func (e *Engine) handleAny(path string, handle handlerFn, moreHandler ...handlerFn) (l int, ok bool) {
+	for key := range methods {
+		l, ok = e.handle(key, path, handle, moreHandler...)
+		if !ok {
+			return l, false
+		}
+	}
+	return
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {

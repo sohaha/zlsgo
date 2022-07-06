@@ -9,11 +9,30 @@ import (
 )
 
 var (
-	// ErrSkipStruct Field is returned when a struct field is skipped.
-	ErrSkipStruct = errors.New("skip struct")
+	// SkipStruct Field is returned when a struct field is skipped.
+	SkipStruct = errors.New("skip struct")
 )
 
-func MapToStruct(from map[string]interface{}, obj interface{}) error {
+func Struct2Map(from interface{}) (map[string]interface{}, error) {
+	val := reflect.ValueOf(from)
+	t, err := newVal(val)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+	m := make(map[string]interface{}, len(t.fields))
+	err = t.ForEachVal(func(parent []string, index int, tag string, field reflect.StructField, val reflect.Value) error {
+		if len(parent) > 0 {
+			return SkipStruct
+		}
+
+		m[GetStructTag(field)] = val.Interface()
+
+		return nil
+	})
+	return m, err
+}
+
+func Map2Struct(from map[string]interface{}, obj interface{}) error {
 	val := reflect.ValueOf(obj)
 	t, err := NewVal(val)
 	if err != nil {
@@ -66,14 +85,14 @@ func (t *Typer) ForEachVal(fn func(parent []string, index int, tag string, field
 				continue
 			}
 			err = fn(parent, i, fieldTag, field, v.Field(i))
-			if err == ErrSkipStruct {
+			if err == SkipStruct {
 				continue
 			}
 
 			if err == nil && field.Type.Kind() == reflect.Struct {
 				nt := getTyper()
 				nt.typ = field.Type
-				nt.fields = t.fields
+				nt.fieldsMapping = t.fieldsMapping
 				nt.name = t.GetFieldTypName(fieldTag)
 				err = forField(nt, v.Field(i), append(parent, fieldTag))
 				putTyper(nt)
@@ -101,14 +120,14 @@ func (t *Typer) ForEach(fn func(parent []string, index int, tag string, field re
 			}
 
 			err = fn(parent, i, fieldTag, field)
-			if err == ErrSkipStruct {
+			if err == SkipStruct {
 				continue
 			}
 
 			if err == nil && field.Type.Kind() == reflect.Struct {
 				nt := getTyper()
 				nt.typ = field.Type
-				nt.fields = t.fields
+				nt.fieldsMapping = t.fieldsMapping
 				nt.name = t.GetFieldTypName(fieldTag)
 				err = forField(nt, append(parent, fieldTag))
 				putTyper(nt)
@@ -196,7 +215,7 @@ func SetStructFidld(typName, tag string, fValue reflect.Value, val interface{}) 
 				t := &Typer{name: typName + nameConnector + tag, typ: tp, val: fValue}
 				return MapTypStruct(nv, t)
 			}
-			// return errors.New("not support " + fkind.String())
+			// return errors.new("not support " + fkind.String())
 		}
 	default:
 		v := reflect.ValueOf(val)

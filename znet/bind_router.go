@@ -69,12 +69,20 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			path = ""
 		}
 
+		var (
+			l  int
+			ok bool
+		)
+
 		if method == "ANY" {
-			g.Any(path, fn)
-			return nil
+			l, ok = g.handleAny(path, handlerFunc(fn))
+		} else {
+			l, ok = g.handle(method, path, handlerFunc(fn))
 		}
 
-		_ = g.handle(method, path, handleName, handlerFunc(fn))
+		if ok && e.IsDebug() {
+			e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l), method, CompletionPath(path, g.router.prefix)))
+		}
 		return nil
 	})
 }

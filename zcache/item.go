@@ -70,7 +70,7 @@ func (item *Item) CreatedTime() time.Time {
 // RemainingLife RemainingLife
 func (item *Item) RemainingLife() time.Duration {
 	if item.lifeSpan == 0 {
-		return -1
+		return 0
 	}
 	return time.Until(item.createdTime.Add(item.lifeSpan))
 }

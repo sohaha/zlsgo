@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -46,7 +48,7 @@ func PKCS7UnPadding(origData []byte) ([]byte, error) {
 }
 
 // AesEncrypt aes encryption
-func AesEncrypt(plainText []byte, key string, iv ...string) (crypted []byte,
+func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
 	err error) {
 	var k []byte
 	var block cipher.Block
@@ -61,16 +63,18 @@ func AesEncrypt(plainText []byte, key string, iv ...string) (crypted []byte,
 		blockSize := block.BlockSize()
 		plainText = PKCS7Padding(plainText, blockSize)
 		blocMode := cipher.NewCBCEncrypter(block, k[:blockSize])
-		crypted = make([]byte, len(plainText))
-		blocMode.CryptBlocks(crypted, plainText)
+		ciphertext = make([]byte, len(plainText))
+		blocMode.CryptBlocks(ciphertext, plainText)
 	}
 	return
 }
 
 // AesDecrypt aes decryption
 func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, err error) {
-	var block cipher.Block
-	var k []byte
+	var (
+		block cipher.Block
+		k     []byte
+	)
 	if len(iv) > 0 {
 		k = String2Bytes(iv[0])
 		block, err = aes.NewCipher(String2Bytes(key))
@@ -115,6 +119,71 @@ func AesDecryptString(cipherText string, key string, iv ...string) (string,
 	error) {
 	base64Byte, _ := Base64Decode(String2Bytes(cipherText))
 	origData, err := AesDecrypt(base64Byte, key, iv...)
+	if err != nil {
+		return "", err
+	}
+	return Bytes2String(origData), nil
+}
+
+func AesGCMEncrypt(plaintext []byte, key string) (ciphertext []byte, err error) {
+	var (
+		block  cipher.Block
+		aesGCM cipher.AEAD
+	)
+
+	block, err = aes.NewCipher(String2Bytes(key))
+	if err != nil {
+		return
+	}
+
+	aesGCM, err = cipher.NewGCM(block)
+	if err != nil {
+		return
+	}
+
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return
+	}
+
+	ciphertext = aesGCM.Seal(nonce, nonce, plaintext, nil)
+	return
+}
+
+func AesGCMDecrypt(ciphertext []byte, key string) (plaintext []byte, err error) {
+	var (
+		block  cipher.Block
+		aesGCM cipher.AEAD
+	)
+	block, err = aes.NewCipher(String2Bytes(key))
+	if err != nil {
+		return
+	}
+
+	aesGCM, err = cipher.NewGCM(block)
+	if err != nil {
+		return
+	}
+
+	nonceSize := aesGCM.NonceSize()
+	nonce, text := ciphertext[:nonceSize], ciphertext[nonceSize:]
+
+	return aesGCM.Open(nil, nonce, text, nil)
+}
+
+func AesGCMEncryptString(plainText string, key string) (string, error) {
+	str := ""
+	c, err := AesGCMEncrypt(String2Bytes(plainText), key)
+	if err == nil {
+		str = Bytes2String(Base64Encode(c))
+	}
+	return str, nil
+}
+
+func AesGCMDecryptString(cipherText string, key string) (string,
+	error) {
+	base64Byte, _ := Base64Decode(String2Bytes(cipherText))
+	origData, err := AesGCMDecrypt(base64Byte, key)
 	if err != nil {
 		return "", err
 	}
