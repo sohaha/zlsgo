@@ -177,7 +177,7 @@ func AesGCMEncryptString(plainText string, key string) (string, error) {
 	if err == nil {
 		str = Bytes2String(Base64Encode(c))
 	}
-	return str, nil
+	return str, err
 }
 
 func AesGCMDecryptString(cipherText string, key string) (string,

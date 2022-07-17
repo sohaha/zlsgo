@@ -96,6 +96,16 @@ func TestGet(t *testing.T) {
 		return true
 	})
 
+	Parse(`{"a":null}`).Get("a").ForEach(func(key, value Res) bool {
+		t.Log(key, value)
+		t.Fail()
+		return true
+	})
+	Parse(`{"a":"a123"}`).Get("a").ForEach(func(key, value Res) bool {
+		t.Log(key, value)
+		return true
+	})
+
 	byteData := zstring.String2Bytes(demo)
 	tt.EqualTrue(ValidBytes(byteData))
 	tt.EqualExit("暴龙兽", GetBytes(byteData, "user.name").String())

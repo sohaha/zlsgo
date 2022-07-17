@@ -1,18 +1,12 @@
 package ztype
 
-import "reflect"
+import (
+	"reflect"
+)
 
-func Slice(value interface{}) (m []interface{}) {
-	ref := reflect.Indirect(reflect.ValueOf(value))
-	switch ref.Kind() {
-	case reflect.Slice, reflect.String:
-		l := ref.Len()
-		v := ref.Slice(0, l)
-		for i := 0; i < l; i++ {
-			m = append(m, v.Index(i).Interface())
-		}
-	}
-	return m
+// Deprecated: please use ToSlice
+func Slice(value interface{}) []interface{} {
+	return ToSlice(value)
 }
 
 // SliceStrToIface  []string to []interface{}
@@ -22,4 +16,19 @@ func SliceStrToIface(slice []string) []interface{} {
 		ifeSlice = append(ifeSlice, val)
 	}
 	return ifeSlice
+}
+
+func ToSlice(value interface{}) (s []interface{}) {
+	ref := reflect.Indirect(reflect.ValueOf(value))
+	switch ref.Kind() {
+	case reflect.Slice:
+		l := ref.Len()
+		v := ref.Slice(0, l)
+		for i := 0; i < l; i++ {
+			s = append(s, v.Index(i).Interface())
+		}
+	default:
+		s = append(s, value)
+	}
+	return s
 }

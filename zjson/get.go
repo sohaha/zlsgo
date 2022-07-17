@@ -187,25 +187,34 @@ func (r Res) Array() []Res {
 }
 
 func (r Res) IsObject() bool {
-	return r.Type == JSON && len(r.Raw) > 0 && r.Raw[0] == '{'
+	return r.firstCharacter() == '{'
 }
 
 func (r Res) IsArray() bool {
-	return r.Type == JSON && len(r.Raw) > 0 && r.Raw[0] == '['
+	return r.firstCharacter() == '['
 }
 
-func (r Res) ForEach(iterator func(key, value Res) bool) {
-	if !r.Exists() {
+func (r Res) firstCharacter() uint8 {
+	if r.Type == JSON && len(r.Raw) > 0 {
+		return r.Raw[0]
+	}
+	return 0
+}
+
+func (r Res) ForEach(fn func(key, value Res) bool) {
+	if !r.Exists() || r.Type == Null {
 		return
 	}
 	if r.Type != JSON {
-		iterator(Res{}, r)
+		fn(Res{}, r)
 		return
 	}
+	var (
+		keys       bool
+		i          int
+		key, value Res
+	)
 	j := r.Raw
-	var keys bool
-	var i int
-	var key, value Res
 	for ; i < len(j); i++ {
 		if j[i] == '{' {
 			i++
@@ -220,9 +229,11 @@ func (r Res) ForEach(iterator func(key, value Res) bool) {
 			return
 		}
 	}
-	var str string
-	var vesc bool
-	var ok bool
+	var (
+		str  string
+		vesc bool
+		ok   bool
+	)
 	for ; i < len(j); i++ {
 		if keys {
 			if j[i] != '"' {
@@ -253,7 +264,7 @@ func (r Res) ForEach(iterator func(key, value Res) bool) {
 			return
 		}
 		value.Index = s
-		if !iterator(key, value) {
+		if !fn(key, value) {
 			return
 		}
 	}
@@ -1480,7 +1491,7 @@ func splitPossiblePipe(path string) (left, right string, ok bool) {
 	return
 }
 
-func ForEachLine(json string, iterator func(line Res) bool) {
+func ForEachLine(json string, fn func(line Res) bool) {
 	var res Res
 	var i int
 	for {
@@ -1488,7 +1499,7 @@ func ForEachLine(json string, iterator func(line Res) bool) {
 		if !res.Exists() {
 			break
 		}
-		if !iterator(res) {
+		if !fn(res) {
 			return
 		}
 	}

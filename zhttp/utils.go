@@ -181,14 +181,14 @@ func getElText(r QueryHTML, full bool) string {
 	return b.String()
 }
 
-func forChild(node *html.Node, iterator func(n *html.Node) bool) {
+func forChild(node *html.Node, fn func(n *html.Node) bool) {
 	n := node.FirstChild
 	for {
 		if n == nil {
 			return
 		}
 		if n.Type == html.ElementNode {
-			if !iterator(n) {
+			if !fn(n) {
 				return
 			}
 		}

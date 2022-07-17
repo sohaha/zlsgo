@@ -11,6 +11,17 @@ var (
 	structTagPriority = []string{"zto", "c", "json"}
 )
 
+type Maps map[string]interface{}
+
+func (m Maps) Get(key string) *Type {
+	typ := &Type{}
+	v, ok := m[key]
+	if ok {
+		typ.v = v
+	}
+	return typ
+}
+
 // MapKeyExists Whether the dictionary key exists
 func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	_, ok := m[key]
@@ -41,65 +52,65 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 		return r
 	}
 	m := map[string]interface{}{}
-	switch value := value.(type) {
+	switch val := value.(type) {
 	case map[interface{}]interface{}:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]string:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]int:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]uint:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]float32:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[interface{}]float64:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[string]bool:
-		for k, v := range value {
+		for k, v := range val {
 			m[k] = v
 		}
 	case map[string]int:
-		for k, v := range value {
+		for k, v := range val {
 			m[k] = v
 		}
 	case map[string]uint:
-		for k, v := range value {
+		for k, v := range val {
 			m[k] = v
 		}
 	case map[string]float32:
-		for k, v := range value {
+		for k, v := range val {
 			m[k] = v
 		}
 	case map[string]float64:
-		for k, v := range value {
+		for k, v := range val {
 			m[k] = v
 		}
 	case map[int]interface{}:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[int]string:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	case map[uint]string:
-		for k, v := range value {
+		for k, v := range val {
 			m[ToString(k)] = v
 		}
 	default:
-		rv := reflect.ValueOf(value)
+		rv := reflect.ValueOf(val)
 		kind := rv.Kind()
 		if kind == reflect.Ptr {
 			rv = rv.Elem()
@@ -158,7 +169,7 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 				m[name] = rv.Field(i).Interface()
 			}
 		default:
-			m["0"] = value
+			m["0"] = val
 		}
 	}
 	return m
