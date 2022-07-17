@@ -11,9 +11,9 @@ var (
 	structTagPriority = []string{"zto", "c", "json"}
 )
 
-type Maps map[string]interface{}
+type Map map[string]interface{}
 
-func (m Maps) Get(key string) *Type {
+func (m Map) Get(key string) *Type {
 	typ := &Type{}
 	v, ok := m[key]
 	if ok {

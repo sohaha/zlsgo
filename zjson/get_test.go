@@ -22,6 +22,21 @@ type Demo struct {
 	} `json:"friends"`
 }
 
+func TestGet2(t *testing.T) {
+	Parse(`{"a":null}`).Get("a").ForEach(func(key, value Res) bool {
+		t.Log(key, value)
+		t.Fail()
+		return true
+	})
+	get := Parse(`{"a":{"b":"a123",}`).Get("a")
+	get.ForEach(func(key, value Res) bool {
+		t.Log(key, value)
+		return true
+	})
+	t.Log(get.str)
+	t.Log(get.raw)
+	t.Log(get.Get("b"))
+}
 func TestGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	SetModifiersState(true)
@@ -30,18 +45,18 @@ func TestGet(t *testing.T) {
 	user := Get(demo, "user")
 	name := user.Get("name").String()
 	other := Get(demo, "other")
-	tt.Log(other.Array())
+	t.Log(other.Array(), other.Raw())
 	tt.EqualExit("暴龙兽", name)
 	tt.EqualExit(666, Get(demo, "other.1").Int())
-	tt.Log(Get(demo, "other.1").Type.String())
+	tt.Log(Get(demo, "other.1").typ.String())
 	tt.EqualExit(0, Get(demo, "other.2").Int())
-	tt.Log(Get(demo, "other.2").Type.String())
+	tt.Log(Get(demo, "other.2").typ.String())
 	tt.EqualExit(0, Get(demo, "bool").Int())
-	tt.Log(Get(demo, "bool").Type.String())
+	tt.Log(Get(demo, "bool").typ.String())
 	tt.EqualExit(1, Get(demo, "boolTrue").Int())
 	tt.EqualExit(0, Get(demo, "time").Int())
-	_ = Get(demo, "time").Type.String()
-	_ = Get(demo, "timeNull").Type.String()
+	_ = Get(demo, "time").typ.String()
+	_ = Get(demo, "timeNull").typ.String()
 	tt.EqualExit(1.8, Get(demo, "other.2").Float())
 	tt.EqualExit(66.6, Get(demo, "index\\.key").Float())
 
@@ -53,7 +68,7 @@ func TestGet(t *testing.T) {
 
 	tt.EqualExit("666", Get(demo, "other.1").String())
 	tt.EqualExit(false, Get(demo, "bool").Bool())
-	_ = Get(demo, "boolTrue").Type.String()
+	_ = Get(demo, "boolTrue").typ.String()
 	tt.EqualExit("false", Get(demo, "bool").String())
 	tt.EqualExit(true, Get(demo, "boolTrue").Bool())
 	tt.EqualExit(false, Get(demo, "boolTrueNot").Bool())
@@ -157,7 +172,7 @@ func TestGet(t *testing.T) {
 	}
 	_ = parseData.Unmarshal(&i)
 	tt.Log(i)
-	tt.Log(Get(demo, "friends").Type.String())
+	tt.Log(Get(demo, "friends").typ.String())
 	tt.Log(parseData.Get("@reverse").String())
 }
 

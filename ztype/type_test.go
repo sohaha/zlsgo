@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 
 func TestNewMap(t *testing.T) {
 	m := map[string]interface{}{"a": 1, "b": 2.01, "c": []string{"d", "e", "f", "g", "h"}, "r": map[string]int{"G1": 1, "G2": 2}}
-	mt := Maps(m)
+	mt := Map(m)
 
 	for _, v := range []string{"a", "b", "c", "d", "r"} {
 		typ := mt.Get(v)

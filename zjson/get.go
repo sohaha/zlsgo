@@ -19,11 +19,11 @@ import (
 type (
 	Type int
 	Res  struct {
-		Type  Type
-		Raw   string
-		Str   string
-		Num   float64
-		Index int
+		typ   Type
+		raw   string
+		str   string
+		num   float64
+		index int
 	}
 	fieldMaps struct {
 		mu sync.RWMutex
@@ -59,28 +59,32 @@ func (t Type) String() string {
 	}
 }
 
+func (r Res) Raw() string {
+	return r.raw
+}
+
 func (r Res) String() string {
-	switch r.Type {
+	switch r.typ {
 	case False:
 		return "false"
 	case Number:
-		if len(r.Raw) == 0 {
-			return strconv.FormatFloat(r.Num, 'f', -1, 64)
+		if len(r.raw) == 0 {
+			return strconv.FormatFloat(r.num, 'f', -1, 64)
 		}
 		var i int
-		if r.Raw[0] == '-' {
+		if r.raw[0] == '-' {
 			i++
 		}
-		for ; i < len(r.Raw); i++ {
-			if r.Raw[i] < '0' || r.Raw[i] > '9' {
-				return strconv.FormatFloat(r.Num, 'f', -1, 64)
+		for ; i < len(r.raw); i++ {
+			if r.raw[i] < '0' || r.raw[i] > '9' {
+				return strconv.FormatFloat(r.num, 'f', -1, 64)
 			}
 		}
-		return r.Raw
+		return r.raw
 	case String:
-		return r.Str
+		return r.str
 	case JSON:
-		return r.Raw
+		return r.raw
 	case True:
 		return "true"
 	default:
@@ -89,80 +93,80 @@ func (r Res) String() string {
 }
 
 func (r Res) Bool() bool {
-	switch r.Type {
+	switch r.typ {
 	case True:
 		return true
 	case String:
-		b, _ := strconv.ParseBool(strings.ToLower(r.Str))
+		b, _ := strconv.ParseBool(strings.ToLower(r.str))
 		return b
 	case Number:
-		return r.Num != 0
+		return r.num != 0
 	default:
 		return false
 	}
 }
 
 func (r Res) Int() int {
-	switch r.Type {
+	switch r.typ {
 	case True:
 		return 1
 	case String:
-		n, _ := parseInt(r.Str)
+		n, _ := parseInt(r.str)
 		return n
 	case Number:
-		i, ok := safeInt(r.Num)
+		i, ok := safeInt(r.num)
 		if ok {
 			return i
 		}
 		// now try to parse the raw string
-		i, ok = parseInt(r.Raw)
+		i, ok = parseInt(r.raw)
 		if ok {
 			return i
 		}
-		return int(r.Num)
+		return int(r.num)
 	default:
 		return 0
 	}
 }
 
 func (r Res) Uint() uint {
-	switch r.Type {
+	switch r.typ {
 	default:
 		return 0
 	case True:
 		return 1
 	case String:
-		n, _ := parseUint(r.Str)
+		n, _ := parseUint(r.str)
 		return n
 	case Number:
-		i, ok := safeInt(r.Num)
+		i, ok := safeInt(r.num)
 		if ok && i >= 0 {
 			return uint(i)
 		}
-		u, ok := parseUint(r.Raw)
+		u, ok := parseUint(r.raw)
 		if ok {
 			return u
 		}
-		return uint(r.Num)
+		return uint(r.num)
 	}
 }
 
 func (r Res) Float() float64 {
-	switch r.Type {
+	switch r.typ {
 	default:
 		return 0
 	case True:
 		return 1
 	case String:
-		n, _ := strconv.ParseFloat(r.Str, 64)
+		n, _ := strconv.ParseFloat(r.str, 64)
 		return n
 	case Number:
-		return r.Num
+		return r.num
 	}
 }
 
 func (r Res) Unmarshal(v interface{}) error {
-	return Unmarshal(r.Raw, v)
+	return Unmarshal(r.raw, v)
 }
 
 func (r Res) Time(format ...string) time.Time {
@@ -176,10 +180,10 @@ func (r Res) Time(format ...string) time.Time {
 }
 
 func (r Res) Array() []Res {
-	if r.Type == Null {
+	if r.typ == Null {
 		return []Res{}
 	}
-	if r.Type != JSON {
+	if r.typ != JSON {
 		return []Res{r}
 	}
 	rr := r.arrayOrMap('[', false)
@@ -195,17 +199,17 @@ func (r Res) IsArray() bool {
 }
 
 func (r Res) firstCharacter() uint8 {
-	if r.Type == JSON && len(r.Raw) > 0 {
-		return r.Raw[0]
+	if r.typ == JSON && len(r.raw) > 0 {
+		return r.raw[0]
 	}
 	return 0
 }
 
 func (r Res) ForEach(fn func(key, value Res) bool) {
-	if !r.Exists() || r.Type == Null {
+	if !r.Exists() || r.typ == Null {
 		return
 	}
-	if r.Type != JSON {
+	if r.typ != JSON {
 		fn(Res{}, r)
 		return
 	}
@@ -214,11 +218,11 @@ func (r Res) ForEach(fn func(key, value Res) bool) {
 		i          int
 		key, value Res
 	)
-	j := r.Raw
+	j := r.raw
 	for ; i < len(j); i++ {
 		if j[i] == '{' {
 			i++
-			key.Type = String
+			key.typ = String
 			keys = true
 			break
 		} else if j[i] == '[' {
@@ -245,12 +249,12 @@ func (r Res) ForEach(fn func(key, value Res) bool) {
 				return
 			}
 			if vesc {
-				key.Str = unescape(str[1 : len(str)-1])
+				key.str = unescape(str[1 : len(str)-1])
 			} else {
-				key.Str = str[1 : len(str)-1]
+				key.str = str[1 : len(str)-1]
 			}
-			key.Raw = str
-			key.Index = s
+			key.raw = str
+			key.index = s
 		}
 		for ; i < len(j); i++ {
 			if j[i] <= ' ' || j[i] == ',' || j[i] == ':' {
@@ -263,7 +267,7 @@ func (r Res) ForEach(fn func(key, value Res) bool) {
 		if !ok {
 			return
 		}
-		value.Index = s
+		value.index = s
 		if !fn(key, value) {
 			return
 		}
@@ -271,7 +275,7 @@ func (r Res) ForEach(fn func(key, value Res) bool) {
 }
 
 func (r Res) Map() map[string]Res {
-	if r.Type != JSON {
+	if r.typ != JSON {
 		return map[string]Res{}
 	}
 	rr := r.arrayOrMap('{', false)
@@ -298,7 +302,7 @@ func (r Res) MapKeys(exclude ...string) (keys []string) {
 }
 
 func (r Res) Get(path string) Res {
-	return Get(r.Raw, path)
+	return Get(r.raw, path)
 }
 
 type arrayOrMapResult struct {
@@ -315,7 +319,7 @@ func (r Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 		count int
 		key   Res
 		i     int
-		j     = r.Raw
+		j     = r.raw
 	)
 	if vc == 0 {
 		for ; i < len(j); i++ {
@@ -363,46 +367,46 @@ func (r Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 		switch j[i] {
 		default:
 			if (j[i] >= '0' && j[i] <= '9') || j[i] == '-' {
-				value.Type = Number
-				value.Raw, value.Num = tonum(j[i:])
-				value.Str = ""
+				value.typ = Number
+				value.raw, value.num = tonum(j[i:])
+				value.str = ""
 			} else {
 				continue
 			}
 		case '{', '[':
-			value.Type = JSON
-			value.Raw = squash(j[i:])
-			value.Str, value.Num = "", 0
+			value.typ = JSON
+			value.raw = squash(j[i:])
+			value.str, value.num = "", 0
 		case 'n':
-			value.Type = Null
-			value.Raw = tolit(j[i:])
-			value.Str, value.Num = "", 0
+			value.typ = Null
+			value.raw = tolit(j[i:])
+			value.str, value.num = "", 0
 		case 'r':
-			value.Type = True
-			value.Raw = tolit(j[i:])
-			value.Str, value.Num = "", 0
+			value.typ = True
+			value.raw = tolit(j[i:])
+			value.str, value.num = "", 0
 		case 'f':
-			value.Type = False
-			value.Raw = tolit(j[i:])
-			value.Str, value.Num = "", 0
+			value.typ = False
+			value.raw = tolit(j[i:])
+			value.str, value.num = "", 0
 		case '"':
-			value.Type = String
-			value.Raw, value.Str = tostr(j[i:])
-			value.Num = 0
+			value.typ = String
+			value.raw, value.str = tostr(j[i:])
+			value.num = 0
 		}
-		i += len(value.Raw) - 1
+		i += len(value.raw) - 1
 
 		if ar.vc == '{' {
 			if count%2 == 0 {
 				key = value
 			} else {
 				if valueize {
-					if _, ok := ar.oi[key.Str]; !ok {
-						ar.oi[key.Str] = value.Value()
+					if _, ok := ar.oi[key.str]; !ok {
+						ar.oi[key.str] = value.Value()
 					}
 				} else {
-					if _, ok := ar.o[key.Str]; !ok {
-						ar.o[key.Str] = value
+					if _, ok := ar.o[key.str]; !ok {
+						ar.o[key.str] = value
 					}
 				}
 			}
@@ -423,8 +427,8 @@ func Parse(json string) Res {
 	var value Res
 	for i := 0; i < len(json); i++ {
 		if json[i] == '{' || json[i] == '[' {
-			value.Type = JSON
-			value.Raw = json[i:]
+			value.typ = JSON
+			value.raw = json[i:]
 			break
 		}
 		if json[i] <= ' ' {
@@ -433,23 +437,23 @@ func Parse(json string) Res {
 		switch json[i] {
 		default:
 			if (json[i] >= '0' && json[i] <= '9') || json[i] == '-' {
-				value.Type = Number
-				value.Raw, value.Num = tonum(json[i:])
+				value.typ = Number
+				value.raw, value.num = tonum(json[i:])
 			} else {
 				return Res{}
 			}
 		case 'n':
-			value.Type = Null
-			value.Raw = tolit(json[i:])
+			value.typ = Null
+			value.raw = tolit(json[i:])
 		case 't':
-			value.Type = True
-			value.Raw = tolit(json[i:])
+			value.typ = True
+			value.raw = tolit(json[i:])
 		case 'f':
-			value.Type = False
-			value.Raw = tolit(json[i:])
+			value.typ = False
+			value.raw = tolit(json[i:])
 		case '"':
-			value.Type = String
-			value.Raw, value.Str = tostr(json[i:])
+			value.typ = String
+			value.raw, value.str = tostr(json[i:])
 		}
 		break
 	}
@@ -537,20 +541,20 @@ func tostr(json string) (raw string, str string) {
 }
 
 func (r Res) Exists() bool {
-	return r.Type != Null || len(r.Raw) != 0
+	return r.typ != Null || len(r.raw) != 0
 }
 
 func (r Res) Value() interface{} {
-	if r.Type == String {
-		return r.Str
+	if r.typ == String {
+		return r.str
 	}
-	switch r.Type {
+	switch r.typ {
 	default:
 		return nil
 	case False:
 		return false
 	case Number:
-		return r.Num
+		return r.num
 	case JSON:
 		r := r.arrayOrMap(0, true)
 		if r.vc == '{' {
@@ -1025,12 +1029,12 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 				}
 				if hit {
 					if vesc {
-						c.value.Str = unescape(val[1 : len(val)-1])
+						c.value.str = unescape(val[1 : len(val)-1])
 					} else {
-						c.value.Str = val[1 : len(val)-1]
+						c.value.str = val[1 : len(val)-1]
 					}
-					c.value.Raw = val
-					c.value.Type = String
+					c.value.raw = val
+					c.value.typ = String
 					return i, true
 				}
 			case '{':
@@ -1042,8 +1046,8 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 				} else {
 					val, i = parseSquash(c.json, i)
 					if hit {
-						c.value.Raw = val
-						c.value.Type = JSON
+						c.value.raw = val
+						c.value.typ = JSON
 						return i, true
 					}
 				}
@@ -1056,29 +1060,29 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 				} else {
 					val, i = parseSquash(c.json, i)
 					if hit {
-						c.value.Raw = val
-						c.value.Type = JSON
+						c.value.raw = val
+						c.value.typ = JSON
 						return i, true
 					}
 				}
 			case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				i, val = parseNumber(c.json, i)
 				if hit {
-					c.value.Raw = val
-					c.value.Type = Number
-					c.value.Num, _ = strconv.ParseFloat(val, 64)
+					c.value.raw = val
+					c.value.typ = Number
+					c.value.num, _ = strconv.ParseFloat(val, 64)
 					return i, true
 				}
 			case 't', 'f', 'n':
 				vc := c.json[i]
 				i, val = parseLiteral(c.json, i)
 				if hit {
-					c.value.Raw = val
+					c.value.raw = val
 					switch vc {
 					case 't':
-						c.value.Type = True
+						c.value.typ = True
 					case 'f':
-						c.value.Type = False
+						c.value.typ = False
 					}
 					return i, true
 				}
@@ -1099,41 +1103,41 @@ func queryMatches(rp *arrayPathResult, value Res) bool {
 	if rp.query.op == "" {
 		return true
 	}
-	switch value.Type {
+	switch value.typ {
 	case String:
 		switch rp.query.op {
 		case "=":
-			return value.Str == rpv
+			return value.str == rpv
 		case "!=":
-			return value.Str != rpv
+			return value.str != rpv
 		case "<":
-			return value.Str < rpv
+			return value.str < rpv
 		case "<=":
-			return value.Str <= rpv
+			return value.str <= rpv
 		case ">":
-			return value.Str > rpv
+			return value.str > rpv
 		case ">=":
-			return value.Str >= rpv
+			return value.str >= rpv
 		case "%":
-			return zstring.Match(value.Str, rpv)
+			return zstring.Match(value.str, rpv)
 		case "!%":
-			return !zstring.Match(value.Str, rpv)
+			return !zstring.Match(value.str, rpv)
 		}
 	case Number:
 		rpvn, _ := strconv.ParseFloat(rpv, 64)
 		switch rp.query.op {
 		case "=":
-			return value.Num == rpvn
+			return value.num == rpvn
 		case "!=":
-			return value.Num != rpvn
+			return value.num != rpvn
 		case "<":
-			return value.Num < rpvn
+			return value.num < rpvn
 		case "<=":
-			return value.Num <= rpvn
+			return value.num <= rpvn
 		case ">":
-			return value.Num > rpvn
+			return value.num > rpvn
 		case ">=":
-			return value.Num >= rpvn
+			return value.num >= rpvn
 		}
 	case True:
 		switch rp.query.op {
@@ -1186,7 +1190,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 			multires = append(multires, '[')
 		}
 		var res Res
-		if qval.Type == JSON {
+		if qval.typ == JSON {
 			res = qval.Get(rp.query.path)
 		} else {
 			if rp.query.path != "" {
@@ -1207,7 +1211,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				res = qval
 			}
 			if rp.query.all {
-				raw := res.Raw
+				raw := res.raw
 				if len(raw) == 0 {
 					raw = res.String()
 				}
@@ -1255,12 +1259,12 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				if rp.query.on {
 					var qval Res
 					if vesc {
-						qval.Str = unescape(val[1 : len(val)-1])
+						qval.str = unescape(val[1 : len(val)-1])
 					} else {
-						qval.Str = val[1 : len(val)-1]
+						qval.str = val[1 : len(val)-1]
 					}
-					qval.Raw = val
-					qval.Type = String
+					qval.raw = val
+					qval.typ = String
 					if procQuery(qval) {
 						return i, true
 					}
@@ -1269,12 +1273,12 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 						break
 					}
 					if vesc {
-						c.value.Str = unescape(val[1 : len(val)-1])
+						c.value.str = unescape(val[1 : len(val)-1])
 					} else {
-						c.value.Str = val[1 : len(val)-1]
+						c.value.str = val[1 : len(val)-1]
 					}
-					c.value.Raw = val
-					c.value.Type = String
+					c.value.raw = val
+					c.value.typ = String
 					return i, true
 				}
 			case '{':
@@ -1289,15 +1293,15 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				} else {
 					val, i = parseSquash(c.json, i)
 					if rp.query.on {
-						if procQuery(Res{Raw: val, Type: JSON}) {
+						if procQuery(Res{raw: val, typ: JSON}) {
 							return i, true
 						}
 					} else if hit {
 						if rp.alogok {
 							break
 						}
-						c.value.Raw = val
-						c.value.Type = JSON
+						c.value.raw = val
+						c.value.typ = JSON
 						return i, true
 					}
 				}
@@ -1313,15 +1317,15 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				} else {
 					val, i = parseSquash(c.json, i)
 					if rp.query.on {
-						if procQuery(Res{Raw: val, Type: JSON}) {
+						if procQuery(Res{raw: val, typ: JSON}) {
 							return i, true
 						}
 					} else if hit {
 						if rp.alogok {
 							break
 						}
-						c.value.Raw = val
-						c.value.Type = JSON
+						c.value.raw = val
+						c.value.typ = JSON
 						return i, true
 					}
 				}
@@ -1329,9 +1333,9 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				i, val = parseNumber(c.json, i)
 				if rp.query.on {
 					var qval Res
-					qval.Raw = val
-					qval.Type = Number
-					qval.Num, _ = strconv.ParseFloat(val, 64)
+					qval.raw = val
+					qval.typ = Number
+					qval.num, _ = strconv.ParseFloat(val, 64)
 					if procQuery(qval) {
 						return i, true
 					}
@@ -1339,9 +1343,9 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					if rp.alogok {
 						break
 					}
-					c.value.Raw = val
-					c.value.Type = Number
-					c.value.Num, _ = strconv.ParseFloat(val, 64)
+					c.value.raw = val
+					c.value.typ = Number
+					c.value.num, _ = strconv.ParseFloat(val, 64)
 					return i, true
 				}
 			case 't', 'f', 'n':
@@ -1349,12 +1353,12 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				i, val = parseLiteral(c.json, i)
 				if rp.query.on {
 					var qval Res
-					qval.Raw = val
+					qval.raw = val
 					switch vc {
 					case 't':
-						qval.Type = True
+						qval.typ = True
 					case 'f':
-						qval.Type = False
+						qval.typ = False
 					}
 					if procQuery(qval) {
 						return i, true
@@ -1363,12 +1367,12 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					if rp.alogok {
 						break
 					}
-					c.value.Raw = val
+					c.value.raw = val
 					switch vc {
 					case 't':
-						c.value.Type = True
+						c.value.typ = True
 					case 'f':
-						c.value.Type = False
+						c.value.typ = False
 					}
 					return i, true
 				}
@@ -1391,7 +1395,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 									if k > 0 {
 										jsons = append(jsons, ',')
 									}
-									raw := res.Raw
+									raw := res.raw
 									if len(raw) == 0 {
 										raw = res.String()
 									}
@@ -1401,24 +1405,24 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 							}
 						}
 						jsons = append(jsons, ']')
-						c.value.Type = JSON
-						c.value.Raw = zstring.Bytes2String(jsons)
+						c.value.typ = JSON
+						c.value.raw = zstring.Bytes2String(jsons)
 						return i + 1, true
 					}
 					if rp.alogok {
 						break
 					}
 
-					c.value.Type = Number
-					c.value.Num = float64(h - 1)
-					c.value.Raw = strconv.Itoa(h - 1)
+					c.value.typ = Number
+					c.value.num = float64(h - 1)
+					c.value.raw = strconv.Itoa(h - 1)
 					c.calcd = true
 					return i + 1, true
 				}
 				if len(multires) > 0 && !c.value.Exists() {
 					c.value = Res{
-						Raw:  zstring.Bytes2String(append(multires, ']')),
-						Type: JSON,
+						raw: zstring.Bytes2String(append(multires, ']')),
+						typ: JSON,
 					}
 				}
 				return i + 1, false
@@ -1631,7 +1635,7 @@ func Get(json, path string) Res {
 				path = npath
 				if len(path) > 0 && (path[0] == '|' || path[0] == '.') {
 					res := Get(rjson, path[1:])
-					res.Index = 0
+					res.index = 0
 					return res
 				}
 				return Parse(rjson)
@@ -1670,13 +1674,13 @@ func Get(json, path string) Res {
 							b = append(b, ':')
 						}
 						var raw string
-						if len(res.Raw) == 0 {
+						if len(res.raw) == 0 {
 							raw = res.String()
 							if len(raw) == 0 {
 								raw = "null"
 							}
 						} else {
-							raw = res.Raw
+							raw = res.raw
 						}
 						b = append(b, raw...)
 						i++
@@ -1684,12 +1688,12 @@ func Get(json, path string) Res {
 				}
 				b = append(b, kind+2)
 				var res Res
-				res.Raw = zstring.Bytes2String(b)
-				res.Type = JSON
+				res.raw = zstring.Bytes2String(b)
+				res.typ = JSON
 				if len(path) > 0 {
 					res = res.Get(path[1:])
 				}
-				res.Index = 0
+				res.index = 0
 				return res
 			}
 
@@ -1717,7 +1721,7 @@ func Get(json, path string) Res {
 	}
 	if c.piped {
 		res := c.value.Get(c.pipe)
-		res.Index = 0
+		res.index = 0
 		return res
 	}
 	fillIndex(json, c)
@@ -1794,8 +1798,8 @@ func parseAny(json string, i int, hit bool) (int, Res, bool) {
 		if json[i] == '{' || json[i] == '[' {
 			val, i = parseSquash(json, i)
 			if hit {
-				res.Raw = val
-				res.Type = JSON
+				res.raw = val
+				res.typ = JSON
 			}
 			return i, res, true
 		}
@@ -1812,33 +1816,33 @@ func parseAny(json string, i int, hit bool) (int, Res, bool) {
 				return i, res, false
 			}
 			if hit {
-				res.Type = String
-				res.Raw = val
+				res.typ = String
+				res.raw = val
 				if vesc {
-					res.Str = unescape(val[1 : len(val)-1])
+					res.str = unescape(val[1 : len(val)-1])
 				} else {
-					res.Str = val[1 : len(val)-1]
+					res.str = val[1 : len(val)-1]
 				}
 			}
 			return i, res, true
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			i, val = parseNumber(json, i)
 			if hit {
-				res.Raw = val
-				res.Type = Number
-				res.Num, _ = strconv.ParseFloat(val, 64)
+				res.raw = val
+				res.typ = Number
+				res.num, _ = strconv.ParseFloat(val, 64)
 			}
 			return i, res, true
 		case 't', 'f', 'n':
 			vc := json[i]
 			i, val = parseLiteral(json, i)
 			if hit {
-				res.Raw = val
+				res.raw = val
 				switch vc {
 				case 't':
-					res.Type = True
+					res.typ = True
 				case 'f':
-					res.Type = False
+					res.typ = False
 				}
 				return i, res, true
 			}
@@ -1864,7 +1868,7 @@ func GetMultipleBytes(json []byte, path ...string) []Res {
 }
 
 func assign(jsval Res, val reflect.Value, fmap *fieldMaps) {
-	if jsval.Type == Null {
+	if jsval.typ == Null {
 		return
 	}
 	t := val.Type()
@@ -1894,7 +1898,7 @@ func assign(jsval Res, val reflect.Value, fmap *fieldMaps) {
 			fmap.mu.Unlock()
 		}
 		jsval.ForEach(func(key, value Res) bool {
-			if idx, ok := sf[key.Str]; ok {
+			if idx, ok := sf[key.str]; ok {
 				f := val.Field(idx)
 				if f.CanSet() {
 					assign(value, f, fmap)
@@ -1904,7 +1908,7 @@ func assign(jsval Res, val reflect.Value, fmap *fieldMaps) {
 		})
 	case reflect.Slice:
 		if t.Elem().Kind() == reflect.Uint8 &&
-			jsval.Type == String {
+			jsval.typ == String {
 			data, _ := base64.StdEncoding.DecodeString(jsval.String())
 			val.Set(reflect.ValueOf(data))
 		} else {
@@ -1965,7 +1969,7 @@ func assign(jsval Res, val reflect.Value, fmap *fieldMaps) {
 		v := val.Addr()
 		if v.Type().NumMethod() > 0 {
 			if u, ok := v.Interface().(json.Unmarshaler); ok {
-				_ = u.UnmarshalJSON([]byte(jsval.Raw))
+				_ = u.UnmarshalJSON([]byte(jsval.raw))
 			}
 		}
 	}
@@ -2413,7 +2417,7 @@ func modifierReverse(json, _ string) string {
 			if j > 0 {
 				out = append(out, ',')
 			}
-			out = append(out, values[i].Raw...)
+			out = append(out, values[i].raw...)
 		}
 		out = append(out, ']')
 		return zstring.Bytes2String(out)
@@ -2430,9 +2434,9 @@ func modifierReverse(json, _ string) string {
 			if j > 0 {
 				out = append(out, ',')
 			}
-			out = append(out, keyValues[i+0].Raw...)
+			out = append(out, keyValues[i+0].raw...)
 			out = append(out, ':')
-			out = append(out, keyValues[i+1].Raw...)
+			out = append(out, keyValues[i+1].raw...)
 		}
 		out = append(out, '}')
 		return zstring.Bytes2String(out)

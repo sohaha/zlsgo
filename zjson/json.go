@@ -25,12 +25,12 @@ type stringHeader struct {
 }
 
 func fillIndex(json string, c *parseContext) {
-	if len(c.value.Raw) > 0 && !c.calcd {
+	if len(c.value.raw) > 0 && !c.calcd {
 		jhdr := *(*stringHeader)(unsafe.Pointer(&json))
-		rhdr := *(*stringHeader)(unsafe.Pointer(&(c.value.Raw)))
-		c.value.Index = int(uintptr(rhdr.data) - uintptr(jhdr.data))
-		if c.value.Index < 0 || c.value.Index >= len(json) {
-			c.value.Index = 0
+		rhdr := *(*stringHeader)(unsafe.Pointer(&(c.value.raw)))
+		c.value.index = int(uintptr(rhdr.data) - uintptr(jhdr.data))
+		if c.value.index < 0 || c.value.index >= len(json) {
+			c.value.index = 0
 		}
 	}
 }
@@ -44,8 +44,8 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 	}
 	if !del && optimistic && isOptimisticPath(path) {
 		res := Get(s, path)
-		if res.Exists() && res.Index > 0 {
-			sz := len(s) - len(res.Raw) + len(raw)
+		if res.Exists() && res.index > 0 {
+			sz := len(s) - len(res.raw) + len(raw)
 			if stringify {
 				sz += 2
 			}
@@ -53,28 +53,28 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 				if !stringify || !mustMarshalString(raw) {
 					jbytes := []byte(s)
 					if stringify {
-						jbytes[res.Index] = '"'
-						copy(jbytes[res.Index+1:], zstring.String2Bytes(raw))
-						jbytes[res.Index+1+len(raw)] = '"'
-						copy(jbytes[res.Index+1+len(raw)+1:],
-							jbytes[res.Index+len(res.Raw):])
+						jbytes[res.index] = '"'
+						copy(jbytes[res.index+1:], zstring.String2Bytes(raw))
+						jbytes[res.index+1+len(raw)] = '"'
+						copy(jbytes[res.index+1+len(raw)+1:],
+							jbytes[res.index+len(res.raw):])
 					} else {
-						copy(jbytes[res.Index:], zstring.String2Bytes(raw))
-						copy(jbytes[res.Index+len(raw):],
-							jbytes[res.Index+len(res.Raw):])
+						copy(jbytes[res.index:], zstring.String2Bytes(raw))
+						copy(jbytes[res.index+len(raw):],
+							jbytes[res.index+len(res.raw):])
 					}
 					return jbytes[:sz], nil
 				}
 				return nil, nil
 			}
 			buf := make([]byte, 0, sz)
-			buf = append(buf, s[:res.Index]...)
+			buf = append(buf, s[:res.index]...)
 			if stringify {
 				buf = appendStringify(buf, raw)
 			} else {
 				buf = append(buf, raw...)
 			}
-			buf = append(buf, s[res.Index+len(res.Raw):]...)
+			buf = append(buf, s[res.index+len(res.raw):]...)
 			return buf, nil
 		}
 	}
