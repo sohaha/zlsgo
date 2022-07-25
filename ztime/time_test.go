@@ -31,7 +31,7 @@ func TestNewTime(t *testing.T) {
 	currentDate := "2020-02-04 17:38:19"
 	tt.Equal(New(8).FormatTimestamp(now, "Y-m-d H:i:s"), FormatTimestamp(now, "Y-m-d H:i:s"))
 
-	for i, v := range []int{2, 3, 4, 5, 6, 7, 1} {
+	for i, v := range []int{2, 3, 4, 5, 6, 0, 1} {
 		tt.Equal(v, Week(nowTime.Add((time.Hour*24)*time.Duration(i))))
 	}
 	tt.Equal(2, Week(nowTime))

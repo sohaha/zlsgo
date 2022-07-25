@@ -1,11 +1,20 @@
 package ztype
 
+import (
+	"time"
+)
+
 type Type struct {
 	v interface{}
 }
 
 func New(v interface{}) Type {
-	return Type{v: v}
+	switch val := v.(type) {
+	case Type:
+		return Type{v: val}
+	default:
+		return Type{v: v}
+	}
 }
 
 func (t Type) Value() interface{} {
@@ -82,4 +91,8 @@ func (t Type) Slice() []interface{} {
 
 func (t Type) Exists() bool {
 	return t.v != nil
+}
+
+func (t Type) Time() (time.Time, error) {
+	return ToTime(t.v)
 }

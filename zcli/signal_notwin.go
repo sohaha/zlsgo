@@ -10,12 +10,16 @@ import (
 )
 
 func KillSignal() bool {
-	sig := <-SignalChan()
-	return sig != syscall.SIGUSR2
+	sig, stop := SignalChan()
+	s := <-sig
+	stop()
+	return s != syscall.SIGUSR2
 }
 
-func SignalChan() <-chan os.Signal {
+func SignalChan() (<-chan os.Signal, func()) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR2)
-	return quit
+	return quit, func() {
+		signal.Stop(quit)
+	}
 }

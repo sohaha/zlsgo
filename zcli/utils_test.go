@@ -74,7 +74,7 @@ func TestSignal(t *testing.T) {
 	defer cancel()
 
 	tip := "test"
-	signalChan := SignalChan()
+	signalChan, _ := SignalChan()
 	now := time.Now()
 	select {
 	case <-ctx.Done():

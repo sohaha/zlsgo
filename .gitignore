@@ -11,11 +11,12 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 .DS_Store
+.idea
+.vscode
+report
+gotest
+.history
+
 coverage.txt
 test.json
-zls-watch.yaml
-.idea/
-.vscode/
-report/
-gotest
 zzz-watch.yaml

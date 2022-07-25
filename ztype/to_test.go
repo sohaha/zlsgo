@@ -271,3 +271,8 @@ func TestStructToMap(tt *testing.T) {
 	t.EqualNil(err)
 	t.EqualExit(`"ok"`, string(j))
 }
+
+func TestToTime(t *testing.T) {
+	t.Log(ztype.ToTime("2022-07-17 17:23:58"))
+	t.Log(ztype.ToTime(1658049838))
+}

@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 type appString interface {
@@ -271,4 +273,16 @@ func ToFloat64(i interface{}) float64 {
 	}
 	v, _ := strconv.ParseFloat(strings.TrimSpace(ToString(i)), 64)
 	return v
+}
+
+// ToTime to time.Time
+func ToTime(i interface{}) (time.Time, error) {
+	switch val := i.(type) {
+	case time.Time:
+		return val, nil
+	case int, int32, int64, uint, uint32, uint64:
+		return ztime.Unix(ToInt64(i)), nil
+	default:
+		return ztime.Parse(ToString(i))
+	}
 }

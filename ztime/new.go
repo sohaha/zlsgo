@@ -207,7 +207,7 @@ func (e *TimeEngine) Week(t time.Time) int {
 		return 6
 	// case "Sunday":
 	default:
-		return 7
+		return 0
 	}
 }
 

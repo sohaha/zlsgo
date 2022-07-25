@@ -2,6 +2,9 @@ package ztype
 
 import (
 	"testing"
+	"time"
+
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 func TestNew(t *testing.T) {
@@ -17,6 +20,12 @@ func TestNew(t *testing.T) {
 		t.Log(New(`{"name": "test"}`).Slice())
 		t.Log(New([]string{"1", "2"}).Slice())
 		t.Log(New(map[string]interface{}{"abc": 123}).Slice())
+	})
+
+	t.Run("Time", func(t *testing.T) {
+		t.Log(New("2022-07-17 17:23:58").Time())
+		t.Log(New(time.Now()).Time())
+		t.Log(New(ztime.Now()).Time())
 	})
 }
 
