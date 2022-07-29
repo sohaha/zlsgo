@@ -198,7 +198,8 @@ func (c *Context) GetJSONs() (json *zjson.Res, err error) {
 		return
 	}
 
-	c.cacheJSON = zjson.Parse(body)
+	json = zjson.Parse(body)
+	c.cacheJSON = json
 	return
 }
 
