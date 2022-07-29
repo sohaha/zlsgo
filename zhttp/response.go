@@ -113,12 +113,12 @@ func (r *Res) String() string {
 	return string(data)
 }
 
-func (r *Res) JSONs() zjson.Res {
+func (r *Res) JSONs() *zjson.Res {
 	data, _ := r.ToBytes()
 	return zjson.ParseBytes(data)
 }
 
-func (r *Res) JSON(key string) zjson.Res {
+func (r *Res) JSON(key string) *zjson.Res {
 	j := r.JSONs()
 	return j.Get(key)
 }

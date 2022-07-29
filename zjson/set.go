@@ -204,7 +204,7 @@ loop:
 func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	stringify, del bool) ([]byte, error) {
 	var err error
-	var res Res
+	var res *Res
 	var found bool
 	if del {
 		if paths[0].part == "-1" && !paths[0].force {

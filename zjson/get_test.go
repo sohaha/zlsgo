@@ -176,6 +176,31 @@ func TestGet(t *testing.T) {
 	tt.Log(parseData.Get("@reverse").String())
 }
 
+func TestEditJson(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	j := Parse(demo)
+
+	name := j.Get("user.name").String()
+	_ = j.Delete("user.name")
+	nName := j.Get("user.name").String()
+	tt.Equal("", nName)
+	tt.Equal("暴龙兽", name)
+
+	c1 := j.Get("children.0").String()
+	_ = j.Delete("children.0")
+	_ = j.Delete("children.0")
+	nc1 := j.Get("children.0").String()
+	tt.Equal("阿古兽", c1)
+	tt.Equal("机器暴龙兽", nc1)
+
+	_ = j.Set("new_path.0", "仙人掌兽")
+	_ = j.Set("new_path.1", "花仙兽")
+
+	t.Log(j.Get("friends.0").MapString())
+
+	t.Log(string(Ugly([]byte(j.String()))))
+}
+
 func TestGetFormat(t *testing.T) {
 	SetModifiersState(true)
 	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())

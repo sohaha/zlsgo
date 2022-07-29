@@ -176,17 +176,18 @@ func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
 }
 
 // GetJSON Get JSON
-func (c *Context) GetJSON(key string) zjson.Res {
+func (c *Context) GetJSON(key string) *zjson.Res {
 	j, _ := c.GetJSONs()
 
 	return j.Get(key)
 }
 
 // GetJSONs Get JSONs
-func (c *Context) GetJSONs() (json zjson.Res, err error) {
+func (c *Context) GetJSONs() (json *zjson.Res, err error) {
 	if c.cacheJSON != nil {
-		return *c.cacheJSON, nil
+		return c.cacheJSON, nil
 	}
+	json = &zjson.Res{}
 	var body string
 	body, err = c.GetDataRaw()
 	if err != nil {
@@ -196,8 +197,8 @@ func (c *Context) GetJSONs() (json zjson.Res, err error) {
 		err = errors.New("illegal json format")
 		return
 	}
-	json = zjson.Parse(body)
-	c.cacheJSON = &json
+
+	c.cacheJSON = zjson.Parse(body)
 	return
 }
 

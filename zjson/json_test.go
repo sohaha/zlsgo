@@ -8,6 +8,18 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+func TestMatch(t *testing.T) {
+	j := Parse(demo)
+	nj := j.MatchKeys([]string{"time", "friends"})
+	t.Log(j)
+	t.Log(nj)
+
+	j = Parse("")
+	nj = j.MatchKeys([]string{"time", "friends"})
+	t.Log(j)
+	t.Log(nj)
+}
+
 func getBigJSON() string {
 	s := ""
 	for i := 0; i < 10000; i++ {

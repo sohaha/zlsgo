@@ -5,6 +5,8 @@ import (
 	"container/list"
 	"errors"
 	"strconv"
+
+	"github.com/sohaha/zlsgo/zjson"
 )
 
 type (
@@ -52,6 +54,24 @@ func Text(value string, name ...string) Engine {
 		obj.name = name[0]
 	}
 	return obj
+}
+
+func JSON(json *zjson.Res, rules map[string]Engine) (err error) {
+	for k := range rules {
+		v := json.Get(k)
+		rule := rules[k]
+		if v.Exists() {
+			err = rule.VerifiAny(v.Value()).Error()
+		} else {
+			err = rule.Verifi(v.String()).Error()
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Required Must have a value (zero values ​​other than "" are allowed). If this rule is not used, when the parameter value is "", data validation does not take effect by default
