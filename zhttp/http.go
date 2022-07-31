@@ -148,7 +148,7 @@ func (p *param) Empty() bool {
 	return p.Values == nil
 }
 
-func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err error) {
+func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err error) {
 	if rawurl == "" {
 		return nil, ErrUrlNotSpecified
 	}
@@ -170,89 +170,91 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 	}
-	resp = &Res{req: req, r: r}
-	if r.getUserAgent != nil {
-		ua := r.getUserAgent()
+	resp = &Res{req: req, r: e}
+	if e.getUserAgent != nil {
+		ua := e.getUserAgent()
 		if ua == "" {
 			ua = UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]
 		}
 		req.Header.Add("User-Agent", ua)
 	}
-	for _, v := range vs {
-		switch vv := v.(type) {
-		case CustomReq:
-			vv(req)
-		case Header:
-			for key, value := range vv {
-				req.Header.Add(key, value)
-			}
-		case http.Header:
-			for key, values := range vv {
-				for _, value := range values {
+	if vs != nil {
+		for _, v := range vs {
+			switch vv := v.(type) {
+			case CustomReq:
+				vv(req)
+			case Header:
+				for key, value := range vv {
 					req.Header.Add(key, value)
 				}
-			}
-		case *bodyJson:
-			fn, err := setBodyJson(req, resp, r.jsonEncOpts, vv.v)
-			if err != nil {
-				return nil, err
-			}
-			delayedFunc = append(delayedFunc, fn)
-		case *bodyXml:
-			fn, err := setBodyXml(req, resp, r.xmlEncOpts, vv.v)
-			if err != nil {
-				return nil, err
-			}
-			delayedFunc = append(delayedFunc, fn)
-		case url.Values:
-			p := param{vv}
-			if method == "GET" || method == "HEAD" {
-				queryParam.Copy(p)
-			} else {
-				formParam.Copy(p)
-			}
-		case Param:
-			if method == "GET" || method == "HEAD" {
+			case http.Header:
+				for key, values := range vv {
+					for _, value := range values {
+						req.Header.Add(key, value)
+					}
+				}
+			case *bodyJson:
+				fn, err := setBodyJson(req, resp, e.jsonEncOpts, vv.v)
+				if err != nil {
+					return nil, err
+				}
+				delayedFunc = append(delayedFunc, fn)
+			case *bodyXml:
+				fn, err := setBodyXml(req, resp, e.xmlEncOpts, vv.v)
+				if err != nil {
+					return nil, err
+				}
+				delayedFunc = append(delayedFunc, fn)
+			case url.Values:
+				p := param{vv}
+				if method == "GET" || method == "HEAD" {
+					queryParam.Copy(p)
+				} else {
+					formParam.Copy(p)
+				}
+			case Param:
+				if method == "GET" || method == "HEAD" {
+					queryParam.Adds(vv)
+				} else {
+					formParam.Adds(vv)
+				}
+			case QueryParam:
 				queryParam.Adds(vv)
-			} else {
-				formParam.Adds(vv)
+			case string:
+				setBodyBytes(req, resp, []byte(vv))
+			case []byte:
+				setBodyBytes(req, resp, vv)
+			case bytes.Buffer:
+				setBodyBytes(req, resp, vv.Bytes())
+			case *http.Client:
+				resp.client = vv
+			case FileUpload:
+				uploads = append(uploads, vv)
+			case []FileUpload:
+				uploads = append(uploads, vv...)
+			case map[string]*http.Cookie:
+				for i := range vv {
+					req.AddCookie(vv[i])
+				}
+			case *http.Cookie:
+				req.AddCookie(vv)
+			case Host:
+				req.Host = string(vv)
+			case io.Reader:
+				fn := setBodyReader(req, resp, vv)
+				lastFunc = append(lastFunc, fn)
+			case UploadProgress:
+				uploadProgress = vv
+			case DownloadProgress:
+				resp.downloadProgress = vv
+			case func(int64, int64):
+				progress = vv
+			case context.Context:
+				req = req.WithContext(vv)
+				resp.req = req
+			case error:
+				return resp, vv
 			}
-		case QueryParam:
-			queryParam.Adds(vv)
-		case string:
-			setBodyBytes(req, resp, []byte(vv))
-		case []byte:
-			setBodyBytes(req, resp, vv)
-		case bytes.Buffer:
-			setBodyBytes(req, resp, vv.Bytes())
-		case *http.Client:
-			resp.client = vv
-		case FileUpload:
-			uploads = append(uploads, vv)
-		case []FileUpload:
-			uploads = append(uploads, vv...)
-		case map[string]*http.Cookie:
-			for i := range vv {
-				req.AddCookie(vv[i])
-			}
-		case *http.Cookie:
-			req.AddCookie(vv)
-		case Host:
-			req.Host = string(vv)
-		case io.Reader:
-			fn := setBodyReader(req, resp, vv)
-			lastFunc = append(lastFunc, fn)
-		case UploadProgress:
-			uploadProgress = vv
-		case DownloadProgress:
-			resp.downloadProgress = vv
-		case func(int64, int64):
-			progress = vv
-		case context.Context:
-			req = req.WithContext(vv)
-			resp.req = req
-		case error:
-			return resp, vv
 		}
 	}
 
@@ -274,7 +276,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			uploads:        uploads,
 			uploadProgress: up,
 		}
-		if r.disableChunke {
+		if e.disableChunke {
 			multipartHelper.Upload(req)
 		} else {
 			multipartHelper.UploadChunke(req)
@@ -318,12 +320,12 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 
 	if resp.client == nil {
-		resp.client = r.Client()
+		resp.client = e.Client()
 	}
 
 	var response *http.Response
 
-	if r.flag&BitTime != 0 {
+	if e.flag&BitTime != 0 {
 		before := time.Now()
 		response, err = resp.client.Do(req)
 		after := time.Now()
@@ -352,7 +354,7 @@ func (r *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 
 	if //noinspection GoBoolExpressions
-	Debug || r.debug {
+	Debug || e.debug {
 		zlog.Println(resp.Dump())
 	}
 	return
@@ -630,16 +632,16 @@ func SetClient(client *http.Client) {
 	std.SetClient(client)
 }
 
-func (r *Engine) SetFlags(flags int) {
-	r.flag = flags
+func (e *Engine) SetFlags(flags int) {
+	e.flag = flags
 }
 
-func (r *Engine) GetFlags() int {
-	return r.flag
+func (e *Engine) GetFlags() int {
+	return e.flag
 }
 
-func (r *Engine) SetUserAgent(fn func() string) {
-	r.getUserAgent = fn
+func (e *Engine) SetUserAgent(fn func() string) {
+	e.getUserAgent = fn
 }
 
 func SetFlags(flags int) {

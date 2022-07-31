@@ -28,6 +28,7 @@ type (
 	// Context context
 	Context struct {
 		stopHandle    *zutil.Bool
+		done          *zutil.Bool
 		rawData       string
 		cacheJSON     *zjson.Res
 		startTime     time.Time

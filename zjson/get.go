@@ -14,6 +14,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 type (
@@ -173,14 +174,9 @@ func (r *Res) Unmarshal(v interface{}) error {
 	return Unmarshal(r.raw, v)
 }
 
-func (r *Res) Time(format ...string) time.Time {
-	f := "2006-01-02 15:04:05"
-	if len(format) > 0 {
-		f = format[0]
-	}
-	loc, _ := time.LoadLocation("Local")
-	res, _ := time.ParseInLocation(f, r.String(), loc)
-	return res
+func (r *Res) Time(format ...string) (t time.Time) {
+	t, _ = ztime.Parse(r.String(), format...)
+	return t
 }
 
 func (r *Res) Array() []Res {
@@ -209,19 +205,19 @@ func (r *Res) firstCharacter() uint8 {
 	return 0
 }
 
-func (r *Res) ForEach(fn func(key, value Res) bool) {
+func (r *Res) ForEach(fn func(key, value *Res) bool) {
 	if !r.Exists() || r.typ == Null {
 		return
 	}
 	if r.typ != JSON {
-		fn(Res{}, *r)
+		fn(&Res{}, r)
 		return
 	}
 	var (
-		keys       bool
-		i          int
-		key, value Res
+		keys bool
+		i    int
 	)
+	key, value := &Res{}, &Res{}
 	j := r.raw
 	for ; i < len(j); i++ {
 		if j[i] == '{' {
@@ -1518,8 +1514,8 @@ func splitPossiblePipe(path string) (left, right string, ok bool) {
 	return
 }
 
-func ForEachLine(json string, fn func(line Res) bool) {
-	var res Res
+func ForEachLine(json string, fn func(line *Res) bool) {
+	var res *Res
 	var i int
 	for {
 		i, res, _ = parseAny(json, i, true)
@@ -1813,8 +1809,8 @@ func unescape(json string) string {
 	return zstring.Bytes2String(str)
 }
 
-func parseAny(json string, i int, hit bool) (int, Res, bool) {
-	var res Res
+func parseAny(json string, i int, hit bool) (int, *Res, bool) {
+	res := &Res{}
 	var val string
 	for ; i < len(json); i++ {
 		if json[i] == '{' || json[i] == '[' {
@@ -1919,11 +1915,11 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 			fmap.m[name] = sf
 			fmap.mu.Unlock()
 		}
-		jsval.ForEach(func(key, value Res) bool {
+		jsval.ForEach(func(key, value *Res) bool {
 			if idx, ok := sf[key.str]; ok {
 				f := val.Field(idx)
 				if f.CanSet() {
-					assign(&value, f, fmap)
+					assign(value, f, fmap)
 				}
 			}
 			return true
@@ -1944,11 +1940,11 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 		}
 	case reflect.Array:
 		i, n := 0, val.Len()
-		jsval.ForEach(func(_, value Res) bool {
+		jsval.ForEach(func(_, value *Res) bool {
 			if i == n {
 				return false
 			}
-			assign(&value, val.Index(i), fmap)
+			assign(value, val.Index(i), fmap)
 			i++
 			return true
 		})
@@ -1962,10 +1958,10 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 				val.Set(reflect.ValueOf(jsval.Value()))
 			case reflect.Struct, reflect.Ptr:
 				v := reflect.MakeMap(t)
-				jsval.ForEach(func(key, value Res) bool {
+				jsval.ForEach(func(key, value *Res) bool {
 					newval := reflect.New(t.Elem())
 					elem := newval.Elem()
-					assign(&value, elem, fmap)
+					assign(value, elem, fmap)
 					v.SetMapIndex(reflect.ValueOf(key.Value()), elem)
 					return true
 				})
@@ -2403,7 +2399,7 @@ func ModifierExists(name string) bool {
 func modifierPretty(json, arg string) string {
 	if len(arg) > 0 {
 		opts := *DefOptions
-		Parse(arg).ForEach(func(key, value Res) bool {
+		Parse(arg).ForEach(func(key, value *Res) bool {
 			switch key.String() {
 			case "sortKeys":
 				opts.SortKeys = value.Bool()
@@ -2428,8 +2424,8 @@ func modifierUgly(json, _ string) string {
 func modifierReverse(json, _ string) string {
 	res := Parse(json)
 	if res.IsArray() {
-		var values []Res
-		res.ForEach(func(_, value Res) bool {
+		var values []*Res
+		res.ForEach(func(_, value *Res) bool {
 			values = append(values, value)
 			return true
 		})
@@ -2445,8 +2441,8 @@ func modifierReverse(json, _ string) string {
 		return zstring.Bytes2String(out)
 	}
 	if res.IsObject() {
-		var keyValues []Res
-		res.ForEach(func(key, value Res) bool {
+		var keyValues []*Res
+		res.ForEach(func(key, value *Res) bool {
 			keyValues = append(keyValues, key, value)
 			return true
 		})

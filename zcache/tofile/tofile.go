@@ -33,7 +33,7 @@ func PersistenceToFile(table *zcache.Table, file string, DisableAutoLoad bool, r
 		if err != nil {
 			return
 		}
-		zjson.ParseBytes(content).ForEach(func(k, v zjson.Res) (b bool) {
+		zjson.ParseBytes(content).ForEach(func(k, v *zjson.Res) (b bool) {
 			b = true
 			key := k.String()
 			base64 := zstring.String2Bytes(v.String())

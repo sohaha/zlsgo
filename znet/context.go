@@ -78,10 +78,16 @@ func (c *Context) SetHeader(key, value string) {
 	c.mu.Unlock()
 }
 
-func (c *Context) done() {
+func (c *Context) write() {
+	if !c.done.CAS(false, true) {
+		return
+	}
+
 	c.Next()
+
 	data := c.PrevContent()
-	data.Code.CAS(0, http.StatusInternalServerError)
+	// data.Code.CAS(0, http.StatusInternalServerError)
+
 	for key, value := range c.header {
 		for i := range value {
 			header := value[i]
@@ -92,17 +98,31 @@ func (c *Context) done() {
 			}
 		}
 	}
+
+	if c.Request == nil || c.Request.Context().Err() != nil {
+		return
+	}
+
+	defer func() {
+		if c.Engine.IsDebug() {
+			requestLog(c)
+		}
+	}()
+
+	code := int(data.Code.Load())
+	if code == 0 {
+		code = http.StatusOK
+	}
 	if len(data.Content) > 0 {
-		c.Writer.WriteHeader(int(data.Code.Load()))
+		c.Writer.WriteHeader(code)
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {
 			c.Log.Error(err)
 		}
-	} else {
-		code := data.Code.Load()
-		if code != 0 && code != 200 {
-			c.Writer.WriteHeader(int(code))
-		}
+		return
+	}
+	if code != 200 {
+		c.Writer.WriteHeader(code)
 	}
 }
 
@@ -112,7 +132,9 @@ func (c *Context) Next() {
 		if c.stopHandle.Load() {
 			break
 		}
+		c.mu.RLock()
 		n := len(c.middleware) > 0
+		c.mu.RUnlock()
 		if !n {
 			break
 		}

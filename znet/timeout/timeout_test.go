@@ -53,10 +53,11 @@ func TestWebTimeout(tt *testing.T) {
 		time.Sleep(3 * time.Second)
 		c.String(200, "timeout_2")
 	}, New(1*time.Second, func(c *znet.Context) {
-		c.String(211, "ok")
+		c.Next()
+		c.String(211, "ok timeout_4")
 	}))
 	t.Equal(211, w4.Code)
-	t.Equal("ok", w4.Body.String())
+	t.Equal("ok timeout_4", w4.Body.String())
 
 	w5 := newRequest(r, "GET", "/timeout_5", func(c *znet.Context) {
 		c.String(200, "timeout_5")

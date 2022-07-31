@@ -22,9 +22,10 @@ func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc
 			case _, _ = <-done:
 				return
 			case <-ctx.Done():
-				c.Abort(http.StatusGatewayTimeout)
 				if len(custom) > 0 {
 					custom[0](c)
+				} else {
+					c.Abort(http.StatusGatewayTimeout)
 				}
 				return
 			}

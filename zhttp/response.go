@@ -1,6 +1,7 @@
 package zhttp
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
@@ -61,6 +62,33 @@ func (r *Res) GetCookie() map[string]*http.Cookie {
 func (r *Res) Bytes() []byte {
 	data, _ := r.ToBytes()
 	return data
+}
+
+func (r *Res) Stream(fn func(line []byte) error) error {
+	if r.err != nil || r.resp == nil {
+		return r.err
+	}
+	r.responseBody = nil
+	defer r.resp.Body.Close()
+
+	br := bufio.NewReader(r.resp.Body)
+	for {
+		bs, err := br.ReadBytes('\n')
+
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+		if err = fn(bs); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *Res) ToBytes() ([]byte, error) {

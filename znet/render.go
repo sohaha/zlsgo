@@ -72,8 +72,10 @@ var (
 )
 
 func (c *Context) renderProcessing(code int32, r render) {
+	if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
+		return
+	}
 	c.prevData.Code.Store(code)
-	c.stopHandle.Store(true)
 	c.mu.Lock()
 	c.render = r
 	c.mu.Unlock()
@@ -235,6 +237,9 @@ func (c *Context) Templates(code int32, templates []string, data interface{}, fu
 
 // Abort stop executing subsequent handlers
 func (c *Context) Abort(code ...int32) {
+	if c.stopHandle.Load() {
+		return
+	}
 	c.stopHandle.Store(true)
 	if len(code) > 0 {
 		c.prevData.Code.Store(code[0])

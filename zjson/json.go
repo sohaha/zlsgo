@@ -20,7 +20,7 @@ var (
 )
 
 func (r *Res) MatchKeys(keys []string) *Res {
-	return r.Filter(func(key, value Res) bool {
+	return r.Filter(func(key, value *Res) bool {
 		for i := range keys {
 			if key.String() == keys[i] {
 				return true
@@ -30,9 +30,9 @@ func (r *Res) MatchKeys(keys []string) *Res {
 	})
 }
 
-func (r *Res) Filter(fn func(key, value Res) bool) *Res {
+func (r *Res) Filter(fn func(key, value *Res) bool) *Res {
 	j := "{}"
-	r.ForEach(func(key, value Res) bool {
+	r.ForEach(func(key, value *Res) bool {
 		if fn(key, value) {
 			j, _ = Set(j, key.String(), value.Value())
 		}

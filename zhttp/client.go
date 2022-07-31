@@ -36,62 +36,62 @@ func newClient() *http.Client {
 	}
 }
 
-func (r *Engine) Client() *http.Client {
-	if r.client == nil {
-		r.client = newClient()
+func (e *Engine) Client() *http.Client {
+	if e.client == nil {
+		e.client = newClient()
 	}
-	return r.client
+	return e.client
 }
 
-func (r *Engine) SetClient(client *http.Client) {
-	r.client = client
+func (e *Engine) SetClient(client *http.Client) {
+	e.client = client
 }
 
-func (r *Engine) DisableChunke(enable ...bool) {
+func (e *Engine) DisableChunke(enable ...bool) {
 	state := true
 	if len(enable) > 0 && enable[0] {
 		state = false
 	}
-	r.disableChunke = state
+	e.disableChunke = state
 }
 
-func (r *Engine) Get(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodGet, url, v...)
+func (e *Engine) Get(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodGet, url, v...)
 }
 
-func (r *Engine) Post(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodPost, url, v...)
+func (e *Engine) Post(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodPost, url, v...)
 }
 
-func (r *Engine) Put(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodPut, url, v...)
+func (e *Engine) Put(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodPut, url, v...)
 }
 
-func (r *Engine) Patch(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodPatch, url, v...)
+func (e *Engine) Patch(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodPatch, url, v...)
 }
 
-func (r *Engine) Delete(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodDelete, url, v...)
+func (e *Engine) Delete(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodDelete, url, v...)
 }
 
-func (r *Engine) Head(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodHead, url, v...)
+func (e *Engine) Head(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodHead, url, v...)
 }
 
-func (r *Engine) Options(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodOptions, url, v...)
+func (e *Engine) Options(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodOptions, url, v...)
 }
 
-func (r *Engine) Trace(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodTrace, url, v...)
+func (e *Engine) Trace(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodTrace, url, v...)
 }
 
-func (r *Engine) Connect(url string, v ...interface{}) (*Res, error) {
-	return r.Do(http.MethodConnect, url, v...)
+func (e *Engine) Connect(url string, v ...interface{}) (*Res, error) {
+	return e.Do(http.MethodConnect, url, v...)
 }
 
-func (r *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error) {
+func (e *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error) {
 	for attempt >= 0 {
 		attempt--
 		res, err := fn()
@@ -104,8 +104,8 @@ func (r *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, erro
 	return nil, errors.New("the number of retries has been exhausted")
 }
 
-func (r *Engine) EnableInsecureTLS(enable bool) {
-	trans := r.getTransport()
+func (e *Engine) EnableInsecureTLS(enable bool) {
+	trans := e.getTransport()
 	if trans == nil {
 		return
 	}
@@ -120,8 +120,8 @@ type Certificate struct {
 	KeyFile  string
 }
 
-func (r *Engine) TlsCertificate(certs ...Certificate) error {
-	trans := r.getTransport()
+func (e *Engine) TlsCertificate(certs ...Certificate) error {
+	trans := e.getTransport()
 	if trans == nil {
 		return nil
 	}
@@ -141,31 +141,31 @@ func (r *Engine) TlsCertificate(certs ...Certificate) error {
 	return nil
 }
 
-func (r *Engine) EnableCookie(enable bool) {
+func (e *Engine) EnableCookie(enable bool) {
 	if enable {
 		jar, _ := cookiejar.New(nil)
-		r.Client().Jar = jar
+		e.Client().Jar = jar
 	} else {
-		r.Client().Jar = nil
+		e.Client().Jar = nil
 	}
 }
 
-func (r *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request) error) {
+func (e *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request) error) {
 	if len(fn) > 0 {
-		r.Client().CheckRedirect = fn[0]
+		e.Client().CheckRedirect = fn[0]
 	} else {
-		r.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+		e.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
 }
 
-func (r *Engine) SetTimeout(d time.Duration) {
-	r.Client().Timeout = d
+func (e *Engine) SetTimeout(d time.Duration) {
+	e.Client().Timeout = d
 }
 
-func (r *Engine) SetTransport(transport func(*http.Transport)) error {
-	trans := r.getTransport()
+func (e *Engine) SetTransport(transport func(*http.Transport)) error {
+	trans := e.getTransport()
 	if trans == nil {
 		return ErrNoTransport
 	}
@@ -173,13 +173,13 @@ func (r *Engine) SetTransport(transport func(*http.Transport)) error {
 	return nil
 }
 
-func (r *Engine) SetProxyUrl(proxyUrl ...string) error {
+func (e *Engine) SetProxyUrl(proxyUrl ...string) error {
 	l := len(proxyUrl)
 	if l == 0 {
 		return errors.New("proxy url cannot be empty")
 	}
 	u := proxyUrl[0]
-	return r.SetProxy(func(request *http.Request) (*url.URL, error) {
+	return e.SetProxy(func(request *http.Request) (*url.URL, error) {
 		if l > 1 {
 			u = proxyUrl[zstring.RandInt(0, l-1)]
 		}
@@ -187,14 +187,14 @@ func (r *Engine) SetProxyUrl(proxyUrl ...string) error {
 	})
 }
 
-func (r *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
-	return r.SetTransport(func(transport *http.Transport) {
+func (e *Engine) SetProxy(proxy func(*http.Request) (*url.URL, error)) error {
+	return e.SetTransport(func(transport *http.Transport) {
 		transport.Proxy = proxy
 	})
 }
 
-func (r *Engine) RemoveProxy() error {
-	trans := r.getTransport()
+func (e *Engine) RemoveProxy() error {
+	trans := e.getTransport()
 	if trans == nil {
 		return ErrNoTransport
 	}
@@ -202,31 +202,31 @@ func (r *Engine) RemoveProxy() error {
 	return nil
 }
 
-func (r *Engine) getJSONEncOpts() *jsonEncOpts {
-	if r.jsonEncOpts == nil {
-		r.jsonEncOpts = &jsonEncOpts{escapeHTML: true}
+func (e *Engine) getJSONEncOpts() *jsonEncOpts {
+	if e.jsonEncOpts == nil {
+		e.jsonEncOpts = &jsonEncOpts{escapeHTML: true}
 	}
-	return r.jsonEncOpts
+	return e.jsonEncOpts
 }
 
-func (r *Engine) SetJSONEscapeHTML(escape bool) {
-	opts := r.getJSONEncOpts()
+func (e *Engine) SetJSONEscapeHTML(escape bool) {
+	opts := e.getJSONEncOpts()
 	opts.escapeHTML = escape
 }
 
-func (r *Engine) SetJSONIndent(prefix, indent string) {
-	opts := r.getJSONEncOpts()
+func (e *Engine) SetJSONIndent(prefix, indent string) {
+	opts := e.getJSONEncOpts()
 	opts.indentPrefix = prefix
 	opts.indentValue = indent
 }
 
-func (r *Engine) SetXMLIndent(prefix, indent string) {
-	opts := r.getXMLEncOpts()
+func (e *Engine) SetXMLIndent(prefix, indent string) {
+	opts := e.getXMLEncOpts()
 	opts.prefix = prefix
 	opts.indent = indent
 }
 
-func (r *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
+func (e *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		zlog.Error("load keys fail", err)
@@ -241,7 +241,7 @@ func (r *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(caData)
 
-	trans := r.getTransport()
+	trans := e.getTransport()
 	if trans == nil {
 		return nil, ErrTransEmpty
 	}
@@ -253,14 +253,14 @@ func (r *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 	return trans.TLSClientConfig, nil
 }
 
-func (r *Engine) getTransport() *http.Transport {
-	trans, _ := r.Client().Transport.(*http.Transport)
+func (e *Engine) getTransport() *http.Transport {
+	trans, _ := e.Client().Transport.(*http.Transport)
 	return trans
 }
 
-func (r *Engine) getXMLEncOpts() *xmlEncOpts {
-	if r.xmlEncOpts == nil {
-		r.xmlEncOpts = &xmlEncOpts{}
+func (e *Engine) getXMLEncOpts() *xmlEncOpts {
+	if e.xmlEncOpts == nil {
+		e.xmlEncOpts = &xmlEncOpts{}
 	}
-	return r.xmlEncOpts
+	return e.xmlEncOpts
 }

@@ -23,13 +23,13 @@ type Demo struct {
 }
 
 func TestGet2(t *testing.T) {
-	Parse(`{"a":null}`).Get("a").ForEach(func(key, value Res) bool {
+	Parse(`{"a":null}`).Get("a").ForEach(func(key, value *Res) bool {
 		t.Log(key, value)
 		t.Fail()
 		return true
 	})
 	get := Parse(`{"a":{"b":"a123",}`).Get("a")
-	get.ForEach(func(key, value Res) bool {
+	get.ForEach(func(key, value *Res) bool {
 		t.Log(key, value)
 		return true
 	})
@@ -93,7 +93,7 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(false, Valid("{{}"))
 	tt.EqualExit(true, Valid(demo))
 
-	ForEachLine(demo+demo, func(line Res) bool {
+	ForEachLine(demo+demo, func(line *Res) bool {
 		return true
 	})
 
@@ -107,16 +107,16 @@ func TestGet(t *testing.T) {
 	t.Log(parseData.Map())
 	t.Log(parseData.MapKeys())
 
-	other.ForEach(func(key, value Res) bool {
+	other.ForEach(func(key, value *Res) bool {
 		return true
 	})
 
-	Parse(`{"a":null}`).Get("a").ForEach(func(key, value Res) bool {
+	Parse(`{"a":null}`).Get("a").ForEach(func(key, value *Res) bool {
 		t.Log(key, value)
 		t.Fail()
 		return true
 	})
-	Parse(`{"a":"a123"}`).Get("a").ForEach(func(key, value Res) bool {
+	Parse(`{"a":"a123"}`).Get("a").ForEach(func(key, value *Res) bool {
 		t.Log(key, value)
 		return true
 	})

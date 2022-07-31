@@ -8,18 +8,48 @@ import (
 )
 
 var (
-	structTagPriority = []string{"zto", "c", "json"}
+	structTagPriority = []string{"zto", "json"}
 )
 
 type Map map[string]interface{}
 
 func (m Map) Get(key string) *Type {
 	typ := &Type{}
-	v, ok := m[key]
+	v, ok := parsePath(key, m)
 	if ok {
 		typ.v = v
 	}
 	return typ
+}
+
+func (m *Map) Set(key string, value interface{}) error {
+	if *m == nil {
+		*m = make(Map)
+	}
+	(*m)[key] = value
+
+	return nil
+}
+
+func (m Map) IsEmpty() bool {
+	return m == nil || len(m) == 0
+}
+
+type Maps []Map
+
+func (m Maps) IsEmpty() bool {
+	return len(m) == 0
+}
+
+func (m Maps) Len() int {
+	return len(m)
+}
+
+func (m Maps) Index(i int) Map {
+	if i < 0 || i >= len(m) {
+		return Map{}
+	}
+	return m[i]
 }
 
 // MapKeyExists Whether the dictionary key exists

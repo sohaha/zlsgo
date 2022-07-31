@@ -21,6 +21,14 @@ func (t Type) Value() interface{} {
 	return t.v
 }
 
+func (t Type) Get(path string) Type {
+	v, ok := parsePath(path, t.v)
+	if !ok {
+		return Type{}
+	}
+	return New(v)
+}
+
 func (t Type) String() string {
 	return ToString(t.v)
 }
@@ -86,6 +94,9 @@ func (t Type) MapString() map[string]interface{} {
 }
 
 func (t Type) Slice() []interface{} {
+	if t.v == nil {
+		return make([]interface{}, 0)
+	}
 	return ToSlice(t.v)
 }
 

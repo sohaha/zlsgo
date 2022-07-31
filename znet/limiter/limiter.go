@@ -26,6 +26,7 @@ func New(allowed uint64, overflow ...func(c *znet.Context)) znet.HandlerFunc {
 	return func(c *znet.Context) {
 		if !r.AllowVisitByIP(c.GetClientIP()) {
 			f(c)
+			c.Abort()
 			return
 		}
 		c.Next()

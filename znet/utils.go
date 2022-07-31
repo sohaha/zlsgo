@@ -196,8 +196,9 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		header:        map[string][]string{},
 		customizeData: map[string]interface{}{},
 		stopHandle:    zutil.NewBool(false),
+		done:          zutil.NewBool(false),
 		prevData: &PrevData{
-			Code: zutil.NewInt32(http.StatusOK),
+			Code: zutil.NewInt32(0),
 			Type: ContentTypePlain,
 		},
 	}
@@ -211,6 +212,7 @@ func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
 	c.startTime = time.Now()
 	c.renderError = defErrorHandler()
 	c.stopHandle.Store(false)
+	c.done.Store(false)
 }
 
 func (e *Engine) acquireContext() *Context {
@@ -218,7 +220,7 @@ func (e *Engine) acquireContext() *Context {
 }
 
 func (e *Engine) releaseContext(c *Context) {
-	c.prevData.Code.Store(http.StatusOK)
+	c.prevData.Code.Store(0)
 	c.mu.Lock()
 	c.middleware = c.middleware[0:0]
 	c.customizeData = map[string]interface{}{}

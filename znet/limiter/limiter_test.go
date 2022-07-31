@@ -38,6 +38,7 @@ func TestNew(tt *testing.T) {
 	}, func(c *znet.Context) {
 		if !rule.AllowVisitByIP(c.GetClientIP()) {
 			c.String(http.StatusTooManyRequests, "超过限制")
+			c.Abort()
 			return
 		}
 		c.Next()
@@ -47,6 +48,7 @@ func TestNew(tt *testing.T) {
 		c.String(200, "ok")
 	}, func(c *znet.Context) {
 		if !rule.AllowVisit("username") {
+			c.Abort()
 			c.String(http.StatusTooManyRequests, "超过限制")
 			return
 		}

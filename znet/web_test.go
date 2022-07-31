@@ -606,7 +606,7 @@ func TestBind(t *testing.T) {
 		`{"appid":"Aid","appids":[{"label":"isLabel","id":"333"}]}`, ContentTypeJSON}, "/TestBind", func(c *Context) {
 		json, _ := c.GetJSONs()
 		var appids []AppInfo
-		json.Get("appids").ForEach(func(key, value zjson.Res) bool {
+		json.Get("appids").ForEach(func(key, value *zjson.Res) bool {
 			appinfo := AppInfo{}
 			err := value.Unmarshal(&appinfo)
 			if err != nil {

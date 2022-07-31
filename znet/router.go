@@ -104,7 +104,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	l, ok := e.handleAny(path, handlerFunc(action), handlerFuncs(moreHandler)...)
+	_, l, ok := e.handleAny(path, handlerFunc(action), handlerFuncs(moreHandler)...)
 
 	if ok && e.IsDebug() {
 		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), "ANY", CompletionPath(path, e.router.prefix)))
@@ -321,18 +321,18 @@ func (e *Engine) GetTrees() map[string]*Tree {
 
 // Handle registers new request handlerFn
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
-	l, ok := e.handle(method, path, handlerFunc(action), handlerFuncs(moreHandler)...)
+	p, l, ok := e.handle(method, path, handlerFunc(action), handlerFuncs(moreHandler)...)
 	if !ok {
 		return e
 	}
 
 	if e.IsDebug() {
-		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), method, path))
+		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), method, p))
 	}
 	return e
 }
 
-func (e *Engine) handle(method string, path string, handle handlerFn, moreHandler ...handlerFn) (int, bool) {
+func (e *Engine) handle(method string, path string, handle handlerFn, moreHandler ...handlerFn) (string, int, bool) {
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
@@ -351,7 +351,7 @@ func (e *Engine) handle(method string, path string, handle handlerFn, moreHandle
 		node := nodes[0]
 		if e.webMode != quietCode && node.path == path && node.handle != nil {
 			e.Log.Track("duplicate route definition: ["+method+"]"+path, 3, 1)
-			return 0, false
+			return "", 0, false
 		}
 	}
 
@@ -365,14 +365,14 @@ func (e *Engine) handle(method string, path string, handle handlerFn, moreHandle
 
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
-	return len(middleware) + 1, true
+	return path, len(middleware) + 1, true
 }
 
-func (e *Engine) handleAny(path string, handle handlerFn, moreHandler ...handlerFn) (l int, ok bool) {
+func (e *Engine) handleAny(path string, handle handlerFn, moreHandler ...handlerFn) (p string, l int, ok bool) {
 	for key := range methods {
-		l, ok = e.handle(key, path, handle, moreHandler...)
+		p, l, ok = e.handle(key, path, handle, moreHandler...)
 		if !ok {
-			return l, false
+			return p, l, false
 		}
 	}
 	return
@@ -386,10 +386,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	c := e.acquireContext()
 	c.clone(w, req)
 	defer func() {
-		c.done()
-		if e.IsDebug() {
-			requestLog(c)
-		}
+		c.write()
 		e.releaseContext(c)
 	}()
 
@@ -407,8 +404,8 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		} else {
 			err := handlerFunc(e.preHandler)(c)
 			if err != nil {
-				c.Abort()
 				c.renderError(c, err)
+				c.Abort()
 				return
 			}
 		}

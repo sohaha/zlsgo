@@ -29,6 +29,8 @@ func TestInject(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
 
+	r.Log.Discard()
+
 	w := newRequest(r, "GET", "/NoInject", "/NoInject", func(c *Context) {
 		c.String(200, "NoInject")
 	})
@@ -45,7 +47,7 @@ func TestInject(t *testing.T) {
 	w = newRequest(r, "GET", "/InjectErr", "/InjectErr", func() (int, string, error) {
 		return 403, "test InjectErr", errors.New("test InjectErr")
 	})
-	tt.Equal(500, w.Code)
+	tt.Equal(403, w.Code)
 	tt.Equal("test InjectErr", w.Body.String())
 	tt.Equal("", rewriteError)
 	w = newRequest(r, "GET", "/InjectErrRewrite", "/InjectErrRewrite", func() (int, string, error) {
@@ -53,10 +55,9 @@ func TestInject(t *testing.T) {
 	}, RewriteErrorHandler(func(c *Context, err error) {
 		tt.Equal("InjectErrRewrite", err.Error())
 		rewriteError = err.Error()
-		c.String(211, "test InjectErrRewrite")
 	}))
-	tt.Equal(211, w.Code)
-	tt.Equal("test InjectErrRewrite", w.Body.String())
+	tt.Equal(403, w.Code)
+	tt.Equal("test InjectErr", w.Body.String())
 	tt.Equal("InjectErrRewrite", rewriteError)
 
 	w = newRequest(r, "GET", "/InjectCustom", "/InjectCustom", CustomInvoker(func(ctx *Context) (b []byte) {

@@ -2,6 +2,7 @@ package ztype
 
 import (
 	"reflect"
+	"strconv"
 )
 
 // GetType Get variable type
@@ -60,4 +61,74 @@ func InArray(needle, hystack interface{}) bool {
 		}
 	}
 	return false
+}
+
+func parsePath(path string, v interface{}) (interface{}, bool) {
+	t := 0
+	i := 0
+	val := v
+
+	exist := true
+
+	pp := func(p string, v interface{}) (result interface{}) {
+		if v == nil || exist == false {
+			return nil
+		}
+
+		switch val := v.(type) {
+		case Map:
+			result, exist = val[p]
+		case map[string]interface{}:
+			result, exist = val[p]
+		case map[string]string:
+			result, exist = val[p]
+		default:
+			i, err := strconv.Atoi(p)
+			if err == nil {
+				switch val := v.(type) {
+				case []Map:
+					if len(val) > i {
+						result = val[i]
+					} else {
+						exist = false
+					}
+				case []interface{}:
+					if len(val) > i {
+						result = val[i]
+					} else {
+						exist = false
+					}
+				case []string:
+					if len(val) > i {
+						result = val[i]
+					} else {
+						exist = false
+					}
+				}
+			}
+		}
+
+		return
+	}
+	for ; i < len(path); i++ {
+		switch path[i] {
+		case '\\':
+			ss := path[t:i]
+			i++
+			path = ss + path[i:]
+		case '.':
+			val = pp(path[t:i], val)
+			t = i + 1
+		}
+
+		if exist == false {
+			break
+		}
+	}
+
+	if i != t {
+		val = pp(path[t:], val)
+	}
+
+	return val, exist
 }
