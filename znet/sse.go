@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
 )
@@ -17,12 +16,12 @@ type SSE struct {
 	lastID    string
 	Comment   []byte
 	events    chan *sseEvent
-	reply     chan struct{}
 	net       *Context
 	option    *SSEOption
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 	close     *zutil.Bool
+	flush     func()
 }
 
 type sseEvent struct {
@@ -40,6 +39,10 @@ func (s *SSE) Done() <-chan struct{} {
 	return s.ctx.Done()
 }
 
+func (s *SSE) Stop() {
+	s.ctxCancel()
+}
+
 func (s *SSE) sendComment() {
 	s.events <- &sseEvent{
 		Comment: "ping",
@@ -50,35 +53,15 @@ func (s *SSE) Send(id string, data string, event ...string) error {
 	return s.SendByte(id, zstring.String2Bytes(data), event...)
 }
 
-func (s *SSE) cancel() {
-	zlog.Error(8888)
-	s.close.Store(true)
-	s.ctxCancel()
-	flusher, _ := s.net.Writer.(http.Flusher)
-
-	s.net.SetHeader("Content-Type", "text/event-stream")
-	s.net.SetHeader("Cache-Control", "no-cache")
-	s.net.SetHeader("Connection", "keep-alive")
-	s.net.Abort(http.StatusNoContent)
-	s.net.write()
-
-	flusher.Flush()
-}
-
-func (s *SSE) start() {
+func (s *SSE) Push() {
 	w := s.net.Writer
 	r := s.net.Request
-	flusher, _ := w.(http.Flusher)
 
-	s.net.SetHeader("Content-Type", "text/event-stream")
-	s.net.SetHeader("Cache-Control", "no-cache")
-	s.net.SetHeader("Connection", "keep-alive")
 	s.net.Abort(http.StatusOK)
 	s.net.write()
+	s.flush()
 
-	flusher.Flush()
-
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(s.option.HeartbeatsTime)
 	defer ticker.Stop()
 
 	b := zstring.Buffer(7)
@@ -89,8 +72,9 @@ sseFor:
 		case <-ticker.C:
 			go s.sendComment()
 		case <-r.Context().Done():
-			s.close.Store(true)
 			s.ctxCancel()
+			break sseFor
+		case <-s.ctx.Done():
 			break sseFor
 		case ev := <-s.events:
 			if len(ev.Data) > 0 {
@@ -137,20 +121,18 @@ sseFor:
 			b.WriteString("\n")
 
 			data := zstring.String2Bytes(b.String())
-			if _, err := w.Write(data); err == nil && r.Context().Err() == nil {
-				flusher.Flush()
-			}
+			_, _ = w.Write(data)
+			s.flush()
 
 			b.Reset()
 			b.Grow(7)
-			s.reply <- struct{}{}
 		}
 	}
 
 }
 
 func (s *SSE) SendByte(id string, data []byte, event ...string) error {
-	if s.close.Load() {
+	if s.ctx.Err() != nil {
 		return errors.New("client has been closed")
 	}
 
@@ -163,15 +145,12 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 	}
 
 	s.events <- ev
-
-	<-s.reply
 	return nil
 }
 
 type SSEOption struct {
 	RetryTime      int
 	HeartbeatsTime time.Duration
-	Verify         bool
 }
 
 func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
@@ -180,13 +159,10 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	s := &SSE{
 		lastID:    id,
 		events:    make(chan *sseEvent),
-		reply:     make(chan struct{}),
 		net:       c,
 		ctx:       ctx,
 		ctxCancel: cancel,
-		close:     zutil.NewBool(false),
 		option: &SSEOption{
-			Verify:         true,
 			RetryTime:      3000,
 			HeartbeatsTime: time.Second * 15,
 		},
@@ -196,11 +172,19 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		opt(id, s.option)
 	}
 
-	if s.option.Verify {
-		go s.start()
-	} else {
-		s.cancel()
+	flusher, _ := s.net.Writer.(http.Flusher)
+
+	s.flush = func() {
+		if c.Request.Context().Err() != nil {
+			return
+		}
+		flusher.Flush()
 	}
+
+	s.net.SetHeader("Content-Type", "text/event-stream")
+	s.net.SetHeader("Cache-Control", "no-cache")
+	s.net.SetHeader("Connection", "keep-alive")
+	c.prevData.Code.Store(http.StatusNoContent)
 
 	return s
 }

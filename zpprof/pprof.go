@@ -15,7 +15,10 @@ func Register(r *znet.Engine, token string) (RouterGroup *znet.Engine) {
 	// go tool pprof -inuse_space http://127.0.0.1:8081/debug/pprof/heap
 
 	RouterGroup = r.Group("/debug", func(g *znet.Engine) {
-		g.Use(authDebug(token))
+		g.Use(authDebug(token), func(c *znet.Context) {
+			c.Next()
+			c.Abort(200)
+		})
 		g.GET("", infoHandler)
 		g.GET("/", redirectPprof)
 		g.GET("/pprof", redirectPprof)

@@ -81,12 +81,15 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 				break
 			}
 
+			data := v
 			if lastID != "" {
-				v = append(v, Header{"Last-Event-ID": lastID})
+				data = append(data, Header{"Last-Event-ID": lastID})
 			}
-			v = append(v, Header{"Accept": "text/event-stream"})
-			v = append(v, sse.ctx)
-			r, err := e.sseReq(url, v...)
+			data = append(data, Header{"Accept": "text/event-stream"})
+			data = append(data, Header{"Connection": "keep-alive"})
+			data = append(data, sse.ctx)
+
+			r, err := e.sseReq(url, data...)
 
 			if err == nil {
 				if r == nil {
@@ -97,7 +100,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 
 				sse.readyState = 1
 
-				err = r.Stream(func(line []byte) error {
+				_ = r.Stream(func(line []byte) error {
 					i := len(line)
 					if i == 1 && currEvent.ID != "" {
 						sse.eventCh <- currEvent

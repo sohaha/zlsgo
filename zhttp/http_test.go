@@ -14,7 +14,52 @@ import (
 	zls "github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/znet"
+	"github.com/sohaha/zlsgo/ztype"
 )
+
+var (
+	r *znet.Engine
+)
+
+func TestMain(m *testing.M) {
+	r = znet.New("zhttp-test")
+	r.SetAddr("3788")
+	r.Log.Discard()
+	r.POST("/upload", func(c *znet.Context) {
+		file, err := c.FormFile("file")
+		if err == nil {
+			_ = c.SaveUploadedFile(file, "./package.json")
+			c.String(200, "上传成功")
+		}
+	})
+
+	r.GET("/sse", func(c *znet.Context) {
+		if !c.IsSSE() {
+			return
+		}
+		sse := znet.NewSSE(c, func(lastID string, opts *znet.SSEOption) {
+			opts.RetryTime = 100
+			opts.HeartbeatsTime = 10
+		})
+		if sse.LastEventID() != "" {
+			return
+		}
+		go func() {
+			for i := 0; i < 2; i++ {
+				_ = sse.Send(ztype.ToString(i), ztype.ToString(i), "system")
+			}
+			time.Sleep(time.Second / 2)
+			sse.Stop()
+		}()
+		sse.Push()
+	})
+	go func() {
+		r.SetAddr(":18181")
+		znet.Run()
+	}()
+	time.Sleep(time.Second / 2)
+	m.Run()
+}
 
 func TestHttp(T *testing.T) {
 	t := zls.NewTest(T)
@@ -283,22 +328,7 @@ func TestFile(t *testing.T) {
 		tt.EqualNil(err)
 	}
 	defer zfile.Rmdir("./test/")
-	r := znet.New()
-	r.POST("/upload", func(c *znet.Context) {
-		file, err := c.FormFile("file")
-		t.Log(err, c.Host(true))
-		t.Log(c.GetPostFormAll())
-		tt.EqualExit("upload", c.GetHeader("type"))
-		if err == nil {
-			err = c.SaveUploadedFile(file, "./package.json")
-			tt.EqualNil(err)
-			c.String(200, "上传成功")
-		}
-	})
-	r.SetAddr("7878")
-	go func() {
-		znet.Run()
-	}()
+	defer zfile.Rmdir("./package.json")
 
 	std.CheckRedirect()
 	time.Sleep(time.Second)
@@ -311,9 +341,9 @@ func TestFile(t *testing.T) {
 	h := Header{
 		"type": "upload",
 	}
-	res, err = Post("http://127.0.0.1:7878/upload", h, UploadProgress(func(current, total int64) {
+	res, err = Post("http://127.0.0.1:18181/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), Host("http://127.0.0.1:7878"), v, q, File("test\\package.json", "file"))
+	}), Host("http://127.0.0.1:18181"), v, q, File("test\\package.json", "file"))
 	if err != nil {
 		tt.EqualNil(err)
 		return
@@ -327,7 +357,7 @@ func TestFile(t *testing.T) {
 	})
 
 	DisableChunke()
-	res, err = Post("http://127.0.0.1:7878/upload", h, CustomReq(func(req *http.Request) {
+	res, err = Post("http://127.0.0.1:18181/upload", h, CustomReq(func(req *http.Request) {
 
 	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)

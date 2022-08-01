@@ -47,6 +47,11 @@ func (c *Context) IsWebsocket() bool {
 	return false
 }
 
+// IsSSE Is SSE
+func (c *Context) IsSSE() bool {
+	return c.GetHeader("Connection") != "" && strings.ToLower(c.GetHeader("Accept")) == "text/event-stream"
+}
+
 // IsAjax IsAjax
 func (c *Context) IsAjax() bool {
 	return c.GetHeader("X-Requested-With") == "XMLHttpRequest"
