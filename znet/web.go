@@ -27,73 +27,71 @@ import (
 type (
 	// Context context
 	Context struct {
-		stopHandle    *zutil.Bool
-		done          *zutil.Bool
-		rawData       string
-		cacheJSON     *zjson.Res
 		startTime     time.Time
-		middleware    []handlerFn
+		render        render
+		Writer        http.ResponseWriter
+		injector      zdi.Injector
+		stopHandle    *zutil.Bool
+		prevData      *PrevData
 		customizeData map[string]interface{}
 		header        map[string][]string
-		render        render
-		prevData      *PrevData
-		Writer        http.ResponseWriter
 		Request       *http.Request
+		cacheJSON     *zjson.Res
+		cacheForm     url.Values
+		done          *zutil.Bool
 		Engine        *Engine
 		Log           *zlog.Logger
 		Cache         *zcache.Table
-		mu            sync.RWMutex
-		cacheQuery    url.Values
-		cacheForm     url.Values
-		injector      zdi.Injector
 		renderError   ErrHandlerFunc
+		cacheQuery    url.Values
+		rawData       string
+		middleware    []handlerFn
+		mu            sync.RWMutex
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
-		// Log Log
-		Log *zlog.Logger
-		// Deprecated: 以后可能移除
-		Cache               *zcache.Table
-		readTimeout         time.Duration
-		writeTimeout        time.Duration
-		webModeName         string
-		webMode             int
-		ShowFavicon         bool
-		MaxMultipartMemory  int64
-		BindTag             string
-		customMethodType    string
-		addr                []addrSt
-		router              *router
-		preHandler          Handler
 		pool                sync.Pool
+		injector            zdi.Injector
+		preHandler          Handler
+		router              *router
+		Cache               *zcache.Table
+		template            *tpl
+		Log                 *zlog.Logger
 		templateFuncMap     template.FuncMap
+		webModeName         string
+		customMethodType    string
+		BindTag             string
 		BindStructDelimiter string
 		BindStructSuffix    string
-		template            *tpl
-		injector            zdi.Injector
+		addr                []addrSt
+		MaxMultipartMemory  int64
+		webMode             int
+		writeTimeout        time.Duration
+		readTimeout         time.Duration
+		ShowFavicon         bool
 	}
 	TlsCfg struct {
+		HTTPProcessing interface{}
+		Config         *tls.Config
 		Cert           string
 		Key            string
 		HTTPAddr       string
-		HTTPProcessing interface{}
-		Config         *tls.Config
 	}
 	tpl struct {
 		tpl             *template.Template
-		pattern         string
 		templateFuncMap template.FuncMap
+		pattern         string
 	}
 	addrSt struct {
-		addr string
 		TlsCfg
+		addr string
 	}
 	router struct {
-		prefix     string
-		middleware []handlerFn
 		trees      map[string]*Tree
-		parameters Parameters
 		notFound   handlerFn
+		prefix     string
+		parameters Parameters
+		middleware []handlerFn
 	}
 	// Handler handler func
 	Handler interface{}
@@ -408,7 +406,7 @@ func (e *Engine) StartUp() []*serverMap {
 	return srvs
 }
 
-// Run run serve
+// Run serve
 func Run() {
 	var (
 		srvs []*serverMap
@@ -443,7 +441,7 @@ func Run() {
 			_ = s.srv.Close()
 		} else {
 			if sigkill {
-				r.Log.Success("Shutdown server done")
+				r.Log.Success("Shutdown server write")
 			}
 		}
 		m.Done()

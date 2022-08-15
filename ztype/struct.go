@@ -7,10 +7,10 @@ import (
 
 type (
 	StruBuilder struct {
-		fieldKeys []string
-		fields    map[string]*StruField
-		typ       int
 		key       reflect.Type
+		fields    map[string]*StruField
+		fieldKeys []string
+		typ       int
 	}
 	StruField struct {
 		typ interface{}

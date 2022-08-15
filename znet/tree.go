@@ -8,24 +8,19 @@ type (
 	// Tree records node
 	Tree struct {
 		root       *Node
-		parameters Parameters
 		routes     map[string]*Node
+		parameters Parameters
 	}
 
 	// Node records any URL params, and executes an end handlerFn.
 	Node struct {
-		key string
-		// path records a request path
-		path   string
-		handle handlerFn
-		// depth records Node's depth
-		depth int
-		// children records Node's children node
-		children map[string]*Node
-		// isPattern flag
-		isPattern bool
-		// middleware records middleware stack
+		handle     handlerFn
+		children   map[string]*Node
+		key        string
+		path       string
 		middleware []handlerFn
+		depth      int
+		isPattern  bool
 	}
 )
 
@@ -76,7 +71,7 @@ func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) {
 	if wareLen > 0 && currentNode.depth == 1 {
 		currentNode.middleware = append(currentNode.middleware, middleware...)
 	}
-	
+
 	currentNode.handle = handle
 	currentNode.isPattern = true
 	currentNode.path = path

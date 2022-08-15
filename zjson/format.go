@@ -10,9 +10,9 @@ import (
 type (
 	Map             map[string]string
 	StFormatOptions struct {
-		Width    int
 		Prefix   string
 		Indent   string
+		Width    int
 		SortKeys bool
 	}
 	pair struct {
@@ -20,9 +20,9 @@ type (
 		vs, vd int
 	}
 	byKey struct {
-		sorted bool
 		json   []byte
 		pairs  []pair
+		sorted bool
 	}
 )
 
@@ -229,7 +229,7 @@ func sortPairs(json, buf []byte, pairs []pair) []byte {
 	}
 	vstart := pairs[0].vs
 	vend := pairs[len(pairs)-1].vd
-	arr := byKey{false, json, pairs}
+	arr := byKey{sorted: false, json: json, pairs: pairs}
 	sort.Sort(&arr)
 	if !arr.sorted {
 		return buf

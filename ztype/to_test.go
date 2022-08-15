@@ -17,18 +17,18 @@ type st interface {
 
 type (
 	type1 struct {
-		A  int
 		B  string
+		A  int
 		C1 float32
 	}
 	type2 struct {
-		D bool
-		E *uint
-		F []string
-		G map[string]int
+		E  *uint
+		G  map[string]int
+		S2 *type1
 		type1
 		S1 type1
-		S2 *type1
+		F  []string
+		D  bool
 	}
 )
 
@@ -255,7 +255,7 @@ func TestStructToMap(tt *testing.T) {
 	t.Log(v, r)
 	j, err := zjson.Marshal(r)
 	t.EqualNil(err)
-	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"A":2,"B":"S1","C1":0},"S2":{"A":3,"B":"Ss","C1":0}}`, string(j))
+	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"B":"S1","A":2,"C1":0},"S2":{"B":"Ss","A":3,"C1":0}}`, string(j))
 
 	v2 := []string{"1", "2", "more"}
 	r = ztype.ToMapString(v2)

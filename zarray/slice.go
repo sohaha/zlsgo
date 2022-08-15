@@ -7,7 +7,7 @@ import (
 	"math/rand"
 )
 
-// Shuffle creates an slice of shuffled values
+// Shuffle creates a slice of shuffled values
 func Shuffle[T any](collection []T) []T {
 	l := len(collection)
 	n := make([]T, l)
@@ -19,7 +19,7 @@ func Shuffle[T any](collection []T) []T {
 	return n
 }
 
-// Filter iterates over elements of collection, returning an array of all elements predicate returns truthy for
+// Filter iterates over elements of collection
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	l := len(slice)
 	res := make([]T, 0, l)
@@ -30,4 +30,15 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 		}
 	}
 	return res
+}
+
+// Contains returns true if an element is present in a collection
+func Contains[T comparable](collection []T, element T) bool {
+	for _, item := range collection {
+		if item == element {
+			return true
+		}
+	}
+
+	return false
 }

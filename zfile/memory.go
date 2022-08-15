@@ -8,13 +8,13 @@ import (
 )
 
 type MemoryFile struct {
+	stopTiming chan struct{}
+	fbefore    memoryFileFlushBefore
 	name       string
-	lock       sync.RWMutex
 	buffer     byteBuffer
 	timing     int64
-	stopTiming chan struct{}
+	lock       sync.RWMutex
 	stop       bool
-	fbefore    memoryFileFlushBefore
 }
 
 type MemoryFileOption func(*MemoryFile)

@@ -6,14 +6,14 @@ import (
 )
 
 type singleRule struct {
+	notRecordsIndex   map[int]struct{}
+	locker            *sync.Mutex
+	usedRecordsIndex  sync.Map
+	records           []*circleQueue
 	defaultExpiration time.Duration
 	cleanupInterval   time.Duration
 	allowed           int
 	estimated         int
-	records           []*circleQueue
-	notRecordsIndex   map[int]struct{}
-	usedRecordsIndex  sync.Map
-	locker            *sync.Mutex
 }
 
 // newRule Initialize an access control policy

@@ -75,17 +75,17 @@ var LevelColous = []Color{
 type (
 	// Logger logger struct
 	Logger struct {
-		mu            sync.RWMutex
-		prefix        string
-		flag          int
 		out           io.Writer
-		buf           bytes.Buffer
 		file          *zfile.MemoryFile
-		calldDepth    int
-		level         int
-		color         bool
+		prefix        string
 		fileDir       string
 		fileName      string
+		buf           bytes.Buffer
+		flag          int
+		calldDepth    int
+		level         int
+		mu            sync.RWMutex
+		color         bool
 		fileAndStdout bool
 	}
 	formatter struct {
@@ -94,8 +94,8 @@ type (
 		quote bool
 	}
 	visit struct {
-		v   uintptr
 		typ reflect.Type
+		v   uintptr
 	}
 	zprinter struct {
 		io.Writer

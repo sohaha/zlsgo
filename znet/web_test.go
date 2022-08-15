@@ -20,6 +20,7 @@ import (
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
+	// "go.uber.org/goleak"
 )
 
 type GG struct {
@@ -28,24 +29,24 @@ type GG struct {
 }
 
 type AA struct {
-	ID   int `json:"id"`
 	Name string
-	Gg   GG `json:"g"`
+	Gg   GG  `json:"g"`
+	ID   int `json:"id"`
 }
 
 type SS struct {
-	Name     string `json:"name"`
-	Abc      int
-	Gg       GG  `json:"g"`
-	ID       int `json:"id"`
-	Pid      uint
+	Name     string   `json:"name"`
+	Gg       GG       `json:"g"`
 	To       []string `json:"t"`
-	To2      int      `json:"t2"`
 	IDs      []AA     `json:"ids"`
 	Property struct {
 		Name string `json:"n"`
 		Key  float64
 	} `json:"p"`
+	Abc int
+	ID  int `json:"id"`
+	Pid uint
+	To2 int `json:"t2"`
 }
 
 var (
@@ -57,6 +58,10 @@ var (
 	one    sync.Once
 	engine *Engine
 )
+
+// func TestMain(m *testing.M) {
+// 	goleak.VerifyTestMain(m)
+// }
 
 func newServer() *Engine {
 	one.Do(func() {
@@ -502,17 +507,17 @@ func TestMore(tt *testing.T) {
 		c.GetAllQuery()
 		c.Log.Debug(c.GetJSON("Name"))
 		type U2 struct {
+			S     []float64
 			N2    int `json:"U.Name3"`
 			Name2 int
-			S     []float64
 		}
 		type U3 struct {
 			Name3 string `json:"name3"`
 		}
 		var u struct {
 			Name string `json:"Na"`
-			U2   `json:"N2"`
 			U    U3
+			U2   `json:"N2"`
 		}
 		err := c.Bind(&u)
 		t.EqualNil(err)

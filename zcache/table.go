@@ -18,16 +18,15 @@ type (
 	CacheItemPairList []CacheItemPair
 	// Table Table
 	Table struct {
-		sync.RWMutex
-		name            string
 		items           map[string]*Item
-		accessCount     bool
 		cleanupTimer    *time.Timer
-		cleanupInterval time.Duration
-		// logger          *zlog.Logger
 		loadNotCallback func(key string, args ...interface{}) *Item
 		addCallback     func(item *Item)
 		deleteCallback  func(key string) bool
+		name            string
+		cleanupInterval time.Duration
+		sync.RWMutex
+		accessCount bool
 	}
 )
 

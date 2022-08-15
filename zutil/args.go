@@ -14,11 +14,11 @@ import (
 
 // Args stores arguments associated
 type Args struct {
-	args           []argsArr
 	namedArgs      map[string]int
 	sqlNamedArgs   map[string]int
-	onlyNamed      bool
 	compileHandler ArgsCompileHandler
+	args           []argsArr
+	onlyNamed      bool
 }
 
 type argsArr struct {

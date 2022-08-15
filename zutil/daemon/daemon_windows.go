@@ -21,11 +21,10 @@ import (
 type (
 	windowsSystem  struct{}
 	windowsService struct {
-		i Iface
-		*Config
-
-		errSync      sync.Mutex
+		i            Iface
 		stopStartErr error
+		*Config
+		errSync sync.Mutex
 	}
 )
 

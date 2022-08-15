@@ -13,8 +13,8 @@ type (
 	Error struct {
 		err     error
 		wrapErr error
-		code    ErrCode
 		stack   zutil.Stack
+		code    ErrCode
 		inner   bool
 	}
 )

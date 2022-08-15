@@ -37,8 +37,8 @@ type (
 	}
 	renderFile struct {
 		Data        string
-		FileExist   bool
 		ContentDate []byte
+		FileExist   bool
 	}
 	renderHTML struct {
 		Template    *template.Template
@@ -49,9 +49,9 @@ type (
 	}
 	// ApiData unified return api format
 	ApiData struct {
-		Code int32       `json:"code" example:"200"`
-		Msg  string      `json:"msg"`
 		Data interface{} `json:"data"`
+		Msg  string      `json:"msg"`
+		Code int32       `json:"code" example:"200"`
 	}
 	// Data map string
 	Data     map[string]interface{}

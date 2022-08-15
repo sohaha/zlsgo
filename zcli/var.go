@@ -11,11 +11,11 @@ import (
 
 type (
 	cmdCont struct {
+		command       Cmd
 		name          string
 		desc          string
-		command       Cmd
-		requiredFlags RequiredFlags
 		Supplement    string
+		requiredFlags RequiredFlags
 	}
 	runFunc func()
 	// RequiredFlags RequiredFlags flags
@@ -34,12 +34,12 @@ type (
 	}
 	// Subcommand sub command
 	Subcommand struct {
-		cmdCont
 		CommandLine *flag.FlagSet
 		Name        string
 		Desc        string
 		Supplement  string
 		Parameter   string
+		cmdCont
 	}
 )
 

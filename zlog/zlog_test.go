@@ -55,19 +55,19 @@ func TestLogs(T *testing.T) {
 	log.ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
 	log.OpTextWrap(OpBold, text)
 	log.Dump(struct {
+		S struct {
+			N *string
+			n string
+		}
+		M map[string]interface{}
 		N string
-		B bool
 		I int
 		U uint
 		F float32
-		M map[string]interface{}
-		S struct {
-			n string
-			N *string
-		}
+		B bool
 	}{N: "test\nyes", M: map[string]interface{}{"s": 1243}, S: struct {
-		n string
 		N *string
+		n string
 	}{n: ""}})
 	CleanLog(log)
 	e := os.RemoveAll("tmp/")

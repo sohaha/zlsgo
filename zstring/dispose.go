@@ -16,8 +16,8 @@ type (
 		mask rune
 	}
 	replacer struct {
-		node
 		mapping map[string]string
+		node
 	}
 )
 

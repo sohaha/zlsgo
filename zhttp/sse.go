@@ -13,10 +13,10 @@ import (
 
 type (
 	SSEEngine struct {
-		readyState int
-		eventCh    chan *SSEEvent
 		ctx        context.Context
+		eventCh    chan *SSEEvent
 		ctxCancel  context.CancelFunc
+		readyState int
 	}
 
 	SSEEvent struct {

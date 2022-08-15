@@ -12,16 +12,16 @@ import (
 type (
 	// Engine valid engine
 	Engine struct {
-		queue        *list.List
-		setRawValue  bool
 		err          error
+		defaultValue interface{}
+		queue        *list.List
 		name         string
 		value        string
+		sep          string
 		valueInt     int
 		valueFloat   float64
-		sep          string
+		setRawValue  bool
 		silent       bool
-		defaultValue interface{}
 		result       bool
 	}
 	queueT func(v *Engine) *Engine

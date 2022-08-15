@@ -15,8 +15,8 @@ type (
 	// Nocmp is an uncomparable struct
 	Nocmp     [0]func()
 	namedArgs struct {
-		name string
 		arg  interface{}
+		name string
 	}
 )
 

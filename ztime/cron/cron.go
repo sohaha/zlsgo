@@ -16,9 +16,9 @@ type (
 		run      func()
 	}
 	JobTable struct {
-		sync.RWMutex
 		table sync.Map
-		stop  bool
+		sync.RWMutex
+		stop bool
 	}
 )
 
@@ -69,6 +69,7 @@ func (c *JobTable) ForceRun() (nextTime time.Duration) {
 
 func (c *JobTable) Run() {
 	go func() {
+		t := time.NewTimer(time.Second)
 		for {
 			c.RLock()
 			stop := c.stop
@@ -77,7 +78,8 @@ func (c *JobTable) Run() {
 				break
 			}
 			NextTime := c.ForceRun()
-			<-time.NewTimer(NextTime).C
+			t.Reset(NextTime)
+			<-t.C
 		}
 	}()
 }

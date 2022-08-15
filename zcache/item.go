@@ -7,15 +7,15 @@ import (
 
 // Item Item
 type Item struct {
+	createdTime    time.Time
+	accessedTime   time.Time
+	data           interface{}
+	deleteCallback func(key string) bool
+	key            string
+	lifeSpan       time.Duration
+	accessCount    int64
 	sync.RWMutex
-	key              string
-	data             interface{}
-	lifeSpan         time.Duration
-	createdTime      time.Time
-	accessedTime     time.Time
-	accessCount      int64
 	intervalLifeSpan bool
-	deleteCallback   func(key string) bool
 }
 
 // NewCacheItem NewCacheItem

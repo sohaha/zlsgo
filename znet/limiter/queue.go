@@ -7,8 +7,8 @@ import (
 )
 
 type circleQueue struct {
-	maxSize int
 	slice   []int64
+	maxSize int
 	head    int
 	tail    int
 	sync.RWMutex

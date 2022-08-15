@@ -20,15 +20,15 @@ import (
 type (
 	Type int
 	Res  struct {
-		typ   Type
 		raw   string
 		str   string
+		typ   Type
 		num   float64
 		index int
 	}
 	fieldMaps struct {
-		mu sync.RWMutex
 		m  map[string]map[string]int
+		mu sync.RWMutex
 	}
 )
 
@@ -324,10 +324,10 @@ func (r *Res) Delete(path string) (err error) {
 }
 
 type arrayOrMapResult struct {
-	a  []Res
-	ai []interface{}
 	o  map[string]Res
 	oi map[string]interface{}
+	a  []Res
+	ai []interface{}
 	vc byte
 }
 
@@ -650,18 +650,18 @@ type arrayPathResult struct {
 	part    string
 	path    string
 	pipe    string
-	piped   bool
-	more    bool
-	alogok  bool
-	arrch   bool
 	alogkey string
 	query   struct {
-		on    bool
 		path  string
 		op    string
 		value string
+		on    bool
 		all   bool
 	}
+	piped  bool
+	more   bool
+	alogok bool
+	arrch  bool
 }
 
 func parseArrayPath(path string) (r arrayPathResult) {

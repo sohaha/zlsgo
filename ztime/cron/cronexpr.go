@@ -13,21 +13,21 @@ import (
 
 type (
 	Expression struct {
-		secondList             []int
-		minuteList             []int
-		hourList               []int
+		daysOfWeek             map[int]bool
+		lastWeekDaysOfWeek     map[int]bool
+		specificWeekDaysOfWeek map[int]bool
 		daysOfMonth            map[int]bool
 		workdaysOfMonth        map[int]bool
-		lastDayOfMonth         bool
+		monthList              []int
+		actualDaysOfMonthList  []int
+		secondList             []int
+		hourList               []int
+		minuteList             []int
+		yearList               []int
 		lastWorkdayOfMonth     bool
 		daysOfMonthRestricted  bool
-		actualDaysOfMonthList  []int
-		monthList              []int
-		daysOfWeek             map[int]bool
-		specificWeekDaysOfWeek map[int]bool
-		lastWeekDaysOfWeek     map[int]bool
+		lastDayOfMonth         bool
 		daysOfWeekRestricted   bool
-		yearList               []int
 	}
 	cronDirective struct {
 		kind  int
@@ -132,11 +132,12 @@ func atoi(s string) int {
 }
 
 type fieldDescriptor struct {
-	name         string
-	min, max     int
-	defaultList  []int
-	valuePattern string
 	atoi         func(string) int
+	name         string
+	valuePattern string
+	defaultList  []int
+	min          int
+	max          int
 }
 
 var (

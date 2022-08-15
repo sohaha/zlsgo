@@ -69,10 +69,10 @@ func TestToMapString(T *testing.T) {
 func TestToMapStringDeep(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	type u struct {
+		Other  *other
 		Name   string
 		Key    int
 		Status bool
-		Other  *other
 	}
 
 	user := &u{
@@ -99,10 +99,10 @@ func TestToMapStringDeep(T *testing.T) {
 func TestToSliceMapString(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	type u struct {
+		Other  *other
 		Name   string
 		Key    int
 		Status bool
-		Other  *other
 	}
 	var data = make([]map[string]interface{}, 2)
 	data[0] = map[string]interface{}{"name": "hi"}

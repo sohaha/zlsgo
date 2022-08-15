@@ -17,10 +17,10 @@ import (
 
 type indentWriter struct {
 	w   io.Writer
-	bol bool
 	pre [][]byte
 	sel int
 	off int
+	bol bool
 }
 
 func NewIndentWriter(w io.Writer, pre ...[]byte) io.Writer {
@@ -222,7 +222,7 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 		t := v.Type()
 		if v.CanAddr() {
 			addr := v.UnsafeAddr()
-			vis := visit{addr, t}
+			vis := visit{v: addr, typ: t}
 			if vd, ok := p.visited[vis]; ok && vd < p.depth {
 				p.fmtString(t.String()+"{(CYCLIC REFERENCE)}", false)
 				break // don't print v again

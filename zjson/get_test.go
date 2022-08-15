@@ -10,16 +10,16 @@ import (
 )
 
 type Demo struct {
-	I        int `json:"i"`
-	F        float64
-	Children []string `json:"children"`
-	Quality  string   `json:"quality"`
-	User     struct {
+	Quality string `json:"quality"`
+	User    struct {
 		Name string `json:"name"`
 	} `json:"user"`
-	Friends []struct {
+	Children []string `json:"children"`
+	Friends  []struct {
 		Name string `json:"name"`
 	} `json:"friends"`
+	I int `json:"i"`
+	F float64
 }
 
 func TestGet2(t *testing.T) {
@@ -147,8 +147,8 @@ func TestGet(t *testing.T) {
 	t.Log(Get(demo, "friends|@format:{\"indent\":\"--\"}").String())
 
 	type Demo struct {
-		I       int    `json:"i"`
 		Quality string `json:"quality"`
+		I       int    `json:"i"`
 	}
 	var demoData Demo
 	demoJson := Ugly(zstring.String2Bytes(demo))

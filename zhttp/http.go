@@ -44,9 +44,9 @@ type (
 	QueryParam map[string]interface{}
 	Host       string
 	FileUpload struct {
+		File      io.ReadCloser
 		FileName  string
 		FieldName string
-		File      io.ReadCloser
 	}
 	DownloadProgress func(current, total int64)
 	UploadProgress   func(current, total int64)
@@ -54,10 +54,10 @@ type (
 		client        *http.Client
 		jsonEncOpts   *jsonEncOpts
 		xmlEncOpts    *xmlEncOpts
+		getUserAgent  func() string
 		flag          int
 		debug         bool
 		disableChunke bool
-		getUserAgent  func() string
 	}
 
 	bodyJson struct {
@@ -81,9 +81,9 @@ type (
 
 	multipartHelper struct {
 		form           url.Values
+		uploadProgress UploadProgress
 		uploads        []FileUpload
 		dump           []byte
-		uploadProgress UploadProgress
 	}
 
 	jsonEncOpts struct {

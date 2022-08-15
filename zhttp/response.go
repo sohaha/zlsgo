@@ -17,17 +17,17 @@ import (
 )
 
 type Res struct {
+	err    error
 	r      *Engine
 	req    *http.Request
 	resp   *http.Response
 	client *http.Client
-	cost   time.Duration
 	*multipartHelper
+	downloadProgress DownloadProgress
+	tmpFile          string
 	requesterBody    []byte
 	responseBody     []byte
-	downloadProgress DownloadProgress
-	err              error
-	tmpFile          string
+	cost             time.Duration
 }
 
 func (r *Res) Request() *http.Request {

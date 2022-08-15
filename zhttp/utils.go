@@ -14,8 +14,8 @@ import (
 
 type (
 	selector struct {
-		Name    string
 		Attr    map[string]string
+		Name    string
 		i       int
 		Child   bool
 		Brother bool

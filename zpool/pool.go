@@ -17,16 +17,16 @@ type (
 	taskfn   func() error
 	WorkPool struct {
 		workers     sync.Pool
-		closed      bool
-		mu          sync.RWMutex
+		injector    zdi.Injector
 		queue       chan *worker
+		usedNum     *zutil.Int64
+		panicFunc   PanicFunc
+		New         func()
 		minIdle     uint
 		maxIdle     uint
-		usedNum     *zutil.Int64
-		injector    zdi.Injector
-		panicFunc   PanicFunc
 		releaseTime time.Duration
-		New         func()
+		mu          sync.RWMutex
+		closed      bool
 	}
 	worker struct {
 		jobQueue  chan taskfn

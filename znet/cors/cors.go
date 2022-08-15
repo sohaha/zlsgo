@@ -11,15 +11,14 @@ import (
 type (
 	// Config cors configuration
 	Config struct {
-		// Domains whitelist domain name
+		CustomHandler Handler
+		methods       string
+		credentials   string
+		headers       string
 		Domains       []string
 		Methods       []string
-		methods       string
 		Credentials   []string
-		credentials   string
 		Headers       []string
-		headers       string
-		CustomHandler Handler
 	}
 	Handler func(conf *Config, c *znet.Context)
 )

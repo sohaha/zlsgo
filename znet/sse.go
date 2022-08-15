@@ -13,22 +13,22 @@ import (
 )
 
 type SSE struct {
-	lastID    string
-	Comment   []byte
+	ctx       context.Context
 	events    chan *sseEvent
 	net       *Context
 	option    *SSEOption
-	ctx       context.Context
 	ctxCancel context.CancelFunc
 	close     *zutil.Bool
 	flush     func()
+	lastID    string
+	Comment   []byte
 }
 
 type sseEvent struct {
 	ID      string
-	Data    []byte
 	Event   string
 	Comment string
+	Data    []byte
 }
 
 func (s *SSE) LastEventID() string {

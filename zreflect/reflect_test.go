@@ -12,23 +12,23 @@ import (
 
 type (
 	DemoSt struct {
-		Name  string `json:"username"`
-		Age   uint
-		Child struct {
-			IsChildName bool
+		Date2  time.Time
+		Child3 *DemoChildSt
+		Remark string `json:"remark"`
+		note   string
+		Name   string `json:"username"`
+		Slice  [][]string
+		Hobby  []string
+		Child  struct {
 			Title       string `json:"child_user_title"`
 			DemoChild2  Child2 `json:"demo_child_2"`
+			IsChildName bool
 		} `json:"child"`
-		Hobby  []string
-		note   string
-		Lovely bool
 		Year   float64
-		Date2  time.Time
-		Remark string `json:"remark"`
 		Child2 Child2
-		Child3 *DemoChildSt
 		child4 DemoChildSt
-		Slice  [][]string
+		Age    uint
+		Lovely bool
 	}
 	TestSt struct {
 		Name string
