@@ -48,13 +48,15 @@ func (r *Rule) AddRule(exp time.Duration, allowed int, estimated ...int) {
 }
 
 // AllowVisit Is access allowed
-func (r *Rule) AllowVisit(key interface{}) bool {
+func (r *Rule) AllowVisit(keys ...interface{}) bool {
 	if len(r.rules) == 0 {
 		return true
 	}
 	for i := range r.rules {
-		if !r.rules[i].allowVisit(key) {
-			return false
+		for _, key := range keys {
+			if !r.rules[i].allowVisit(key) {
+				return false
+			}
 		}
 	}
 	return true

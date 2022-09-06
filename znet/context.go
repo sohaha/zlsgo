@@ -117,6 +117,7 @@ func (c *Context) write() {
 	code := int(data.Code.Load())
 	if code == 0 {
 		code = http.StatusOK
+		data.Code.Store(int32(code))
 	}
 	if len(data.Content) > 0 {
 		c.Writer.WriteHeader(code)
@@ -231,6 +232,12 @@ func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok b
 		value = def[0]
 	}
 	c.mu.RUnlock()
+	return
+}
+
+// Value get context sharing data
+func (c *Context) MustValue(key string, def ...interface{}) (value interface{}) {
+	value, _ = c.Value(key, def)
 	return
 }
 

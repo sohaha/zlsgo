@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
-	"github.com/sohaha/zlsgo/zutil"
 )
 
 type SSE struct {
@@ -18,7 +17,6 @@ type SSE struct {
 	net       *Context
 	option    *SSEOption
 	ctxCancel context.CancelFunc
-	close     *zutil.Bool
 	flush     func()
 	lastID    string
 	Comment   []byte

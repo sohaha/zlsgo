@@ -40,7 +40,17 @@ func NewAllowHeaders() (addAllowHeader func(header string), handler znet.Handler
 
 func New(conf *Config) znet.HandlerFunc {
 	if len(conf.Methods) == 0 {
-		conf.Methods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+		conf.Methods = []string{
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodConnect,
+			http.MethodOptions,
+			http.MethodTrace,
+		}
 	}
 	conf.methods = strings.Join(conf.Methods, ", ")
 	if len(conf.Credentials) == 0 {
@@ -48,7 +58,7 @@ func New(conf *Config) znet.HandlerFunc {
 	}
 	conf.credentials = strings.Join(conf.Credentials, ", ")
 	if len(conf.Headers) == 0 {
-		conf.Headers = []string{"Origin", "No-Cache", "X-Requested-With", "If-Modified-Since", "Pragma", "Last-Modified", "Cache-Control", "Expires", "Content-Type", "Access-Control-Allow-Origin"}
+		conf.Headers = []string{"Origin", "No-Cache", "X-Requested-With", "If-Modified-Since", "Pragma", "Last-Modified", "Cache-Control", "Expires", "Content-Type", "Access-Control-Allow-Origin", "Authorization"}
 	}
 	conf.headers = strings.Join(conf.Headers, ", ")
 	return func(c *znet.Context) {

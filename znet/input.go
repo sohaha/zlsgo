@@ -237,9 +237,36 @@ func (c *Context) get(m map[string][]string, key string) (map[string]string, boo
 
 // FormFile FormFile
 func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
-	_, _ = c.MultipartForm()
-	_, fh, err := c.Request.FormFile(name)
-	return fh, err
+	f, err := c.FormFiles(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return f[0], err
+}
+
+// FormFiles Multiple FormFile
+func (c *Context) FormFiles(name string) (files []*multipart.FileHeader, err error) {
+	var multipartForm *multipart.Form
+	multipartForm, err = c.MultipartForm()
+
+	if multipartForm == nil || multipartForm.File == nil {
+		err = errors.New("file is empty")
+		return
+	}
+
+	files = make([]*multipart.FileHeader, 0, 1)
+	if fhs := multipartForm.File[name]; len(fhs) > 0 {
+		for i := range fhs {
+			files = append(files, fhs[i])
+		}
+	}
+
+	if len(files) == 0 {
+		return nil, errors.New("file is empty")
+	}
+
+	return
 }
 
 // MultipartForm MultipartForm
@@ -270,7 +297,7 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) erro
 	return nil
 }
 
-func (c *Context) ParseMultipartForm() error {
+func (c *Context) ParseMultipartForm(maxMultipartMemory ...int64) error {
 	if c.Request.MultipartForm != nil {
 		return nil
 	}
@@ -280,7 +307,11 @@ func (c *Context) ParseMultipartForm() error {
 		return err
 	}
 
-	f, err := mr.ReadForm(c.Engine.MaxMultipartMemory)
+	maxMemory := c.Engine.MaxMultipartMemory
+	if len(maxMultipartMemory) > 0 && maxMultipartMemory[0] > 0 {
+		maxMemory = maxMultipartMemory[0]
+	}
+	f, err := mr.ReadForm(maxMemory)
 	if err != nil {
 		return err
 	}
