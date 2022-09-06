@@ -64,9 +64,21 @@ func TestFormatTlp(tt *testing.T) {
 }
 
 func TestUnix(t *testing.T) {
-	t.Log(Unix(1648879934))
+	now := time.Now()
+	t.Log(Unix(now.Unix()))
+	t.Log(In(now))
+
+	t0 := New(0)
+	t.Log(t0.Unix(now.Unix()))
+	t.Log(t0.In(now))
+
+	t1 := New(1)
+	t.Log(t1.Unix(now.Unix()))
+	t.Log(t1.In(now))
 
 	ti := New(2)
+	t.Log(ti.Unix(1648879934))
+
 	t.Log(ti.Unix(1648879934))
 }
 

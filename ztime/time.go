@@ -48,3 +48,8 @@ func Parse(str string, format ...string) (time.Time, error) {
 func Unix(tt int64) time.Time {
 	return newZtime.Unix(tt)
 }
+
+// In time to time
+func In(tt time.Time) time.Time {
+	return newZtime.In(tt)
+}

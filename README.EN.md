@@ -101,6 +101,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 
 - [x] HttpServer
 - [x] HttpClient
+- [x] JSON RPC
 - [x] Logger
 - [x] Json processing
 - [x] String processing
@@ -112,6 +113,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] Goroutine pool
 - [x] HTML Parse
 - [x] Injection
+- [x] Server Sent Event
 - [ ] [Database](https://github.com/sohaha/zdb)
 - [ ] ...
 

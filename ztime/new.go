@@ -116,7 +116,7 @@ func (e *TimeEngine) GetTimeZone() *time.Location {
 	return e.zone
 }
 
-func (e *TimeEngine) in(t time.Time) time.Time {
+func (e *TimeEngine) In(t time.Time) time.Time {
 	if e.zone == nil {
 		return t
 	}
@@ -125,7 +125,7 @@ func (e *TimeEngine) in(t time.Time) time.Time {
 
 // FormatTime string format of return time
 func (e *TimeEngine) FormatTime(t time.Time, format ...string) string {
-	t = e.in(t)
+	t = e.In(t)
 	tpl := TimeTpl
 	if len(format) > 0 {
 		tpl = FormatTlp(format[0])
@@ -140,7 +140,7 @@ func (e *TimeEngine) FormatTimestamp(timestamp int64, format ...string) string {
 
 // Unix int to time
 func (e *TimeEngine) Unix(tt int64) time.Time {
-	return e.in(time.Unix(tt, 0))
+	return e.In(time.Unix(tt, 0))
 }
 
 // Parse Parse
@@ -148,6 +148,7 @@ func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error
 	if len(format) > 0 {
 		return time.ParseInLocation(FormatTlp(format[0]), str, e.GetTimeZone())
 	}
+
 	var year, month, day, hour, min, sec string
 	match, err := zstring.RegexExtract(timePattern, str)
 	if err != nil {
@@ -177,6 +178,7 @@ func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error
 		month = zstring.Pad(arr[1], 2, "0", zstring.PadLeft)
 		day = zstring.Pad(arr[2], 2, "0", zstring.PadLeft)
 	}
+
 	if len(match[2]) > 0 {
 		s := strings.Replace(match[2], ":", "", -1)
 		if len(s) < 6 {
@@ -185,13 +187,13 @@ func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error
 		hour = zstring.Pad(s[0:2], 2, "0", zstring.PadLeft)
 		min = zstring.Pad(s[2:4], 2, "0", zstring.PadLeft)
 		sec = zstring.Pad(s[4:6], 2, "0", zstring.PadLeft)
+		return time.ParseInLocation(TimeTpl, year+"-"+month+"-"+day+" "+hour+":"+min+":"+sec, e.GetTimeZone())
 	}
-	return time.ParseInLocation(TimeTpl, fmt.Sprintf("%s-%s-%s %s:%s:%s", year, month, day, hour, min, sec), e.GetTimeZone())
-
+	return time.ParseInLocation("2006-01-02", year+"-"+month+"-"+day, e.GetTimeZone())
 }
 
 func (e *TimeEngine) Week(t time.Time) int {
-	week := e.in(t).Weekday().String()
+	week := e.In(t).Weekday().String()
 	switch week {
 	case "Monday":
 		return 1
@@ -214,7 +216,7 @@ func (e *TimeEngine) Week(t time.Time) int {
 // MonthRange gets the start and end UNIX times for the specified year and month
 func (e *TimeEngine) MonthRange(year int, month int) (beginTime, endTime int64, err error) {
 	var monthStr string
-	t := e.in(time.Now())
+	t := e.In(time.Now())
 
 	if year == 0 {
 		year = t.Year()
