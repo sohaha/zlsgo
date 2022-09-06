@@ -151,6 +151,10 @@ func AesGCMEncrypt(plaintext []byte, key string) (ciphertext []byte, err error) 
 }
 
 func AesGCMDecrypt(ciphertext []byte, key string) (plaintext []byte, err error) {
+	if len(ciphertext) == 0 {
+		return nil, errors.New("ciphertext is empty")
+	}
+
 	var (
 		block  cipher.Block
 		aesGCM cipher.AEAD
@@ -166,6 +170,9 @@ func AesGCMDecrypt(ciphertext []byte, key string) (plaintext []byte, err error) 
 	}
 
 	nonceSize := aesGCM.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, errors.New("ciphertext is too short")
+	}
 	nonce, text := ciphertext[:nonceSize], ciphertext[nonceSize:]
 
 	return aesGCM.Open(nil, nonce, text, nil)
