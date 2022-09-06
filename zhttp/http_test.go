@@ -21,6 +21,18 @@ var (
 	r *znet.Engine
 )
 
+type Result struct {
+	Num, Ans int
+}
+
+type Cal int
+
+func (cal *Cal) Square(num int, result *Result) error {
+	result.Num = num
+	result.Ans = num * num
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	r = znet.New("zhttp-test")
 	r.SetAddr("3788")
@@ -53,6 +65,11 @@ func TestMain(m *testing.M) {
 		}()
 		sse.Push()
 	})
+
+	r.Any("/__rpc", znet.JSONRPC(map[string]interface{}{
+		"Cal": new(Cal),
+	}))
+
 	go func() {
 		r.SetAddr(":18181")
 		znet.Run()

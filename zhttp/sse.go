@@ -52,7 +52,7 @@ func (e *Engine) sseReq(url string, v ...interface{}) (*Res, error) {
 		return nil, nil
 	}
 
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return nil, errors.New("status code is not 200")
 	}
 	return r, nil

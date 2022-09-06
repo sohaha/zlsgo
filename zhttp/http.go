@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
@@ -388,7 +389,7 @@ func setBodyJson(req *http.Request, resp *Res, opts *jsonEncOpts, v interface{})
 			data = buf.Bytes()
 		} else {
 			var err error
-			data, err = json.Marshal(v)
+			data, err = zjson.Marshal(v)
 			if err != nil {
 				return nil, err
 			}
