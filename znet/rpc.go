@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"reflect"
 )
 
 type JSONRPCOption struct {
 	DisabledHTTP bool
+	Debug        bool
 }
 
 func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c *Context) {
@@ -18,13 +20,29 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 	}
 
 	s := rpc.NewServer()
+	methods := make(map[string][]string, 0)
 	for name, v := range rcvr {
-		_ = s.RegisterName(name, v)
+		err := s.RegisterName(name, v)
+		if err == nil && o.Debug {
+			typ := reflect.TypeOf(v)
+			for m := 0; m < typ.NumMethod(); m++ {
+				method := typ.Method(m)
+				mtype := method.Type
+				mname := method.Name
+				argType := mtype.In(1).String()
+				replyType := mtype.In(2).String()
+				methods[name+"."+mname] = []string{argType, replyType}
+			}
+		}
 	}
 
 	return func(c *Context) {
 		req := c.Request
 		method := req.Method
+		if o.Debug && method == "GET" {
+			c.JSON(200, methods)
+			return
+		}
 		var codec rpc.ServerCodec
 		if method == "CONNECT" || (method == "POST" && !o.DisabledHTTP) {
 			c.stopHandle.Store(true)

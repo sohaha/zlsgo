@@ -15,10 +15,12 @@ type (
 		methods       string
 		credentials   string
 		headers       string
+		exposeHeaders string
 		Domains       []string
 		Methods       []string
 		Credentials   []string
 		Headers       []string
+		ExposeHeaders []string
 	}
 	Handler func(conf *Config, c *znet.Context)
 )
@@ -61,6 +63,11 @@ func New(conf *Config) znet.HandlerFunc {
 		conf.Headers = []string{"Origin", "No-Cache", "X-Requested-With", "If-Modified-Since", "Pragma", "Last-Modified", "Cache-Control", "Expires", "Content-Type", "Access-Control-Allow-Origin", "Authorization"}
 	}
 	conf.headers = strings.Join(conf.Headers, ", ")
+
+	if len(conf.ExposeHeaders) > 0 {
+		conf.exposeHeaders = strings.Join(conf.ExposeHeaders, ", ")
+	}
+
 	return func(c *znet.Context) {
 		if applyCors(c, conf) {
 			c.Next()
@@ -91,6 +98,9 @@ func applyCors(c *znet.Context, conf *Config) bool {
 	c.SetHeader("Access-Control-Allow-Methods", conf.methods)
 	c.SetHeader("Access-Control-Allow-Credentials", conf.credentials)
 	c.SetHeader("Access-Control-Allow-Headers", conf.headers)
+	if conf.exposeHeaders != "" {
+		c.SetHeader("Access-Control-Expose-Headers", conf.exposeHeaders)
+	}
 	c.SetHeader("Access-Control-Allow-Origin", origin)
 	if conf.CustomHandler != nil {
 		conf.CustomHandler(conf, c)

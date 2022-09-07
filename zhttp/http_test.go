@@ -68,6 +68,8 @@ func TestMain(m *testing.M) {
 
 	r.Any("/__rpc", znet.JSONRPC(map[string]interface{}{
 		"Cal": new(Cal),
+	}, func(o *znet.JSONRPCOption) {
+		o.Debug = true
 	}))
 
 	go func() {
