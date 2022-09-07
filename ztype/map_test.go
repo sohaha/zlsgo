@@ -14,6 +14,24 @@ func TestMap(t *testing.T) {
 	T.Equal(true, tMapKeyExists)
 }
 
+func TestMapNil(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var m Map
+
+	tt.Equal(true, m.IsEmpty())
+	err := m.Delete("no")
+	t.Log(err)
+
+	tt.NoError(m.Set("val", "99"))
+	tt.NoError(m.Set("yes", true))
+	t.Log(m)
+
+	tt.NoError(m.Delete("yes"))
+
+	t.Logf("%+v", m)
+}
+
 type other struct {
 	Sex int
 }

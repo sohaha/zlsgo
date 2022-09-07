@@ -17,7 +17,7 @@ type appString interface {
 }
 
 // ToByte to []byte
-func ToByte(i interface{}) []byte {
+func ToBytes(i interface{}) []byte {
 	s := ToString(i)
 	return zstring.String2Bytes(s)
 }
@@ -276,13 +276,14 @@ func ToFloat64(i interface{}) float64 {
 }
 
 // ToTime to time.Time
-func ToTime(i interface{}) (time.Time, error) {
+func ToTime(i interface{}, format ...string) (time.Time, error) {
 	switch val := i.(type) {
 	case time.Time:
 		return val, nil
 	case int, int32, int64, uint, uint32, uint64:
 		return ztime.Unix(ToInt64(i)), nil
 	default:
-		return ztime.Parse(ToString(i))
+		v := ToString(i)
+		return ztime.Parse(v, format...)
 	}
 }

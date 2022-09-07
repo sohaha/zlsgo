@@ -71,7 +71,7 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 	exist := true
 
 	pp := func(p string, v interface{}) (result interface{}) {
-		if v == nil || exist == false {
+		if v == nil || !exist {
 			return nil
 		}
 

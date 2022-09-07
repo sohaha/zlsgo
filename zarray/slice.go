@@ -5,7 +5,20 @@ package zarray
 
 import (
 	"math/rand"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
+
+// Rand A random elements
+func Rand[T any](collection []T) T {
+	l := len(collection)
+	if l == 0 {
+		var zero T
+		return zero
+	}
+	i := zstring.RandInt(0, l-1)
+	return collection[i]
+}
 
 // Shuffle creates a slice of shuffled values
 func Shuffle[T any](collection []T) []T {

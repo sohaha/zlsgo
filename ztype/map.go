@@ -1,6 +1,7 @@
 package ztype
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 
@@ -31,8 +32,16 @@ func (m *Map) Set(key string, value interface{}) error {
 	return nil
 }
 
+func (m *Map) Delete(key string) error {
+	if _, ok := (*m)[key]; ok {
+		delete(*m, key)
+		return nil
+	}
+	return errors.New("key not found")
+}
+
 func (m Map) IsEmpty() bool {
-	return m == nil || len(m) == 0
+	return len(m) == 0
 }
 
 type Maps []Map
@@ -56,6 +65,17 @@ func (m Maps) Index(i int) Map {
 func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	_, ok := m[key]
 	return ok
+}
+
+func ToMap(value interface{}) Map {
+	switch v := value.(type) {
+	case Map:
+		return v
+	case map[string]interface{}:
+		return v
+	default:
+		return ToMapString(v)
+	}
 }
 
 // ToSliceMapString to SliceMapString

@@ -25,9 +25,9 @@ type (
 		E  *uint
 		G  map[string]int
 		S2 *type1
+		F  []string
 		type1
 		S1 type1
-		F  []string
 		D  bool
 	}
 )
@@ -71,8 +71,8 @@ func TestTo(t *testing.T) {
 	sst.Set(str)
 	jj := j{Name: "123"}
 
-	tt.Equal([]byte(str), ztype.ToByte(str))
-	tt.Equal([]byte(str), ztype.ToByte(i))
+	tt.Equal([]byte(str), ztype.ToBytes(str))
+	tt.Equal([]byte(str), ztype.ToBytes(i))
 
 	tt.Equal(0, ztype.ToInt(ni))
 	tt.Equal(i, ztype.ToInt(str))
@@ -151,7 +151,7 @@ func TestTo(t *testing.T) {
 	tt.Equal(str, ztype.ToString(ui64))
 	tt.Equal(str, ztype.ToString(f6))
 	tt.Equal(str, ztype.ToString(f3))
-	tt.Equal(str, ztype.ToString(ztype.ToByte(i)))
+	tt.Equal(str, ztype.ToString(ztype.ToBytes(i)))
 	tt.Equal("{\"Name\":\"123\",\"Key\":\"\",\"age\":0}", ztype.ToString(jj))
 	tt.Equal(f6, ztype.ToFloat64(i))
 	tt.Equal(f6, ztype.ToFloat64(f3))

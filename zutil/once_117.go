@@ -1,5 +1,5 @@
-//go:build go1.18
-// +build go1.18
+//go:build !go1.18
+// +build !go1.18
 
 package zutil
 
@@ -8,12 +8,12 @@ import (
 )
 
 // Once initialize the singleton
-func Once[T any](fn func() T) func() T {
+func Once(fn func() interface{}) func() interface{} {
 	var (
 		once sync.Once
-		ivar T
+		ivar interface{}
 	)
-	return func() T {
+	return func() interface{} {
 		once.Do(func() {
 			ivar = fn()
 		})

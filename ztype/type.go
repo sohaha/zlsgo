@@ -33,8 +33,8 @@ func (t Type) String() string {
 	return ToString(t.v)
 }
 
-func (t Type) ToByte() []byte {
-	return ToByte(t.v)
+func (t Type) Bytes() []byte {
+	return ToBytes(t.v)
 }
 
 func (t Type) Bool() bool {
@@ -93,17 +93,30 @@ func (t Type) MapString() map[string]interface{} {
 	return ToMapString(t.v)
 }
 
-func (t Type) Slice() []interface{} {
+func (t Type) Slice() SliceType {
 	if t.v == nil {
-		return make([]interface{}, 0)
+		return make([]Type, 0)
 	}
 	return ToSlice(t.v)
+}
+
+func (t Type) SliceValue() []interface{} {
+	s := t.Slice()
+	slice := make([]interface{}, 0, len(s))
+	for _, v := range s {
+		slice = append(slice, v.Value())
+	}
+	return slice
 }
 
 func (t Type) Exists() bool {
 	return t.v != nil
 }
 
-func (t Type) Time() (time.Time, error) {
-	return ToTime(t.v)
+func (t Type) Time(format ...string) (time.Time, error) {
+	return ToTime(t.v, format...)
+}
+
+func (t Type) Map() Map {
+	return ToMap(t.v)
 }
