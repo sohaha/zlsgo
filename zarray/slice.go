@@ -20,6 +20,17 @@ func Rand[T any](collection []T) T {
 	return collection[i]
 }
 
+// Map manipulates a slice and transforms it to a slice of another type
+func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
+	result := make([]R, len(collection))
+
+	for i, item := range collection {
+		result[i] = iteratee(i, item)
+	}
+
+	return result
+}
+
 // Shuffle creates a slice of shuffled values
 func Shuffle[T any](collection []T) []T {
 	l := len(collection)

@@ -10,8 +10,7 @@ import (
 func TestArray(t *testing.T) {
 	tt := zls.NewTest(t)
 	var err error
-	array := zarray.New(20)
-	array = zarray.New()
+	array := zarray.New()
 	tt.Equal(true, array.IsEmpty())
 	for i := 0; i < 10; i++ {
 		if err := array.Add(i, i+1); err != nil {

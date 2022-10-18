@@ -20,7 +20,7 @@ func parse(outHelp bool) {
 func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err error) {
 	requiredFlagsLen := len(requiredFlags)
 	if requiredFlagsLen > 0 {
-		flagMap := zarray.New(requiredFlagsLen)
+		flagMap := zarray.NewArray(requiredFlagsLen)
 		for _, flagName := range requiredFlags {
 			flagMap.Push(flagName)
 		}
@@ -153,7 +153,7 @@ func parseSubcommand(Args []string) {
 		_ = fs.Parse(fsArgs)
 		args = fs.Args()
 		argsIsHelp(args)
-		flagMap := zarray.New(len(cont.requiredFlags))
+		flagMap := zarray.NewArray(len(cont.requiredFlags))
 		for _, flagName := range cont.requiredFlags {
 			flagMap.Push(flagName)
 		}

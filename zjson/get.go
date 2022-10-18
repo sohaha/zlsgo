@@ -15,6 +15,7 @@ import (
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 type (
@@ -188,6 +189,14 @@ func (r *Res) Array() []Res {
 	}
 	rr := r.arrayOrMap('[', false)
 	return rr.a
+}
+
+func (r *Res) Slice() ztype.SliceType {
+	if !r.IsArray() {
+		return make(ztype.SliceType, 0)
+	}
+
+	return ztype.ToSlice(r.Value())
 }
 
 func (r *Res) IsObject() bool {

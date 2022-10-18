@@ -12,10 +12,10 @@ import (
 
 type (
 	linuxSystemService struct {
-		name        string
 		detect      func() bool
 		interactive func() bool
 		new         func(i Iface, c *Config) (ServiceIface, error)
+		name        string
 	}
 	systemd struct {
 		i Iface
@@ -186,6 +186,7 @@ func (s *systemd) Run() (err error) {
 
 	runWait := func() {
 		var sigChan = make(chan os.Signal, 3)
+		//nolint
 		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		<-sigChan
 	}

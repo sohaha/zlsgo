@@ -72,7 +72,6 @@ func (e *Error) Stack() string {
 						break
 					}
 					buffer.WriteString(fmt.Sprintf("%d. %s\n", i, e.wrapErr.Error()))
-					i++
 					break
 				}
 			} else {

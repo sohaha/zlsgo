@@ -6,6 +6,10 @@ import (
 
 type SliceType []Type
 
+func (s SliceType) Len() int {
+	return len(s)
+}
+
 func (s SliceType) Index(i int) Type {
 	if len(s) <= i {
 		return Type{}

@@ -63,7 +63,7 @@ func BenchmarkFileMem6(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	WriteFile(name, f.Bytes())
+	_ = WriteFile(name, f.Bytes())
 }
 
 func BenchmarkFileReal8(b *testing.B) {

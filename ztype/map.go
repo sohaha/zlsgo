@@ -61,6 +61,15 @@ func (m Maps) Index(i int) Map {
 	return m[i]
 }
 
+func (m Maps) ForEach(fn func(i int, value Map) bool) {
+	for i := range m {
+		v := m[i]
+		if !fn(i, v) {
+			break
+		}
+	}
+}
+
 // MapKeyExists Whether the dictionary key exists
 func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	_, ok := m[key]

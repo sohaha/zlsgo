@@ -23,7 +23,9 @@ func TestFile(t *testing.T) {
 
 	tmpFile := RealPath("./tmp.tmp")
 	_ = WriteFile(tmpFile, []byte(""))
-	defer Remove(tmpFile)
+	defer func() {
+		_ = Remove(tmpFile)
+	}()
 
 	filePath := "./tmp.tmp"
 	tIsFile := FileExist(filePath)

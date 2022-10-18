@@ -94,13 +94,13 @@ func TestReflectStructField(t *testing.T) {
 func TestReflectForNumField(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	var test = &struct {
-		TestSt
-		*TestSt2
-		New       bool
 		UpdatedAt time.Time
-		Updated   uint8
-		T2p       *TestSt2
-		T2        TestSt2
+		*TestSt2
+		T2p *TestSt2
+		T2  TestSt2
+		TestSt
+		New     bool
+		Updated uint8
 	}{}
 	rv := reflect.ValueOf(test)
 	rv = rv.Elem()

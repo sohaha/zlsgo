@@ -29,6 +29,7 @@ func TestProvide(t *testing.T) {
 		t.Log("init time")
 		return time.Now()
 	})
+	t.Log(override)
 
 	// overwrite the previous time.Time, *testSt
 	override = di.Provide(func() (time.Time, *testSt) {

@@ -179,83 +179,81 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		}
 		req.Header.Add("User-Agent", ua)
 	}
-	if vs != nil {
-		for _, v := range vs {
-			switch vv := v.(type) {
-			case CustomReq:
-				vv(req)
-			case Header:
-				for key, value := range vv {
+	for _, v := range vs {
+		switch vv := v.(type) {
+		case CustomReq:
+			vv(req)
+		case Header:
+			for key, value := range vv {
+				req.Header.Add(key, value)
+			}
+		case http.Header:
+			for key, values := range vv {
+				for _, value := range values {
 					req.Header.Add(key, value)
 				}
-			case http.Header:
-				for key, values := range vv {
-					for _, value := range values {
-						req.Header.Add(key, value)
-					}
-				}
-			case *bodyJson:
-				fn, err := setBodyJson(req, resp, e.jsonEncOpts, vv.v)
-				if err != nil {
-					return nil, err
-				}
-				delayedFunc = append(delayedFunc, fn)
-			case *bodyXml:
-				fn, err := setBodyXml(req, resp, e.xmlEncOpts, vv.v)
-				if err != nil {
-					return nil, err
-				}
-				delayedFunc = append(delayedFunc, fn)
-			case url.Values:
-				p := param{vv}
-				if method == "GET" || method == "HEAD" {
-					queryParam.Copy(p)
-				} else {
-					formParam.Copy(p)
-				}
-			case Param:
-				if method == "GET" || method == "HEAD" {
-					queryParam.Adds(vv)
-				} else {
-					formParam.Adds(vv)
-				}
-			case QueryParam:
-				queryParam.Adds(vv)
-			case string:
-				setBodyBytes(req, resp, []byte(vv))
-			case []byte:
-				setBodyBytes(req, resp, vv)
-			case bytes.Buffer:
-				setBodyBytes(req, resp, vv.Bytes())
-			case *http.Client:
-				resp.client = vv
-			case FileUpload:
-				uploads = append(uploads, vv)
-			case []FileUpload:
-				uploads = append(uploads, vv...)
-			case map[string]*http.Cookie:
-				for i := range vv {
-					req.AddCookie(vv[i])
-				}
-			case *http.Cookie:
-				req.AddCookie(vv)
-			case Host:
-				req.Host = string(vv)
-			case io.Reader:
-				fn := setBodyReader(req, resp, vv)
-				lastFunc = append(lastFunc, fn)
-			case UploadProgress:
-				uploadProgress = vv
-			case DownloadProgress:
-				resp.downloadProgress = vv
-			case func(int64, int64):
-				progress = vv
-			case context.Context:
-				req = req.WithContext(vv)
-				resp.req = req
-			case error:
-				return resp, vv
 			}
+		case *bodyJson:
+			fn, err := setBodyJson(req, resp, e.jsonEncOpts, vv.v)
+			if err != nil {
+				return nil, err
+			}
+			delayedFunc = append(delayedFunc, fn)
+		case *bodyXml:
+			fn, err := setBodyXml(req, resp, e.xmlEncOpts, vv.v)
+			if err != nil {
+				return nil, err
+			}
+			delayedFunc = append(delayedFunc, fn)
+		case url.Values:
+			p := param{vv}
+			if method == "GET" || method == "HEAD" {
+				queryParam.Copy(p)
+			} else {
+				formParam.Copy(p)
+			}
+		case Param:
+			if method == "GET" || method == "HEAD" {
+				queryParam.Adds(vv)
+			} else {
+				formParam.Adds(vv)
+			}
+		case QueryParam:
+			queryParam.Adds(vv)
+		case string:
+			setBodyBytes(req, resp, []byte(vv))
+		case []byte:
+			setBodyBytes(req, resp, vv)
+		case bytes.Buffer:
+			setBodyBytes(req, resp, vv.Bytes())
+		case *http.Client:
+			resp.client = vv
+		case FileUpload:
+			uploads = append(uploads, vv)
+		case []FileUpload:
+			uploads = append(uploads, vv...)
+		case map[string]*http.Cookie:
+			for i := range vv {
+				req.AddCookie(vv[i])
+			}
+		case *http.Cookie:
+			req.AddCookie(vv)
+		case Host:
+			req.Host = string(vv)
+		case io.Reader:
+			fn := setBodyReader(req, resp, vv)
+			lastFunc = append(lastFunc, fn)
+		case UploadProgress:
+			uploadProgress = vv
+		case DownloadProgress:
+			resp.downloadProgress = vv
+		case func(int64, int64):
+			progress = vv
+		case context.Context:
+			req = req.WithContext(vv)
+			resp.req = req
+		case error:
+			return resp, vv
 		}
 	}
 

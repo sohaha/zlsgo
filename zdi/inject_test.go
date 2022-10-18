@@ -47,7 +47,7 @@ func TestInterfaceOf(t *testing.T) {
 	tt.NoError(err)
 	tt.Equal(ok, invoke[0].String())
 
-	invoke, err = di.Invoke(func(s Itest, t time.Time) string {
+	_, err = di.Invoke(func(s Itest, t time.Time) string {
 		tt.Equal(s.String(), "val")
 		tt.Equal(t.String(), val.String())
 		return ok

@@ -1,6 +1,7 @@
 package zutil
 
 import (
+	"fmt"
 	"strconv"
 	"sync/atomic"
 )
@@ -14,9 +15,17 @@ type (
 		_ Nocmp
 		v int32
 	}
+	Uint32 struct {
+		_ Nocmp
+		v uint32
+	}
 	Int64 struct {
 		_ Nocmp
 		v int64
+	}
+	Uintptr struct {
+		_ Nocmp
+		v uintptr
 	}
 )
 
@@ -98,6 +107,41 @@ func (i32 *Int32) String() string {
 	return strconv.FormatInt(int64(v), 10)
 }
 
+func NewUint32(i uint32) *Uint32 {
+	return &Uint32{
+		v: i,
+	}
+}
+
+func (ui32 *Uint32) Add(i uint32) uint32 {
+	return atomic.AddUint32(&ui32.v, i)
+}
+
+func (ui32 *Uint32) Sub(i uint32) uint32 {
+	return atomic.AddUint32(&ui32.v, -i)
+}
+
+func (ui32 *Uint32) Swap(i uint32) uint32 {
+	return atomic.SwapUint32(&ui32.v, i)
+}
+
+func (ui32 *Uint32) Load() uint32 {
+	return atomic.LoadUint32(&ui32.v)
+}
+
+func (ui32 *Uint32) Store(i uint32) {
+	atomic.StoreUint32(&ui32.v, i)
+}
+
+func (i32 *Uint32) CAS(old, new uint32) bool {
+	return atomic.CompareAndSwapUint32(&i32.v, old, new)
+}
+
+func (ui32 *Uint32) String() string {
+	v := ui32.Load()
+	return strconv.FormatInt(int64(v), 10)
+}
+
 func NewInt64(i int64) *Int64 {
 	return &Int64{
 		v: i,
@@ -131,4 +175,39 @@ func (i64 *Int64) CAS(old, new int64) bool {
 func (i64 *Int64) String() string {
 	v := i64.Load()
 	return strconv.FormatInt(v, 10)
+}
+
+func NewUintptr(i uintptr) *Uintptr {
+	return &Uintptr{
+		v: i,
+	}
+}
+
+func (ptr *Uintptr) Add(i uintptr) uintptr {
+	return atomic.AddUintptr(&ptr.v, i)
+}
+
+func (ptr *Uintptr) Sub(i uintptr) uintptr {
+	return atomic.AddUintptr(&ptr.v, -i)
+}
+
+func (ptr *Uintptr) Swap(i uintptr) uintptr {
+	return atomic.SwapUintptr(&ptr.v, i)
+}
+
+func (ptr *Uintptr) Load() uintptr {
+	return atomic.LoadUintptr(&ptr.v)
+}
+
+func (ptr *Uintptr) Store(i uintptr) {
+	atomic.StoreUintptr(&ptr.v, i)
+}
+
+func (ptr *Uintptr) CAS(old, new uintptr) bool {
+	return atomic.CompareAndSwapUintptr(&ptr.v, old, new)
+}
+
+func (ptr *Uintptr) String() string {
+	v := ptr.Load()
+	return fmt.Sprintf("%+v", v)
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zarray"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 var l = []int{0, 1, 2, 3, 4, 5}
@@ -25,4 +26,13 @@ func TestFilter(t *testing.T) {
 		return item%2 == 0
 	})
 	tt.Equal([]int{0, 2, 4}, nl)
+}
+
+func TestMap(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	s := []int{1, 2, 3}
+	nl := zarray.Map(s, func(i int, v int) string {
+		return ztype.ToString(v) + "//"
+	})
+	tt.Equal([]string{"1//", "2//", "3//"}, nl)
 }

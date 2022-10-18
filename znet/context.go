@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/sohaha/zlsgo/zdi"
@@ -119,7 +120,9 @@ func (c *Context) write() {
 		code = http.StatusOK
 		data.Code.Store(int32(code))
 	}
-	if len(data.Content) > 0 {
+	size := len(data.Content)
+	if size > 0 {
+		c.Writer.Header().Set("Content-Length", strconv.Itoa(size))
 		c.Writer.WriteHeader(code)
 		_, err := c.Writer.Write(data.Content)
 		if err != nil {

@@ -19,7 +19,7 @@ func New(waitingTime time.Duration, custom ...znet.HandlerFunc) znet.HandlerFunc
 		}()
 		for {
 			select {
-			case _, _ = <-done:
+			case <-done:
 				return
 			case <-ctx.Done():
 				if len(custom) > 0 {

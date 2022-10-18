@@ -17,7 +17,7 @@ type Array struct {
 var ErrIllegalIndex = errors.New("illegal index")
 
 // New array initialization memory
-func New(capacity ...int) (array *Array) {
+func NewArray(capacity ...int) (array *Array) {
 	c := 5
 	if len(capacity) >= 1 && capacity[0] != 0 {
 		c = capacity[0]
@@ -29,12 +29,17 @@ func New(capacity ...int) (array *Array) {
 	}
 }
 
+// Deprecated: please use NewArray
+func New(capacity ...int) (array *Array) {
+	return NewArray(capacity...)
+}
+
 // Copy an array
-func Copy(arr interface{}) (array *Array, err error) {
+func CopyArray(arr interface{}) (array *Array, err error) {
 	data, ok := arr.([]interface{})
 	if ok {
 		l := len(data)
-		array = New(l)
+		array = NewArray(l)
 		for i := 0; i < l; i++ {
 			array.Push(data[i])
 		}
@@ -42,6 +47,11 @@ func Copy(arr interface{}) (array *Array, err error) {
 		err = errors.New("type of error")
 	}
 	return
+}
+
+// Deprecated: please use CopyArray
+func Copy(arr interface{}) (array *Array, err error) {
+	return CopyArray(arr)
 }
 
 // determine whether the index is out of bounds

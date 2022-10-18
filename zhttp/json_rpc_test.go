@@ -46,6 +46,7 @@ func TestNewJSONRPC(t *testing.T) {
 		"id":     1,
 	}))
 	t.Log(err)
+	t.Log(res)
 
 	_ = client.Close()
 }
