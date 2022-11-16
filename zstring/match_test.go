@@ -11,6 +11,7 @@ var (
 	z = "hello 中华小当家"
 	s = "hello pickup"
 	h = "hello kiki"
+	u = "/api/hello/kiki/k999"
 )
 
 func TestMatch(T *testing.T) {
@@ -34,6 +35,39 @@ func TestMatch(T *testing.T) {
 
 	t.EqualExit(true, Match(z, "*当家"))
 	t.EqualExit(false, Match(z, "h?o*当家"))
+	t.EqualExit(false, Match(z, "h*{大}当家"))
+	t.EqualExit(false, Match(z, "h*大当家"))
+	t.EqualExit(true, Match(z, "h*{小}当家"))
+	t.EqualExit(true, Match(z, "h*小当家"))
+	t.EqualExit(true, Match(z, "h*{小,大}当家"))
+	t.EqualExit(false, Match(z, "h*{中,大}当家"))
+	t.EqualExit(true, Match(z, "h*{小当家,大当家}"))
+	t.EqualExit(false, Match(z, "h*{不当家,大当家}"))
+	t.EqualExit(true, Match(z, "hell{o 中华小当,大当}家"))
+	t.EqualExit(true, Match(z, "h{ll,ello} 中华小当家"))
+	t.EqualExit(false, Match(z, "h{ll,ell} 中华小当家"))
+
+	t.EqualExit(true, Match("超级马里{奥", "超级马里{奥"))
+	t.EqualExit(false, Match("超级马里奥{", "超级马里{奥"))
+	t.EqualExit(true, Match("超级马里奥{}", "超级马里奥{}"))
+	t.EqualExit(true, Match("超级马里奥{1,2.3}!", "超级马里奥{1,2.3}!"))
+
+	t.EqualExit(true, Match(u, "/api/hello/kiki/k999"))
+	t.EqualExit(false, Match("/api/hi2/kiki/k999", "/api/{hello,hi}/kiki/k999"))
+	t.EqualExit(true, Match("/api/hi/kiki/k999", "/api/{hello,hi}/kiki/k999"))
+	t.EqualExit(true, Match(u, "/api/{hello,hi}/kiki/k999"))
+	t.EqualExit(true, Match(u, "/api/*/kiki/*"))
+	t.EqualExit(false, Match("/api/kiki/k999", "/api/*/kiki/*"))
+	t.EqualExit(false, Match("/api/kiki/", "/api/*/kiki/*"))
+	t.EqualExit(true, Match(u, "/api/*"))
+	t.EqualExit(true, Match(u, "/api/**"))
+	t.EqualExit(true, Match(u, "/api/*/*/k999"))
+	t.EqualExit(true, Match(u, "/api/*/k999"))
+	t.EqualExit(true, Match(u, "/api*k999"))
+	t.EqualExit(true, Match(u, "/a*9"))
+	t.EqualExit(false, Match(u, "a*9"))
+	t.EqualExit(false, Match(u, "/a*8"))
+	t.EqualExit(true, Match(u, "/api/hello/kiki/{k999,k1}"))
 }
 
 func TestIsPattern(T *testing.T) {

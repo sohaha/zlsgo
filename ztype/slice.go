@@ -25,6 +25,22 @@ func (s SliceType) Value() []interface{} {
 	return ss
 }
 
+func (s SliceType) String() []string {
+	ss := make([]string, 0, len(s))
+	for _, val := range s {
+		ss = append(ss, val.String())
+	}
+	return ss
+}
+
+func (s SliceType) Int() []int {
+	ss := make([]int, 0, len(s))
+	for _, val := range s {
+		ss = append(ss, val.Int())
+	}
+	return ss
+}
+
 // Deprecated: please use ToSlice
 func Slice(value interface{}) SliceType {
 	return ToSlice(value)

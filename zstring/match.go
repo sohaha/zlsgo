@@ -1,6 +1,9 @@
 package zstring
 
-import "unicode/utf8"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 func Match(str, pattern string) bool {
 	if pattern == "*" {
@@ -10,6 +13,7 @@ func Match(str, pattern string) bool {
 }
 
 func deepMatch(str, pattern string) bool {
+	// label:
 	for len(pattern) > 0 {
 		if pattern[0] > 0x7f {
 			return deepMatchRune(str, pattern)
@@ -22,7 +26,26 @@ func deepMatch(str, pattern string) bool {
 			if str[0] > 0x7f {
 				return deepMatchRune(str, pattern)
 			}
+
 			if str[0] != pattern[0] {
+				return false
+			}
+		case '{':
+			i, l := 1, len(pattern)
+			for ; i < l; i++ {
+				if pattern[i] == '}' {
+					break
+				}
+			}
+			if i > 2 {
+				for _, p := range strings.Split(pattern[1:i], ",") {
+					if len(pattern) > i {
+						p = p + pattern[i+1:]
+					}
+					if deepMatch(str, p) {
+						return true
+					}
+				}
 				return false
 			}
 		case '?':
@@ -39,35 +62,26 @@ func deepMatch(str, pattern string) bool {
 	return len(str) == 0 && len(pattern) == 0
 }
 
+func x7f(str string) (r rune, p int) {
+	if len(str) <= 0 {
+		return utf8.RuneError, 0
+	}
+	var s uint8 = str[0]
+	if s > 0x7f {
+		r, p = utf8.DecodeRuneInString(str)
+	} else {
+		r, p = rune(s), 1
+	}
+	return
+}
+
 func deepMatchRune(str, pattern string) bool {
 	var sr, pr rune
 	var srsz, prsz int
 
-	x7f := func(isStr bool) (r rune, p int) {
-		var s uint8
-		if isStr {
-			s = str[0]
-		} else {
-			s = pattern[0]
-		}
-		if str[0] > 0x7f {
-			r, p = utf8.DecodeRuneInString(str)
-		} else {
-			r, p = rune(s), 1
-		}
-		return
-	}
+	sr, srsz = x7f(str)
+	pr, prsz = x7f(pattern)
 
-	if len(str) > 0 {
-		sr, srsz = x7f(true)
-	} else {
-		sr, srsz = utf8.RuneError, 0
-	}
-	if len(pattern) > 0 {
-		pr, prsz = x7f(false)
-	} else {
-		pr, prsz = utf8.RuneError, 0
-	}
 	for pr != utf8.RuneError {
 		switch pr {
 		default:
@@ -85,18 +99,12 @@ func deepMatchRune(str, pattern string) bool {
 			return deepMatchRune(str, pattern[prsz:]) ||
 				(srsz > 0 && deepMatchRune(str[srsz:], pattern))
 		}
-		str = str[srsz:]
+
 		pattern = pattern[prsz:]
-		if len(str) > 0 {
-			sr, srsz = x7f(true)
-		} else {
-			sr, srsz = utf8.RuneError, 0
-		}
-		if len(pattern) > 0 {
-			pr, prsz = x7f(false)
-		} else {
-			pr, prsz = utf8.RuneError, 0
-		}
+		str = str[srsz:]
+
+		sr, srsz = x7f(str)
+		pr, prsz = x7f(pattern)
 	}
 
 	return srsz == 0 && prsz == 0
