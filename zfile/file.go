@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -204,4 +206,13 @@ func pathAddSlash(path string, addSlash ...bool) string {
 		path += "/"
 	}
 	return path
+}
+
+// GetMimeType get file mime type
+func GetMimeType(filename string, content []byte) string {
+	ctype := mime.TypeByExtension(filepath.Ext(filename))
+	if ctype == "" && len(content) > 0 {
+		ctype = http.DetectContentType(content)
+	}
+	return ctype
 }

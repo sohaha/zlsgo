@@ -102,3 +102,19 @@ func TestPut(t *testing.T) {
 	err = PutOffset("./text.txt", []byte("\n(ok)\n"), 5)
 	tt.EqualNil(err)
 }
+
+func TestGetMimeType(t *testing.T) {
+	tt := NewTest(t)
+
+	m := GetMimeType("test.jpg", nil)
+	tt.Log(m)
+	tt.Equal("image/jpeg", m)
+
+	m = GetMimeType("test.html", nil)
+	tt.Log(m)
+	tt.Equal("text/html", strings.Split(m, ";")[0])
+
+	m = GetMimeType("test", []byte("<html></html>"))
+	tt.Log(m)
+	tt.Equal("text/html", strings.Split(m, ";")[0])
+}
