@@ -78,7 +78,7 @@ func TestHashMapSwap(t *testing.T) {
 	tt.EqualTrue(!m.CAS(1, 100, 200))
 	tt.EqualTrue(m.CAS(1, 200, 100))
 	tt.EqualTrue(m.CAS(1, 100, 200))
-	tt.EqualTrue(m.CAS(1, 100, 200))
+	tt.EqualTrue(!m.CAS(1, 100, 200))
 }
 
 func TestHashMapProvideGet(t *testing.T) {
