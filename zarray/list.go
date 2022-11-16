@@ -10,7 +10,10 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-const marked = ^uintptr(0)
+const (
+	notDeleted uint32 = iota
+	deleted
+)
 
 type atomicPointer[T any] struct {
 	_   zutil.Nocmp
@@ -25,7 +28,7 @@ func (p *atomicPointer[T]) CompareAndSwap(old, new *T) bool {
 }
 
 func newListHead[K hashable, V any]() *element[K, V] {
-	e := &element[K, V]{keyHash: marked, key: *new(K)}
+	e := &element[K, V]{keyHash: 0, key: *new(K)}
 	e.nextPtr.Store(nil)
 	e.value.Store(new(V))
 	return e
@@ -36,13 +39,11 @@ type element[K hashable, V any] struct {
 	nextPtr atomicPointer[element[K, V]]
 	value   atomicPointer[V]
 	keyHash uintptr
+	deleted uint32
 }
 
 func (self *element[K, V]) next() *element[K, V] {
 	for nextElement := self.nextPtr.Load(); nextElement != nil; {
-		if nextElement.keyHash == marked {
-			return nextElement.next()
-		}
 		if nextElement.isDeleted() {
 			self.nextPtr.CompareAndSwap(nextElement, nextElement.next())
 			nextElement = self.nextPtr.Load()
@@ -90,14 +91,12 @@ func (self *element[K, V]) search(c uintptr, key K) (*element[K, V], *element[K,
 			return left, curr, right
 		}
 		right = curr.next()
-		if curr.keyHash != marked {
-			if c < curr.keyHash {
-				right = curr
-				curr = nil
-				return left, curr, right
-			} else if c == curr.keyHash && key == curr.key {
-				return left, curr, right
-			}
+		if c < curr.keyHash {
+			right = curr
+			curr = nil
+			return left, curr, right
+		} else if c == curr.keyHash && key == curr.key {
+			return left, curr, right
 		}
 		left = curr
 		curr = left.next()
@@ -105,15 +104,10 @@ func (self *element[K, V]) search(c uintptr, key K) (*element[K, V], *element[K,
 	}
 }
 
-func (self *element[K, V]) remove() {
-	deletionNode := &element[K, V]{keyHash: marked}
-	for !self.isDeleted() && !self.addBefore(deletionNode, self.next()) {
-	}
+func (self *element[K, V]) remove() bool {
+	return atomic.CompareAndSwapUint32(&self.deleted, notDeleted, deleted)
 }
 
 func (self *element[K, V]) isDeleted() bool {
-	if next := self.nextPtr.Load(); next != nil {
-		return next.keyHash == marked
-	}
-	return false
+	return atomic.LoadUint32(&self.deleted) == deleted
 }

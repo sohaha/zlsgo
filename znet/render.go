@@ -50,7 +50,7 @@ type (
 	// ApiData unified return api format
 	ApiData struct {
 		Data interface{} `json:"data"`
-		Msg  string      `json:"msg"`
+		Msg  string      `json:"msg,omitempty"`
 		Code int32       `json:"code" example:"200"`
 	}
 	// Data map string
@@ -83,7 +83,7 @@ func (c *Context) renderProcessing(code int32, r render) {
 
 func (r *renderByte) Content(c *Context) []byte {
 	if !c.hasContentType() {
-		c.SetContentType(zutil.IfVal(r.Type != "", r.Type, ContentTypePlain).(string))
+		c.SetContentType(ContentTypePlain)
 	}
 	return r.Data
 }
@@ -92,7 +92,9 @@ func (r *renderString) Content(c *Context) []byte {
 	if r.ContentDate != nil {
 		return r.ContentDate
 	}
-	c.SetContentType(ContentTypePlain)
+	if !c.hasContentType() {
+		c.SetContentType(ContentTypePlain)
+	}
 	if len(r.Data) > 0 {
 		r.ContentDate = zstring.String2Bytes(fmt.Sprintf(r.Format, r.Data...))
 	} else {

@@ -149,7 +149,7 @@ var (
 	}
 )
 
-func (m *StMap[K, V]) setDefaultHasher() {
+func (m *Maper[K, V]) setDefaultHasher() {
 	switch any(*new(K)).(type) {
 	case string:
 		m.hasher = func(key K) uintptr {

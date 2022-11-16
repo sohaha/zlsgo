@@ -503,8 +503,8 @@ func (e *Engine) Match(requestURL string, path string) bool {
 }
 
 // matchAndParse checks if the request matches the route path and returns a map of the parsed
-func (e *Engine) matchAndParse(requestURL string, path string) (matchParams ParamsMapType, bl bool) {
-	bl = true
+func (e *Engine) matchAndParse(requestURL string, path string) (matchParams ParamsMapType, ok bool) {
+	ok = true
 	matchParams = make(ParamsMapType)
 	res := strings.Split(path, "/")
 	pattern, matchName := parsPattern(res, "/")

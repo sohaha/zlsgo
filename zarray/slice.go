@@ -9,7 +9,7 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-// Rand A random elements
+// Rand A random eents
 func Rand[T any](collection []T) T {
 	l := len(collection)
 	if l == 0 {
@@ -22,13 +22,13 @@ func Rand[T any](collection []T) T {
 
 // Map manipulates a slice and transforms it to a slice of another type
 func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
-	result := make([]R, len(collection))
+	res := make([]R, len(collection))
 
 	for i, item := range collection {
-		result[i] = iteratee(i, item)
+		res[i] = iteratee(i, item)
 	}
 
-	return result
+	return res
 }
 
 // Shuffle creates a slice of shuffled values
@@ -43,7 +43,7 @@ func Shuffle[T any](collection []T) []T {
 	return n
 }
 
-// Filter iterates over elements of collection
+// Filter iterates over eents of collection
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	l := len(slice)
 	res := make([]T, 0, l)
@@ -56,13 +56,71 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	return res
 }
 
-// Contains returns true if an element is present in a collection
-func Contains[T comparable](collection []T, element T) bool {
+// Contains returns true if an eent is present in a collection
+func Contains[T comparable](collection []T, eent T) bool {
 	for _, item := range collection {
-		if item == element {
+		if item == eent {
 			return true
 		}
 	}
 
 	return false
+}
+
+// Find search an eent in a slice based on a predicate. It returns eent and true if eent was found.
+func Find[T any](collection []T, predicate func(index int, item T) bool) (T, bool) {
+	for i := range collection {
+		item := collection[i]
+		if predicate(i, item) {
+			return item, true
+		}
+	}
+
+	var res T
+	return res, false
+}
+
+// Unique returns a duplicate-free version of an array
+func Unique[T comparable](collection []T) []T {
+	res := make([]T, 0, len(collection))
+	repeat := make(map[T]struct{}, len(collection))
+
+	for _, item := range collection {
+		if _, ok := repeat[item]; ok {
+			continue
+		}
+
+		repeat[item] = struct{}{}
+		res = append(res, item)
+	}
+
+	return res
+}
+
+func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
+	l, r := []T{}, []T{}
+
+	rl, rr := map[T]struct{}{}, map[T]struct{}{}
+
+	for _, e := range list1 {
+		rl[e] = struct{}{}
+	}
+
+	for _, e := range list2 {
+		rr[e] = struct{}{}
+	}
+
+	for _, e := range list1 {
+		if _, ok := rr[e]; !ok {
+			l = append(l, e)
+		}
+	}
+
+	for _, e := range list2 {
+		if _, ok := rl[e]; !ok {
+			r = append(r, e)
+		}
+	}
+
+	return l, r
 }

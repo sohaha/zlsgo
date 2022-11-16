@@ -89,6 +89,7 @@ func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {
 		nodes = append(nodes, node)
 		return
 	}
+
 	res := strings.Split(pattern, "/")
 	for i := range res {
 		key := res[i]

@@ -11,6 +11,10 @@ func Now(format ...string) string {
 	return newZtime.FormatTime(time.Now(), format...)
 }
 
+func Time() time.Time {
+	return In(time.Now())
+}
+
 // SetTimeZone SetTimeZone
 func SetTimeZone(zone int) *TimeEngine {
 	return newZtime.SetTimeZone(zone)

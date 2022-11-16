@@ -4,7 +4,6 @@
 package zarray
 
 import (
-	"errors"
 	"reflect"
 	"sort"
 	"strconv"
@@ -17,7 +16,7 @@ import (
 
 const (
 	// defaultSize is the default size for a zero allocated map
-	defaultSize = 256
+	defaultSize = 8
 
 	// maxFillRate is the maximum fill rate for the slice before a resize will happen
 	maxFillRate = 50
@@ -45,7 +44,7 @@ type (
 	}
 
 	// Map implements the concurrent hashmap
-	StMap[K hashable, V any] struct {
+	Maper[K hashable, V any] struct {
 		g        singleflight.Group
 		listHead *element[K, V]
 		hasher   func(K) uintptr
@@ -60,8 +59,8 @@ type (
 	}
 )
 
-func NewHashMap[K hashable, V any](size ...uintptr) *StMap[K, V] {
-	m := &StMap[K, V]{
+func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
+	m := &Maper[K, V]{
 		listHead: newListHead[K, V](),
 		resizing: zutil.NewUint32(0),
 		numItems: zutil.NewUintptr(0),
@@ -76,86 +75,128 @@ func NewHashMap[K hashable, V any](size ...uintptr) *StMap[K, V] {
 	return m
 }
 
-func (m *StMap[K, V]) Delele(keys ...K) {
-	if len(keys) == 0 {
+func (m *Maper[K, V]) Delele(keys ...K) {
+	size := len(keys)
+	switch {
+	case size == 0:
 		return
-	}
-	var (
-		size = len(keys)
-		delQ = make([]deletionRequest[K], size)
-		elem = m.listHead.next()
-		iter = 0
-	)
-	for idx := 0; idx < size; idx++ {
-		delQ[idx].keyHash, delQ[idx].key = m.hasher(keys[idx]), keys[idx]
-	}
-
-	sort.Slice(delQ, func(i, j int) bool {
-		return delQ[i].keyHash < delQ[j].keyHash
-	})
-
-	for elem != nil && iter < size {
-		if elem.keyHash == delQ[iter].keyHash && elem.key == delQ[iter].key {
-			elem.remove()
-			m.removeItemFromIndex(elem)
-			iter++
-			elem = elem.next()
-		} else if elem.keyHash > delQ[iter].keyHash {
-			iter++
-		} else {
-			elem = elem.next()
+	case size == 1:
+		var (
+			h        = m.hasher(keys[0])
+			existing = m.metadata.Load().indexElement(h)
+		)
+		if existing == nil || existing.keyHash > h {
+			existing = m.listHead.next()
 		}
-	}
+		for ; existing != nil && existing.keyHash <= h; existing = existing.next() {
+			if existing.key == keys[0] {
+				if existing.remove() {
+					m.removeItemFromIndex(existing)
+				}
+				return
+			}
+		}
+	default:
+		var (
+			delQ = make([]deletionRequest[K], size)
+			iter = 0
+		)
+		for idx := 0; idx < size; idx++ {
+			delQ[idx].keyHash, delQ[idx].key = m.hasher(keys[idx]), keys[idx]
+		}
 
-	for iter := m.listHead; iter != nil; iter = iter.next() {
+		sort.Slice(delQ, func(i, j int) bool {
+			return delQ[i].keyHash < delQ[j].keyHash
+		})
+
+		elem := m.metadata.Load().indexElement(delQ[0].keyHash)
+
+		if elem == nil || elem.keyHash > delQ[0].keyHash {
+			elem = m.listHead.next()
+		}
+
+		for elem != nil && iter < size {
+			if elem.keyHash == delQ[iter].keyHash && elem.key == delQ[iter].key {
+				if elem.remove() {
+					m.removeItemFromIndex(elem)
+				}
+				iter++
+				elem = elem.next()
+			} else if elem.keyHash > delQ[iter].keyHash {
+				iter++
+			} else {
+				elem = elem.next()
+			}
+		}
 	}
 }
 
-func (m *StMap[K, V]) get(key K) (h uintptr, value V, ok bool) {
-	h = m.hasher(key)
-	for elem := m.metadata.Load().indexElement(h); elem != nil; elem = elem.nextPtr.Load() {
-		if elem.keyHash == h && elem.key == key {
-			value, ok = *elem.value.Load(), true
+func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
+	h := m.hasher(key)
+	for elem := m.metadata.Load().indexElement(h); elem != nil && elem.keyHash <= h; elem = elem.nextPtr.Load() {
+		if elem.key == key {
+			ok = !elem.isDeleted()
+			if ok {
+				value = *elem.value.Load()
+			}
+
 			return
-		}
-		if elem.keyHash <= h || elem.keyHash == marked {
-			continue
-		} else {
-			break
 		}
 	}
 	ok = false
 	return
 }
 
-func (m *StMap[K, V]) Get(key K) (value V, ok bool) {
-	_, value, ok = m.get(key)
-	return
-}
+func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loaded bool) {
+	var (
+		h        = m.hasher(key)
+		data     = m.metadata.Load()
+		existing = data.indexElement(h)
+	)
 
-func (m *StMap[K, V]) ProvideGet(key K, provide func(K) (V, bool)) (value V, ok bool) {
-	var h uintptr
-	h, value, ok = m.get(key)
-	if !ok {
-		v, err, _ := m.g.Do(strconv.Itoa(int(h)), func() (interface{}, error) {
-			value, ok := provide(key)
-			if !ok {
-				return nil, errors.New("key not found")
+	for elem := existing; elem != nil && elem.keyHash <= h; elem = elem.nextPtr.Load() {
+		if elem.key == key {
+			loaded = !elem.isDeleted()
+			if loaded {
+				actual = *elem.value.Load()
+				return
 			}
-
-			m.Set(key, value)
-			return value, nil
-		})
-
-		if err == nil {
-			ok = true
-			value = v.(V)
 		}
+	}
+
+	actual, loaded = provide()
+	if !loaded {
+		return
+	}
+
+	var (
+		alloc   *element[K, V]
+		created = false
+		valPtr  = &actual
+	)
+	if existing == nil || existing.keyHash > h {
+		existing = m.listHead
+	}
+	if alloc, created = existing.inject(h, key, valPtr); alloc != nil {
+		if created {
+			m.numItems.Add(1)
+		}
+	} else {
+		for existing = m.listHead; alloc == nil; alloc, created = existing.inject(h, key, valPtr) {
+		}
+		if created {
+			m.numItems.Add(1)
+		}
+	}
+
+	count := data.addItemToIndex(alloc)
+	if resizeNeeded(uintptr(len(data.index)), count) && m.resizing.CAS(notResizing, resizingInProgress) {
+		m.grow(0)
 	}
 	return
 }
 
-func (m *StMap[K, V]) Set(key K, value V) {
+func (m *Maper[K, V]) Set(key K, value V) {
 	var (
 		created  bool
 		h        = m.hasher(key)
@@ -186,40 +227,74 @@ func (m *StMap[K, V]) Set(key K, value V) {
 	}
 }
 
-func (m *StMap[K, V]) ForEach(lambda func(K, V) bool) {
+func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
+	var (
+		h        = m.hasher(key)
+		existing = m.metadata.Load().indexElement(h)
+	)
+	if existing == nil || existing.keyHash > h {
+		existing = m.listHead
+	}
+	if _, current, _ := existing.search(h, key); current != nil {
+		oldValue, swapped = *current.value.Swap(&newValue), true
+	} else {
+		swapped = false
+	}
+	return
+}
+
+func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
+	var (
+		h        = m.hasher(key)
+		existing = m.metadata.Load().indexElement(h)
+	)
+	if existing == nil || existing.keyHash > h {
+		existing = m.listHead
+	}
+	if _, current, _ := existing.search(h, key); current != nil {
+		if oldPtr := current.value.Load(); reflect.DeepEqual(*oldPtr, oldValue) {
+			return current.value.CompareAndSwap(oldPtr, &newValue)
+		}
+	}
+	return false
+}
+
+func (m *Maper[K, V]) ForEach(lambda func(K, V) bool) {
 	for item := m.listHead.next(); item != nil && lambda(item.key, *item.value.Load()); item = item.next() {
 	}
 }
 
-func (m *StMap[K, V]) Grow(newSize uintptr) {
+func (m *Maper[K, V]) Grow(newSize uintptr) {
 	if m.resizing.CAS(notResizing, resizingInProgress) {
 		m.grow(newSize)
 	}
 }
 
-func (m *StMap[K, V]) SetHasher(hs func(K) uintptr) {
+func (m *Maper[K, V]) SetHasher(hs func(K) uintptr) {
 	m.hasher = hs
 }
 
-func (m *StMap[K, V]) Len() uintptr {
+func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
 }
 
-func (m *StMap[K, V]) Fillrate() uintptr {
+func (m *Maper[K, V]) Fillrate() uintptr {
 	data := m.metadata.Load()
 	return (data.count.Load() * 100) / uintptr(len(data.index))
 }
 
-func (m *StMap[K, V]) allocate(newSize uintptr) {
+func (m *Maper[K, V]) allocate(newSize uintptr) {
 	if m.resizing.CAS(notResizing, resizingInProgress) {
 		m.grow(newSize)
 	}
 }
 
-func (m *StMap[K, V]) fillIndexItems(mapData *metadata[K, V]) {
-	first := m.listHead
-	item := first
-	lastIndex := uintptr(0)
+func (m *Maper[K, V]) fillIndexItems(mapData *metadata[K, V]) {
+	var (
+		first     = m.listHead.next()
+		item      = first
+		lastIndex = uintptr(0)
+	)
 	for item != nil {
 		index := item.keyHash >> mapData.keyshifts
 		if item == first || index != lastIndex {
@@ -230,7 +305,7 @@ func (m *StMap[K, V]) fillIndexItems(mapData *metadata[K, V]) {
 	}
 }
 
-func (m *StMap[K, V]) removeItemFromIndex(item *element[K, V]) {
+func (m *Maper[K, V]) removeItemFromIndex(item *element[K, V]) {
 	for {
 		data := m.metadata.Load()
 		index := item.keyHash >> data.keyshifts
@@ -243,13 +318,13 @@ func (m *StMap[K, V]) removeItemFromIndex(item *element[K, V]) {
 		atomic.CompareAndSwapPointer(ptr, unsafe.Pointer(item), unsafe.Pointer(next))
 
 		if data == m.metadata.Load() {
-			m.numItems.Add(marked)
+			m.numItems.Add(^uintptr(0))
 			return
 		}
 	}
 }
 
-func (m *StMap[K, V]) grow(newSize uintptr) {
+func (m *Maper[K, V]) grow(newSize uintptr) {
 	for {
 		currentStore := m.metadata.Load()
 		if newSize == 0 {

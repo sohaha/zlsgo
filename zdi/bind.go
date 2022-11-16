@@ -6,13 +6,6 @@ import (
 	"reflect"
 )
 
-type (
-	Construct interface {
-		Apply(Pointer) error
-		Resolve(...Pointer) error
-	}
-)
-
 func (inj *injector) Resolve(v ...Pointer) error {
 	for _, p := range v {
 		r := reflect.ValueOf(p)

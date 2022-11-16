@@ -32,13 +32,12 @@ func TestHashMap(t *testing.T) {
 	tt.EqualTrue(!ok)
 	tt.Equal("", item)
 
-	m.Delele(2)
+	m.Delele(2, 9)
 
-	tt.Equal(2, int(m.Len()))
+	tt.Equal(1, int(m.Len()))
 
 	item, ok = m.Get(2)
 	tt.EqualTrue(!ok)
-	tt.Equal("", item)
 
 	m.ForEach(func(key int, value string) bool {
 		t.Log(key, value)
@@ -63,15 +62,36 @@ func TestHashMapOverwrite(t *testing.T) {
 	tt.Equal(name2, item)
 }
 
+func TestHashMapSwap(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	m := zarray.NewHashMap[int, int]()
+	m.Set(1, 100)
+
+	oldValue, swapped := m.Swap(1, 200)
+	t.Log(oldValue, swapped)
+	tt.EqualTrue(swapped)
+	tt.Equal(100, oldValue)
+
+	oldValue, swapped = m.Swap(1, 200)
+	t.Log(oldValue, swapped)
+
+	tt.EqualTrue(!m.CAS(1, 100, 200))
+	tt.EqualTrue(m.CAS(1, 200, 100))
+	tt.EqualTrue(m.CAS(1, 100, 200))
+	tt.EqualTrue(m.CAS(1, 100, 200))
+}
+
 func TestHashMapProvideGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	m := zarray.NewHashMap[int, int]()
 
 	var wg sync.WaitGroup
+
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go func(i int) {
-			v, ok := m.ProvideGet(1, func(i int) (int, bool) {
+			v, ok := m.ProvideGet(1, func() (int, bool) {
+				t.Log("set", 99)
 				return 99, true
 			})
 			tt.EqualTrue(ok)
@@ -82,5 +102,28 @@ func TestHashMapProvideGet(t *testing.T) {
 
 	wg.Wait()
 
-	tt.Log(m.Get(1))
+	v, ok := m.Get(1)
+	tt.EqualTrue(ok)
+	tt.Equal(99, v)
+
+	m.Delele(1)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			v, ok := m.ProvideGet(1, func() (int, bool) {
+				t.Log("new set", 100)
+				return 100, true
+			})
+			tt.EqualTrue(ok)
+			tt.Equal(100, v)
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+
+	v, ok = m.Get(1)
+	tt.EqualTrue(ok)
+	tt.Equal(100, v)
 }

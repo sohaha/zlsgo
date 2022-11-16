@@ -45,6 +45,21 @@ func handlerFunc(h Handler) (fn handlerFn) {
 			v(c)
 			return nil
 		}
+	case func(*Context) (interface{}, error):
+		return func(c *Context) error {
+			res, err := v(c)
+			if err != nil {
+				return err
+			}
+			if res == nil {
+				res = struct{}{}
+			}
+			data := ApiData{
+				Data: res,
+			}
+			c.JSON(200, data)
+			return nil
+		}
 	case handlerFn:
 		return v
 	case zdi.PreInvoker:

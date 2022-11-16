@@ -36,3 +36,14 @@ func TestMap(t *testing.T) {
 	})
 	tt.Equal([]string{"1//", "2//", "3//"}, nl)
 }
+
+func TestDiff(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	s1 := []int{1, 2, 3}
+	s2 := []int{5, 6, 3}
+
+	n1, n2 := zarray.Diff(s1, s2)
+
+	tt.Equal([]int{1, 2}, n1)
+	tt.Equal([]int{5, 6}, n2)
+}

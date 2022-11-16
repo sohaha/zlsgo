@@ -59,7 +59,11 @@ func (e *Error) Stack() string {
 		e, ok := loop.(*Error)
 		if ok {
 			if e.stack != nil {
-				buffer.WriteString(fmt.Sprintf("%d. %-v\n", i, loop))
+				if e.err != nil {
+					buffer.WriteString(fmt.Sprintf("%d. %-v\n", i, e.err))
+				} else {
+					buffer.WriteString(fmt.Sprintf("%d. %-v\n", i, e))
+				}
 				i++
 				formatSubStack(e.stack, buffer)
 			}
@@ -71,7 +75,7 @@ func (e *Error) Stack() string {
 					if loop == nil {
 						break
 					}
-					buffer.WriteString(fmt.Sprintf("%d. %s\n", i, e.wrapErr.Error()))
+					buffer.WriteString(fmt.Sprintf("%d. %s\n", i, loop.Error()))
 					break
 				}
 			} else {

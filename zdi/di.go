@@ -6,7 +6,6 @@ import (
 
 type (
 	Injector interface {
-		Construct
 		Invoker
 		TypeMapper
 		Set(reflect.Type, reflect.Value)
@@ -14,6 +13,8 @@ type (
 		SetParent(Injector)
 	}
 	Invoker interface {
+		Apply(Pointer) error
+		Resolve(...Pointer) error
 		Invoke(interface{}) ([]reflect.Value, error)
 	}
 	TypeMapper interface {
