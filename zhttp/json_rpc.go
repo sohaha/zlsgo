@@ -3,13 +3,18 @@ package zhttp
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zvalid"
 )
 
 type JSONRPC struct {
@@ -68,12 +73,26 @@ func (j *JSONRPC) connect() error {
 		return err
 	}
 
-	_, _ = io.WriteString(conn, "CONNECT "+j.path+" HTTP/1.0\n\n")
-	_, err = http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: "CONNECT"})
+	message := zstring.Buffer(2)
+	_, _ = message.WriteString("CONNECT " + j.path + " HTTP/1.0\n")
+
+	for k := range j.options.Header {
+		_, _ = message.WriteString(k)
+		_, _ = message.WriteString(": ")
+		_, _ = message.WriteString(j.options.Header.Get(k))
+		_, _ = message.WriteString("\n")
+	}
+
+	_, _ = message.WriteString("\n\n")
+	_, _ = io.WriteString(conn, message.String())
+	response, err := http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: "CONNECT"})
 	if err != nil {
 		return err
 	}
 
+	if response.StatusCode != http.StatusOK && response.ContentLength != -1 {
+		return errors.New("Prohibit connection, a status code: " + strconv.Itoa(response.StatusCode))
+	}
 	j.client = rpc.NewClientWithCodec(jsonrpc.NewClientCodec(conn))
 
 	return nil
@@ -84,12 +103,14 @@ type JSONRPCOptions struct {
 	Timeout    time.Duration
 	Retry      bool
 	RetryDelay time.Duration
+	Header     http.Header
 }
 
 func NewJSONRPC(address string, path string, opts ...func(o *JSONRPCOptions)) (client *JSONRPC, err error) {
 	o := JSONRPCOptions{
 		Retry:      true,
 		RetryDelay: time.Second * 1,
+		Header:     http.Header{},
 	}
 	if len(opts) > 0 {
 		opts[0](&o)
@@ -97,6 +118,16 @@ func NewJSONRPC(address string, path string, opts ...func(o *JSONRPCOptions)) (c
 
 	if !strings.ContainsRune(address, ':') {
 		address = ":" + address
+	}
+
+	if zvalid.Text(address).IsURL().Ok() {
+		s := strings.Split(address, "://")
+		if len(s) > 1 {
+			address = s[1]
+			if s[0] == "https" {
+				o.TlsConfig = &tls.Config{}
+			}
+		}
 	}
 
 	client = &JSONRPC{options: o, address: address, path: path}

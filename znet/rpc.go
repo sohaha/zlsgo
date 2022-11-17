@@ -43,6 +43,11 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 			c.JSON(200, methods)
 			return
 		}
+
+		if c.stopHandle.Load() {
+			return
+		}
+
 		var codec rpc.ServerCodec
 		if method == "CONNECT" || (method == "POST" && !o.DisabledHTTP) {
 			c.stopHandle.Store(true)
