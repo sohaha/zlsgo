@@ -680,6 +680,18 @@ func TestMoreMatchingRouter(t *testing.T) {
 			tt.Equal("txt", c.GetParam("ext"))
 		})
 	tt.Equal(200, w.Code)
+
+	engine := r.GET("/MoreMatchingRouter/*", func(c *Context) string {
+		return c.GetParam("*")
+	})
+	w = request(engine, "GET", "/MoreMatchingRouter/t1/x2/z3", nil)
+	tt.Equal(200, w.Code)
+	tt.Equal("t1/x2/z3", w.Body.String())
+
+	w = request(engine, "GET", "/MoreMatchingRouter/t", nil)
+	tt.Equal(200, w.Code)
+	tt.Equal("t", w.Body.String())
+	t.Log(w)
 }
 
 func TestWebRouter(T *testing.T) {

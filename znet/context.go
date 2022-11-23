@@ -50,7 +50,7 @@ func (c *Context) IsWebsocket() bool {
 
 // IsSSE Is SSE
 func (c *Context) IsSSE() bool {
-	return c.GetHeader("Connection") != "" && strings.ToLower(c.GetHeader("Accept")) == "text/event-stream"
+	return strings.ToLower(c.GetHeader("Accept")) == "text/event-stream"
 }
 
 // IsAjax IsAjax

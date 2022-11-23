@@ -30,7 +30,7 @@ var (
 	defaultPattern = `[\w\p{Han}\.\- ]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
-	allPattern     = `[\w\p{Han}\s\S]+`
+	allPattern     = `.*`
 	allKey         = `*`
 
 	contextKey = contextKeyType{}
