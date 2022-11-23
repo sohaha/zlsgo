@@ -2,58 +2,88 @@
 package ztime
 
 import (
+	"sync/atomic"
 	"time"
 )
 
-var newZtime = New()
+var inlay = New()
 
+// Now format current time
 func Now(format ...string) string {
-	return newZtime.FormatTime(time.Now(), format...)
+	return inlay.FormatTime(UnixMicro(Clock()), format...)
 }
 
+// Time With the time zone of the time
 func Time() time.Time {
-	return In(time.Now())
+	return inlay.In(UnixMicro(Clock()))
 }
 
 // SetTimeZone SetTimeZone
 func SetTimeZone(zone int) *TimeEngine {
-	return newZtime.SetTimeZone(zone)
+	return inlay.SetTimeZone(zone)
 }
 
 // GetTimeZone getTimeZone
 func GetTimeZone() *time.Location {
-	return newZtime.GetTimeZone()
+	return inlay.GetTimeZone()
 }
 
 // FormatTime format time
 func FormatTime(t time.Time, format ...string) string {
-	return newZtime.FormatTime(t, format...)
+	return inlay.FormatTime(t, format...)
 }
 
 // FormatTimestamp format timestamp
 func FormatTimestamp(timestamp int64, format ...string) string {
-	return newZtime.FormatTimestamp(timestamp, format...)
+	return inlay.FormatTimestamp(timestamp, format...)
 }
 
 func Week(t time.Time) int {
-	return newZtime.Week(t)
+	return inlay.Week(t)
 }
 
 func MonthRange(year int, month int) (beginTime, endTime int64, err error) {
-	return newZtime.MonthRange(year, month)
+	return inlay.MonthRange(year, month)
 }
 
 // Parse string to time
 func Parse(str string, format ...string) (time.Time, error) {
-	return newZtime.Parse(str, format...)
+	return inlay.Parse(str, format...)
 }
 
 // Unix int to time
 func Unix(tt int64) time.Time {
-	return newZtime.Unix(tt)
+	return inlay.Unix(tt)
+}
+
+// UnixMicro int to time
+func UnixMicro(tt int64) time.Time {
+	return inlay.UnixMicro(tt)
 }
 
 // In time to time
 func In(tt time.Time) time.Time {
-	return newZtime.In(tt)
+	return inlay.In(tt)
+}
+
+var clock = time.Now().UnixNano() / 1000
+
+func init() {
+	go func() {
+		m := 90 * time.Millisecond
+		t := int64(m)
+		for {
+			atomic.StoreInt64(&clock, time.Now().UnixNano()/1000)
+			for i := 0; i < 10; i++ {
+				time.Sleep(m)
+				atomic.AddInt64(&clock, t)
+			}
+			time.Sleep(m)
+		}
+	}()
+}
+
+// Clock The current microsecond timestamp has an accuracy of 100ms.
+func Clock() int64 {
+	return atomic.LoadInt64(&clock)
 }

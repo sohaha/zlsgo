@@ -1,8 +1,11 @@
 package ztime
 
 import (
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 
 	"github.com/sohaha/zlsgo"
 )
@@ -54,6 +57,7 @@ func TestNewTime(t *testing.T) {
 	t.Log(GetTimeZone().String())
 
 	t.Log(Now())
+	t.Log(Time())
 }
 
 func TestFormatTlp(tt *testing.T) {
@@ -66,14 +70,17 @@ func TestFormatTlp(tt *testing.T) {
 func TestUnix(t *testing.T) {
 	now := time.Now()
 	t.Log(Unix(now.Unix()))
+	t.Log(UnixMicro(now.Unix()))
 	t.Log(In(now))
 
 	t0 := New(0)
 	t.Log(t0.Unix(now.Unix()))
+	t.Log(t0.UnixMicro(now.Unix()))
 	t.Log(t0.In(now))
 
 	t1 := New(1)
 	t.Log(t1.Unix(now.Unix()))
+	t.Log(t1.UnixMicro(now.Unix()))
 	t.Log(t1.In(now))
 
 	ti := New(2)
@@ -112,4 +119,24 @@ func TestParse(t *testing.T) {
 		New(24).FormatTime(date, "Y-m-d H"),
 		New(0).FormatTime(date, "Y-m-d H"),
 	)
+}
+
+func TestClock(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	var wg sync.WaitGroup
+	for i := 0; i < 20000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Duration(zstring.RandInt(1, 250)) * time.Millisecond)
+			d := (time.Now().UnixNano() / 1000 / 1000) - Clock()/1000
+			b := d <= 100
+			tt.EqualTrue(b)
+			if !b {
+				t.Log(d)
+			}
+		}()
+	}
+
+	wg.Wait()
 }

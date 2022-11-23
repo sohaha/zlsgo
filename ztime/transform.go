@@ -143,6 +143,11 @@ func (e *TimeEngine) Unix(tt int64) time.Time {
 	return e.In(time.Unix(tt, 0))
 }
 
+// UnixMicro int to time
+func (e *TimeEngine) UnixMicro(tt int64) time.Time {
+	return e.In(time.Unix(tt/1e6, (tt%1e6)*1e3))
+}
+
 // Parse Parse
 func (e *TimeEngine) Parse(str string, format ...string) (t time.Time, err error) {
 	if len(format) > 0 {
