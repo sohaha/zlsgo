@@ -16,19 +16,28 @@ type (
 		stack   zutil.Stack
 		code    ErrCode
 		inner   bool
+		errText *string
 	}
+
+	External func(err error) error
 )
 
 var (
 	goROOT = zutil.GOROOT()
 )
 
-func New(code ErrCode, text string) error {
-	return &Error{
-		err:   errors.New(text),
-		code:  code,
-		stack: zutil.Callers(3),
+func New(code ErrCode, text string, w ...External) error {
+	var err error = &Error{
+		code:    code,
+		stack:   zutil.Callers(3),
+		errText: &(&[1]string{text})[0],
 	}
+
+	for i := range w {
+		err = w[i](err)
+	}
+
+	return err
 }
 
 // Reuse the error
@@ -46,16 +55,20 @@ func Reuse(err error) error {
 }
 
 // Wrap wraps err with code
-func Wrap(err error, code ErrCode, text string) error {
+func Wrap(err error, code ErrCode, text string, w ...External) error {
 	if err == nil {
 		return nil
+	}
+
+	for i := range w {
+		err = w[i](err)
 	}
 
 	return &Error{
 		wrapErr: err,
 		code:    code,
 		stack:   zutil.Callers(3),
-		err:     errors.New(text),
+		errText: &(&[1]string{text})[0],
 	}
 }
 
@@ -66,16 +79,20 @@ func SupText(err error, text string) error {
 }
 
 // With returns the inner error's text
-func With(err error, text string) error {
+func With(err error, text string, w ...External) error {
 	if err == nil {
 		return nil
+	}
+
+	for i := range w {
+		err = w[i](err)
 	}
 
 	return &Error{
 		wrapErr: err,
 		inner:   true,
 		stack:   zutil.Callers(3),
-		err:     errors.New(text),
+		errText: &(&[1]string{text})[0],
 	}
 }
 
@@ -92,6 +109,10 @@ func Unwrap(err error, code ErrCode) (error, bool) {
 		}
 
 		if e.code == code {
+			if e.errText != nil {
+				return errors.New(*e.errText), true
+			}
+
 			return e.err, true
 		}
 
@@ -156,7 +177,11 @@ func UnwrapErrors(err error) (errs []string) {
 			return
 		}
 
-		errs = append(errs, e.err.Error())
+		if e.errText != nil {
+			errs = append(errs, *e.errText)
+		} else {
+			errs = append(errs, e.err.Error())
+		}
 
 		err = e.Unwrap()
 	}

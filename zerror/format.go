@@ -12,12 +12,18 @@ import (
 
 // Error returns msg
 func (e *Error) Error() string {
-	if e == nil || e.err == nil {
+	if e == nil || (e.err == nil && e.errText == nil) {
 		return "<nil>"
 	}
+
+	if e.errText != nil {
+		return *e.errText
+	}
+
 	if e.inner && e.wrapErr != nil {
 		return e.wrapErr.Error()
 	}
+
 	return e.err.Error()
 }
 
@@ -34,11 +40,11 @@ func (e *Error) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		switch {
-		case s.Flag('+'):
+		case s.Flag('-'):
+			_, _ = io.WriteString(s, e.Error())
+		default:
 			tip := strings.Join(UnwrapErrors(e), ": ")
 			_, _ = io.WriteString(s, tip+"\n"+e.Stack())
-		default:
-			_, _ = io.WriteString(s, e.Error())
 		}
 	case 's':
 		_, _ = io.WriteString(s, strings.Join(UnwrapErrors(e), ": "))
