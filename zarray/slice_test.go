@@ -19,6 +19,10 @@ func TestShuffle(t *testing.T) {
 	t.Log(zarray.Shuffle(l2))
 }
 
+func TestRand(t *testing.T) {
+	t.Log(zarray.Rand(l))
+}
+
 func TestFilter(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	nl := zarray.Filter(l, func(index int, item int) bool {
@@ -39,11 +43,48 @@ func TestMap(t *testing.T) {
 
 func TestDiff(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	s1 := []int{1, 2, 3}
-	s2 := []int{5, 6, 3}
 
-	n1, n2 := zarray.Diff(s1, s2)
+	n1, n2 := zarray.Diff(l2, l)
 
-	tt.Equal([]int{1, 2}, n1)
-	tt.Equal([]int{5, 6}, n2)
+	tt.Equal([]int{34, 6, 7, 98, 6, 67, 54, 543, 345, 435, 43543, 435, 42, 3423, 54, 6}, n1)
+	tt.Equal([]int{}, n2)
+}
+
+func TestContains(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.EqualTrue(!zarray.Contains(l, 54))
+	tt.EqualTrue(!zarray.Contains(l, 6))
+	tt.EqualTrue(zarray.Contains(l2, 5))
+	tt.EqualTrue(zarray.Contains(l2, 6))
+	tt.EqualTrue(zarray.Contains(l2, 54))
+}
+
+func TestUnique(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	a := append(l, l2...)
+	unia := zarray.Unique(a)
+	tt.Equal(18, len(unia))
+	tt.EqualTrue(len(a) != len(unia))
+	t.Log(unia)
+}
+
+func TestFind(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	a := []map[string]string{
+		{"name": "a"},
+		{"name": "b"},
+		{"name": "c"},
+	}
+
+	v, ok := zarray.Find(a, func(_ int, v map[string]string) bool {
+		return v["name"] == "b"
+	})
+	tt.EqualTrue(ok)
+	tt.Equal("b", v["name"])
+
+	v, ok = zarray.Find(a, func(_ int, v map[string]string) bool {
+		return v["name"] == "z"
+	})
+	tt.EqualTrue(!ok)
+	tt.Equal("", v["name"])
 }
