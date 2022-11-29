@@ -53,16 +53,17 @@ type (
 		pool                sync.Pool
 		injector            zdi.Injector
 		preHandler          Handler
-		router              *router
+		views               Template
 		Cache               *zcache.Table
 		template            *tpl
 		Log                 *zlog.Logger
 		templateFuncMap     template.FuncMap
+		router              *router
 		webModeName         string
 		customMethodType    string
-		BindTag             string
 		BindStructDelimiter string
 		BindStructSuffix    string
+		BindTag             string
 		addr                []addrSt
 		MaxMultipartMemory  int64
 		webMode             int
@@ -191,7 +192,7 @@ func New(serverName ...string) *Engine {
 		return r.NewContext(nil, nil)
 	}
 	if _, ok := zservers[name]; ok {
-		Log.Fatal("serverName: [", name, "] it already exists")
+		r.Log.Fatal("serverName: [", name, "] it already exists")
 	}
 	zservers[name] = r
 	// r.Use(withRequestLog)
@@ -205,8 +206,8 @@ func Server(serverName ...string) (engine *Engine, ok bool) {
 		name = serverName[0]
 	}
 	if engine, ok = zservers[name]; !ok {
-		Log.Warnf("serverName: %s is not", name)
 		engine = New(name)
+		engine.Log.Warnf("serverName: %s is not", name)
 	}
 	return
 }
@@ -238,9 +239,18 @@ func CloseHotRestartFileMd5() {
 	fileMd5 = ""
 }
 
+// Deprecated: please use SetTemplate(znet.NewHTML())
 // SetTemplateFuncMap Set Template Func
 func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
-	e.templateFuncMap = funcMap
+	if e.views == nil {
+		// compatible with the old version at present
+		e.templateFuncMap = funcMap
+		return
+	}
+
+	if t, ok := e.views.(*htmlEngine); ok {
+		t.SetFuncMap(funcMap)
+	}
 }
 
 // Injector Call Injector
@@ -248,6 +258,7 @@ func (e *Engine) Injector() zdi.TypeMapper {
 	return e.injector
 }
 
+// Deprecated: please use SetTemplate(znet.NewHTML())
 // SetHTMLTemplate Set HTML Template
 func (e *Engine) SetHTMLTemplate(t *template.Template) {
 	val := &tpl{
@@ -259,6 +270,13 @@ func (e *Engine) SetHTMLTemplate(t *template.Template) {
 
 // LoadHTMLGlob Load Glob HTML
 func (e *Engine) LoadHTMLGlob(pattern string) {
+	if !strings.Contains(pattern, "*") {
+		h := newGoTemplate(e, pattern)
+		e.views = h
+		return
+	}
+
+	// compatible with the old version at present
 	pattern = zfile.RealPath(pattern)
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {
@@ -272,7 +290,7 @@ func (e *Engine) LoadHTMLGlob(pattern string) {
 		templateFuncMap: template.FuncMap{},
 	}
 	if isDebug {
-		templatesDebug(t)
+		templatesDebug(e, t)
 		val.templateFuncMap = e.templateFuncMap
 	}
 	e.template = val

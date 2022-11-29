@@ -137,24 +137,29 @@ func (r *renderHTML) Content(c *Context) []byte {
 			err error
 			t   *template.Template
 		)
-		tpl := c.Engine.template
-		if tpl != nil {
-			t = tpl.Get(c.Engine.IsDebug())
-			if t != nil && len(r.FuncMap) == 0 {
-				name := r.Templates[0]
-				err = t.ExecuteTemplate(&buf, name, r.Data)
-				if err == nil {
-					r.ContentDate = buf.Bytes()
-					return r.ContentDate
-				}
-				if !strings.Contains(err.Error(), " is undefined") {
-					panic(err)
+		if c.Engine.views != nil {
+			err = c.Engine.views.Render(&buf, r.Templates[0], r.Data)
+		} else {
+			tpl := c.Engine.template
+			if tpl != nil {
+				t = tpl.Get(c.Engine.IsDebug())
+				if t != nil && len(r.FuncMap) == 0 {
+					name := r.Templates[0]
+					err = t.ExecuteTemplate(&buf, name, r.Data)
+					if err == nil {
+						r.ContentDate = buf.Bytes()
+						return r.ContentDate
+					}
+					if !strings.Contains(err.Error(), " is undefined") {
+						panic(err)
+					}
 				}
 			}
+			if t, err = templateParse(r.Templates, r.FuncMap); err == nil {
+				err = t.Execute(&buf, r.Data)
+			}
 		}
-		if t, err = templateParse(r.Templates, r.FuncMap); err == nil {
-			err = t.Execute(&buf, r.Data)
-		}
+
 		if err != nil {
 			panic(err)
 		}

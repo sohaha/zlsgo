@@ -598,6 +598,38 @@ func TestTemplateLoad(t *testing.T) {
 	tt.EqualExit(`ZlsGo`, w.Body.String())
 }
 
+func TestTemplateNew(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	path := zfile.RealPathMkdir("tmpTemplate", true)
+	defer zfile.Rmdir(path)
+	r.SetMode(DebugMode)
+	r.LoadHTMLGlob("tmpTemplate")
+	_ = zfile.WriteFile(path+"tpl-define.html", []byte(`{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`))
+	r.SetTemplateFuncMap(map[string]interface{}{
+		"test": func() string {
+			return "-ok"
+		},
+	})
+
+	w := newRequest(r, "GET", "/Template-new-define-1", "/Template-new-define-1",
+		func(c *Context) {
+			c.Template(200, "user/index.html", Data{"title": "ZlsGo"})
+		})
+	tt.Equal(200, w.Code)
+	tt.EqualExit(`ZlsGo-ok`, w.Body.String())
+	return
+	temple, _ := template.New("tmpTemplate/tpl-html.html").Parse(`{{.title}}`)
+	r.SetHTMLTemplate(temple)
+
+	w = newRequest(r, "GET", "/Template-define-2", "/Template-define-2",
+		func(c *Context) {
+			c.Template(200, "tmpTemplate/tpl-html.html", Data{"title": "ZlsGo"})
+		})
+	tt.Equal(200, w.Code)
+	tt.EqualExit(`ZlsGo`, w.Body.String())
+}
+
 func TestBind(t *testing.T) {
 	type AppInfo struct {
 		Label   string `json:"label"`

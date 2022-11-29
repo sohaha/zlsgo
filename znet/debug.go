@@ -40,15 +40,16 @@ func routeLog(log *zlog.Logger, tf, method, path string) string {
 	return fmt.Sprintf(tf, method, path)
 }
 
-func templatesDebug(t *template.Template) {
-	l := len(t.Templates())
-	var buf string
+func templatesDebug(e *Engine, t *template.Template) {
+	l := 0
+	buf := zstring.Buffer()
 	for _, t := range t.Templates() {
 		n := t.Name()
 		if n == "" {
 			continue
 		}
-		buf = "\t  - " + n + "\n"
+		buf.WriteString("\t  - " + n + "\n")
+		l++
 	}
-	Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf)
+	e.Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf.String())
 }

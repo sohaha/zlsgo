@@ -29,8 +29,14 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 				method := typ.Method(m)
 				mtype := method.Type
 				mname := method.Name
-				argType := mtype.In(1).String()
-				replyType := mtype.In(2).String()
+				l := mtype.NumIn()
+				replyType, argType := "-", "-"
+				if l > 2 {
+					replyType = mtype.In(2).String()
+				}
+				if l > 1 {
+					argType = mtype.In(1).String()
+				}
 				methods[name+"."+mname] = []string{argType, replyType}
 			}
 		}
