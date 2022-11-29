@@ -100,10 +100,10 @@ func (j *JSONRPC) connect() error {
 
 type JSONRPCOptions struct {
 	TlsConfig  *tls.Config
-	Timeout    time.Duration
-	Retry      bool
-	RetryDelay time.Duration
 	Header     http.Header
+	Timeout    time.Duration
+	RetryDelay time.Duration
+	Retry      bool
 }
 
 func NewJSONRPC(address string, path string, opts ...func(o *JSONRPCOptions)) (client *JSONRPC, err error) {

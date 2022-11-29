@@ -13,10 +13,10 @@ type (
 	Error struct {
 		err     error
 		wrapErr error
+		errText *string
 		stack   zutil.Stack
 		code    ErrCode
 		inner   bool
-		errText *string
 	}
 
 	External func(err error) error

@@ -41,6 +41,9 @@ func GetType(s interface{}) string {
 		varType = "[]byte"
 	default:
 		v := reflect.ValueOf(s)
+		if v.Kind() == reflect.Invalid {
+			return "invalid"
+		}
 		varType = v.Type().String()
 	}
 	return varType
@@ -69,7 +72,6 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 	val := v
 
 	exist := true
-
 	pp := func(p string, v interface{}) (result interface{}) {
 		if v == nil || !exist {
 			return nil
@@ -110,6 +112,7 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 
 		return
 	}
+
 	for ; i < len(path); i++ {
 		switch path[i] {
 		case '\\':
@@ -128,6 +131,8 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 
 	if i != t {
 		val = pp(path[t:], val)
+	} else if i == 0 && t == 0 {
+		val = pp(path, val)
 	}
 
 	return val, exist

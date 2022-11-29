@@ -57,9 +57,9 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 }
 
 // Contains returns true if an eent is present in a collection
-func Contains[T comparable](collection []T, eent T) bool {
+func Contains[T comparable](collection []T, v T) bool {
 	for _, item := range collection {
-		if item == eent {
+		if item == v {
 			return true
 		}
 	}

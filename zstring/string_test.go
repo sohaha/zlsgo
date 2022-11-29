@@ -114,6 +114,21 @@ func TestTrimSpace(t *testing.T) {
 	}
 }
 
+func TestTrimLine(t *testing.T) {
+	const html = `
+		<html>
+		<head>
+		<title>Test</title>
+		</head>
+		<body>
+		<h1>Hello, 世界</h1>
+		<p>This is a test.</p>
+		</body>
+		</html>`
+	tt := zlsgo.NewTest(t)
+	tt.Equal(`<html><head><title>Test</title></head><body><h1>Hello, 世界</h1><p>This is a test.</p></body></html>`, TrimLine(html))
+}
+
 func BenchmarkStr(b *testing.B) {
 	s := ""
 	for i := 0; i < b.N; i++ {

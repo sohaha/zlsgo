@@ -45,7 +45,7 @@ type (
 
 	// Map implements the concurrent hashmap
 	Maper[K hashable, V any] struct {
-		g        singleflight.Group
+		gsf      singleflight.Group
 		listHead *element[K, V]
 		hasher   func(K) uintptr
 		metadata atomicPointer[metadata[K, V]]
@@ -98,31 +98,31 @@ func (m *Maper[K, V]) Delele(keys ...K) {
 		}
 	default:
 		var (
-			delQ = make([]deletionRequest[K], size)
-			iter = 0
+			delQueue = make([]deletionRequest[K], size)
+			iter     = 0
 		)
 		for idx := 0; idx < size; idx++ {
-			delQ[idx].keyHash, delQ[idx].key = m.hasher(keys[idx]), keys[idx]
+			delQueue[idx].keyHash, delQueue[idx].key = m.hasher(keys[idx]), keys[idx]
 		}
 
-		sort.Slice(delQ, func(i, j int) bool {
-			return delQ[i].keyHash < delQ[j].keyHash
+		sort.Slice(delQueue, func(i, j int) bool {
+			return delQueue[i].keyHash < delQueue[j].keyHash
 		})
 
-		elem := m.metadata.Load().indexElement(delQ[0].keyHash)
+		elem := m.metadata.Load().indexElement(delQueue[0].keyHash)
 
-		if elem == nil || elem.keyHash > delQ[0].keyHash {
+		if elem == nil || elem.keyHash > delQueue[0].keyHash {
 			elem = m.listHead.next()
 		}
 
 		for elem != nil && iter < size {
-			if elem.keyHash == delQ[iter].keyHash && elem.key == delQ[iter].key {
+			if elem.keyHash == delQueue[iter].keyHash && elem.key == delQueue[iter].key {
 				if elem.remove() {
 					m.removeItemFromIndex(elem)
 				}
 				iter++
 				elem = elem.next()
-			} else if elem.keyHash > delQ[iter].keyHash {
+			} else if elem.keyHash > delQueue[iter].keyHash {
 				iter++
 			} else {
 				elem = elem.next()
@@ -132,7 +132,10 @@ func (m *Maper[K, V]) Delele(keys ...K) {
 }
 
 func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
-	h := m.hasher(key)
+	return m.get(m.hasher(key), key)
+}
+
+func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
 	for elem := m.metadata.Load().indexElement(h); elem != nil && elem.keyHash <= h; elem = elem.nextPtr.Load() {
 		if elem.key == key {
 			ok = !elem.isDeleted()
@@ -143,7 +146,6 @@ func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
 			return
 		}
 	}
-	ok = false
 	return
 }
 
@@ -164,42 +166,37 @@ func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loa
 		}
 	}
 
-	actual, loaded = provide()
-	if !loaded {
-		return
-	}
+	_, _, _ = m.gsf.Do(strconv.FormatInt(int64(h), 10), func() (interface{}, error) {
+		actual, loaded = provide()
+		if loaded {
+			m.Set(key, actual)
+		}
+		return nil, nil
+	})
 
-	var (
-		alloc   *element[K, V]
-		created = false
-		valPtr  = &actual
-	)
-	if existing == nil || existing.keyHash > h {
-		existing = m.listHead
-	}
-	if alloc, created = existing.inject(h, key, valPtr); alloc != nil {
-		if created {
-			m.numItems.Add(1)
-		}
-	} else {
-		for existing = m.listHead; alloc == nil; alloc, created = existing.inject(h, key, valPtr) {
-		}
-		if created {
-			m.numItems.Add(1)
-		}
-	}
+	return m.get(h, key)
+	// loaded = err == nil
+	// if loaded {
+	// 	actual = compute.(V)
+	// 	m.set(m.hasher(key), key, actual)
+	// }
 
-	count := data.addItemToIndex(alloc)
-	if resizeNeeded(uintptr(len(data.index)), count) && m.resizing.CAS(notResizing, resizingInProgress) {
-		m.grow(0)
-	}
 	return
 }
 
+func (m *Maper[K, V]) GetOrSet(key K, value V) (actual V, loaded bool) {
+	return m.ProvideGet(key, func() (V, bool) {
+		return value, true
+	})
+}
+
 func (m *Maper[K, V]) Set(key K, value V) {
+	m.set(m.hasher(key), key, value)
+}
+
+func (m *Maper[K, V]) set(h uintptr, key K, value V) {
 	var (
 		created  bool
-		h        = m.hasher(key)
 		valPtr   = &value
 		alloc    *element[K, V]
 		data     = m.metadata.Load()
@@ -209,6 +206,7 @@ func (m *Maper[K, V]) Set(key K, value V) {
 	if existing == nil || existing.keyHash > h {
 		existing = m.listHead
 	}
+
 	if alloc, created = existing.inject(h, key, valPtr); alloc != nil {
 		if created {
 			m.numItems.Add(1)
@@ -232,9 +230,11 @@ func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
 		h        = m.hasher(key)
 		existing = m.metadata.Load().indexElement(h)
 	)
+
 	if existing == nil || existing.keyHash > h {
 		existing = m.listHead
 	}
+
 	if _, current, _ := existing.search(h, key); current != nil {
 		oldValue, swapped = *current.value.Swap(&newValue), true
 	} else {
@@ -248,9 +248,11 @@ func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
 		h        = m.hasher(key)
 		existing = m.metadata.Load().indexElement(h)
 	)
+
 	if existing == nil || existing.keyHash > h {
 		existing = m.listHead
 	}
+
 	if _, current, _ := existing.search(h, key); current != nil {
 		if oldPtr := current.value.Load(); reflect.DeepEqual(*oldPtr, oldValue) {
 			return current.value.CompareAndSwap(oldPtr, &newValue)
@@ -270,8 +272,8 @@ func (m *Maper[K, V]) Grow(newSize uintptr) {
 	}
 }
 
-func (m *Maper[K, V]) SetHasher(hs func(K) uintptr) {
-	m.hasher = hs
+func (m *Maper[K, V]) SetHasher(hasher func(K) uintptr) {
+	m.hasher = hasher
 }
 
 func (m *Maper[K, V]) Len() uintptr {
@@ -280,6 +282,7 @@ func (m *Maper[K, V]) Len() uintptr {
 
 func (m *Maper[K, V]) Fillrate() uintptr {
 	data := m.metadata.Load()
+
 	return (data.count.Load() * 100) / uintptr(len(data.index))
 }
 
@@ -295,6 +298,7 @@ func (m *Maper[K, V]) fillIndexItems(mapData *metadata[K, V]) {
 		item      = first
 		lastIndex = uintptr(0)
 	)
+
 	for item != nil {
 		index := item.keyHash >> mapData.keyshifts
 		if item == first || index != lastIndex {

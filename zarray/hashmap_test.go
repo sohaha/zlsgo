@@ -6,6 +6,7 @@ package zarray_test
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zarray"
@@ -85,6 +86,28 @@ func TestHashMapProvideGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	m := zarray.NewHashMap[int, int]()
 
+	{
+		i := 0
+		one, ok := m.ProvideGet(0, func() (int, bool) {
+			i++
+			return 110, false
+		})
+		t.Log(one, ok)
+
+		one, ok = m.ProvideGet(0, func() (int, bool) {
+			i++
+			return 119, true
+		})
+		t.Log(one, ok)
+
+		one, ok = m.ProvideGet(0, func() (int, bool) {
+			i++
+			return 119, true
+		})
+		t.Log(one, ok)
+		tt.Equal(2, i)
+	}
+
 	var wg sync.WaitGroup
 
 	for i := 0; i < 1000; i++ {
@@ -92,6 +115,7 @@ func TestHashMapProvideGet(t *testing.T) {
 		go func(i int) {
 			v, ok := m.ProvideGet(1, func() (int, bool) {
 				t.Log("set", 99)
+				time.Sleep(time.Millisecond * 100)
 				return 99, true
 			})
 			tt.EqualTrue(ok)
@@ -112,6 +136,7 @@ func TestHashMapProvideGet(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			v, ok := m.ProvideGet(1, func() (int, bool) {
+				time.Sleep(time.Millisecond * 100)
 				t.Log("new set", 100)
 				return 100, true
 			})

@@ -86,7 +86,7 @@ func (u *TestUtil) NoError(err error) bool {
 	if err == nil {
 		return true
 	}
-	u.T.Fatalf("    %s Error: %s\n", u.PrintMyName(), err)
+	fmt.Printf("    %s Error: %s\n", u.PrintMyName(), err)
 	return false
 }
 

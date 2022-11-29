@@ -4,6 +4,7 @@ package zstring
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -193,6 +194,14 @@ func XSSClean(str string) string {
 	str, _ = RegexReplace("<[\\S\\s]+?>", str, "")
 	str, _ = RegexReplace("\\s{2,}", str, " ")
 	return strings.TrimSpace(str)
+}
+
+// TrimLine TrimLine
+func TrimLine(s string) string {
+	str := strings.TrimSpace(regexp.MustCompile(`\s+`).ReplaceAllString(s, " "))
+	str = strings.Replace(str, " <", "<", -1)
+	str = strings.Replace(str, "> ", ">", -1)
+	return str
 }
 
 // TrimSpace TrimSpace
