@@ -19,6 +19,10 @@ const (
 	Unauthorized TagKind = "UNAUTHORIZED"
 )
 
+func (t TagKind) Wrap(err error, text string) error {
+	return With(err, text, WrapTag(t))
+}
+
 type withTag struct {
 	wrapErr error
 	tag     TagKind

@@ -33,7 +33,7 @@ func TestHashMap(t *testing.T) {
 	tt.EqualTrue(!ok)
 	tt.Equal("", item)
 
-	m.Delele(2, 9)
+	m.Delete(2, 9)
 
 	tt.Equal(1, int(m.Len()))
 
@@ -130,7 +130,7 @@ func TestHashMapProvideGet(t *testing.T) {
 	tt.EqualTrue(ok)
 	tt.Equal(99, v)
 
-	m.Delele(1)
+	m.Delete(1)
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)

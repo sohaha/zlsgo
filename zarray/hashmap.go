@@ -75,7 +75,7 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 	return m
 }
 
-func (m *Maper[K, V]) Delele(keys ...K) {
+func (m *Maper[K, V]) Delete(keys ...K) {
 	size := len(keys)
 	switch {
 	case size == 0:

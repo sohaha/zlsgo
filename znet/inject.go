@@ -6,12 +6,18 @@ import (
 	"github.com/sohaha/zlsgo/zdi"
 )
 
-func handlerFuncs(h []Handler) []handlerFn {
-	more := make([]handlerFn, len(h))
+func handlerFuncs(h []Handler) (middleware []handlerFn, firstMiddleware []handlerFn) {
+	middleware = make([]handlerFn, 0, len(h))
+	firstMiddleware = make([]handlerFn, 0, len(h))
 	for i := range h {
-		more[i] = handlerFunc(h[i])
+		fn := h[i]
+		if v, ok := fn.(firstHandler); ok {
+			firstMiddleware = append(firstMiddleware, handlerFunc(v[0]))
+		} else {
+			middleware = append(middleware, handlerFunc(fn))
+		}
 	}
-	return more
+	return
 }
 
 func invokeHandler(c *Context, v []reflect.Value) (err error) {
@@ -39,6 +45,10 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 }
 
 func handlerFunc(h Handler) (fn handlerFn) {
+	if h == nil {
+		return nil
+	}
+
 	switch v := h.(type) {
 	case func(*Context):
 		return func(c *Context) error {

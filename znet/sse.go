@@ -126,7 +126,6 @@ sseFor:
 			b.Grow(7)
 		}
 	}
-
 }
 
 func (s *SSE) SendByte(id string, data []byte, event ...string) error {
@@ -183,6 +182,8 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	s.net.SetHeader("Cache-Control", "no-cache")
 	s.net.SetHeader("Connection", "keep-alive")
 	c.prevData.Code.Store(http.StatusNoContent)
-
+	s.net.Engine.shutdowns = append(s.net.Engine.shutdowns, func() {
+		s.Stop()
+	})
 	return s
 }

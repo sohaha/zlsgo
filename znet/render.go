@@ -151,7 +151,8 @@ func (r *renderHTML) Content(c *Context) []byte {
 						return r.ContentDate
 					}
 					if !strings.Contains(err.Error(), " is undefined") {
-						panic(err)
+						Log.Error(err)
+						return r.ContentDate
 					}
 				}
 			}
@@ -161,7 +162,7 @@ func (r *renderHTML) Content(c *Context) []byte {
 		}
 
 		if err != nil {
-			panic(err)
+			Log.Error(err)
 		}
 		r.ContentDate = buf.Bytes()
 	} else {

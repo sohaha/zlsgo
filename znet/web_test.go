@@ -430,9 +430,27 @@ func TestCustomMethod(t *testing.T) {
 	r := newServer()
 	r.SetCustomMethodField("_m_")
 
+	var q []string
+	r.Use(func(c *Context) {
+		q = append(q, "1")
+		c.Next()
+		q = append(q, "1 done")
+	})
+	r.Use(WrapFirstMiddleware(func() {
+		q = append(q, "second")
+	}))
+	r.Use(func() {
+		q = append(q, "third")
+	})
 	r.PUT("/CustomMethod", func(c *Context) {
 		tt.EqualExit(true, c.IsAjax())
 		c.String(200, `put`)
+	}, func() {
+		q = append(q, "2")
+	}, WrapFirstMiddleware(func() {
+		q = append(q, "first")
+	}), func() {
+		q = append(q, "3")
 	})
 
 	w := httptest.NewRecorder()
@@ -445,6 +463,7 @@ func TestCustomMethod(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal(200, w.Code)
 	tt.Equal("put", w.Body.String())
+	tt.Equal("first second 1 third 2 3 1 done", strings.Join(q, " "))
 }
 
 func TestPreHandler(tt *testing.T) {

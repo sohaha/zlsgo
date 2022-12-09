@@ -105,7 +105,7 @@ func ToSliceMapString(value interface{}) []map[string]interface{} {
 // ToMapString ToMapString
 func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 	if value == nil {
-		return nil
+		return map[string]interface{}{}
 	}
 	if r, ok := value.(map[string]interface{}); ok {
 		return r

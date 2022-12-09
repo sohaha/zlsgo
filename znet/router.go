@@ -104,7 +104,8 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	_, l, ok := e.handleAny(path, handlerFunc(action), handlerFuncs(moreHandler)...)
+	middleware, firstMiddleware := handlerFuncs(moreHandler)
+	_, l, ok := e.handleAny(path, handlerFunc(action), middleware, firstMiddleware)
 
 	if ok && e.IsDebug() {
 		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), "ANY", CompletionPath(path, e.router.prefix)))
@@ -321,7 +322,8 @@ func (e *Engine) GetTrees() map[string]*Tree {
 
 // Handle registers new request handlerFn
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
-	p, l, ok := e.handle(method, path, handlerFunc(action), handlerFuncs(moreHandler)...)
+	handler, firsthandle := handlerFuncs(moreHandler)
+	p, l, ok := e.addHandle(method, path, handlerFunc(action), firsthandle, handler)
 	if !ok {
 		return e
 	}
@@ -332,7 +334,7 @@ func (e *Engine) Handle(method string, path string, action Handler, moreHandler 
 	return e
 }
 
-func (e *Engine) handle(method string, path string, handle handlerFn, moreHandler ...handlerFn) (string, int, bool) {
+func (e *Engine) addHandle(method string, path string, handle handlerFn, beforehandle []handlerFn, moreHandler []handlerFn) (string, int, bool) {
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
 	}
@@ -342,10 +344,12 @@ func (e *Engine) handle(method string, path string, handle handlerFn, moreHandle
 		tree = NewTree()
 		e.router.trees[method] = tree
 	}
+
 	path = CompletionPath(path, e.router.prefix)
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
+
 	nodes := tree.Find(path, false)
 	if len(nodes) > 0 {
 		node := nodes[0]
@@ -363,14 +367,18 @@ func (e *Engine) handle(method string, path string, handle handlerFn, moreHandle
 		}
 	}
 
+	if len(beforehandle) > 0 {
+		middleware = append(beforehandle, middleware...)
+	}
+
 	tree.Add(path, handle, middleware...)
 	tree.parameters.routeName = ""
 	return path, len(middleware) + 1, true
 }
 
-func (e *Engine) handleAny(path string, handle handlerFn, moreHandler ...handlerFn) (p string, l int, ok bool) {
+func (e *Engine) handleAny(path string, handle handlerFn, beforehandle []handlerFn, moreHandler []handlerFn) (p string, l int, ok bool) {
 	for key := range methods {
-		p, l, ok = e.handle(key, path, handle, moreHandler...)
+		p, l, ok = e.addHandle(key, path, handle, beforehandle, moreHandler)
 		if !ok {
 			return p, l, false
 		}
@@ -429,7 +437,6 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 		return true
 	}
 	nodes := t.Find(requestURL, false)
-
 	for i := range nodes {
 		node := nodes[i]
 		if node.handle != nil {
@@ -474,7 +481,9 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 
 func (e *Engine) Use(middleware ...Handler) {
 	if len(middleware) > 0 {
-		e.router.middleware = append(e.router.middleware, handlerFuncs(middleware)...)
+		middleware, firstMiddleware := handlerFuncs(middleware)
+		e.router.middleware = append(firstMiddleware, e.router.middleware...)
+		e.router.middleware = append(e.router.middleware, middleware...)
 	}
 }
 

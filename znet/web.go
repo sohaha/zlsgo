@@ -70,6 +70,7 @@ type (
 		writeTimeout        time.Duration
 		readTimeout         time.Duration
 		ShowFavicon         bool
+		shutdowns           []func()
 	}
 	TlsCfg struct {
 		HTTPProcessing interface{}
@@ -95,7 +96,8 @@ type (
 		middleware []handlerFn
 	}
 	// Handler handler func
-	Handler interface{}
+	Handler      interface{}
+	firstHandler [1]Handler
 	// HandlerFunc old handler func
 	HandlerFunc func(c *Context)
 	handlerFn   func(c *Context) error
@@ -187,6 +189,7 @@ func New(serverName ...string) *Engine {
 		addr:                []addrSt{defaultAddr},
 		templateFuncMap:     template.FuncMap{},
 		injector:            zdi.New(),
+		shutdowns:           make([]func(), 0),
 	}
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)
@@ -197,6 +200,11 @@ func New(serverName ...string) *Engine {
 	zservers[name] = r
 	// r.Use(withRequestLog)
 	return r
+}
+
+// WrapFirstMiddleware Wrapping a function in the first position of the middleware
+func WrapFirstMiddleware(fn Handler) firstHandler {
+	return firstHandler{fn}
 }
 
 // Server Server
@@ -450,6 +458,9 @@ func Run() {
 		r := s.engine
 		if sigkill {
 			r.Log.Info("Shutdown server ...")
+		}
+		for _, shutdown := range r.shutdowns {
+			shutdown()
 		}
 		err := s.srv.Shutdown(ctx)
 		if err != nil {
