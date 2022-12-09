@@ -70,8 +70,8 @@ var clock = time.Now().UnixNano() / 1000
 
 func init() {
 	go func() {
-		m := 90 * time.Millisecond
-		t := int64(m / 1000)
+		m := 10 * time.Millisecond
+		t := int64(10000)
 		for {
 			atomic.StoreInt64(&clock, time.Now().UnixNano()/1000)
 			for i := 0; i < 10; i++ {
@@ -83,7 +83,7 @@ func init() {
 	}()
 }
 
-// Clock The current microsecond timestamp has an accuracy of 100ms.
+// Clock The current microsecond timestamp has an accuracy of 100ms
 func Clock() int64 {
 	return atomic.LoadInt64(&clock)
 }
