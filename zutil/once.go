@@ -5,6 +5,7 @@ package zutil
 
 import (
 	"sync"
+	"time"
 )
 
 // Once initialize the singleton
@@ -15,8 +16,18 @@ func Once[T any](fn func() T) func() T {
 	)
 	return func() T {
 		once.Do(func() {
-			ivar = fn()
+			err := TryCatch(func() error {
+				ivar = fn()
+				return nil
+			})
+			if err != nil {
+				go func() {
+					time.Sleep(time.Second)
+					once = sync.Once{}
+				}()
+			}
 		})
+
 		return ivar
 	}
 }

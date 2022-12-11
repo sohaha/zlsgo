@@ -221,33 +221,24 @@ func TestAccessCount(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	cache := zcache.New("AccessCount", true)
 
-	cache.SetRaw("TestOther", 123, 100*time.Millisecond, true)
-	i, err := cache.GetInt("TestOther")
+	cache.SetRaw("AccessCount", 123, 100*time.Millisecond, true)
+	i, err := cache.GetInt("AccessCount")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
 	time.Sleep(90 * time.Millisecond)
-	i, err = cache.GetInt("TestOther")
+	i, err = cache.GetInt("AccessCount")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
 	time.Sleep(90 * time.Millisecond)
-	i, err = cache.GetInt("TestOther")
+	i, err = cache.GetInt("AccessCount")
 	tt.EqualNil(err)
 	tt.Equal(123, i)
-	time.Sleep(110 * 5 * time.Millisecond)
-	i, err = cache.GetInt("TestOther")
+	time.Sleep(time.Second)
+	i, err = cache.GetInt("AccessCount")
 	t.Log(i, err)
 	tt.EqualTrue(err != nil)
 	tt.Equal(0, i)
 }
-
-// func TestExportJSON(t *testing.T) {
-// 	cache := zcache.New("ExportJSON")
-// 	cache.Set("tmp1", &testSt{Name: "isName", Key: 100}, 1, true)
-// 	cache.Set("tmp2", 666, 2)
-// 	cache.Set("tmp3", "is string", 2)
-// 	jsonData := cache.ExportJSON()
-// 	t.Log(jsonData)
-// }
 
 func TestDo(t *testing.T) {
 	var g sync.WaitGroup

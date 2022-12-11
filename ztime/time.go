@@ -72,13 +72,15 @@ func init() {
 	go func() {
 		m := 10 * time.Millisecond
 		t := int64(10000)
+		ticker := time.NewTicker(m)
+		defer ticker.Stop()
 		for {
 			atomic.StoreInt64(&clock, time.Now().UnixNano()/1000)
 			for i := 0; i < 10; i++ {
-				time.Sleep(m)
+				<-ticker.C
 				atomic.AddInt64(&clock, t)
 			}
-			time.Sleep(m)
+			<-ticker.C
 		}
 	}()
 }

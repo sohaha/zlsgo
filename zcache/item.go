@@ -3,6 +3,8 @@ package zcache
 import (
 	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 // Item Item
@@ -20,7 +22,7 @@ type Item struct {
 
 // NewCacheItem NewCacheItem
 func NewCacheItem(key string, data interface{}, lifeSpan time.Duration) *Item {
-	t := time.Now()
+	t := ztime.UnixMicro(ztime.Clock())
 	return &Item{
 		key:              key,
 		lifeSpan:         lifeSpan,
@@ -35,7 +37,7 @@ func NewCacheItem(key string, data interface{}, lifeSpan time.Duration) *Item {
 
 func (item *Item) keepAlive() {
 	item.Lock()
-	item.accessedTime = time.Now()
+	item.accessedTime = ztime.UnixMicro(ztime.Clock())
 	item.accessCount++
 	item.Unlock()
 }

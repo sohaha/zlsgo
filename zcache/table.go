@@ -4,6 +4,9 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/zutil"
 	// "github.com/sohaha/zlsgo/zlog"
 	// "sync/atomic"
 )
@@ -23,10 +26,10 @@ type (
 		loadNotCallback func(key string, args ...interface{}) *Item
 		addCallback     func(item *Item)
 		deleteCallback  func(key string) bool
+		accessCount     *zutil.Bool
 		name            string
 		cleanupInterval time.Duration
 		sync.RWMutex
-		accessCount bool
 	}
 )
 
@@ -82,25 +85,14 @@ func (table *Table) SetDeleteCallback(f func(key string) bool) {
 	table.deleteCallback = f
 }
 
-// SetLogger SetLogger
-// func (table *Table) SetLogger(logger *zlog.Logger) {
-// 	table.Lock()
-// 	defer table.Unlock()
-// 	table.logger = logger
-// }
-
 func (table *Table) expirationCheck() {
-	now := time.Now()
-	smallestDuration := 0 * time.Second
+	now := ztime.UnixMicro(ztime.Clock())
+	smallestDuration := time.Duration(0)
 	table.Lock()
 	if table.cleanupTimer != nil {
 		table.cleanupTimer.Stop()
 	}
-	if table.cleanupInterval > 0 {
-		table.log("Expiration check triggered after", table.cleanupInterval, "for table", table.name)
-	} else {
-		table.log("Expiration check installed for table", table.name)
-	}
+
 	for key, item := range table.items {
 		item.RLock()
 		lifeSpan := item.lifeSpan
@@ -111,18 +103,15 @@ func (table *Table) expirationCheck() {
 			continue
 		}
 		remainingLift := item.RemainingLife()
-		if table.accessCount && intervalLifeSpan {
+		if table.accessCount.Load() && intervalLifeSpan {
 			lastTime := now.Sub(accessedOn)
-			table.log(lastTime, lifeSpan, accessedOn)
 			if lastTime >= lifeSpan {
 				_, _ = table.deleteInternal(key)
 			} else {
 				lifeSpan = lifeSpan * 2
-				// table.Lock()
 				item.Lock()
 				item.lifeSpan = lifeSpan
 				item.Unlock()
-				// table.Unlock()
 				nextDuration := lifeSpan - lastTime
 				if smallestDuration == 0 || nextDuration < smallestDuration {
 					smallestDuration = nextDuration
@@ -147,7 +136,7 @@ func (table *Table) expirationCheck() {
 }
 
 func (table *Table) addInternal(item *Item) {
-	table.log("Adding item with key", item.key, "and lifespan of", item.lifeSpan, "to table", table.name)
+	table.Lock()
 	table.items[item.key] = item
 
 	expDur := table.cleanupInterval
@@ -169,11 +158,9 @@ func (table *Table) addInternal(item *Item) {
 func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 	intervalLifeSpan ...bool) *Item {
 	item := NewCacheItem(key, data, lifeSpan)
-	table.Lock()
+
 	if len(intervalLifeSpan) > 0 && intervalLifeSpan[0] {
-		if !table.accessCount {
-			table.accessCount = true
-		}
+		table.accessCount.Store(true)
 		item.intervalLifeSpan = intervalLifeSpan[0]
 	}
 	table.addInternal(item)
@@ -193,14 +180,13 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	table.log("Deleting item with key", key, "created on", r.createdTime, "and hit", r.accessCount, "times from table", table.name)
 	deleteCallback := table.deleteCallback
 	table.Unlock()
 	if deleteCallback != nil && !deleteCallback(r.key) {
 		table.Lock()
 		r.RLock()
-		defer r.RUnlock()
-		r.accessedTime = time.Now()
+		r.accessedTime = ztime.UnixMicro(ztime.Clock())
+		r.RUnlock()
 		return r, nil
 	}
 
@@ -209,8 +195,8 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 	if r.deleteCallback != nil && !r.deleteCallback(r.key) {
 		table.Lock()
 		r.RLock()
-		defer r.RUnlock()
-		r.accessedTime = time.Now()
+		r.accessedTime = ztime.UnixMicro(ztime.Clock())
+		r.RUnlock()
 		return r, nil
 	}
 
@@ -239,9 +225,9 @@ func (table *Table) Exists(key string) bool {
 // Add if the cache does not exist then adding does not take effect
 func (table *Table) Add(key string, data interface{}, lifeSpan time.Duration, intervalLifeSpan ...bool) bool {
 	table.Lock()
-
-	if _, ok := table.items[key]; ok {
-		table.Unlock()
+	_, ok := table.items[key]
+	table.Unlock()
+	if ok {
 		return false
 	}
 
@@ -278,12 +264,14 @@ func (table *Table) MustGet(key string, do func(set func(data interface{},
 		}
 	})
 	item.Unlock()
-	table.Lock()
+
 	if err != nil {
+		table.Lock()
 		delete(table.items, key)
 		table.Unlock()
 		return
 	}
+
 	data = item.data
 	table.addInternal(item)
 	return
@@ -296,7 +284,7 @@ func (table *Table) GetT(key string, args ...interface{}) (*Item, error) {
 	table.RUnlock()
 
 	if ok {
-		if table.accessCount {
+		if table.accessCount.Load() {
 			r.keepAlive()
 		}
 		return r, nil
@@ -349,15 +337,12 @@ func (table *Table) GetInt(key string, args ...interface{}) (value int, err erro
 // Clear Clear
 func (table *Table) Clear() {
 	table.Lock()
-	defer table.Unlock()
-
-	table.log("Flushing table", table.name)
-
 	table.items = make(map[string]*Item)
 	table.cleanupInterval = 0
 	if table.cleanupTimer != nil {
 		table.cleanupTimer.Stop()
 	}
+	table.Unlock()
 }
 
 func (p CacheItemPairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
@@ -392,12 +377,4 @@ func (table *Table) MostAccessed(count int64) []*Item {
 	}
 
 	return r
-}
-
-func (table *Table) log(v ...interface{}) {
-	// if table.logger == nil {
-	// 	return
-	// }
-	//
-	// table.logger.Debug(v...)
 }

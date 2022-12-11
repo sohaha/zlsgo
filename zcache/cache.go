@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 var (
@@ -56,6 +58,7 @@ func SetDeleteCallback(fn func(key string) bool) {
 	ite.SetDeleteCallback(fn)
 }
 
+// Deprecated: please use zcache.NewFast
 // New new cache
 func New(table string, accessCount ...bool) *Table {
 	mutex.RLock()
@@ -63,19 +66,15 @@ func New(table string, accessCount ...bool) *Table {
 	mutex.RUnlock()
 
 	if !ok {
-		mutex.Lock()
 		t, ok = cache[table]
 		if !ok {
 			t = &Table{
 				name:  table,
 				items: make(map[string]*Item),
 			}
-			if len(accessCount) > 0 && accessCount[0] {
-				t.accessCount = true
-			}
+			t.accessCount = zutil.NewBool(len(accessCount) > 0 && accessCount[0])
 			cache[table] = t
 		}
-		mutex.Unlock()
 	}
 
 	return t
