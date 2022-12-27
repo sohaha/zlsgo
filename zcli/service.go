@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sohaha/zlsgo/zerror"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zshell"
 	"github.com/sohaha/zlsgo/zutil/daemon"
@@ -41,11 +42,15 @@ var s = make(chan struct{})
 
 func (a *app) Start(daemon.ServiceIface) error {
 	a.status = true
+	err := make(chan error, 1)
 	go func() {
-		a.run()
+		err <- zerror.TryCatch(func() error {
+			a.run()
+			return nil
+		})
 		s <- struct{}{}
 	}()
-	return nil
+	return <-err
 }
 
 func (a *app) Stop(daemon.ServiceIface) error {
@@ -115,6 +120,9 @@ func (*serviceRestart) Run(_ []string) {
 func LaunchServiceRun(name string, description string, fn func(), config ...*daemon.Config) error {
 	_, _ = LaunchService(name, description, fn, config...)
 	Parse()
+	if *flagDetach {
+		return zshell.BgRun(strings.Join(runCmd, " "))
+	}
 	if serviceErr != nil && (serviceErr != daemon.ErrNoServiceSystemDetected && !daemon.IsPermissionError(serviceErr)) {
 		return serviceErr
 	}

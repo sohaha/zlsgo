@@ -55,6 +55,7 @@ func TestWebTimeout(tt *testing.T) {
 	}, New(1*time.Second, func(c *znet.Context) {
 		c.Next()
 		c.String(211, "ok timeout_4")
+		c.Abort()
 	}))
 	t.Equal(211, w4.Code)
 	t.Equal("ok timeout_4", w4.Body.String())

@@ -1,9 +1,11 @@
 package znet
 
 import (
+	"net/http"
 	"reflect"
 
 	"github.com/sohaha/zlsgo/zdi"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func handlerFuncs(h []Handler) (middleware []handlerFn, firstMiddleware []handlerFn) {
@@ -90,6 +92,15 @@ func handlerFunc(h Handler) (fn handlerFn) {
 			return err
 		}
 	default:
+		val := reflect.ValueOf(v)
+		if val.Kind() != reflect.Func {
+			return func(c *Context) error {
+				c.Byte(http.StatusOK, ztype.ToBytes(v))
+				return nil
+			}
+			// panic("znet Handler is not a function: " + val.Kind().String())
+		}
+
 		return func(c *Context) error {
 			v, err := c.injector.Invoke(v)
 			if err != nil {

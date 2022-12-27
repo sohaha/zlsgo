@@ -3,6 +3,8 @@ package znet
 import (
 	"fmt"
 	"html/template"
+	"reflect"
+	"runtime"
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
@@ -52,4 +54,15 @@ func templatesDebug(e *Engine, t *template.Template) {
 		l++
 	}
 	e.Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf.String())
+}
+
+func routeAddLog(e *Engine, method string, path string, action Handler, middlewareCount int) {
+	if e.IsDebug() {
+		v := reflect.ValueOf(action)
+		if v.Kind() == reflect.Func {
+			e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(v.Pointer()).Name(), middlewareCount), method, path))
+		} else {
+			e.Log.Warn(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", v.Type().String(), middlewareCount), method, path))
+		}
+	}
 }

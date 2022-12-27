@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sohaha/zlsgo/zstring"
@@ -107,9 +105,10 @@ func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engin
 	middleware, firstMiddleware := handlerFuncs(moreHandler)
 	_, l, ok := e.handleAny(path, handlerFunc(action), middleware, firstMiddleware)
 
-	if ok && e.IsDebug() {
-		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), "ANY", CompletionPath(path, e.router.prefix)))
+	if ok {
+		routeAddLog(e, "ANY", CompletionPath(path, e.router.prefix), action, l)
 	}
+
 	return e
 }
 
@@ -328,9 +327,7 @@ func (e *Engine) Handle(method string, path string, action Handler, moreHandler 
 		return e
 	}
 
-	if e.IsDebug() {
-		e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(reflect.ValueOf(action).Pointer()).Name(), l), method, p))
-	}
+	routeAddLog(e, method, p, action, l)
 	return e
 }
 

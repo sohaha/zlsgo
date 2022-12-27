@@ -8,7 +8,7 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
-func TestGoTemplate(t *testing.T) {
+func TestHTMLRender(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	engine := newGoTemplate(nil, "./testdata/html")
