@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"net/http"
 	"reflect"
 
@@ -14,9 +15,9 @@ func handlerFuncs(h []Handler) (middleware []handlerFn, firstMiddleware []handle
 	for i := range h {
 		fn := h[i]
 		if v, ok := fn.(firstHandler); ok {
-			firstMiddleware = append(firstMiddleware, handlerFunc(v[0]))
+			firstMiddleware = append(firstMiddleware, Utils.ParseHandlerFunc(v[0]))
 		} else {
-			middleware = append(middleware, handlerFunc(fn))
+			middleware = append(middleware, Utils.ParseHandlerFunc(fn))
 		}
 	}
 	return
@@ -46,9 +47,11 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 	return
 }
 
-func handlerFunc(h Handler) (fn handlerFn) {
+func (_ utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	if h == nil {
-		return nil
+		return func(c *Context) error {
+			return errors.New("Handler is nil")
+		}
 	}
 
 	switch v := h.(type) {
@@ -65,6 +68,18 @@ func handlerFunc(h Handler) (fn handlerFn) {
 			}
 			if res == nil {
 				res = struct{}{}
+			}
+			data := ApiData{
+				Data: res,
+			}
+			c.JSON(200, data)
+			return nil
+		}
+	case func(*Context) (ztype.Map, error):
+		return func(c *Context) error {
+			res, err := v(c)
+			if err != nil {
+				return err
 			}
 			data := ApiData{
 				Data: res,

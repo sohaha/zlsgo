@@ -24,3 +24,22 @@ func TestCompletionPath(t *testing.T) {
 	tt.Equal("/xxx/{name:[\\w\\d-]+}.{ext:[\\w]+}", CompletionPath("xxx/{name:[\\w\\d-]+}.{ext:[\\w]+}", "/"))
 	tt.Equal("/aaa/xxx/{name:[\\w\\d-]+}.{ext:[\\w]+}", CompletionPath("xxx/{name:[\\w\\d-]+}.{ext:[\\w]+}", "aaa"))
 }
+
+func TestURLMatchAndParse(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	match, ok := Utils.URLMatchAndParse("/", "/")
+	t.Log(match)
+	tt.EqualTrue(!ok)
+	tt.Equal(0, len(match))
+
+	match, ok = Utils.URLMatchAndParse("/123", "/:id")
+	t.Log(match)
+	tt.EqualTrue(ok)
+	tt.Equal(1, len(match))
+
+	match, ok = Utils.URLMatchAndParse("/aaa/hi", "/:name/:*")
+	t.Log(match)
+	tt.EqualTrue(ok)
+	tt.Equal(2, len(match))
+}

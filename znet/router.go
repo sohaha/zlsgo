@@ -8,8 +8,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-
-	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (
@@ -24,12 +22,6 @@ var (
 
 	// ErrPatternGrammar is returned when generating a route that pattern grammar error.
 	ErrPatternGrammar = errors.New("pattern grammar error")
-
-	defaultPattern = `[\w\p{Han}\.\- ]+`
-	idPattern      = `[\d]+`
-	idKey          = `id`
-	allPattern     = `.*`
-	allKey         = `*`
 
 	contextKey = contextKeyType{}
 
@@ -49,9 +41,6 @@ var (
 type (
 	// contextKeyType Private Value Structure for Each Request
 	contextKeyType struct{}
-
-	// ParamsMapType Storage path parameters
-	ParamsMapType map[string]string
 )
 
 func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
@@ -103,7 +92,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
 	middleware, firstMiddleware := handlerFuncs(moreHandler)
-	_, l, ok := e.handleAny(path, handlerFunc(action), middleware, firstMiddleware)
+	_, l, ok := e.handleAny(path, Utils.ParseHandlerFunc(action), middleware, firstMiddleware)
 
 	if ok {
 		routeAddLog(e, "ANY", CompletionPath(path, e.router.prefix), action, l)
@@ -305,7 +294,7 @@ func (e *Engine) PreHandler(preHandler Handler) {
 }
 
 func (e *Engine) NotFoundHandler(handler Handler) {
-	e.router.notFound = handlerFunc(handler)
+	e.router.notFound = Utils.ParseHandlerFunc(handler)
 }
 
 // Deprecated: please use znet.Recovery(func(c *Context, err error) {})
@@ -322,7 +311,7 @@ func (e *Engine) GetTrees() map[string]*Tree {
 // Handle registers new request handlerFn
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
 	handler, firsthandle := handlerFuncs(moreHandler)
-	p, l, ok := e.addHandle(method, path, handlerFunc(action), firsthandle, handler)
+	p, l, ok := e.addHandle(method, path, Utils.ParseHandlerFunc(action), firsthandle, handler)
 	if !ok {
 		return e
 	}
@@ -407,7 +396,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 		} else {
-			err := handlerFunc(e.preHandler)(c)
+			err := Utils.ParseHandlerFunc(e.preHandler)(c)
 			if err != nil {
 				c.renderError(c, err)
 				c.Abort()
@@ -459,7 +448,7 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 		nodes := t.Find(p, true)
 		for _, node := range nodes {
 			if handler := node.handle; handler != nil && node.path != requestURL {
-				if matchParamsMap, ok := e.matchAndParse(requestURL, node.path); ok {
+				if matchParamsMap, ok := Utils.URLMatchAndParse(requestURL, node.path); ok {
 					ctx := context.WithValue(req.Context(), contextKey, matchParamsMap)
 					req = req.WithContext(ctx)
 					rw.Request = req
@@ -504,34 +493,6 @@ func handleAction(c *Context, handler handlerFn, middleware []handlerFn) {
 
 // Match checks if the request matches the route pattern
 func (e *Engine) Match(requestURL string, path string) bool {
-	_, ok := e.matchAndParse(requestURL, path)
+	_, ok := Utils.URLMatchAndParse(requestURL, path)
 	return ok
-}
-
-// matchAndParse checks if the request matches the route path and returns a map of the parsed
-func (e *Engine) matchAndParse(requestURL string, path string) (matchParams ParamsMapType, ok bool) {
-	ok = true
-	matchParams = make(ParamsMapType)
-	res := strings.Split(path, "/")
-	pattern, matchName := parsPattern(res, "/")
-	if pattern == "" {
-		return nil, false
-	}
-	rr, err := zstring.RegexExtract(pattern, requestURL)
-	if err != nil || len(rr) == 0 {
-		return nil, false
-	}
-	if rr[0] == requestURL {
-		rr = rr[1:]
-		if len(matchName) != 0 {
-			for k, v := range rr {
-				if key := matchName[k]; key != "" {
-					matchParams[key] = v
-				}
-			}
-		}
-		return
-	}
-
-	return nil, false
 }

@@ -47,7 +47,7 @@ func TestInject(t *testing.T) {
 	w = newRequest(r, "GET", "/InjectErr", "/InjectErr", func() (int, string, error) {
 		return 403, "test InjectErr", errors.New("test InjectErr")
 	})
-	tt.Equal(403, w.Code)
+	tt.Equal(500, w.Code)
 	tt.Equal("test InjectErr", w.Body.String())
 	tt.Equal("", rewriteError)
 	w = newRequest(r, "GET", "/InjectErrRewrite", "/InjectErrRewrite", func() (int, string, error) {

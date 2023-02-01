@@ -103,7 +103,9 @@ func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) Engine {
 		}
 	}
 	queue := list.New()
-	queue.PushBackList(v.queue)
+	if v.queue != nil {
+		queue.PushBackList(v.queue)
+	}
 	queue.PushBack(pFn)
 	v.queue = queue
 	return *v

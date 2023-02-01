@@ -39,18 +39,30 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			if m.Name == "Init" {
 				return nil
 			}
-			info, err := zstring.RegexExtract(
-				`^(ID|Full|Name){0,}(?i)(ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)(.*)`, m.Name)
+			path, method, key := "", "", ""
+			methods := `ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS`
+			regex := `^(?i)(` + methods + `)(.*)$`
+			info, err := zstring.RegexExtract(regex, m.Name)
 			infoLen := len(info)
-			if err != nil || infoLen != 4 {
-				if e.IsDebug() && m.Name != "Init" {
-					e.Log.Warnf("matching rule error: %s%s\n", m.Name, m.Func.String())
+
+			if err != nil || infoLen != 3 {
+				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)
+				if len(indexs) == 0 {
+					if e.IsDebug() && m.Name != "Init" {
+						e.Log.Warnf("matching rule error: %s%s\n", m.Name, m.Func.String())
+					}
+					return nil
 				}
-				return nil
+
+				index := indexs[0]
+				method = strings.ToUpper(m.Name[index[0]:index[1]])
+				path = m.Name[index[1]:]
+				key = strings.ToLower(m.Name[:index[0]])
+			} else {
+				path = info[2]
+				method = strings.ToUpper(info[1])
 			}
-			path := info[3]
-			method := strings.ToUpper(info[2])
-			key := strings.ToLower(info[1])
+
 			fn := value.Interface()
 			handleName = strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
 			if e.BindStructDelimiter != "" {
@@ -79,9 +91,9 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			)
 
 			if method == "ANY" {
-				p, l, ok = g.handleAny(path, handlerFunc(fn), nil, nil)
+				p, l, ok = g.handleAny(path, Utils.ParseHandlerFunc(fn), nil, nil)
 			} else {
-				p, l, ok = g.addHandle(method, path, handlerFunc(fn), nil, nil)
+				p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn), nil, nil)
 			}
 
 			if ok && e.IsDebug() {

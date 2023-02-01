@@ -14,6 +14,7 @@ type (
 
 	// Node records any URL params, and executes an end handlerFn.
 	Node struct {
+		value      interface{}
 		handle     handlerFn
 		children   map[string]*Node
 		key        string
@@ -32,6 +33,23 @@ func NewNode(key string, depth int) *Node {
 	}
 }
 
+func (t *Node) WithValue(v interface{}) *Node {
+	t.value = v
+	return t
+}
+
+func (t *Node) Value() interface{} {
+	return t.value
+}
+
+func (t *Node) Path() string {
+	return t.path
+}
+
+func (t *Node) Handle() handlerFn {
+	return t.handle
+}
+
 func NewTree() *Tree {
 	return &Tree{
 		root:   NewNode("/", 1),
@@ -39,8 +57,8 @@ func NewTree() *Tree {
 	}
 }
 
-func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) {
-	var currentNode = t.root
+func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) (currentNode *Node) {
+	currentNode = t.root
 	wareLen := len(middleware)
 	if path != currentNode.key {
 		res := strings.Split(path, "/")
@@ -78,6 +96,7 @@ func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) {
 	if routeName := t.parameters.routeName; routeName != "" {
 		t.routes[routeName] = currentNode
 	}
+	return
 }
 
 func (t *Tree) Find(pattern string, isRegex bool) (nodes []*Node) {

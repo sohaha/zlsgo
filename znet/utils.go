@@ -15,6 +15,118 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
+type utils struct{}
+
+var Utils = utils{}
+
+const (
+	defaultPattern = `[\w\p{Han}\.\- ]+`
+	idPattern      = `[\d]+`
+	idKey          = `id`
+	allPattern     = `.*`
+	allKey         = `*`
+)
+
+// URLMatchAndParse checks if the request matches the route path and returns a map of the parsed
+func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map[string]string, ok bool) {
+	ok = true
+	matchParams = make(map[string]string)
+	res := strings.Split(path, "/")
+	pattern, matchName := parsPattern(res, "/")
+	if pattern == "" {
+		return nil, false
+	}
+	rr, err := zstring.RegexExtract(pattern, requestURL)
+	if err != nil || len(rr) == 0 {
+		return nil, false
+	}
+	if rr[0] == requestURL {
+		rr = rr[1:]
+		if len(matchName) != 0 {
+			for k, v := range rr {
+				if key := matchName[k]; key != "" {
+					matchParams[key] = v
+				}
+			}
+		}
+		return
+	}
+
+	return nil, false
+}
+
+func parsPattern(res []string, prefix string) (string, []string) {
+	var (
+		matchName []string
+		pattern   string
+	)
+	for _, str := range res {
+		if str == "" {
+			continue
+		}
+		pattern = pattern + prefix
+		l := len(str) - 1
+		i := strings.Index(str, "}")
+		i2 := strings.Index(str, "{")
+		firstChar := string(str[0])
+		// todo Need to optimize
+		if i2 != -1 && i != -1 {
+			// lastChar := string(str[mu])
+			if i == l && i2 == 0 {
+				matchStr := str[1:l]
+				res := strings.Split(matchStr, ":")
+				matchName = append(matchName, res[0])
+				pattern = pattern + "(" + res[1] + ")"
+			} else {
+				if i2 != 0 {
+					p, m := parsPattern([]string{str[:i2]}, "")
+					if p != "" {
+						pattern = pattern + p
+						matchName = append(matchName, m...)
+					}
+					str = str[i2:]
+				}
+				if i >= 0 {
+					ni := i - i2
+					matchStr := str[1:ni]
+					res := strings.Split(matchStr, ":")
+					matchName = append(matchName, res[0])
+					pattern = pattern + "(" + res[1] + ")"
+					p, m := parsPattern([]string{str[ni+1:]}, "")
+					if p != "" {
+						pattern = pattern + p
+						matchName = append(matchName, m...)
+					}
+				} else {
+					pattern = pattern + str
+				}
+			}
+
+		} else if firstChar == ":" {
+			matchStr := str
+			res := strings.Split(matchStr, ":")
+			key := res[1]
+			if key == "full" {
+				key = allKey
+			}
+			matchName = append(matchName, key)
+			if key == idKey {
+				pattern = pattern + "(" + idPattern + ")"
+			} else if key == allKey {
+				pattern = pattern + "(" + allPattern + ")"
+			} else {
+				pattern = pattern + "(" + defaultPattern + ")"
+			}
+		} else if firstChar == "*" {
+			pattern = pattern + "(" + allPattern + ")"
+			matchName = append(matchName, allKey)
+		} else {
+			pattern = pattern + str
+		}
+	}
+	return pattern, matchName
+}
+
 func getAddr(addr string) string {
 	var port int
 	if strings.Contains(addr, ":") {
@@ -103,78 +215,6 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 		t, err = t.Parse(file)
 	}
 	return
-}
-
-func parsPattern(res []string, prefix string) (string, []string) {
-	var (
-		matchName []string
-		pattern   string
-	)
-	for _, str := range res {
-		if str == "" {
-			continue
-		}
-		pattern = pattern + prefix
-		l := len(str) - 1
-		i := strings.Index(str, "}")
-		i2 := strings.Index(str, "{")
-		firstChar := string(str[0])
-		// todo Need to optimize
-		if i2 != -1 && i != -1 {
-			// lastChar := string(str[mu])
-			if i == l && i2 == 0 {
-				matchStr := str[1:l]
-				res := strings.Split(matchStr, ":")
-				matchName = append(matchName, res[0])
-				pattern = pattern + "(" + res[1] + ")"
-			} else {
-				if i2 != 0 {
-					p, m := parsPattern([]string{str[:i2]}, "")
-					if p != "" {
-						pattern = pattern + p
-						matchName = append(matchName, m...)
-					}
-					str = str[i2:]
-				}
-				if i >= 0 {
-					ni := i - i2
-					matchStr := str[1:ni]
-					res := strings.Split(matchStr, ":")
-					matchName = append(matchName, res[0])
-					pattern = pattern + "(" + res[1] + ")"
-					p, m := parsPattern([]string{str[ni+1:]}, "")
-					if p != "" {
-						pattern = pattern + p
-						matchName = append(matchName, m...)
-					}
-				} else {
-					pattern = pattern + str
-				}
-			}
-
-		} else if firstChar == ":" {
-			matchStr := str
-			res := strings.Split(matchStr, ":")
-			key := res[1]
-			if key == "full" {
-				key = allKey
-			}
-			matchName = append(matchName, key)
-			if key == idKey {
-				pattern = pattern + "(" + idPattern + ")"
-			} else if key == allKey {
-				pattern = pattern + "(" + allPattern + ")"
-			} else {
-				pattern = pattern + "(" + defaultPattern + ")"
-			}
-		} else if firstChar == "*" {
-			pattern = pattern + "(" + allPattern + ")"
-			matchName = append(matchName, allKey)
-		} else {
-			pattern = pattern + str
-		}
-	}
-	return pattern, matchName
 }
 
 type tlsRedirectHandler struct {

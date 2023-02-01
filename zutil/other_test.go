@@ -7,8 +7,8 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-func TestUnescapeHTML(tt *testing.T) {
-	t := zlsgo.NewTest(tt)
+func TestUnescapeHTML(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	s := zutil.UnescapeHTML("")
-	t.Log(s)
+	tt.Log(s)
 }

@@ -17,8 +17,16 @@ func TestTryCatch(t *testing.T) {
 	})
 	tt.EqualTrue(err != nil)
 	tt.Equal("测试", err.Error())
+	tt.Logf("%+v", err)
 	code, _ := zerror.UnwrapCode(err)
 	tt.Equal(zerror.ErrCode(500), code)
+
+	err = zerror.TryCatch(func() error {
+		panic("测试")
+		return nil
+	})
+	tt.Equal("测试", err.Error())
+	tt.Logf("%+v", err)
 }
 
 func BenchmarkTryCatch_normal(b *testing.B) {

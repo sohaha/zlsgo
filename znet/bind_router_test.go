@@ -18,11 +18,11 @@ func (t *testController) Init(e *Engine) {
 	e.Log.Debug("initialization")
 }
 
-func (t *testController) GetUser(_ *Context) {
+func (t *testController) GETUser(_ *Context) {
 
 }
 
-func (t *testController) GetgetUser(_ *Context) {
+func (t *testController) GETGetUser(_ *Context) {
 
 }
 
@@ -55,15 +55,15 @@ func (t *testController) AnyOk(c *Context) error {
 	return errors.New("ok")
 }
 
-func (t *testController) IDGet(_ *Context) {
+func (t *testController) IDGET(_ *Context) {
 
 }
 
-func (t *testController) IDGetUser(_ *Context) {
+func (t *testController) IDGETUser(_ *Context) {
 
 }
 
-func (t *testController) FullGetFile(_ *Context) {
+func (t *testController) FullGETFile(_ *Context) {
 
 }
 
@@ -108,7 +108,6 @@ func TestBindStruct(t *testing.T) {
 	}
 	for _, v := range methods {
 		w := httptest.NewRecorder()
-		t.Log("Test:", v[0], v[1])
 		req, _ := http.NewRequest(v[0], v[1], nil)
 		r.ServeHTTP(w, req)
 		code := 200
@@ -116,7 +115,8 @@ func TestBindStruct(t *testing.T) {
 			code = ztype.ToInt(v[2])
 		}
 		tt.Equal(code, w.Code)
-		t.Log(w.Body.String())
+		t.Log("Test:", v[0], v[1])
+		t.Log(w.Code, w.Body.String())
 	}
 
 	err = r.BindStruct(prefix, nil)

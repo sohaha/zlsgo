@@ -161,8 +161,8 @@ func (c *Context) next() {
 	c.mu.Unlock()
 	err := n(c)
 	if err != nil {
-		c.Abort()
 		c.renderError(c, err)
+		c.Abort()
 	}
 }
 

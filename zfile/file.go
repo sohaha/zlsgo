@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	ProjectPath = "."
+	ProjectPath = "./"
 )
 
 func init() {
 	// abs, _ := filepath.Abs(".")
 	// ProjectPath = RealPath(abs)
-	ProjectPath = ProgramPath()
+	ProjectPath = ProgramPath(true)
 	if strings.Contains(ProjectPath, TmpPath("")) {
 		ProjectPath = RootPath()
 	}
@@ -144,6 +144,13 @@ func RealPathMkdir(path string, addSlash ...bool) string {
 	return realPath
 }
 
+// IsSubPath Is the subPath under the path
+func IsSubPath(subPath, path string) bool {
+	subPath = RealPath(subPath)
+	path = RealPath(path)
+	return strings.HasPrefix(subPath, path)
+}
+
 // Rmdir support to keep the current directory
 func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 	realPath := RealPath(path)
@@ -209,10 +216,16 @@ func pathAddSlash(path string, addSlash ...bool) string {
 }
 
 // GetMimeType get file mime type
-func GetMimeType(filename string, content []byte) string {
-	ctype := mime.TypeByExtension(filepath.Ext(filename))
-	if ctype == "" && len(content) > 0 {
+func GetMimeType(filename string, content []byte) (ctype string) {
+	if len(content) > 0 {
 		ctype = http.DetectContentType(content)
+	}
+
+	if ctype == "" || strings.HasPrefix(ctype, "text/plain") {
+		ntype := mime.TypeByExtension(filepath.Ext(filename))
+		if ntype != "" {
+			ctype = ntype
+		}
 	}
 	return ctype
 }

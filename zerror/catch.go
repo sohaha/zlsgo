@@ -1,12 +1,25 @@
 package zerror
 
 import (
-	"github.com/sohaha/zlsgo/zutil"
+	"fmt"
 )
 
 // TryCatch exception capture
 func TryCatch(fn func() error) (err error) {
-	return zutil.TryCatch(fn)
+	defer func() {
+		if recoverErr := recover(); recoverErr != nil {
+			switch e := recoverErr.(type) {
+			case error:
+				err = Reuse(e)
+			case *Error:
+				err = e
+			default:
+				err = Reuse(fmt.Errorf("%v", recoverErr))
+			}
+		}
+	}()
+	err = fn()
+	return
 }
 
 // Panic if error is not nil, usually used in conjunction with TryCatch

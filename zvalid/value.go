@@ -94,7 +94,7 @@ func (v Engine) Split(sep string) ([]string, error) {
 
 // Valid get the final value, or an notEmpty string if an error occurs
 func (v *Engine) valid() *Engine {
-	if v.result {
+	if v.result || v.queue == nil {
 		return v
 	}
 	v.result = true
@@ -102,6 +102,7 @@ func (v *Engine) valid() *Engine {
 		v.err = ErrNoValidationValueSet
 		return v
 	}
+
 	queues := list.New()
 	queues.PushBackList(v.queue)
 	l := queues.Len()
@@ -142,11 +143,11 @@ func (v Engine) VerifiAny(value interface{}, name ...string) Engine {
 	switch vv := value.(type) {
 	case string:
 		s = vv
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
-		s = ztype.ToString(vv)
+	// case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+	// 	s = ztype.ToString(vv)
 	default:
-		s = ""
-		v.err = setError(&v, "unsupported type")
+		s = ztype.ToString(vv)
+		// v.err = setError(&v, "unsupported type")
 	}
 	return v.Verifi(s, name...)
 }

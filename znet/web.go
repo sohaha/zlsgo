@@ -59,18 +59,18 @@ type (
 		Log                 *zlog.Logger
 		templateFuncMap     template.FuncMap
 		router              *router
+		BindTag             string
 		webModeName         string
-		customMethodType    string
 		BindStructDelimiter string
 		BindStructSuffix    string
-		BindTag             string
+		customMethodType    string
 		addr                []addrSt
+		shutdowns           []func()
 		MaxMultipartMemory  int64
 		webMode             int
 		writeTimeout        time.Duration
 		readTimeout         time.Duration
 		ShowFavicon         bool
-		shutdowns           []func()
 	}
 	TlsCfg struct {
 		HTTPProcessing interface{}
