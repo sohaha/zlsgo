@@ -4,12 +4,13 @@
 package zarray_test
 
 import (
-	"sync"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zarray"
+	"github.com/sohaha/zlsgo/zsync"
 )
 
 func TestHashMap(t *testing.T) {
@@ -33,17 +34,43 @@ func TestHashMap(t *testing.T) {
 	tt.EqualTrue(!ok)
 	tt.Equal("", item)
 
-	m.Delete(2, 9)
+	m.Delete(2)
+	m.Delete(9)
 
 	tt.Equal(1, int(m.Len()))
 
-	item, ok = m.Get(2)
+	_, ok = m.Get(2)
 	tt.EqualTrue(!ok)
 
+	m.Set(2, "reset name2")
 	m.ForEach(func(key int, value string) bool {
-		t.Log(key, value)
+		t.Log("ForEach:", key, value)
 		return true
 	})
+
+	j, err := json.Marshal(m)
+	tt.NoError(err)
+	t.Log(string(j))
+
+	j = []byte(`{"2":"hobby","1":"new name","8":"886"}`)
+	err = json.Unmarshal(j, &m)
+	tt.NoError(err)
+	mlen := m.Len()
+
+	v2, ok := m.Get(2)
+	tt.EqualTrue(ok)
+	tt.Equal("hobby", v2)
+
+	v1, ok := m.GetAndDelete(1)
+	tt.EqualTrue(ok)
+	tt.Equal("new name", v1)
+	tt.Equal(mlen-1, m.Len())
+
+	m.ForEach(func(key int, value string) bool {
+		t.Log("n:", key, value)
+		return true
+	})
+
 }
 
 func TestHashMapOverwrite(t *testing.T) {
@@ -88,43 +115,48 @@ func TestHashMapProvideGet(t *testing.T) {
 
 	{
 		i := 0
-		one, ok := m.ProvideGet(0, func() (int, bool) {
+		one, ok, computed := m.ProvideGet(0, func() (int, bool) {
+			t.Log("ProvideGet set", 110)
 			i++
 			return 110, false
 		})
 		t.Log(one, ok)
+		tt.EqualTrue(!computed)
 
-		one, ok = m.ProvideGet(0, func() (int, bool) {
+		one, ok, computed = m.ProvideGet(0, func() (int, bool) {
+			t.Log("ProvideGet set", 119)
 			i++
 			return 119, true
 		})
 		t.Log(one, ok)
+		tt.EqualTrue(computed)
 
-		one, ok = m.ProvideGet(0, func() (int, bool) {
+		one, ok, computed = m.ProvideGet(0, func() (int, bool) {
 			i++
-			return 119, true
+			return 120, true
 		})
-		t.Log(one, ok)
+		tt.EqualTrue(!computed)
+
+		tt.EqualTrue(ok)
+		tt.Equal(119, one)
 		tt.Equal(2, i)
 	}
 
-	var wg sync.WaitGroup
+	var wg zsync.WaitGroup
 
 	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-		go func(i int) {
-			v, ok := m.ProvideGet(1, func() (int, bool) {
+		wg.Go(func() {
+			v, ok, _ := m.ProvideGet(1, func() (int, bool) {
 				t.Log("set", 99)
 				time.Sleep(time.Millisecond * 100)
 				return 99, true
 			})
 			tt.EqualTrue(ok)
 			tt.Equal(99, v)
-			wg.Done()
-		}(i)
+		})
 	}
 
-	wg.Wait()
+	_ = wg.Wait()
 
 	v, ok := m.Get(1)
 	tt.EqualTrue(ok)
@@ -133,20 +165,18 @@ func TestHashMapProvideGet(t *testing.T) {
 	m.Delete(1)
 
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(i int) {
-			v, ok := m.ProvideGet(1, func() (int, bool) {
+		wg.Go(func() {
+			v, ok, _ := m.ProvideGet(1, func() (int, bool) {
 				time.Sleep(time.Millisecond * 100)
 				t.Log("new set", 100)
 				return 100, true
 			})
 			tt.EqualTrue(ok)
 			tt.Equal(100, v)
-			wg.Done()
-		}(i)
+		})
 	}
 
-	wg.Wait()
+	_ = wg.Wait()
 
 	v, ok = m.Get(1)
 	tt.EqualTrue(ok)

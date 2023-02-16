@@ -15,9 +15,13 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-type utils struct{}
+type utils struct {
+	ContextKey contextKeyType
+}
 
-var Utils = utils{}
+var Utils = utils{
+	ContextKey: contextKeyType{},
+}
 
 const (
 	defaultPattern = `[\w\p{Han}\.\- ]+`
@@ -150,7 +154,7 @@ func getHostname(addr string, isTls bool) string {
 	return hostname + resolveHostname(addr)
 }
 
-func CompletionPath(p, prefix string) string {
+func (_ utils) CompletionPath(p, prefix string) string {
 	if p == "/" {
 		if prefix == "/" {
 			return prefix

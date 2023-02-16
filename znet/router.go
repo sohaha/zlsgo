@@ -23,8 +23,6 @@ var (
 	// ErrPatternGrammar is returned when generating a route that pattern grammar error.
 	ErrPatternGrammar = errors.New("pattern grammar error")
 
-	contextKey = contextKeyType{}
-
 	methods = map[string]struct{}{
 		http.MethodGet:     {},
 		http.MethodPost:    {},
@@ -95,7 +93,7 @@ func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engin
 	_, l, ok := e.handleAny(path, Utils.ParseHandlerFunc(action), middleware, firstMiddleware)
 
 	if ok {
-		routeAddLog(e, "ANY", CompletionPath(path, e.router.prefix), action, l)
+		routeAddLog(e, "ANY", Utils.CompletionPath(path, e.router.prefix), action, l)
 	}
 
 	return e
@@ -202,7 +200,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 	}
 	rprefix := e.router.prefix
 	if rprefix != "" {
-		prefix = CompletionPath(prefix, rprefix)
+		prefix = Utils.CompletionPath(prefix, rprefix)
 	}
 	middleware := make([]handlerFn, len(e.router.middleware))
 	copy(middleware, e.router.middleware)
@@ -331,7 +329,7 @@ func (e *Engine) addHandle(method string, path string, handle handlerFn, beforeh
 		e.router.trees[method] = tree
 	}
 
-	path = CompletionPath(path, e.router.prefix)
+	path = Utils.CompletionPath(path, e.router.prefix)
 	if routeName := e.router.parameters.routeName; routeName != "" {
 		tree.parameters.routeName = routeName
 	}
@@ -449,7 +447,7 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 		for _, node := range nodes {
 			if handler := node.handle; handler != nil && node.path != requestURL {
 				if matchParamsMap, ok := Utils.URLMatchAndParse(requestURL, node.path); ok {
-					ctx := context.WithValue(req.Context(), contextKey, matchParamsMap)
+					ctx := context.WithValue(req.Context(), Utils.ContextKey, matchParamsMap)
 					req = req.WithContext(ctx)
 					rw.Request = req
 					if applyMiddleware {

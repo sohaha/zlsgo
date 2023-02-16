@@ -34,6 +34,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 	handleName := "reflect.methodValueCall"
 	typeOf := typ.TypeOf()
 
+	// methods := strings.Split("ANY|GET|Post|POST|PUT|DELETE|PATCH|HEAD|OPTIONS", "|")
 	return zutil.TryCatch(func() error {
 		return typ.ForEachMethod(func(i int, m reflect.Method, value reflect.Value) error {
 			if m.Name == "Init" {
@@ -41,9 +42,15 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			}
 			path, method, key := "", "", ""
 			methods := `ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS`
+			// regex := `^(` + methods + `){0,}([a-zA-Z]+){0,}(?i)(` + methods + `)(.*)`
+
+			// regex := `^(!(?i:` + methods + `)?([a-zA-Z]+))?(?i)(` + methods + `)(.*)$`
 			regex := `^(?i)(` + methods + `)(.*)$`
 			info, err := zstring.RegexExtract(regex, m.Name)
+			// info := strings.Split(zstring.CamelCaseToSnakeCase(m.Name, "-"), "-")
 			infoLen := len(info)
+
+			// Log.Dump(zstring.CamelCaseToSnakeCase(m.Name, "-"))
 
 			if err != nil || infoLen != 3 {
 				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)

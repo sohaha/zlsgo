@@ -28,11 +28,15 @@ func (h *WaitGroup) GoTry(f func()) {
 			f()
 			return nil
 		})
-		h.mu.Lock()
-		if err != nil && h.err == nil {
-			h.err = err
+
+		if err != nil {
+			h.mu.Lock()
+			if h.err == nil {
+				h.err = err
+			}
+			h.mu.Unlock()
 		}
-		h.mu.Unlock()
+
 	}()
 }
 

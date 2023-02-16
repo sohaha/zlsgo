@@ -61,9 +61,8 @@ func SetDeleteCallback(fn func(key string) bool) {
 // Deprecated: please use zcache.NewFast
 // New new cache
 func New(table string, accessCount ...bool) *Table {
-	mutex.RLock()
+	mutex.Lock()
 	t, ok := cache[table]
-	mutex.RUnlock()
 
 	if !ok {
 		t, ok = cache[table]
@@ -77,5 +76,6 @@ func New(table string, accessCount ...bool) *Table {
 		}
 	}
 
+	mutex.Unlock()
 	return t
 }

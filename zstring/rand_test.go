@@ -10,6 +10,7 @@ func TestRand(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	t.Log(Rand(4), Rand(10), Rand(4, "a1"))
 	t.Log(RandInt(4, 10), RandInt(1, 10), RandInt(1, 2), RandInt(1, 0))
+	t.Log(RandUint32Max(10), RandUint32Max(100), RandUint32Max(1000), RandUint32Max(10000))
 	t.Log(UUID())
 }
 

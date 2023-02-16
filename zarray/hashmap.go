@@ -4,6 +4,7 @@
 package zarray
 
 import (
+	"encoding/json"
 	"reflect"
 	"sort"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/sohaha/zlsgo/zutil"
+	"golang.org/x/exp/constraints"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -33,7 +35,7 @@ const (
 
 type (
 	hashable interface {
-		int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | uintptr | float32 | float64 | string | complex64 | complex128
+		constraints.Integer | constraints.Float | constraints.Complex | ~string | uintptr | ~unsafe.Pointer
 	}
 
 	metadata[K hashable, V any] struct {
@@ -43,7 +45,7 @@ type (
 		keyshifts uintptr
 	}
 
-	// Map implements the concurrent hashmap
+	// Maper implements the concurrent hashmap
 	Maper[K hashable, V any] struct {
 		gsf      singleflight.Group
 		listHead *element[K, V]
@@ -131,8 +133,33 @@ func (m *Maper[K, V]) Delete(keys ...K) {
 	}
 }
 
+func (m *Maper[K, V]) Has(key K) (ok bool) {
+	_, ok = m.get(m.hasher(key), key)
+	return
+}
+
 func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
 	return m.get(m.hasher(key), key)
+}
+
+func (m *Maper[K, V]) GetAndDelete(key K) (value V, ok bool) {
+	var (
+		h        = m.hasher(key)
+		existing = m.metadata.Load().indexElement(h)
+	)
+	if existing == nil || existing.keyHash > h {
+		existing = m.listHead.next()
+	}
+	for ; existing != nil && existing.keyHash <= h; existing = existing.next() {
+		if existing.key == key {
+			value, ok = *existing.value.Load(), !existing.isDeleted()
+			if existing.remove() {
+				m.removeItemFromIndex(existing)
+			}
+			return
+		}
+	}
+	return
 }
 
 func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
@@ -142,14 +169,13 @@ func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
 			if ok {
 				value = *elem.value.Load()
 			}
-
 			return
 		}
 	}
 	return
 }
 
-func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loaded bool) {
+func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loaded, computed bool) {
 	var (
 		h        = m.hasher(key)
 		data     = m.metadata.Load()
@@ -166,28 +192,28 @@ func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loa
 		}
 	}
 
+	r := false
 	_, _, _ = m.gsf.Do(strconv.FormatInt(int64(h), 10), func() (interface{}, error) {
 		actual, loaded = provide()
 		if loaded {
 			m.Set(key, actual)
+			computed = true
 		}
+		r = true
 		return nil, nil
 	})
 
-	return m.get(h, key)
-	// loaded = err == nil
-	// if loaded {
-	// 	actual = compute.(V)
-	// 	m.set(m.hasher(key), key, actual)
-	// }
-
+	if !r {
+		actual, loaded = m.get(h, key)
+	}
 	return
 }
 
 func (m *Maper[K, V]) GetOrSet(key K, value V) (actual V, loaded bool) {
-	return m.ProvideGet(key, func() (V, bool) {
+	actual, loaded, _ = m.ProvideGet(key, func() (V, bool) {
 		return value, true
 	})
+	return
 }
 
 func (m *Maper[K, V]) Set(key K, value V) {
@@ -280,6 +306,28 @@ func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
+	gomap := make(map[K]V)
+	for i := m.listHead.next(); i != nil; i = i.next() {
+		gomap[i.key] = *i.value.Load()
+	}
+	return json.Marshal(gomap)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (m *Maper[K, V]) UnmarshalJSON(i []byte) error {
+	gomap := make(map[K]V)
+	err := json.Unmarshal(i, &gomap)
+	if err != nil {
+		return err
+	}
+	for k, v := range gomap {
+		m.Set(k, v)
+	}
+	return nil
+}
+
 func (m *Maper[K, V]) Fillrate() uintptr {
 	data := m.metadata.Load()
 
@@ -323,6 +371,9 @@ func (m *Maper[K, V]) removeItemFromIndex(item *element[K, V]) {
 
 		if data == m.metadata.Load() {
 			m.numItems.Add(^uintptr(0))
+			if next == nil {
+				data.count.Add(^uintptr(0))
+			}
 			return
 		}
 	}
@@ -350,7 +401,7 @@ func (m *Maper[K, V]) grow(newSize uintptr) {
 		m.fillIndexItems(newdata)
 		m.metadata.Store(newdata)
 
-		if !resizeNeeded(newSize, uintptr(m.Len())) {
+		if !resizeNeeded(newSize, m.Len()) {
 			m.resizing.Store(notResizing)
 			return
 		}
@@ -362,7 +413,7 @@ func (md *metadata[K, V]) indexElement(hashedKey uintptr) *element[K, V] {
 	index := hashedKey >> md.keyshifts
 	ptr := (*unsafe.Pointer)(unsafe.Pointer(uintptr(md.data) + index*intSizeBytes))
 	item := (*element[K, V])(atomic.LoadPointer(ptr))
-	for (item == nil || hashedKey < item.keyHash) && index > 0 {
+	for (item == nil || hashedKey < item.keyHash || item.isDeleted()) && index > 0 {
 		index--
 		ptr = (*unsafe.Pointer)(unsafe.Pointer(uintptr(md.data) + index*intSizeBytes))
 		item = (*element[K, V])(atomic.LoadPointer(ptr))

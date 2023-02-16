@@ -5,36 +5,8 @@ import (
 	"encoding/hex"
 	"io"
 	"strconv"
-	"sync"
 	"time"
 )
-
-var rngPool sync.Pool
-
-func (r *ru) Uint32() uint32 {
-	for r.x == 0 {
-		x := time.Now().UnixNano()
-		r.x = uint32((x >> 32) ^ x)
-	}
-	x := r.x
-	x ^= x << 13
-	x ^= x >> 17
-	x ^= x << 5
-	r.x = x
-	return x
-}
-
-// RandUint32 returns pseudorandom uint32
-func RandUint32() uint32 {
-	v := rngPool.Get()
-	if v == nil {
-		v = &ru{}
-	}
-	r := v.(*ru)
-	x := r.Uint32()
-	rngPool.Put(r)
-	return x
-}
 
 // RandUint32Max returns pseudorandom uint32 in the range [0..max)
 func RandUint32Max(max uint32) uint32 {

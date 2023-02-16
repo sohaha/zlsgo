@@ -53,7 +53,7 @@ func (c *Context) GetParam(key string) string {
 
 // GetAllParam Get the value of all param in the route
 func (c *Context) GetAllParam() map[string]string {
-	if values, ok := c.Request.Context().Value(contextKey).(map[string]string); ok {
+	if values, ok := c.Request.Context().Value(Utils.ContextKey).(map[string]string); ok {
 		return values
 	}
 

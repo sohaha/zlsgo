@@ -5,6 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 type (
@@ -30,7 +32,7 @@ const nslowdown = 7
 
 var rtokenPool sync.Pool
 
-// NewRBMutex creates a new RBMutex instance.
+// NewRBMutex creates a new RBMutex instance
 func NewRBMutex() *RBMutex {
 	nslots := nextPowOf2(parallelism())
 	mu := RBMutex{
@@ -45,8 +47,8 @@ func (mu *RBMutex) RLock() *RToken {
 	if atomic.LoadInt32(&mu.rbias) == 1 {
 		t, ok := rtokenPool.Get().(*RToken)
 		if !ok {
-			t = new(RToken)
-			t.slot = fastrand()
+			t = &RToken{}
+			t.slot = zstring.RandUint32()
 		}
 		for i := 0; i < len(mu.rslots); i++ {
 			slot := t.slot + uint32(i)
