@@ -3,6 +3,11 @@
 
 package zstring
 
+import (
+	"sync"
+	"time"
+)
+
 var rngPool sync.Pool
 
 func (r *ru) Uint32() uint32 {

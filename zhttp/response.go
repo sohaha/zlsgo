@@ -14,6 +14,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
+	"golang.org/x/net/html/charset"
 )
 
 type Res struct {
@@ -35,7 +36,6 @@ func (r *Res) Request() *http.Request {
 }
 
 func (r *Res) Response() *http.Response {
-
 	return r.resp
 }
 
@@ -105,8 +105,21 @@ func (r *Res) ToBytes() ([]byte, error) {
 		r.err = err
 		return nil, err
 	}
-	r.responseBody = respBody
+
+	r.responseBody = forceUTF8(r, respBody)
 	return r.responseBody, nil
+}
+
+func forceUTF8(r *Res, respBody []byte) []byte {
+	ctype := r.resp.Header.Get("Content-Type")
+	c, n, _ := charset.DetermineEncoding(respBody, ctype)
+	if n != "utf-8" && n != "windows-1252" {
+		b, err := c.NewDecoder().Bytes(respBody)
+		if err == nil {
+			return b
+		}
+	}
+	return respBody
 }
 
 func (r *Res) Body() (body io.ReadCloser) {
@@ -123,7 +136,8 @@ func (r *Res) Body() (body io.ReadCloser) {
 		r.err = err
 		return nil
 	}
-	r.responseBody = respBody
+
+	r.responseBody = forceUTF8(r, respBody)
 	return ioutil.NopCloser(bytes.NewReader(r.responseBody))
 }
 
