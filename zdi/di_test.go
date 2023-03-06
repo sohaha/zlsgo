@@ -34,3 +34,25 @@ func TestBase(t *testing.T) {
 		tt.NoError(err)
 	})
 }
+
+func TestMultiple(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	di := zdi.New()
+
+	test1 := &testSt{Num: 1}
+	test2 := &testSt{Num: 2}
+	test3 := &testSt{Num: 3}
+
+	di.Maps(test1, test2)
+	di.Map(test3)
+
+	_, err := di.Invoke(func(test *testSt) {
+		t.Log(test)
+	})
+	tt.NoError(err)
+
+	_, err = di.Invoke(func(test []*testSt) {
+		t.Log(test)
+	})
+	tt.NoError(err)
+}

@@ -5,8 +5,6 @@ import (
 	_ "unsafe"
 )
 
-var assertionsEnabled = false
-
 const (
 	cacheLineSize = 64
 )

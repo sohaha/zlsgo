@@ -8,6 +8,11 @@ import (
 	"os"
 )
 
+func ProjectMd5() string {
+	d, _ := Md5File(os.Args[0])
+	return d
+}
+
 func Md5(s string) string {
 	return Md5Byte(String2Bytes(s))
 }

@@ -10,6 +10,7 @@ func TestCompletionPath(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	tt.Equal("/", Utils.CompletionPath("/", "/"))
+	tt.Equal("/", Utils.CompletionPath("//", "///"))
 	tt.Equal("/", Utils.CompletionPath("", "/"))
 	tt.Equal("/", Utils.CompletionPath(" ", "/"))
 	tt.Equal("/a", Utils.CompletionPath("a", "/"))

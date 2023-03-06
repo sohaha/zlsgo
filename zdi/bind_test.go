@@ -65,5 +65,4 @@ func TestApply(t *testing.T) {
 	err = di.Apply(&s)
 	tt.EqualNil(err)
 	t.Log(s)
-
 }

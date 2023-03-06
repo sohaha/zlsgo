@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -52,11 +51,27 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	}
 }
 
-func (e *Engine) StaticFS(relativePath string, fs http.FileSystem) {
+func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, headers ...map[string]string) {
 	var urlPattern string
 	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", relativePath))
 	fileServer := http.StripPrefix(relativePath, http.FileServer(fs))
+
+	headerValues := make(map[string]string, 1)
+	// if !e.IsDebug() {
+	// 	headerValues["Cache-Control"] = "max-age=86400"
+	// }
+
+	for i := range headers {
+		for k := range headers[i] {
+			headerValues[k] = headers[i][k]
+		}
+	}
+
 	handler := func(c *Context) {
+		for k := range headerValues {
+			c.Writer.Header().Set(k, headerValues[k])
+		}
+
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
 	if strings.HasSuffix(relativePath, "/") {
@@ -74,8 +89,8 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem) {
 	log()
 }
 
-func (e *Engine) Static(relativePath, root string) {
-	e.StaticFS(relativePath, http.Dir(root))
+func (e *Engine) Static(relativePath, root string, headers ...map[string]string) {
+	e.StaticFS(relativePath, http.Dir(root), headers...)
 }
 
 func (e *Engine) StaticFile(relativePath, filepath string) {
@@ -420,47 +435,18 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 	if !ok {
 		return true
 	}
-	nodes := t.Find(requestURL, false)
-	for i := range nodes {
-		node := nodes[i]
-		if node.handle != nil {
-			if node.path == requestURL {
-				if applyMiddleware {
-					handleAction(rw, node.handle, node.middleware)
-				} else {
-					handleAction(rw, node.handle, []handlerFn{})
-				}
-				return
-			}
-		}
+
+	handler, middleware, ok := Utils.TreeFind(t, requestURL)
+	if !ok {
+		return true
 	}
 
-	if len(nodes) == 0 {
-		res := strings.Split(requestURL, "/")
-		p := ""
-		if len(res) == 1 {
-			p = res[0]
-		} else {
-			p = res[1]
-		}
-		nodes := t.Find(p, true)
-		for _, node := range nodes {
-			if handler := node.handle; handler != nil && node.path != requestURL {
-				if matchParamsMap, ok := Utils.URLMatchAndParse(requestURL, node.path); ok {
-					ctx := context.WithValue(req.Context(), Utils.ContextKey, matchParamsMap)
-					req = req.WithContext(ctx)
-					rw.Request = req
-					if applyMiddleware {
-						handleAction(rw, handler, node.middleware)
-					} else {
-						handleAction(rw, handler, []handlerFn{})
-					}
-					return
-				}
-			}
-		}
+	if applyMiddleware {
+		handleAction(rw, handler, middleware)
+	} else {
+		handleAction(rw, handler, []handlerFn{})
 	}
-	return true
+	return false
 }
 
 func (e *Engine) Use(middleware ...Handler) {

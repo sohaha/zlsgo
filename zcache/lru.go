@@ -78,8 +78,13 @@ func (l *FastCache) set(k string, v *interface{}, b []byte, expiration ...time.D
 	}
 	idx := hasher(k) & l.mask
 	var expireAt int64
-	if len(expiration) > 0 && expiration[0] > 0 {
-		expireAt = ztime.Clock()*1000 + int64(expiration[0])
+	if len(expiration) > 0 {
+		if expiration[0] == -1 {
+		} else if expiration[0] > 0 {
+			expireAt = ztime.Clock()*1000 + int64(expiration[0])
+		} else if l.expiration > 0 {
+			expireAt = ztime.Clock()*1000 + int64(l.expiration)
+		}
 	} else if l.expiration > 0 {
 		expireAt = ztime.Clock()*1000 + int64(l.expiration)
 	}
@@ -122,7 +127,7 @@ func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 }
 
 // ProvideGet get value of key from cache with result and provide default value
-func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool)) (interface{}, bool) {
+func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool), expiration ...time.Duration) (interface{}, bool) {
 	if i, _, ok := l.get(key); ok && i != nil {
 		return *i, true
 	}
@@ -130,7 +135,7 @@ func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool)) (
 	_, _, _ = l.gsf.Do(key, func() (value interface{}, err error) {
 		value, ok := provide()
 		if ok {
-			l.Set(key, value)
+			l.Set(key, value, expiration...)
 		}
 		return
 	})

@@ -35,7 +35,7 @@ const (
 
 type (
 	hashable interface {
-		constraints.Integer | constraints.Float | constraints.Complex | ~string | uintptr | ~unsafe.Pointer
+		constraints.Integer | constraints.Float | constraints.Complex | ~string | uintptr | unsafe.Pointer
 	}
 
 	metadata[K hashable, V any] struct {
@@ -364,14 +364,14 @@ func (m *Maper[K, V]) removeItemFromIndex(item *element[K, V]) {
 		ptr := (*unsafe.Pointer)(unsafe.Pointer(uintptr(data.data) + index*intSizeBytes))
 
 		next := item.next()
-		if next != nil && item.keyHash>>data.keyshifts != index {
+		if next != nil && next.keyHash>>data.keyshifts != index {
 			next = nil
 		}
-		atomic.CompareAndSwapPointer(ptr, unsafe.Pointer(item), unsafe.Pointer(next))
 
+		swappedToNil := atomic.CompareAndSwapPointer(ptr, unsafe.Pointer(item), unsafe.Pointer(next)) && next == nil
 		if data == m.metadata.Load() {
 			m.numItems.Add(^uintptr(0))
-			if next == nil {
+			if swappedToNil {
 				data.count.Add(^uintptr(0))
 			}
 			return

@@ -13,3 +13,7 @@ func TestMd5(t *testing.T) {
 	t.Log(Md5File("./md5.go"))
 	t.Log(Md5File("./md5.go.bak"))
 }
+
+func TestProjectMd5(t *testing.T) {
+	t.Log(ProjectMd5())
+}

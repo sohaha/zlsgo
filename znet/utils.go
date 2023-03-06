@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"net/http"
@@ -154,27 +155,55 @@ func getHostname(addr string, isTls bool) string {
 	return hostname + resolveHostname(addr)
 }
 
+func (u utils) TreeFind(t *Tree, path string) (handlerFn, []handlerFn, bool) {
+	nodes := t.Find(path, false)
+	for i := range nodes {
+		node := nodes[i]
+		if node.handle != nil {
+			if node.path == path {
+				return node.handle, node.middleware, true
+			}
+		}
+	}
+
+	if len(nodes) == 0 {
+		res := strings.Split(path, "/")
+		p := ""
+		if len(res) == 1 {
+			p = res[0]
+		} else {
+			p = res[1]
+		}
+		nodes := t.Find(p, true)
+		for _, node := range nodes {
+			if handler := node.handle; handler != nil && node.path != path {
+				if matchParamsMap, ok := u.URLMatchAndParse(path, node.path); ok {
+					return func(c *Context) error {
+						req := c.Request
+						ctx := context.WithValue(req.Context(), u.ContextKey, matchParamsMap)
+						c.Request = req.WithContext(ctx)
+						return node.Handle()(c)
+					}, node.middleware, true
+				}
+			}
+		}
+	}
+	return nil, nil, false
+}
+
 func (_ utils) CompletionPath(p, prefix string) string {
-	if p == "/" {
-		if prefix == "/" {
-			return prefix
-		}
-		return prefix + p
-	} else if p == "" {
-		if prefix[0] != '/' {
-			return "/" + prefix
-		}
-		return prefix
+	suffix := strings.HasSuffix(p, "/")
+	p = strings.TrimLeft(p, "/")
+	prefix = strings.TrimRight(prefix, "/")
+	path := zstring.TrimSpace(path.Join("/", prefix, p))
+
+	if path == "" {
+		path = "/"
+	} else if suffix && path != "/" {
+		path = path + "/"
 	}
-	suffix := false
-	if p[len(p)-1] == '/' {
-		suffix = true
-	}
-	p = zstring.TrimSpace(path.Join("/", prefix, p))
-	if suffix {
-		p = p + "/"
-	}
-	return p
+
+	return path
 }
 
 func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {

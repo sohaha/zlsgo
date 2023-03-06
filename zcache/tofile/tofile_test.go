@@ -64,7 +64,7 @@ func TestToFile(t *testing.T) {
 	tt.EqualTrue(zfile.FileExist("tmp.json"))
 
 	_ = zfile.WriteFile("tmp.json", []byte(`{"tmp1":"XhAAFSp0b2ZpbGUucGVyc2lzdGVuY2VTdP+BAwEBDXBlcnNpc3RlbmNlU3QB/4IAAQMBBERhdGEBEAABCExpZmVTcGFuAQQAARBJbnRlcnZhbExpZmVTcGFuAQIAAABP/4I1AQ4qdG9maWxlLnRlc3RTdP+DAwEBBnRlc3RTdAH/hAABAgEETmFtZQEMAAEDS2V"}`))
-	save, err = PersistenceToFile(cache, "tmp.json", false)
+	_, err = PersistenceToFile(cache, "tmp.json", false)
 	tt.EqualTrue(err != nil)
 
 	zfile.Rmdir("tmp.json")
