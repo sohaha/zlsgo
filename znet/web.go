@@ -139,8 +139,8 @@ var (
 	// Log Log
 	Log   = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
 	Cache = zcache.New("__ZNET__")
-	// ShutdownDone Shutdown Done executed after shutting down the server
-	ShutdownDone func()
+	// shutdownDone Shutdown Done executed after shutting down the server
+	shutdownDone func()
 	// CloseHotRestart Close Hot Restart
 	CloseHotRestart bool
 	fileMd5         string
@@ -220,9 +220,9 @@ func Server(serverName ...string) (engine *Engine, ok bool) {
 	return
 }
 
-// SetShutdown Set Shutdown Func
-func SetShutdown(done func()) {
-	ShutdownDone = done
+// OnShutdown On Shutdown Func
+func OnShutdown(done func()) {
+	shutdownDone = done
 }
 
 // SetAddr SetAddr
@@ -432,21 +432,11 @@ func (e *Engine) StartUp() []*serverMap {
 	return srvs
 }
 
-// Run serve
-func Run() {
-	var (
-		srvs []*serverMap
-		m    sync.WaitGroup
-	)
+func Shutdown() {
+	shutdown(true)
+}
 
-	for _, e := range zservers {
-		ss := e.StartUp()
-		m.Add(len(ss))
-		srvs = append(srvs, ss...)
-	}
-
-	sigkill := zcli.KillSignal()
-
+func shutdown(sigkill bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
@@ -473,13 +463,35 @@ func Run() {
 				r.Log.Success("Shutdown server write")
 			}
 		}
-		m.Done()
+		wg.Done()
 	}
-	m.Wait()
-	if ShutdownDone != nil {
-		ShutdownDone()
+
+	wg.Wait()
+	if shutdownDone != nil {
+		shutdownDone()
 	}
-	time.Sleep(100 * time.Millisecond)
+}
+
+var (
+	srvs []*serverMap
+	wg   sync.WaitGroup
+)
+
+// Run serve
+func Run() {
+	for _, e := range zservers {
+		ss := e.StartUp()
+		wg.Add(len(ss))
+		srvs = append(srvs, ss...)
+	}
+
+	sigkill := zcli.KillSignal()
+
+	if !sigkill && !CloseHotRestart {
+		runNewProcess()
+	}
+
+	shutdown(sigkill)
 }
 
 func runNewProcess() {

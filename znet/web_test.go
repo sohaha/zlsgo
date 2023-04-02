@@ -122,6 +122,12 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 	})
 }
 
+func TestMain(m *testing.M) {
+	m.Run()
+	Shutdown()
+	zlog.Debug(333)
+}
+
 func TestWeb(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
@@ -515,8 +521,8 @@ func TestMore(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
 	r.SetMode(DebugMode)
-	SetShutdown(func() {
-
+	OnShutdown(func() {
+		fmt.Println("Shutdown")
 	})
 	CloseHotRestart = true
 	w := newRequest(r, "delete", []string{"/", `{"Na":"is json","Name2":"222","U":{"name3":"333"},"N2":{"Name2":2002,"U.Name3":"333","S":[14.1,20]}}`, ContentTypeJSON}, "/", func(c *Context) {
