@@ -15,11 +15,9 @@ type (
 		name          string
 		desc          string
 		Supplement    string
-		requiredFlags RequiredFlags
+		requiredFlags []string
 	}
 	runFunc func()
-	// RequiredFlags RequiredFlags flags
-	RequiredFlags []string
 	// Cmd represents a subCommand
 	Cmd interface {
 		Flags(subcommand *Subcommand)
@@ -64,7 +62,7 @@ var (
 	cmdsKey          []string
 	matchingCmd      *cmdCont
 	args             []string
-	requiredFlags    = RequiredFlags{}
+	requiredFlags    = make([]string, 0)
 	defaultLang      = "en"
 	unknownCommandFn = func(name string) {
 		Error("unknown Command: %s", errorText(name))

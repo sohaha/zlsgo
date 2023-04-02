@@ -12,11 +12,11 @@ import (
 type (
 	// RBMutex is a reader biased reader/writer mutual exclusion lock
 	RBMutex struct {
+		inhibitUntil time.Time
 		rslots       []rslot
+		rw           sync.RWMutex
 		rmask        uint32
 		rbias        int32
-		inhibitUntil time.Time
-		rw           sync.RWMutex
 	}
 	RToken struct {
 		slot uint32

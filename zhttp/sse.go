@@ -3,11 +3,12 @@ package zhttp
 import (
 	"bytes"
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/sohaha/zlsgo/zerror"
+	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
@@ -15,15 +16,24 @@ type (
 	SSEEngine struct {
 		ctx        context.Context
 		eventCh    chan *SSEEvent
+		errCh      chan error
 		ctxCancel  context.CancelFunc
+		method     string
 		readyState int
 	}
 
 	SSEEvent struct {
-		ID    string
-		Event string
-		Data  []byte
+		ID        string
+		Event     string
+		Undefined []byte
+		Data      []byte
 	}
+)
+
+var (
+	delim   = []byte{':', ' '}
+	ping    = []byte("ping")
+	dataEnd = byte('\n')
 )
 
 func (sse *SSEEngine) Event() <-chan *SSEEvent {
@@ -38,12 +48,34 @@ func (sse *SSEEngine) Done() <-chan struct{} {
 	return sse.ctx.Done()
 }
 
+func (sse *SSEEngine) Error() <-chan error {
+	return sse.errCh
+}
+
+func (sse *SSEEngine) ResetMethod(method string) {
+	sse.method = method
+}
+
+func (sse *SSEEngine) OnMessage(fn func(*SSEEvent, error)) {
+	for {
+		select {
+		case <-sse.Done():
+			zlog.Debug("sse done")
+			return
+		case err := <-sse.Error():
+			fn(nil, err)
+		case v := <-sse.Event():
+			fn(v, nil)
+		}
+	}
+}
+
 func SSE(url string, v ...interface{}) *SSEEngine {
 	return std.SSE(url, v...)
 }
 
-func (e *Engine) sseReq(url string, v ...interface{}) (*Res, error) {
-	r, err := e.Get(url, v...)
+func (e *Engine) sseReq(method, url string, v ...interface{}) (*Res, error) {
+	r, err := e.Do(method, url, v...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +85,7 @@ func (e *Engine) sseReq(url string, v ...interface{}) (*Res, error) {
 	}
 
 	if statusCode != http.StatusOK {
-		return nil, errors.New("status code is not 200")
+		return nil, zerror.With(zerror.New(zerror.ErrCode(statusCode), r.String()), "status code is "+strconv.Itoa(statusCode))
 	}
 	return r, nil
 }
@@ -61,7 +93,6 @@ func (e *Engine) sseReq(url string, v ...interface{}) (*Res, error) {
 func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 	var (
 		retry     = 3000
-		delim     = []byte{':', ' '}
 		currEvent = &SSEEvent{}
 	)
 
@@ -71,6 +102,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 		ctx:        ctx,
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
+		errCh:      make(chan error),
 	}
 
 	lastID := ""
@@ -89,7 +121,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 			data = append(data, Header{"Connection": "keep-alive"})
 			data = append(data, sse.ctx)
 
-			r, err := e.sseReq(url, data...)
+			r, err := e.sseReq(sse.method, url, data...)
 
 			if err == nil {
 				if r == nil {
@@ -100,11 +132,18 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 
 				sse.readyState = 1
 
+				isPing := false
 				_ = r.Stream(func(line []byte) error {
 					i := len(line)
-					if i == 1 && currEvent.ID != "" {
-						sse.eventCh <- currEvent
-						currEvent = &SSEEvent{}
+					if i == 1 && line[0] == dataEnd {
+						if !isPing {
+							sse.eventCh <- currEvent
+							currEvent = &SSEEvent{}
+							isPing = false
+						} else {
+							currEvent = &SSEEvent{}
+						}
+
 						return nil
 					}
 
@@ -120,6 +159,11 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 					val := bytes.TrimSuffix(spl[1], []byte{'\n'})
 
 					switch zstring.Bytes2String(spl[0]) {
+					case "":
+						isPing = bytes.Equal(ping, val)
+						if !isPing {
+							currEvent.Undefined = val
+						}
 					case "id":
 						lastID = zstring.Bytes2String(val)
 						currEvent.ID = lastID
@@ -137,6 +181,8 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 					}
 					return nil
 				})
+			} else {
+				sse.errCh <- err
 			}
 
 			sse.readyState = 0

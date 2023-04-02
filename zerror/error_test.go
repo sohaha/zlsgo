@@ -25,14 +25,14 @@ func TestError(t *testing.T) {
 		err404 error
 		err401 error
 	)
-	tt.Run("Wrap", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("Wrap", func(tt *zlsgo.TestUtil) {
 		err404 = zerror.Wrap(err500, ErrCode404, "The is 404")
 		t.Log(err404)
 		err401 = zerror.Wrap(err404, ErrCode401, "The is 401")
 		t.Log(err401)
 	})
 
-	tt.Run("Is", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("Is", func(tt *zlsgo.TestUtil) {
 		tt.EqualTrue(zerror.Is(err401, ErrCode401))
 		tt.EqualTrue(zerror.Is(err401, ErrCode404))
 		tt.EqualTrue(zerror.Is(err401, ErrCode500))
@@ -47,7 +47,7 @@ func TestError(t *testing.T) {
 		ok            bool
 	)
 
-	tt.Run("Unwrap", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("Unwrap", func(tt *zlsgo.TestUtil) {
 		rawErr401, ok = zerror.Unwrap(err401, ErrCode401)
 		tt.Equal(err401.Error(), rawErr401.Error())
 
@@ -72,7 +72,7 @@ func TestError(t *testing.T) {
 		tt.EqualNil(rawErr404T401)
 	})
 
-	tt.Run("UnwrapCode", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("UnwrapCode", func(tt *zlsgo.TestUtil) {
 		code, ok := zerror.UnwrapCode(rawErr404T500)
 		tt.Equal(zerror.ErrCode(0), code)
 		tt.EqualTrue(!ok)
@@ -90,13 +90,13 @@ func TestError(t *testing.T) {
 		tt.EqualTrue(ok)
 	})
 
-	tt.Run("UnwrapCodes", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("UnwrapCodes", func(tt *zlsgo.TestUtil) {
 		tt.Equal([]zerror.ErrCode{ErrCode401, ErrCode404, ErrCode500}, zerror.UnwrapCodes(err401))
 		tt.Equal([]zerror.ErrCode{ErrCode404, ErrCode500}, zerror.UnwrapCodes(err404))
 		tt.Equal([]zerror.ErrCode{ErrCode500}, zerror.UnwrapCodes(err500))
 	})
 
-	tt.Run("UnwrapErrors", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("UnwrapErrors", func(tt *zlsgo.TestUtil) {
 		errs := zerror.UnwrapErrors(err401)
 		t.Log(strings.Join(errs, ", "))
 		tt.Equal([]string{err401.Error(), err404.Error(), err500.Error()}, errs)

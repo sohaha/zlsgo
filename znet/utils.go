@@ -206,6 +206,22 @@ func (_ utils) CompletionPath(p, prefix string) string {
 	return path
 }
 
+// func (utils) IsAbort(c *Context) bool {
+// 	return c.stopHandle.Load()
+// }
+
+// AppendHandler append handler to context, Use caution
+func (utils) AppendHandler(c *Context, handlers ...Handler) {
+	hl := len(handlers)
+	if hl == 0 {
+		return
+	}
+
+	for i := range handlers {
+		c.middleware = append(c.middleware, Utils.ParseHandlerFunc(handlers[i]))
+	}
+}
+
 func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {
 	cfg := addrSt{
 		addr: addrString,

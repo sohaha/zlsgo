@@ -36,11 +36,9 @@ func TestPoolInvoke(t *testing.T) {
 		code, b := zerror.UnwrapCode(err)
 		if b {
 			t.Log("is zerror", code, err)
+			wg.Done()
 		} else {
 			t.Log("is not zerror", err)
-			if err != testErr {
-				wg.Done()
-			}
 		}
 	})
 
@@ -61,10 +59,10 @@ func TestPoolInvoke(t *testing.T) {
 		wg.Add(1)
 		index := i
 		err = p.Do(func(now time.Time) error {
-			defer wg.Done()
-			if index%20 == 0 {
+			if index > 0 && index%20 == 0 {
 				return zerror.New(zerror.ErrCode(index), now.String())
 			}
+			defer wg.Done()
 			return nil
 		})
 		tt.NoError(err)

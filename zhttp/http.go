@@ -68,6 +68,8 @@ type (
 		v interface{}
 	}
 
+	NoRedirect bool
+
 	CustomReq func(req *http.Request)
 
 	param struct {
@@ -165,7 +167,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	)
 
 	req := &http.Request{
-		Method:     method,
+		Method:     strings.ToUpper(method),
 		Header:     make(http.Header),
 		Proto:      "Engine/1.1",
 		ProtoMajor: 1,
@@ -181,6 +183,16 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 	for _, v := range vs {
 		switch vv := v.(type) {
+		case NoRedirect:
+			if vv {
+				r := e.Client().CheckRedirect
+				e.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				}
+				defer func() {
+					e.Client().CheckRedirect = r
+				}()
+			}
 		case CustomReq:
 			vv(req)
 		case Header:

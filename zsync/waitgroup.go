@@ -7,8 +7,8 @@ import (
 )
 
 type WaitGroup struct {
-	wg  sync.WaitGroup
 	err error
+	wg  sync.WaitGroup
 	mu  sync.RWMutex
 }
 

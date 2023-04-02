@@ -17,7 +17,7 @@ func parse(outHelp bool) {
 	parseSubcommand(flag.Args())
 }
 
-func parseRequiredFlags(fs *flag.FlagSet, requiredFlags RequiredFlags) (err error) {
+func parseRequiredFlags(fs *flag.FlagSet, requiredFlags []string) (err error) {
 	requiredFlagsLen := len(requiredFlags)
 	if requiredFlagsLen > 0 {
 		flagMap := zarray.NewArray(requiredFlagsLen)
@@ -142,13 +142,13 @@ func parseSubcommand(Args []string) {
 		cont.command.Flags(subcommand)
 		fs.SetOutput(&errWrite{})
 		fs.Usage = func() {
-			Log.Printf("%s\n", subcommand.Desc)
+			Log.Printf("%s\n\n", subcommand.Desc)
 			if subcommand.Supplement != "" {
-				Log.Printf("%s\n", subcommand.Supplement)
+				Log.Printf("%s\n\n", subcommand.Supplement)
 			}
-			Log.Printf("\nusage of %s\n", subcommand.Parameter)
-			ShowFlags(fs)
-			ShowRequired(fs, cont.requiredFlags)
+			Log.Printf("\nusage of %s\n\n", subcommand.Parameter)
+			showFlags(fs)
+			showRequired(fs, cont.requiredFlags)
 		}
 		_ = fs.Parse(fsArgs)
 		args = fs.Args()

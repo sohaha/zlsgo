@@ -14,6 +14,25 @@ func TestMap(t *testing.T) {
 	T.Equal(true, tMapKeyExists)
 }
 
+func TestMapCopy(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	z := Map{"a": 1}
+	m := Map{"1": 1, "z": z}
+	m2 := m.DeepCopy()
+	m3 := m
+
+	tt.Equal(m, m2)
+	tt.Equal(m, m3)
+
+	m["1"] = 2
+	z["a"] = 2
+
+	tt.EqualTrue(m.Get("z.a").String() != m2.Get("z.a").String())
+	t.Log(m, m2, m3)
+	tt.EqualTrue(m.Get("z.a").String() == m3.Get("z.a").String())
+}
+
 func TestMapNil(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
@@ -25,10 +44,12 @@ func TestMapNil(t *testing.T) {
 
 	tt.NoError(m.Set("val", "99"))
 	tt.NoError(m.Set("yes", true))
+	tt.NoError(m.Set("", "empty"))
 	t.Log(m)
 
 	tt.NoError(m.Delete("yes"))
 
+	tt.Equal("empty", m.Get("").String())
 	t.Logf("%+v", m)
 }
 

@@ -12,14 +12,13 @@ import (
 type (
 	// Config configuration
 	Config struct {
-		zcache.Option
-		// Custom key and expiration, default is the request path, key is empty not cached , 0 is the default expiration
 		Custom func(c *znet.Context) (key string, expiration time.Duration)
+		zcache.Option
 	}
 	cacheContext struct {
-		Code    int32
 		Type    string
 		Content []byte
+		Code    int32
 	}
 )
 
@@ -86,7 +85,7 @@ func QueryKey(c *znet.Context) (key string) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	
+
 	b := zstring.Buffer((len(m) * 4) + 2)
 	b.WriteString(c.Request.URL.Path)
 	b.WriteString("?")

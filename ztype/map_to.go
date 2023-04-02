@@ -248,7 +248,7 @@ func (m *Map) GetToSlice(key string, def ...SliceType) (val SliceType) {
 func (m *Map) GetToSliceValue(key string, def ...[]interface{}) (val []interface{}) {
 	v := m.Get(key)
 	if v.Exists() {
-		val = v.SliceValue()
+		val = v.Slice().Value()
 		_ = m.Set(key, val)
 	} else if len(def) > 0 {
 		val = def[0]

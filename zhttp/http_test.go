@@ -50,8 +50,8 @@ func TestMain(m *testing.M) {
 			return
 		}
 		sse := znet.NewSSE(c, func(lastID string, opts *znet.SSEOption) {
-			opts.RetryTime = 100
-			opts.HeartbeatsTime = 10
+			opts.RetryTime = 500
+			opts.HeartbeatsTime = 500
 		})
 		if sse.LastEventID() != "" {
 			return
@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 			for i := 0; i < 2; i++ {
 				_ = sse.Send(ztype.ToString(i), ztype.ToString(i), "system")
 			}
-			time.Sleep(time.Second / 2)
+			time.Sleep(time.Second)
 			sse.Stop()
 		}()
 		sse.Push()
@@ -98,7 +98,7 @@ func TestHttp(T *testing.T) {
 		_ = r.ParseForm()
 		id, ok := r.PostForm["id"]
 		if !ok {
-			t.T.Fatal("err")
+			t.Fatal("err")
 		}
 		_, _ = w.Write([]byte(expectedText + id[0]))
 	}, urlValues, Param{
@@ -109,7 +109,7 @@ func TestHttp(T *testing.T) {
 		"id6": 666,
 	})
 	if err != nil {
-		t.T.Fatal(err)
+		t.Fatal(err)
 	}
 	data = res.String()
 	t.Equal(expectedText+"123", data)
@@ -120,14 +120,14 @@ func TestHttp(T *testing.T) {
 		query := r.URL.Query()
 		id, ok := query["id"]
 		if !ok {
-			t.T.Fatal("err")
+			t.Fatal("err")
 		}
 		_, _ = w.Write([]byte(expectedText + id[0]))
 	}, QueryParam{
 		"id": "123",
 	})
 	if err != nil {
-		t.T.Fatal(err)
+		t.Fatal(err)
 	}
 	data = res.String()
 	t.Equal(expectedText+"123", data)
@@ -227,7 +227,7 @@ func forMethod(t *zls.TestUtil) {
 		_, err := newMethod(v, func(_ http.ResponseWriter, _ *http.Request) {
 		})
 		if err != nil {
-			t.T.Fatal(v, err)
+			t.Fatal(v, err)
 		}
 	}
 }
@@ -292,7 +292,7 @@ func TestHttpProxy(t *testing.T) {
 	})
 	var res *Res
 	if err != nil {
-		tt.T.Fatal(err)
+		tt.Fatal(err)
 	}
 
 	SetTimeout(10 * time.Second)

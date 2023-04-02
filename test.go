@@ -11,12 +11,14 @@ import (
 
 // TestUtil Test aid
 type TestUtil struct {
-	*testing.T
+	t testing.TB
 }
 
 // NewTest testing object
-func NewTest(t *testing.T) *TestUtil {
-	return &TestUtil{t}
+func NewTest(t testing.TB) *TestUtil {
+	return &TestUtil{
+		t: t,
+	}
 }
 
 // GetCallerInfo GetCallerInfo
@@ -64,8 +66,9 @@ func (u *TestUtil) GetCallerInfo() string {
 // Equal Equal
 func (u *TestUtil) Equal(expected, actual interface{}) bool {
 	if !reflect.DeepEqual(expected, actual) {
+		u.t.Helper()
 		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
-		u.T.Fail()
+		u.t.Fail()
 		return false
 	}
 	return true
@@ -94,22 +97,20 @@ func (u *TestUtil) NoError(err error) bool {
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
 		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
-		u.T.Fatal()
+		u.t.Fatal()
 	}
 }
 
 // Log log
 func (u *TestUtil) Log(v ...interface{}) {
-	tip := []interface{}{"    " + u.PrintMyName()}
-	va := append(tip, v...)
-	u.T.Log(va...)
+	u.t.Helper()
+	u.t.Log(v...)
 }
 
 // Fatal Fatal
 func (u *TestUtil) Fatal(v ...interface{}) {
-	tip := []interface{}{"\n  " + u.PrintMyName()}
-	va := append(tip, v...)
-	u.T.Fatal(va...)
+	u.t.Helper()
+	u.t.Fatal(v...)
 }
 
 // PrintMyName PrintMyName
@@ -117,9 +118,9 @@ func (u *TestUtil) PrintMyName() string {
 	return u.GetCallerInfo()
 }
 
-func (u *TestUtil) Run(name string, f func(t *testing.T, tt *TestUtil)) {
-	u.T.Run(name, func(t *testing.T) {
-		tt := NewTest(t)
-		f(t, tt)
+func (u *TestUtil) Run(name string, f func(tt *TestUtil)) {
+	u.t.Helper()
+	u.t.(*testing.T).Run(name, func(t *testing.T) {
+		f(NewTest(t))
 	})
 }

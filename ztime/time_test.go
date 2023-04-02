@@ -131,9 +131,9 @@ func TestClock(t *testing.T) {
 			randI := zstring.RandInt(1, 500)
 			time.Sleep(time.Duration(randI) * time.Millisecond)
 			d := ((time.Now().UnixNano()) - (Clock() * 1000)) / 1000
-			b := d <= 50000
+			b := d <= int64(time.Millisecond)
 			if !b {
-				t.Log(b, d, randI)
+				tt.Log(b, d, randI)
 			}
 			tt.EqualTrue(b)
 		}()

@@ -14,9 +14,46 @@ var (
 
 type Map map[string]interface{}
 
-func (m Map) Get(key string) *Type {
+func (m Map) DeepCopy() Map {
+	newMap := make(Map, len(m))
+	for k := range m {
+		switch v := m[k].(type) {
+		case Map:
+			newMap[k] = v.DeepCopy()
+		case map[string]interface{}:
+			newMap[k] = Map(v).DeepCopy()
+		default:
+			newMap[k] = v
+		}
+	}
+
+	return newMap
+}
+
+func deepCopyMap(m map[string]interface{}) map[string]interface{} {
+	newMap := make(map[string]interface{})
+	for key, value := range m {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			newMap[key] = deepCopyMap(v)
+		default:
+			newMap[key] = value
+		}
+	}
+	return newMap
+}
+
+func (m Map) Get(key string, disabled ...bool) *Type {
 	typ := &Type{}
-	v, ok := parsePath(key, m)
+	var (
+		v  interface{}
+		ok bool
+	)
+	if len(disabled) > 0 && disabled[0] {
+		v, ok = m[key]
+	} else {
+		v, ok = parsePath(key, m)
+	}
 	if ok {
 		typ.v = v
 	}
@@ -30,6 +67,12 @@ func (m *Map) Set(key string, value interface{}) error {
 	(*m)[key] = value
 
 	return nil
+}
+
+func (m Map) Has(key string) bool {
+	_, ok := m[key]
+
+	return ok
 }
 
 func (m *Map) Delete(key string) error {

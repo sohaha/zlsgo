@@ -3,16 +3,27 @@ package zdi
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zerror"
 )
 
-func (inj *injector) Invoke(f interface{}) ([]reflect.Value, error) {
-	t := reflect.TypeOf(f)
-	switch v := f.(type) {
-	case PreInvoker:
-		return inj.fast(v, t, t.NumIn())
-	default:
-		return inj.call(f, t, t.NumIn())
+func (inj *injector) Invoke(f interface{}) (values []reflect.Value, err error) {
+	catch := zerror.TryCatch(func() error {
+		t := reflect.TypeOf(f)
+		switch v := f.(type) {
+		case PreInvoker:
+			values, err = inj.fast(v, t, t.NumIn())
+		default:
+			values, err = inj.call(f, t, t.NumIn())
+		}
+		return nil
+	})
+
+	if catch != nil {
+		err = catch
 	}
+
+	return
 }
 
 func (inj *injector) call(f interface{}, t reflect.Type, numIn int) ([]reflect.Value, error) {

@@ -2,8 +2,10 @@
 package zcli
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sohaha/zlsgo/zlog"
@@ -32,7 +34,7 @@ func Add(name, description string, command Cmd) *cmdCont {
 		name:          name,
 		desc:          description,
 		command:       command,
-		requiredFlags: RequiredFlags{},
+		requiredFlags: []string{},
 	}
 	cmds[name] = cmd
 	cmdsKey = append(cmdsKey, name)
@@ -48,21 +50,21 @@ func usage() {
 	showHeadr()
 	showFlagsAndRequired := func() {
 		if numOfGlobalFlags() > 0 {
-			ShowFlags(flag.CommandLine)
-			ShowRequired(flag.CommandLine, requiredFlags)
+			showFlags(flag.CommandLine)
+			showRequired(flag.CommandLine, requiredFlags)
 		}
 	}
 	if len(cmds) == 0 {
-		Log.Printf("usage of %s\n", showText(FirstParameter))
+		Log.Printf("usage of %s\n\n", showText(FirstParameter))
 		showFlagsAndRequired()
 		return
 	}
-	Log.Printf("usage: %s <command>\n\n", FirstParameter)
+	Log.Printf("usage: %s <command>\n\n\n", FirstParameter)
 	Log.Println("where <command> is one of:")
 	for _, name := range cmdsKey {
 		if cont, ok := cmds[name]; ok {
 			// for name, cont := range cmds {
-			Log.Printf("    "+tipText("%-19s")+" %s", name, cont.desc)
+			Log.Printf("    "+tipText("%-19s")+" %s\n", name, cont.desc)
 		}
 	}
 
@@ -72,9 +74,8 @@ func usage() {
 	}
 }
 
-// ShowFlags Show Flags
-func ShowFlags(fg *flag.FlagSet) {
-	Log.Printf("\noptional flags:")
+func showFlags(fg *flag.FlagSet) {
+	Log.Printf("\noptional flags:\n")
 	max := 40
 	showFlagsHelp()
 	flagsItems := zstring.Buffer()
@@ -168,4 +169,23 @@ func Run(runFunc ...runFunc) (ok bool) {
 	parse(!isRunFunc)
 	Start(runFunc...)
 	return
+}
+
+func Input(problem string, required bool) (text string) {
+	if problem != "" {
+		fmt.Print(problem)
+	}
+	reader := bufio.NewReader(os.Stdin)
+	text, _ = reader.ReadString('\n')
+	if required && zstring.TrimSpace(text) == "" {
+		return Input(problem, required)
+	}
+	return
+}
+
+func Inputln(problem string, required bool) (text string) {
+	if problem != "" {
+		problem = problem + "\n"
+	}
+	return Input(problem, required)
 }

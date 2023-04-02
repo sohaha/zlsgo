@@ -1,6 +1,7 @@
 package zcli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -47,21 +48,21 @@ func numOfGlobalFlags() (count int) {
 func Error(format string, v ...interface{}) {
 	Log.Errorf(format, v...)
 	if !HidePrompt {
-		tip := "\nPlease use " + tipText("%s --help") + " for more information"
+		tip := "\nPlease use " + tipText("%s --help") + " for more information\n"
 		Log.Printf(tip, FirstParameter)
 	}
 	osExit(1)
 }
 
-func ShowRequired(_ *flag.FlagSet, requiredFlags RequiredFlags) {
+func showRequired(_ *flag.FlagSet, requiredFlags []string) {
 	flagMapLen := len(requiredFlags)
 	if flagMapLen > 0 {
-		Log.Printf("\n  required flags:\n")
+		Log.Printf("\n  required flags:\n\n")
 		arr := make([]string, flagMapLen)
 		for i := 0; i < flagMapLen; i++ {
 			arr[i] = "-" + ztype.ToString(requiredFlags[i])
 		}
-		Log.Printf("    %s\n\n", errorText(strings.Join(arr, ", ")))
+		Log.Printf("    %s\n\n\n", errorText(strings.Join(arr, ", ")))
 	}
 }
 
@@ -71,7 +72,7 @@ func showSubcommandUsage(fs *flag.FlagSet, _ *cmdCont) {
 
 func showLogo() bool {
 	if Logo != "" {
-		Log.Printf("%s\n", strings.Replace(Logo+"v"+Version, "\n", "", 1))
+		Log.Printf("%s\n\n", strings.Replace(Logo+"v"+Version, "\n", "", 1))
 		return true
 	}
 	return false
@@ -86,9 +87,9 @@ func showFlagsHelp() {
 func showDescription(logoOk bool) bool {
 	if Name != "" {
 		if !logoOk && Version != "" {
-			Log.Printf("%s v%s\n", Name, Version)
+			Log.Printf("%s v%s\n\n", Name, Version)
 		} else if !logoOk {
-			Log.Printf("%s\n", Name)
+			Log.Printf("%s\n\n", Name)
 		}
 
 		return true
@@ -98,7 +99,7 @@ func showDescription(logoOk bool) bool {
 
 func showVersion() bool {
 	if Version != "" {
-		Log.Printf("Version: %s\n", Version)
+		Log.Printf("Version: %s\n\n", Version)
 		return true
 	}
 	return false
@@ -106,18 +107,18 @@ func showVersion() bool {
 
 func showVersionNum(info bool) {
 	if info {
-		Log.Printf("version=%s\n", Version)
+		Log.Printf("version=%s\n\n", Version)
 		//noinspection GoBoolExpressions
 		if BuildGoVersion != "" {
-			Log.Printf("goVersion=%s\n", BuildGoVersion)
+			Log.Printf("goVersion=%s\n\n", BuildGoVersion)
 		}
 		//noinspection GoBoolExpressions
 		if BuildTime != "" {
-			Log.Printf("buildTime=%s\n", BuildTime)
+			Log.Printf("buildTime=%s\n\n", BuildTime)
 		}
 		//noinspection GoBoolExpressions
 		if BuildGitCommitID != "" {
-			Log.Printf("GitCommitID=%s\n", BuildGitCommitID)
+			Log.Printf("GitCommitID=%s\n\n", BuildGitCommitID)
 		}
 	} else {
 		Log.Println(Version)
@@ -152,7 +153,7 @@ func argsIsHelp(args []string) {
 
 func CheckErr(err error, exit ...bool) {
 	if serviceErr == daemon.ErrNoServiceSystemDetected {
-		err = fmt.Errorf("%s does not support process daemon\n", zutil.GetOs())
+		err = errors.New(zutil.GetOs() + " does not support process daemon")
 		exit = []bool{true}
 	}
 	if err != nil {

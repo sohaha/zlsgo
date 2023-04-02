@@ -19,6 +19,7 @@ type SSE struct {
 	ctxCancel context.CancelFunc
 	flush     func()
 	lastID    string
+	method    string
 	Comment   []byte
 }
 
@@ -59,7 +60,8 @@ func (s *SSE) Push() {
 	s.net.write()
 	s.flush()
 
-	ticker := time.NewTicker(s.option.HeartbeatsTime)
+	ticker := time.NewTicker(time.Duration(s.option.HeartbeatsTime) * time.Millisecond)
+
 	defer ticker.Stop()
 
 	b := zstring.Buffer(7)
@@ -76,9 +78,11 @@ sseFor:
 			break sseFor
 		case ev := <-s.events:
 			if len(ev.Data) > 0 {
-				b.WriteString("id: ")
-				b.WriteString(ev.ID)
-				b.WriteString("\n")
+				if ev.ID != "" {
+					b.WriteString("id: ")
+					b.WriteString(ev.ID)
+					b.WriteString("\n")
+				}
 
 				if bytes.HasPrefix(ev.Data, []byte(":")) {
 					b.Write(ev.Data)
@@ -137,6 +141,7 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 		ID:   id,
 		Data: data,
 	}
+
 	if len(event) > 0 {
 		ev.Event = event[0]
 	}
@@ -147,7 +152,7 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 
 type SSEOption struct {
 	RetryTime      int
-	HeartbeatsTime time.Duration
+	HeartbeatsTime int
 }
 
 func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
@@ -161,7 +166,7 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		ctxCancel: cancel,
 		option: &SSEOption{
 			RetryTime:      3000,
-			HeartbeatsTime: time.Second * 15,
+			HeartbeatsTime: 15000,
 		},
 	}
 

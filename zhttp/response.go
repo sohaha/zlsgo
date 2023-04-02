@@ -70,7 +70,6 @@ func (r *Res) Stream(fn func(line []byte) error) error {
 	}
 	r.responseBody = nil
 	defer r.resp.Body.Close()
-
 	br := bufio.NewReader(r.resp.Body)
 	for {
 		bs, err := br.ReadBytes('\n')

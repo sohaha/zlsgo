@@ -22,7 +22,7 @@ func TestBase(t *testing.T) {
 	override := di.Maps(test1, testSt2{Name: "main"})
 	tt.Equal(0, len(override))
 
-	tt.Run("TestSetParent", func(t *testing.T, tt *zlsgo.TestUtil) {
+	tt.Run("TestSetParent", func(tt *zlsgo.TestUtil) {
 		ndi := zdi.New(di)
 		ndi.Map(testSt2{Name: "Current"})
 		_, err := ndi.Invoke(func(t2 testSt2, t1 *testSt) {

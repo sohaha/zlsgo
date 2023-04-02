@@ -252,7 +252,7 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 
 // Printf formats according to a format specifier and writes to standard output
 func (log *Logger) Printf(format string, v ...interface{}) {
-	_ = log.outPut(LogNot, fmt.Sprintf(format+"\r\n", v...), false, nil)
+	_ = log.outPut(LogNot, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Println Println

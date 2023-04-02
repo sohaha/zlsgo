@@ -41,6 +41,14 @@ func (s SliceType) Int() []int {
 	return ss
 }
 
+func (s SliceType) Maps() Maps {
+	ss := make(Maps, 0, len(s))
+	for _, val := range s {
+		ss = append(ss, val.Map())
+	}
+	return ss
+}
+
 // Deprecated: please use ToSlice
 func Slice(value interface{}) SliceType {
 	return ToSlice(value)

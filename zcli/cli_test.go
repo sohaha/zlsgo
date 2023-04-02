@@ -64,11 +64,11 @@ func TestCliCommand(t *testing.T) {
 		t.Log("myExit:", code)
 	}
 	osExit = myExit
-	requiredFlags = RequiredFlags{}
+	requiredFlags = []string{}
 	resetForTesting("test", "-flag1")
 	Add("test", "test", &testCmd{})
 	Run()
-	ShowFlags(flag.CommandLine)
+	showFlags(flag.CommandLine)
 }
 
 func TestCliCommandErr(_ *testing.T) {
@@ -77,7 +77,7 @@ func TestCliCommandErr(_ *testing.T) {
 	myExit := func(code int) {
 	}
 	osExit = myExit
-	requiredFlags = RequiredFlags{}
+	requiredFlags = []string{}
 	resetForTesting("test")
 	Add("test", "test", &testCmd{})
 	Run()
@@ -85,7 +85,7 @@ func TestCliCommandErr(_ *testing.T) {
 
 func TestCliCommandHelp(t *testing.T) {
 	expectedName := "gopher"
-	requiredFlags = RequiredFlags{}
+	requiredFlags = []string{}
 	resetForTesting("testHelp", "-help")
 	matchingCmd := Add("testHelp", "test", &testCmd{})
 	expectedErrorHandling := flag.ExitOnError
@@ -94,7 +94,7 @@ func TestCliCommandHelp(t *testing.T) {
 	flag.CommandLine.Init(expectedName, expectedErrorHandling)
 	flag.CommandLine.SetOutput(expectedOutput)
 	showSubcommandUsage(flag.CommandLine, matchingCmd)
-	ShowFlags(flag.CommandLine)
+	showFlags(flag.CommandLine)
 }
 
 func TestCliCommandHelp2(t *testing.T) {
@@ -104,7 +104,7 @@ func TestCliCommandHelp2(t *testing.T) {
 		t.Log("myExit:", code)
 	}
 	osExit = myExit
-	requiredFlags = RequiredFlags{}
+	requiredFlags = []string{}
 	resetForTesting("test", "ddd", "-h")
 	Add("test", "test", &testCmd{})
 	Run()
@@ -135,4 +135,8 @@ func TestUnknown2(T *testing.T) {
 	resetForTesting("unknown")
 	Run()
 	t.Equal(1, eCode)
+}
+
+func TestInput(t *testing.T) {
+	Inputln("test:", false)
 }

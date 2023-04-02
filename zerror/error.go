@@ -143,6 +143,10 @@ func UnwrapCode(err error) (ErrCode, bool) {
 		return 0, false
 	}
 
+	if e.code == 0 {
+		return UnwrapCode(e.wrapErr)
+	}
+
 	return e.code, true
 }
 

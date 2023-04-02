@@ -47,7 +47,7 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 	return
 }
 
-func (_ utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
+func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	if h == nil {
 		return func(c *Context) error {
 			return errors.New("Handler is nil")

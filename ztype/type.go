@@ -100,15 +100,6 @@ func (t Type) Slice() SliceType {
 	return ToSlice(t.v)
 }
 
-func (t Type) SliceValue() []interface{} {
-	s := t.Slice()
-	slice := make([]interface{}, 0, len(s))
-	for _, v := range s {
-		slice = append(slice, v.Value())
-	}
-	return slice
-}
-
 func (t Type) Exists() bool {
 	return t.v != nil
 }

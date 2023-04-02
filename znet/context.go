@@ -135,17 +135,17 @@ func (c *Context) write() {
 	}
 }
 
-// Next Handler
-func (c *Context) Next() {
+// Next middleware, if current middleware has been stopped, it will return false
+func (c *Context) Next() bool {
 	for {
 		if c.stopHandle.Load() {
-			break
+			return false
 		}
 		c.mu.RLock()
 		n := len(c.middleware) > 0
 		c.mu.RUnlock()
 		if !n {
-			break
+			return true
 		}
 		c.next()
 	}
