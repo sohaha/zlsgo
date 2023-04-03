@@ -460,7 +460,7 @@ func shutdown(sigkill bool) {
 			_ = s.srv.Close()
 		} else {
 			if sigkill {
-				r.Log.Success("Shutdown server write")
+				r.Log.Success("Shutdown server done")
 			}
 		}
 		wg.Done()

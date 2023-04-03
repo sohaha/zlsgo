@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -191,4 +192,20 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		s.Stop()
 	})
 	return s
+}
+
+func (c *Context) Stream(step func(w io.Writer) bool) bool {
+	w := c.Writer
+	flusher, _ := w.(http.Flusher)
+	c.write()
+	for {
+		if c.stopHandle.Load() {
+			return false
+		}
+		keepOpen := step(w)
+		flusher.Flush()
+		if !keepOpen {
+			return false
+		}
+	}
 }

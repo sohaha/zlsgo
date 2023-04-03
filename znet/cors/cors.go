@@ -25,6 +25,10 @@ type (
 	Handler func(conf *Config, c *znet.Context)
 )
 
+const (
+	DefaultHeaders = "Origin,No-Cache,X-Requested-With,If-Modified-Since,Pragma,Last-Modified,Cache-Control,Expires,Content-Type,Access-Control-Allow-Origin,Authorization"
+)
+
 func Default() znet.HandlerFunc {
 	return New(&Config{})
 }
@@ -34,9 +38,7 @@ func NewAllowHeaders() (addAllowHeader func(header string), handler znet.Handler
 	handler = New(conf)
 
 	return func(header string) {
-		headers := strings.Split(conf.headers, ", ")
-		headers = append(headers, header)
-		conf.headers = strings.Join(headers, ", ")
+		conf.headers = conf.headers + ", " + header
 	}, handler
 }
 
@@ -59,10 +61,11 @@ func New(conf *Config) znet.HandlerFunc {
 		conf.Credentials = []string{"true"}
 	}
 	conf.credentials = strings.Join(conf.Credentials, ", ")
-	if len(conf.Headers) == 0 {
-		conf.Headers = []string{"Origin", "No-Cache", "X-Requested-With", "If-Modified-Since", "Pragma", "Last-Modified", "Cache-Control", "Expires", "Content-Type", "Access-Control-Allow-Origin", "Authorization"}
+	if len(conf.Headers) != 0 {
+		conf.headers = strings.Join(conf.Headers, ", ")
+	} else {
+		conf.headers = DefaultHeaders
 	}
-	conf.headers = strings.Join(conf.Headers, ", ")
 
 	if len(conf.ExposeHeaders) > 0 {
 		conf.exposeHeaders = strings.Join(conf.ExposeHeaders, ", ")

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zerror"
-	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
@@ -31,7 +30,7 @@ type (
 )
 
 var (
-	delim   = []byte{':', ' '}
+	delim   = []byte{':'} // []byte{':', ' '}
 	ping    = []byte("ping")
 	dataEnd = byte('\n')
 )
@@ -60,7 +59,6 @@ func (sse *SSEEngine) OnMessage(fn func(*SSEEvent, error)) {
 	for {
 		select {
 		case <-sse.Done():
-			zlog.Debug("sse done")
 			return
 		case err := <-sse.Error():
 			fn(nil, err)
@@ -153,10 +151,12 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 
 					spl := bytes.SplitN(line, delim, 2)
 					if len(spl) < 2 {
+						currEvent.Undefined = line
 						return nil
 					}
 
 					val := bytes.TrimSuffix(spl[1], []byte{'\n'})
+					val = bytes.TrimPrefix(val, []byte{' '})
 
 					switch zstring.Bytes2String(spl[0]) {
 					case "":
