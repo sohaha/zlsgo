@@ -30,19 +30,6 @@ func (m Map) DeepCopy() Map {
 	return newMap
 }
 
-func deepCopyMap(m map[string]interface{}) map[string]interface{} {
-	newMap := make(map[string]interface{})
-	for key, value := range m {
-		switch v := value.(type) {
-		case map[string]interface{}:
-			newMap[key] = deepCopyMap(v)
-		default:
-			newMap[key] = value
-		}
-	}
-	return newMap
-}
-
 func (m Map) Get(key string, disabled ...bool) *Type {
 	typ := &Type{}
 	var (

@@ -123,7 +123,23 @@ func isStr(s interface{}) interface{} {
 
 func TestIsEmpty(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	t.Log(IsEmpty(0))
+	t.EqualTrue(IsEmpty(""))
+	t.EqualTrue(IsEmpty(0))
+	t.EqualTrue(IsEmpty([]byte("")))
+	t.EqualTrue(IsEmpty(int(0)))
+	t.EqualTrue(IsEmpty(int8(0)))
+	t.EqualTrue(IsEmpty(int16(0)))
+	t.EqualTrue(IsEmpty(int32(0)))
+	t.EqualTrue(IsEmpty(int64(0)))
+	t.EqualTrue(IsEmpty(uint(0)))
+	t.EqualTrue(IsEmpty(uint8(0)))
+	t.EqualTrue(IsEmpty(uint16(0)))
+	t.EqualTrue(IsEmpty(uint32(0)))
+	t.EqualTrue(IsEmpty(uint64(0)))
+	t.EqualTrue(IsEmpty(float32(0)))
+	t.EqualTrue(IsEmpty(float64(0)))
+	t.EqualTrue(IsEmpty(false))
+	t.EqualTrue(IsEmpty([]string{}))
 	var s interface{}
-	t.Log(IsEmpty(s))
+	t.EqualTrue(IsEmpty(s))
 }

@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 		}
 	})
 
-	r.GET("/sse", func(c *znet.Context) {
+	r.Any("/sse", func(c *znet.Context) {
 		if !c.IsSSE() {
 			return
 		}

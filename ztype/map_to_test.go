@@ -29,6 +29,8 @@ func TestMapTo(t *testing.T) {
 
 	tt.Equal(0, m.GetToInt("i2"))
 	tt.Equal(456, m.GetToInt("i2", 456))
+	tt.Equal(uint(456), m.GetToUint("i2"))
+	tt.Equal(float64(456), m.GetToFloat64("i2"))
 
 	tt.Equal(reflect.Float64, reflect.TypeOf(m["s"]).Kind())
 	tt.Equal(123, m.GetToInt("s"))

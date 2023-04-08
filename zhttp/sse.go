@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sohaha/zlsgo/zerror"
@@ -98,6 +99,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 	sse = &SSEEngine{
 		readyState: 0,
 		ctx:        ctx,
+		method:     "POST",
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
 		errCh:      make(chan error),
@@ -122,6 +124,13 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 			r, err := e.sseReq(sse.method, url, data...)
 
 			if err == nil {
+				if r != nil && !strings.Contains(r.Response().Header.Get("Content-Type"), "text/event-stream") {
+					sse.eventCh <- &SSEEvent{
+						Undefined: r.Bytes(),
+					}
+					r = nil
+				}
+
 				if r == nil {
 					sse.readyState = 2
 					cancel()
