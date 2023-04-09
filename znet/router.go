@@ -51,46 +51,42 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	}
 }
 
-func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, headers ...map[string]string) {
+func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler ...Handler) {
 	var urlPattern string
 	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", relativePath))
 	fileServer := http.StripPrefix(relativePath, http.FileServer(fs))
 
-	headerValues := make(map[string]string, 1)
-	// if !e.IsDebug() {
-	// 	headerValues["Cache-Control"] = "max-age=86400"
-	// }
-
-	for i := range headers {
-		for k := range headers[i] {
-			headerValues[k] = headers[i][k]
-		}
-	}
-
 	handler := func(c *Context) {
-		for k := range headerValues {
-			c.Writer.Header().Set(k, headerValues[k])
+		for key, value := range c.header {
+			for i := range value {
+				header := value[i]
+				if i == 0 {
+					c.Writer.Header().Set(key, header)
+				} else {
+					c.Writer.Header().Add(key, header)
+				}
+			}
 		}
 
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
 	if strings.HasSuffix(relativePath, "/") {
 		urlPattern = path.Join(relativePath, "*")
-		e.GET(relativePath, handler)
+		e.GET(relativePath, handler, moreHandler...)
 	} else {
 		urlPattern = path.Join(relativePath, "/*")
 		e.GET(relativePath, func(c *Context) {
 			c.Redirect(relativePath + "/")
-		})
-		e.GET(relativePath+"/", handler)
+		}, moreHandler...)
+		e.GET(relativePath+"/", handler, moreHandler...)
 	}
-	e.GET(urlPattern, handler)
-	e.HEAD(urlPattern, handler)
+	e.GET(urlPattern, handler, moreHandler...)
+	e.HEAD(urlPattern, handler, moreHandler...)
 	log()
 }
 
-func (e *Engine) Static(relativePath, root string, headers ...map[string]string) {
-	e.StaticFS(relativePath, http.Dir(root), headers...)
+func (e *Engine) Static(relativePath, root string, moreHandler ...Handler) {
+	e.StaticFS(relativePath, http.Dir(root), moreHandler...)
 }
 
 func (e *Engine) StaticFile(relativePath, filepath string) {
