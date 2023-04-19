@@ -2,6 +2,7 @@
 package ztype
 
 import (
+	"bytes"
 	// "encoding/json"
 	"encoding/json"
 	"strconv"
@@ -63,6 +64,7 @@ func ToString(i interface{}) string {
 			return f.String()
 		}
 		jsonContent, _ := json.Marshal(value)
+		jsonContent = bytes.Trim(jsonContent, `"`)
 		return zstring.Bytes2String(jsonContent)
 	}
 }
