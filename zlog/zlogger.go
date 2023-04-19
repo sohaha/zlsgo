@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/zutil"
 )
@@ -87,6 +88,7 @@ type (
 		mu            sync.RWMutex
 		color         bool
 		fileAndStdout bool
+		ignoreLogs    []string
 	}
 	formatter struct {
 		v     reflect.Value
@@ -207,6 +209,19 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 // outPut Output log
 func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 	prefixText ...string) error {
+
+	if log.ignoreLogs != nil && len(s) > 0 {
+		p := s
+		if isWrap {
+			p = p[:len(p)-1]
+		}
+		for _, v := range log.ignoreLogs {
+			if zstring.Match(p, v) {
+				return nil
+			}
+		}
+	}
+
 	log.mu.Lock()
 	var after func()
 	if fn != nil {
@@ -218,13 +233,16 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 		}
 		log.mu.Unlock()
 	}()
+
 	if log.out == ioutil.Discard {
 		return nil
 	}
+
 	isNotLevel := level == LogNot
 	if log.level < level {
 		return nil
 	}
+
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
@@ -460,6 +478,15 @@ func (log *Logger) SetLogLevel(level int) {
 // GetLogLevel Get log display level
 func (log *Logger) GetLogLevel() int {
 	return log.level
+}
+
+func (log *Logger) Write(b []byte) (n int, err error) {
+	_ = log.outPut(LogWarn, zstring.Bytes2String(b), false, nil)
+	return len(b), nil
+}
+
+func (log *Logger) SetIgnoreLog(logs ...string) {
+	log.ignoreLogs = append(log.ignoreLogs, logs...)
 }
 
 func itoa(buf *bytes.Buffer, i int, wid int) {

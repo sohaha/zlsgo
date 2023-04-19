@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/ztype"
@@ -42,14 +43,18 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags []string) (err error) {
 	return
 }
 
+var parseDone sync.Once
+
 // Parse Parse
 func Parse(arg ...[]string) {
-	if Version != "" {
-		flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()
-	}
-	if EnableDetach {
-		flagDetach = SetVar("detach", GetLangText("detach")).short("D").Bool()
-	}
+	parseDone.Do(func() {
+		if Version != "" {
+			flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()
+		}
+		if EnableDetach {
+			flagDetach = SetVar("detach", GetLangText("detach")).short("D").Bool()
+		}
+	})
 	var argsData []string
 	if len(arg) == 1 {
 		argsData = arg[0]
@@ -79,7 +84,9 @@ func Parse(arg ...[]string) {
 	}
 	if len(argsData) > 0 && argsData[0][0] != '-' {
 		parseSubcommand(argsData)
-		matchingCmd.command.Run(args)
+		if matchingCmd != nil {
+			matchingCmd.command.Run(args)
+		}
 		osExit(0)
 	}
 

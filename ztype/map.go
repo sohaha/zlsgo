@@ -70,6 +70,14 @@ func (m *Map) Delete(key string) error {
 	return errors.New("key not found")
 }
 
+func (m Map) ForEach(fn func(k string, v Type) bool) {
+	for s, v := range m {
+		if !fn(s, Type{v}) {
+			return
+		}
+	}
+}
+
 func (m Map) IsEmpty() bool {
 	return len(m) == 0
 }

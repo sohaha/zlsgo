@@ -42,6 +42,10 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 			c.render = &renderByte{Data: vv}
 		case ApiData:
 			c.render = &renderJSON{Data: vv}
+		default:
+			if vv != nil {
+				c.render = &renderJSON{Data: ApiData{Data: v}}
+			}
 		}
 	}
 	return
@@ -55,6 +59,11 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	}
 
 	switch v := h.(type) {
+	case HandlerFunc:
+		return func(c *Context) error {
+			v(c)
+			return nil
+		}
 	case func(*Context):
 		return func(c *Context) error {
 			v(c)
@@ -95,6 +104,7 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 			if err != nil {
 				return err
 			}
+
 			if len(v) == 0 {
 				return nil
 			}

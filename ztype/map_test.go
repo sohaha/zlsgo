@@ -57,6 +57,36 @@ type other struct {
 	Sex int
 }
 
+func TestToMap(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	type Str string
+	type u struct {
+		Name   Str `json:"name"`
+		Key    int
+		Status bool
+	}
+	user := &u{
+		Name:   "n666",
+		Key:    9,
+		Status: true,
+	}
+	userMap := map[string]interface{}{
+		"Name":   user.Name,
+		"Status": user.Status,
+		"Key":    user.Key,
+	}
+	toUserMap := ToMap(user)
+	t.Log(user)
+	t.Log(userMap)
+	t.Log(toUserMap)
+	t.Equal("n666", toUserMap.Get("name").String())
+
+	toUserMap.ForEach(func(k string, v Type) bool {
+		t.Log(k, v.String())
+		return true
+	})
+}
+
 func TestToMapInterface(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	type u struct {

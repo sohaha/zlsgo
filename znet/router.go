@@ -386,12 +386,17 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !e.ShowFavicon && p == "/favicon.ico" {
 		return
 	}
+
 	c := e.acquireContext()
 	c.clone(w, req)
 	defer func() {
 		c.write()
 		e.releaseContext(c)
 	}()
+
+	if e.AllowQuerySemicolons {
+		allowQuerySemicolons(c.Request)
+	}
 
 	// custom method type
 	if req.Method == "POST" && e.customMethodType != "" {
@@ -416,6 +421,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if c.stopHandle.Load() {
 		return
 	}
+
 	if _, ok := e.router.trees[req.Method]; !ok {
 		e.HandleNotFound(c)
 		return

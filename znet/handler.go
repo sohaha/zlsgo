@@ -3,8 +3,11 @@ package znet
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
@@ -81,5 +84,19 @@ func requestLog(c *Context) {
 		}
 		ft := fmt.Sprintf("%s %15s %15v %%s %%s", status, clientIP, latency)
 		c.Log.Success(routeLog(c.Log, ft, c.Request.Method, c.Request.RequestURI))
+	}
+}
+
+const errURLQuerySemicolon = "http: URL query contains semicolon, which is no longer a supported separator; parts of the query may be stripped when parsed; see golang.org/issue/25192\n"
+
+func allowQuerySemicolons(r *http.Request) {
+	// clopy of net/http.AllowQuerySemicolons.
+	if s := r.URL.RawQuery; strings.Contains(s, ";") {
+		r2 := new(http.Request)
+		*r2 = *r
+		r2.URL = new(url.URL)
+		*r2.URL = *r.URL
+		r2.URL.RawQuery = strings.Replace(s, ";", "&", -1)
+		*r = *r2
 	}
 }

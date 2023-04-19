@@ -85,11 +85,16 @@ func (u *TestUtil) EqualNil(actual interface{}) {
 }
 
 // NoError NoError
-func (u *TestUtil) NoError(err error) bool {
+func (u *TestUtil) NoError(err error, exit ...bool) bool {
 	if err == nil {
 		return true
 	}
+
 	fmt.Printf("    %s Error: %s\n", u.PrintMyName(), err)
+
+	if len(exit) > 0 && exit[0] {
+		u.t.Fatal()
+	}
 	return false
 }
 
@@ -105,6 +110,12 @@ func (u *TestUtil) EqualExit(expected, actual interface{}) {
 func (u *TestUtil) Log(v ...interface{}) {
 	u.t.Helper()
 	u.t.Log(v...)
+}
+
+// Logf Logf
+func (u *TestUtil) Logf(format string, args ...interface{}) {
+	u.t.Helper()
+	u.t.Logf(format, args...)
 }
 
 // Fatal Fatal
@@ -123,4 +134,8 @@ func (u *TestUtil) Run(name string, f func(tt *TestUtil)) {
 	u.t.(*testing.T).Run(name, func(t *testing.T) {
 		f(NewTest(t))
 	})
+}
+
+func (u *TestUtil) T() *testing.T {
+	return u.t.(*testing.T)
 }

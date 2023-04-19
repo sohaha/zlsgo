@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -50,27 +51,28 @@ type (
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {
-		pool                sync.Pool
-		injector            zdi.Injector
-		preHandler          Handler
-		views               Template
-		Cache               *zcache.Table
-		template            *tpl
-		Log                 *zlog.Logger
-		templateFuncMap     template.FuncMap
-		router              *router
-		BindTag             string
-		webModeName         string
-		BindStructDelimiter string
-		BindStructSuffix    string
-		customMethodType    string
-		addr                []addrSt
-		shutdowns           []func()
-		MaxMultipartMemory  int64
-		webMode             int
-		writeTimeout        time.Duration
-		readTimeout         time.Duration
-		ShowFavicon         bool
+		pool                 sync.Pool
+		injector             zdi.Injector
+		preHandler           Handler
+		views                Template
+		Cache                *zcache.Table
+		template             *tpl
+		Log                  *zlog.Logger
+		templateFuncMap      template.FuncMap
+		router               *router
+		BindTag              string
+		webModeName          string
+		BindStructDelimiter  string
+		BindStructSuffix     string
+		customMethodType     string
+		addr                 []addrSt
+		shutdowns            []func()
+		MaxMultipartMemory   int64
+		webMode              int
+		writeTimeout         time.Duration
+		readTimeout          time.Duration
+		ShowFavicon          bool
+		AllowQuerySemicolons bool
 	}
 	TlsCfg struct {
 		HTTPProcessing interface{}
@@ -198,7 +200,6 @@ func New(serverName ...string) *Engine {
 		r.Log.Fatal("serverName: [", name, "] it already exists")
 	}
 	zservers[name] = r
-	// r.Use(withRequestLog)
 	return r
 }
 
@@ -367,7 +368,11 @@ func (e *Engine) StartUp() []*serverMap {
 	var srvMap sync.Map
 	for _, cfg := range e.addr {
 		wg.Add(1)
+
 		go func(cfg addrSt, e *Engine) {
+			if e.AllowQuerySemicolons {
+				e.Log.SetIgnoreLog(errURLQuerySemicolon)
+			}
 			var err error
 			isTls := cfg.Cert != "" || cfg.Config != nil
 			addr := getAddr(cfg.addr)
@@ -378,6 +383,7 @@ func (e *Engine) StartUp() []*serverMap {
 				ReadTimeout:  e.readTimeout,
 				WriteTimeout: e.writeTimeout,
 				// MaxHeaderBytes: 1 << 20,
+				ErrorLog: log.New(e.Log, "", 0),
 			}
 
 			srvMap.Store(addr, &serverMap{e, srv})
@@ -423,7 +429,9 @@ func (e *Engine) StartUp() []*serverMap {
 			}
 		}(cfg, e)
 	}
+
 	wg.Wait()
+
 	srvs := make([]*serverMap, 0)
 	srvMap.Range(func(addr, value interface{}) bool {
 		srvs = append(srvs, value.(*serverMap))
@@ -478,11 +486,17 @@ var (
 )
 
 // Run serve
-func Run() {
-	for _, e := range zservers {
+func Run(cb ...func(name, addr string)) {
+	for n, e := range zservers {
 		ss := e.StartUp()
 		wg.Add(len(ss))
 		srvs = append(srvs, ss...)
+		if len(cb) == 0 {
+			continue
+		}
+		for _, v := range ss {
+			cb[0](n, v.GetAddr())
+		}
 	}
 
 	sigkill := zcli.KillSignal()

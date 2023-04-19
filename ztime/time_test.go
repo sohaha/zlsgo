@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sohaha/zlsgo/zstring"
-
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 func TestNewTime(t *testing.T) {
@@ -58,6 +57,7 @@ func TestNewTime(t *testing.T) {
 
 	t.Log(Now())
 	t.Log(Time())
+	t.Log(FormatTime(time.Now(), "Y-m-d H:i:s.u"))
 }
 
 func TestFormatTlp(tt *testing.T) {

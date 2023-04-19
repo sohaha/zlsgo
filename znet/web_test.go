@@ -66,6 +66,7 @@ var (
 func newServer() *Engine {
 	one.Do(func() {
 		engine = New("Web-test")
+		engine.AllowQuerySemicolons = true
 		engine.SetMode(DebugMode)
 		engine.AddAddr("3787")
 		engine.SetAddr("3788")
@@ -764,7 +765,7 @@ func TestWebRouter(T *testing.T) {
 func testRouterGET(r *Engine, t *zlsgo.TestUtil) {
 	randString := zstring.Rand(5)
 
-	w := newRequest(r, "GET", "/RouterGET?id="+randString, "/RouterGET", func(c *Context) {
+	w := newRequest(r, "GET", "/RouterGET?id="+randString+"&a;b", "/RouterGET", func(c *Context) {
 		id := c.DefaultQuery("id", "not")
 		host := c.Host()
 		u := c.Host(true)

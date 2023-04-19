@@ -15,7 +15,11 @@ func TestLogTrack(T *testing.T) {
 func TestLogs(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	text := "Text"
+
+	Log.SetIgnoreLog("test")
 	SetLogLevel(LogDump)
+	Debug("test")
+	Debug("debug")
 	Debug("log with Debug")
 	Debugf("%s\n", "log with Debug")
 	Info("log with Info")

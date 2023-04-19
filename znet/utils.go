@@ -326,3 +326,7 @@ func (e *Engine) releaseContext(c *Context) {
 	c.mu.Unlock()
 	e.pool.Put(c)
 }
+
+func (s *serverMap) GetAddr() string {
+	return s.srv.Addr
+}
