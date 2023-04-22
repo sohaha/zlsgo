@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"text/template"
 	"time"
 
@@ -226,9 +224,7 @@ func (s *darwinLaunchdService) Run() error {
 		return err
 	}
 	runWait := func() {
-		var sigChan = make(chan os.Signal, 3)
-		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-		<-sigChan
+		<-SingleKillSignal()
 	}
 	if v, ok := s.Option[optionRunWait]; ok {
 		runWait, _ = v.(func())

@@ -1,7 +1,7 @@
-//go:build windows
-// +build windows
+//go:build !windows
+// +build !windows
 
-package zcli
+package daemon
 
 import (
 	"os"
@@ -11,14 +11,14 @@ import (
 
 func KillSignal() bool {
 	sig, stop := SignalChan()
-	<-sig
+	s := <-sig
 	stop()
-	return true
+	return s != syscall.SIGUSR2
 }
 
 func SignalChan() (<-chan os.Signal, func()) {
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(quit, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR2)
 	return quit, func() {
 		signal.Stop(quit)
 	}

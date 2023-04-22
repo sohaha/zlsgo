@@ -3,11 +3,9 @@ package daemon
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows/registry"
@@ -205,9 +203,9 @@ func (w *windowsService) Run() error {
 	if err != nil {
 		return err
 	}
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	<-sigChan
+
+	<-SingleKillSignal()
+
 	return w.i.Stop(w)
 }
 

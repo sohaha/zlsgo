@@ -50,6 +50,28 @@ func TestDiff(t *testing.T) {
 	tt.Equal([]int{}, n2)
 }
 
+func TestPop(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	l1 := []int{0, 1, 2, 3, 4, 5}
+
+	tt.Equal(5, zarray.Pop(&l1))
+	tt.Equal(4, zarray.Pop(&l1))
+
+	tt.Equal([]int{0, 1, 2, 3}, l1)
+}
+
+func TestShift(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	l1 := []int{0, 1, 2, 3, 4, 5}
+
+	tt.Equal(0, zarray.Shift(&l1))
+	tt.Equal(1, zarray.Shift(&l1))
+
+	tt.Equal([]int{2, 3, 4, 5}, l1)
+}
+
 func TestContains(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	tt.EqualTrue(!zarray.Contains(l, 54))

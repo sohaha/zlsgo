@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sohaha/zlsgo/zcli"
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zutil"
+	"github.com/sohaha/zlsgo/zutil/daemon"
 
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
@@ -499,9 +499,8 @@ func Run(cb ...func(name, addr string)) {
 		}
 	}
 
-	sigkill := zcli.KillSignal()
-
-	if !sigkill && !CloseHotRestart {
+	sigkill, ok := <-daemon.SingleKillSignal()
+	if ok && !sigkill && !CloseHotRestart {
 		runNewProcess()
 	}
 

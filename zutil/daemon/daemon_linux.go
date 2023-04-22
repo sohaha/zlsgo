@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"text/template"
 )
 
@@ -185,10 +183,7 @@ func (s *systemd) Run() (err error) {
 	}
 
 	runWait := func() {
-		var sigChan = make(chan os.Signal, 3)
-		//nolint
-		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-		<-sigChan
+		<-SingleKillSignal()
 	}
 	if v, ok := s.Option[optionRunWait]; ok {
 		runWait, _ = v.(func())

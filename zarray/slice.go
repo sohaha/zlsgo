@@ -68,7 +68,7 @@ func Contains[T comparable](collection []T, v T) bool {
 }
 
 // Find search an eent in a slice based on a predicate. It returns eent and true if eent was found.
-func Find[T any](collection []T, predicate func(index int, item T) bool) (T, bool) {
+func Find[T any](collection []T, predicate func(index int, item T) bool) (res T, ok bool) {
 	for i := range collection {
 		item := collection[i]
 		if predicate(i, item) {
@@ -76,8 +76,7 @@ func Find[T any](collection []T, predicate func(index int, item T) bool) (T, boo
 		}
 	}
 
-	var res T
-	return res, false
+	return
 }
 
 // Unique returns a duplicate-free version of an array
@@ -123,4 +122,26 @@ func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	}
 
 	return l, r
+}
+
+func Pop[T comparable](list *[]T) (v T) {
+	l := len(*list)
+	if l == 0 {
+		return
+	}
+
+	v = (*list)[l-1]
+	*list = (*list)[:l-1]
+	return
+}
+
+func Shift[T comparable](list *[]T) (v T) {
+	l := len(*list)
+	if l == 0 {
+		return
+	}
+
+	v = (*list)[0]
+	*list = (*list)[1:]
+	return
 }

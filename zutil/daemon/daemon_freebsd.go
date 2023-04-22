@@ -3,9 +3,7 @@ package daemon
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"text/template"
 )
 
@@ -218,9 +216,7 @@ func (s *freebsdRcdService) Run() error {
 		return err
 	}
 	runWait := func() {
-		var sigChan = make(chan os.Signal, 3)
-		signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-		<-sigChan
+		<-SingleKillSignal()
 	}
 	if v, ok := s.Option[optionRunWait]; ok {
 		runWait, _ = v.(func())
