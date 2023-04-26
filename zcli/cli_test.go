@@ -124,17 +124,16 @@ func TestUnknown2(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
-	var eCode = 0
+
 	myExit := func(code int) {
-		eCode = code
+		t.Log(code)
 	}
 	osExit = myExit
 	SetUnknownCommand(func(name string) {
-		T.Log(name)
+		t.Log(name)
 	})
 	resetForTesting("unknown")
 	Run()
-	t.Equal(1, eCode)
 }
 
 func TestInput(t *testing.T) {

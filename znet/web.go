@@ -499,12 +499,7 @@ func Run(cb ...func(name, addr string)) {
 		}
 	}
 
-	sigkill, ok := <-daemon.SingleKillSignal()
-	if ok && !sigkill && !CloseHotRestart {
-		runNewProcess()
-	}
-
-	shutdown(sigkill)
+	shutdown(<-daemon.SingleKillSignal())
 }
 
 func runNewProcess() {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func newClient() *http.Client {
@@ -91,17 +92,21 @@ func (e *Engine) Connect(url string, v ...interface{}) (*Res, error) {
 	return e.Do(http.MethodConnect, url, v...)
 }
 
-func (e *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error) {
-	for attempt >= 0 {
-		attempt--
-		res, err := fn()
-		if err != nil {
-			time.Sleep(sleep)
-			continue
+func (e *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (res *Res, err error) {
+	if !zutil.DoRetry(attempt, func() bool {
+		res, err = fn()
+		return err != nil
+	}, func(rc *zutil.RetryConf) {
+		if sleep == 0 {
+			rc.BackOffDelay = true
+		} else {
+			rc.Interval = sleep
 		}
-		return res, nil
+	}) {
+		return res, errors.New("the number of retries has been exhausted")
 	}
-	return nil, errors.New("the number of retries has been exhausted")
+
+	return
 }
 
 func (e *Engine) EnableInsecureTLS(enable bool) {
