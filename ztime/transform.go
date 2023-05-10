@@ -136,7 +136,13 @@ func (e *TimeEngine) FormatTime(t time.Time, format ...string) string {
 
 // FormatTimestamp convert UNIX time to time string
 func (e *TimeEngine) FormatTimestamp(timestamp int64, format ...string) string {
-	return e.FormatTime(time.Unix(timestamp, 0), format...)
+	if timestamp <= 9999999999 {
+		return e.FormatTime(e.Unix(timestamp), format...)
+	}
+	if timestamp <= 9999999999999 {
+		timestamp = timestamp * 1000
+	}
+	return e.FormatTime(e.UnixMicro(timestamp), format...)
 }
 
 // Unix int to time

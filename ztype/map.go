@@ -30,8 +30,8 @@ func (m Map) DeepCopy() Map {
 	return newMap
 }
 
-func (m Map) Get(key string, disabled ...bool) *Type {
-	typ := &Type{}
+func (m Map) Get(key string, disabled ...bool) Type {
+	typ := Type{}
 	var (
 		v  interface{}
 		ok bool

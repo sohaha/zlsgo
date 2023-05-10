@@ -25,6 +25,7 @@ func TestNewTime(t *testing.T) {
 	tt.EqualExit("2020-02-04 10:38:19", New(1).FormatTimestamp(now, "Y-m-d H:i:s"))
 	tt.EqualExit(New(24).Week(nowTime), Week(nowTime)+1)
 	tt.EqualExit("2020-02-04T09:38:19+00:00", FormatTimestamp(now, "c"))
+	tt.EqualExit("2023-03-01T11:30:00+00:00", FormatTimestamp(1677670200000, "c"))
 
 	SetTimeZone(8)
 

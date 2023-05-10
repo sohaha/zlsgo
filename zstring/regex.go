@@ -83,6 +83,16 @@ func RegexReplaceFunc(pattern string, str string, repl func(string) string) (str
 	return str, err
 }
 
+// RegexSplit split the string
+func RegexSplit(pattern string, str string) ([]string, error) {
+	r, err := getRegexpCompile(pattern)
+	var result []string
+	if err == nil {
+		result = r.Split(str, -1)
+	}
+	return result, err
+}
+
 func clearRegexpCompile() {
 	newRegexCache := map[string]*regexMapStruct{}
 	l.Lock()

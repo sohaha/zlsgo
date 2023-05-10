@@ -3,6 +3,7 @@ package ztype
 
 import (
 	"bytes"
+
 	// "encoding/json"
 	"encoding/json"
 	"strconv"
@@ -283,8 +284,18 @@ func ToTime(i interface{}, format ...string) (time.Time, error) {
 	case time.Time:
 		return val, nil
 	case int, int32, int64, uint, uint32, uint64:
-		return ztime.Unix(ToInt64(i)), nil
+		i := ToInt64(i)
+		if i <= 9999999999 {
+			return ztime.Unix(i), nil
+		}
+		if i <= 9999999999999 {
+			i = i * 1000
+		}
+		return ztime.UnixMicro(i), nil
 	default:
+		if i := ToInt64(i); i > 0 {
+			return ToTime(i)
+		}
 		v := ToString(i)
 		return ztime.Parse(v, format...)
 	}

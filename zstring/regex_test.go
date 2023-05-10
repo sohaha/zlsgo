@@ -42,6 +42,9 @@ func TestRegex(T *testing.T) {
 	str, _ := RegexReplace(`b\d{2}`, "a1b23c456", "*")
 	t.Equal("a1*c456", str)
 
+	strs, _ := RegexSplit(`~m~[0-9]{1,}~m~`, "~m~4~m~~h~1")
+	t.Equal([]string{"", "~h~1"}, strs)
+
 	str, _ = RegexReplaceFunc(`\w{2}`, "abcd", Ucfirst)
 	t.Equal("AbCd", str)
 

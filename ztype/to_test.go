@@ -273,6 +273,8 @@ func TestStructToMap(tt *testing.T) {
 }
 
 func TestToTime(t *testing.T) {
-	t.Log(ztype.ToTime("2022-07-17 17:23:58"))
+	t.Log(ztype.ToTime(1683280800000))
+	t.Log(ztype.ToTime(1677670200000))
 	t.Log(ztype.ToTime(1658049838))
+	t.Log(ztype.ToTime("2022-07-17 17:23:58"))
 }
