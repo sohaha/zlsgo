@@ -7,6 +7,25 @@ import (
 	"github.com/sohaha/zlsgo/zerror"
 )
 
+func (inj *injector) InvokeWithErrorOnly(f interface{}) (err error) {
+	v, err := inj.Invoke(f)
+	if err != nil {
+		return err
+	}
+
+	if len(v) == 0 {
+		return nil
+	}
+
+	for i := range v {
+		if err, ok := v[i].Interface().(error); ok {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (inj *injector) Invoke(f interface{}) (values []reflect.Value, err error) {
 	catch := zerror.TryCatch(func() error {
 		t := reflect.TypeOf(f)

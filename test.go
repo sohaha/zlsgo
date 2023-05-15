@@ -94,6 +94,8 @@ func (u *TestUtil) NoError(err error, exit ...bool) bool {
 
 	if len(exit) > 0 && exit[0] {
 		u.t.Fatal()
+	} else {
+		u.t.Fail()
 	}
 	return false
 }

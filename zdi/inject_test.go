@@ -1,6 +1,7 @@
 package zdi_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -92,4 +93,46 @@ func TestInvoke(t *testing.T) {
 	})
 	tt.NoError(err)
 	tt.Equal(int64(18), int64(invoke[0].Int()))
+}
+
+func TestInvokeWithErrorOnly(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	di := zdi.New()
+
+	test := &testSt{Msg: ztime.Now(), Num: 666}
+	_ = di.Map(test)
+
+	{
+		err := di.InvokeWithErrorOnly(func(s *testSt) {})
+		tt.NoError(err)
+	}
+
+	{
+		err := di.InvokeWithErrorOnly(func(s *testSt) error {
+			return nil
+		})
+		tt.NoError(err)
+	}
+
+	{
+		err := di.InvokeWithErrorOnly(func(s *testSt) error {
+			return errors.New("test error")
+		})
+		tt.Equal("test error", err.Error())
+	}
+
+	{
+		err := di.InvokeWithErrorOnly(func(s *testSt) error {
+			panic("test panic")
+			return nil
+		})
+		tt.Equal("test panic", err.Error())
+	}
+
+	{
+		err := di.InvokeWithErrorOnly(func(s *testSt) (int, error) {
+			return 0, errors.New("test error")
+		})
+		tt.Equal("test error", err.Error())
+	}
 }

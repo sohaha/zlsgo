@@ -16,6 +16,7 @@ type (
 		Apply(Pointer) error
 		Resolve(...Pointer) error
 		Invoke(interface{}) ([]reflect.Value, error)
+		InvokeWithErrorOnly(interface{}) error
 	}
 	TypeMapper interface {
 		Map(interface{}, ...Option) reflect.Type
