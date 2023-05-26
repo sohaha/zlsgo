@@ -11,6 +11,13 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
+type testErrController struct {
+}
+
+func (t *testErrController) Init(e *Engine) error {
+	return errors.New("test error")
+}
+
 type testController struct {
 }
 
@@ -74,7 +81,10 @@ func TestBindStruct(t *testing.T) {
 		t.Log("PanicHandler", err)
 	})
 	prefix := "/test"
-	err := r.BindStruct(prefix, &testController{}, func(c *Context) {
+	err := r.BindStruct(prefix, &testErrController{})
+	tt.Equal("test error", err.Error())
+
+	err = r.BindStruct(prefix, &testController{}, func(c *Context) {
 		t.Log("go", c.Request.URL)
 		t.Log(c.GetAllParam())
 		c.Next()

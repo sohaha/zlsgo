@@ -22,7 +22,7 @@ func RandInt(min int, max int) int {
 	return min + int(RandUint32Max(uint32(max+1-min)))
 }
 
-// RandString random string of specified length, the second parameter limit can only appear the specified character
+// Rand random string of specified length, the second parameter limit can only appear the specified character
 func Rand(n int, tpl ...string) string {
 	var s string
 	b := make([]byte, n)

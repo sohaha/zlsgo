@@ -166,7 +166,7 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		ctx:       ctx,
 		ctxCancel: cancel,
 		option: &SSEOption{
-			RetryTime:      3000,
+			// RetryTime:      3000,
 			HeartbeatsTime: 15000,
 		},
 	}

@@ -1,7 +1,6 @@
 package zutil
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 )
@@ -56,8 +55,7 @@ func DoRetry(sum int, fn func() bool, opt ...func(*RetryConf)) (ok bool) {
 
 		var interval time.Duration
 		if o.BackOffDelay {
-			interval = backOffDelay(i, o.MaxRetryInterval)
-			fmt.Println(i, interval)
+			interval = BackOffDelay(i, o.MaxRetryInterval)
 		} else {
 			interval = o.Interval
 		}
@@ -68,7 +66,7 @@ func DoRetry(sum int, fn func() bool, opt ...func(*RetryConf)) (ok bool) {
 	return
 }
 
-func backOffDelay(attempt int, maxRetryInterval time.Duration) time.Duration {
+func BackOffDelay(attempt int, maxRetryInterval time.Duration) time.Duration {
 	attempt = attempt - 1
 	if attempt < 0 {
 		return 0

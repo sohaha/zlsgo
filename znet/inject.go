@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/sohaha/zlsgo/zdi"
+	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -119,8 +120,13 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	default:
 		val := reflect.ValueOf(v)
 		if val.Kind() != reflect.Func {
+			b := ztype.ToBytes(v)
+			isJSON := zjson.ValidBytes(b)
 			return func(c *Context) error {
-				c.Byte(http.StatusOK, ztype.ToBytes(v))
+				c.Byte(http.StatusOK, b)
+				if isJSON {
+					c.SetContentType(ContentTypeJSON)
+				}
 				return nil
 			}
 			// panic("znet Handler is not a function: " + val.Kind().String())

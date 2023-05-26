@@ -64,7 +64,7 @@ func (r *Res) Bytes() []byte {
 	return data
 }
 
-func (r *Res) Stream(fn func(line []byte) error) error {
+func (r *Res) Stream(fn func(line []byte, eof bool) error) error {
 	if r.err != nil || r.resp == nil {
 		return r.err
 	}
@@ -78,12 +78,12 @@ func (r *Res) Stream(fn func(line []byte) error) error {
 			return err
 		}
 
-		if err == io.EOF {
-			break
+		if err := fn(bs, err == io.EOF); err != nil {
+			return err
 		}
 
-		if err = fn(bs); err != nil {
-			return err
+		if err == io.EOF {
+			break
 		}
 	}
 

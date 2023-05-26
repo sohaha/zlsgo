@@ -37,20 +37,22 @@ func TestMapNil(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	var m Map
-
 	tt.Equal(true, m.IsEmpty())
 	err := m.Delete("no")
 	t.Log(err)
 
-	tt.NoError(m.Set("val", "99"))
-	tt.NoError(m.Set("yes", true))
-	tt.NoError(m.Set("", "empty"))
-	t.Log(m)
+	err = m.Set("val", "99")
+	t.Log(err)
+	tt.EqualTrue(err != nil)
 
-	tt.NoError(m.Delete("yes"))
+	var m2 = &Map{}
+	tt.Equal(true, m2.IsEmpty())
+	err = m.Delete("no")
+	t.Log(err)
 
-	tt.Equal("empty", m.Get("").String())
-	t.Logf("%+v", m)
+	err = m2.Set("val", "99")
+	tt.NoError(err)
+	tt.Equal("99", m2.Get("val").String())
 }
 
 type other struct {

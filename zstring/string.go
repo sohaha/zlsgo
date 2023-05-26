@@ -26,7 +26,7 @@ const (
 	PadLeft
 	// PadSides Two-sided padding characters,If the two sides are not equal, the right side takes precedence.
 	PadSides
-	letterBytes = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 // Pad String padding

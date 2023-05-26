@@ -47,11 +47,12 @@ func (m Map) Get(key string, disabled ...bool) Type {
 	return typ
 }
 
-func (m *Map) Set(key string, value interface{}) error {
-	if *m == nil {
-		*m = make(Map)
+func (m Map) Set(key string, value interface{}) error {
+	if m == nil {
+		return errors.New("map is nil")
 	}
-	(*m)[key] = value
+
+	m[key] = value
 
 	return nil
 }
@@ -62,11 +63,12 @@ func (m Map) Has(key string) bool {
 	return ok
 }
 
-func (m *Map) Delete(key string) error {
-	if _, ok := (*m)[key]; ok {
-		delete(*m, key)
+func (m Map) Delete(key string) error {
+	if _, ok := m[key]; ok {
+		delete(m, key)
 		return nil
 	}
+
 	return errors.New("key not found")
 }
 

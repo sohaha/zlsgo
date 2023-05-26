@@ -81,14 +81,14 @@ type (
 		prefix        string
 		fileDir       string
 		fileName      string
+		ignoreLogs    []string
 		buf           bytes.Buffer
-		flag          int
 		calldDepth    int
 		level         int
+		flag          int
 		mu            sync.RWMutex
 		color         bool
 		fileAndStdout bool
-		ignoreLogs    []string
 	}
 	formatter struct {
 		v     reflect.Value

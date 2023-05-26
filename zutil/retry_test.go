@@ -64,6 +64,6 @@ func TestRetry(tt *testing.T) {
 
 func Test_backOffDelay(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		t.Log(backOffDelay((i), time.Minute))
+		t.Log(BackOffDelay((i), time.Minute))
 	}
 }

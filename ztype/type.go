@@ -29,63 +29,108 @@ func (t Type) Get(path string) Type {
 	return New(v)
 }
 
-func (t Type) String() string {
+func (t Type) String(def ...string) string {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToString(t.v)
 }
 
-func (t Type) Bytes() []byte {
+func (t Type) Bytes(def ...[]byte) []byte {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToBytes(t.v)
 }
 
-func (t Type) Bool() bool {
+func (t Type) Bool(def ...bool) bool {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToBool(t.v)
 }
 
-func (t Type) Int() int {
+func (t Type) Int(def ...int) int {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToInt(t.v)
 }
 
-func (t Type) Int8() int8 {
+func (t Type) Int8(def ...int8) int8 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToInt8(t.v)
 }
 
-func (t Type) Int16() int16 {
+func (t Type) Int16(def ...int16) int16 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToInt16(t.v)
 }
 
-func (t Type) Int32() int32 {
+func (t Type) Int32(def ...int32) int32 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToInt32(t.v)
 }
 
-func (t Type) Int64() int64 {
+func (t Type) Int64(def ...int64) int64 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToInt64(t.v)
 }
 
-func (t Type) Uint() uint {
+func (t Type) Uint(def ...uint) uint {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToUint(t.v)
 }
 
-func (t Type) Uint8() uint8 {
+func (t Type) Uint8(def ...uint8) uint8 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToUint8(t.v)
 }
 
-func (t Type) Uint16() uint16 {
+func (t Type) Uint16(def ...uint16) uint16 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToUint16(t.v)
 }
 
-func (t Type) Uint32() uint32 {
+func (t Type) Uint32(def ...uint32) uint32 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToUint32(t.v)
 }
 
-func (t Type) Uint64() uint64 {
+func (t Type) Uint64(def ...uint64) uint64 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToUint64(t.v)
 }
 
-func (t Type) Float32() float32 {
+func (t Type) Float32(def ...float32) float32 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToFloat32(t.v)
 }
 
-func (t Type) Float64() float64 {
+func (t Type) Float64(def ...float64) float64 {
+	if t.v == nil && len(def) > 0 {
+		return def[0]
+	}
 	return ToFloat64(t.v)
 }
 

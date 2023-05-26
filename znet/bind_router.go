@@ -26,10 +26,18 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 	initFn := of.MethodByName("Init")
 	if initFn.IsValid() {
 		before, ok := initFn.Interface().(func(e *Engine))
-		if !ok {
-			return fmt.Errorf("func: [%s] is not an effective routing method", "Init")
+		if ok {
+			before(g)
+		} else {
+			if before, ok := initFn.Interface().(func(e *Engine) error); !ok {
+				return fmt.Errorf("func: [%s] is not an effective routing method", "Init")
+			} else {
+				if err := before(g); err != nil {
+					return err
+				}
+			}
 		}
-		before(g)
+
 	}
 	handleName := "reflect.methodValueCall"
 	typeOf := typ.TypeOf()

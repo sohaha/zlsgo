@@ -36,29 +36,31 @@ func TestNewMap(t *testing.T) {
 	m := map[string]interface{}{"a": 1, "b": 2.01, "c": []string{"d", "e", "f", "g", "h"}, "r": map[string]int{"G1": 1, "G2": 2}}
 	mt := ztype.Map(m)
 
-	for _, v := range []string{"a", "b", "c", "d", "r"} {
+	for _, v := range []string{"a", "b", "c", "d", "r", "_"} {
 		typ := mt.Get(v)
 		d := map[string]interface{}{
 			"value":   typ.Value(),
-			"string":  typ.String(),
-			"bool":    typ.Bool(),
-			"int":     typ.Int(),
-			"int8":    typ.Int8(),
-			"int16":   typ.Int16(),
-			"int32":   typ.Int32(),
-			"int64":   typ.Int64(),
-			"uint":    typ.Uint(),
-			"uint8":   typ.Uint8(),
-			"uint16":  typ.Uint16(),
-			"uint32":  typ.Uint32(),
-			"uint64":  typ.Uint64(),
-			"float32": typ.Float32(),
-			"float64": typ.Float64(),
+			"bytes":   typ.Bytes([]byte("_")),
+			"string":  typ.String("_"),
+			"bool":    typ.Bool(false),
+			"int":     typ.Int(1),
+			"int8":    typ.Int8(1),
+			"int16":   typ.Int16(1),
+			"int32":   typ.Int32(1),
+			"int64":   typ.Int64(1),
+			"uint":    typ.Uint(1),
+			"uint8":   typ.Uint8(1),
+			"uint16":  typ.Uint16(1),
+			"uint32":  typ.Uint32(1),
+			"uint64":  typ.Uint64(1),
+			"float32": typ.Float32(1),
+			"float64": typ.Float64(1),
 			"map":     typ.MapString(),
-			"slice":   typ.Slice(),
+			"slice_0": typ.Slice().Index(0).String("_s_"),
 		}
 		t.Logf("%s %+v", v, d)
 	}
+
 }
 
 func TestNewMapKeys(t *testing.T) {
@@ -120,7 +122,7 @@ func TestMapSet(t *testing.T) {
 	tt.Equal(1, m.Get("a").Int())
 	tt.EqualTrue(!m.IsEmpty())
 
-	var m2 ztype.Map
+	var m2 = ztype.Map{}
 
 	tt.EqualTrue(m2.IsEmpty())
 	tt.EqualTrue(!m2.Get("a").Exists())

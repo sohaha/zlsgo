@@ -14,12 +14,13 @@ import (
 
 type (
 	SSEEngine struct {
-		ctx        context.Context
-		eventCh    chan *SSEEvent
-		errCh      chan error
-		ctxCancel  context.CancelFunc
-		method     string
-		readyState int
+		ctx          context.Context
+		eventCh      chan *SSEEvent
+		errCh        chan error
+		ctxCancel    context.CancelFunc
+		verifyHeader func(http.Header) bool
+		method       string
+		readyState   int
 	}
 
 	SSEEvent struct {
@@ -54,6 +55,10 @@ func (sse *SSEEngine) Error() <-chan error {
 
 func (sse *SSEEngine) ResetMethod(method string) {
 	sse.method = method
+}
+
+func (sse *SSEEngine) VerifyHeader(fn func(http.Header) bool) {
+	sse.verifyHeader = fn
 }
 
 func (sse *SSEEngine) OnMessage(fn func(*SSEEvent, error)) {
@@ -103,6 +108,9 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
 		errCh:      make(chan error),
+		verifyHeader: func(h http.Header) bool {
+			return strings.Contains(h.Get("Content-Type"), "text/event-stream")
+		},
 	}
 
 	lastID := ""
@@ -122,13 +130,14 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 			data = append(data, sse.ctx)
 
 			r, err := e.sseReq(sse.method, url, data...)
-
 			if err == nil {
-				if r != nil && !strings.Contains(r.Response().Header.Get("Content-Type"), "text/event-stream") {
-					sse.eventCh <- &SSEEvent{
-						Undefined: r.Bytes(),
+				if r != nil {
+					if sse.verifyHeader != nil && !sse.verifyHeader(r.Response().Header) {
+						sse.eventCh <- &SSEEvent{
+							Undefined: r.Bytes(),
+						}
+						r = nil
 					}
-					r = nil
 				}
 
 				if r == nil {
@@ -140,7 +149,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 				sse.readyState = 1
 
 				isPing := false
-				_ = r.Stream(func(line []byte) error {
+				_ = r.Stream(func(line []byte, eof bool) error {
 					i := len(line)
 					if i == 1 && line[0] == dataEnd {
 						if !isPing {
@@ -164,15 +173,18 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 						return nil
 					}
 
+					if len(spl[0]) == 0 {
+						isPing = bytes.Equal(ping, bytes.TrimSpace(spl[1]))
+						if !isPing {
+							currEvent.Undefined = spl[1]
+						}
+						return nil
+					}
+
 					val := bytes.TrimSuffix(spl[1], []byte{'\n'})
 					val = bytes.TrimPrefix(val, []byte{' '})
 
 					switch zstring.Bytes2String(spl[0]) {
-					case "":
-						isPing = bytes.Equal(ping, val)
-						if !isPing {
-							currEvent.Undefined = val
-						}
 					case "id":
 						lastID = zstring.Bytes2String(val)
 						currEvent.ID = lastID
@@ -180,13 +192,19 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 						currEvent.Event = zstring.Bytes2String(val)
 					case "data":
 						if len(currEvent.Data) > 0 {
-							currEvent.Data = append(currEvent.Data, '\n')
+							sse.eventCh <- currEvent
+							currEvent = &SSEEvent{}
+							isPing = false
 						}
 						currEvent.Data = append(currEvent.Data, val...)
 					case "retry":
 						if t, err := strconv.Atoi(zstring.Bytes2String(val)); err == nil {
 							retry = t
 						}
+					}
+					if eof && !isPing {
+						sse.eventCh <- currEvent
+						currEvent = &SSEEvent{}
 					}
 					return nil
 				})

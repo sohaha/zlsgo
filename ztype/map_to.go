@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func (m *Map) GetToString(key string, def ...string) (val string) {
+func (m Map) GetToString(key string, def ...string) (val string) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.String()
@@ -18,7 +18,7 @@ func (m *Map) GetToString(key string, def ...string) (val string) {
 	return
 }
 
-func (m *Map) GetToBytes(key string, def ...[]byte) (val []byte) {
+func (m Map) GetToBytes(key string, def ...[]byte) (val []byte) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Bytes()
@@ -31,7 +31,7 @@ func (m *Map) GetToBytes(key string, def ...[]byte) (val []byte) {
 	return
 }
 
-func (m *Map) GetToBool(key string, def ...bool) (val bool) {
+func (m Map) GetToBool(key string, def ...bool) (val bool) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Bool()
@@ -44,7 +44,7 @@ func (m *Map) GetToBool(key string, def ...bool) (val bool) {
 	return
 }
 
-func (m *Map) GetToInt(key string, def ...int) (val int) {
+func (m Map) GetToInt(key string, def ...int) (val int) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Int()
@@ -57,7 +57,7 @@ func (m *Map) GetToInt(key string, def ...int) (val int) {
 	return
 }
 
-func (m *Map) GetToInt8(key string, def ...int8) (val int8) {
+func (m Map) GetToInt8(key string, def ...int8) (val int8) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Int8()
@@ -70,7 +70,7 @@ func (m *Map) GetToInt8(key string, def ...int8) (val int8) {
 	return
 }
 
-func (m *Map) GetToInt16(key string, def ...int16) (val int16) {
+func (m Map) GetToInt16(key string, def ...int16) (val int16) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Int16()
@@ -83,7 +83,7 @@ func (m *Map) GetToInt16(key string, def ...int16) (val int16) {
 	return
 }
 
-func (m *Map) GetToInt32(key string, def ...int32) (val int32) {
+func (m Map) GetToInt32(key string, def ...int32) (val int32) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Int32()
@@ -96,7 +96,7 @@ func (m *Map) GetToInt32(key string, def ...int32) (val int32) {
 	return
 }
 
-func (m *Map) GetToInt64(key string, def ...int64) (val int64) {
+func (m Map) GetToInt64(key string, def ...int64) (val int64) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Int64()
@@ -109,7 +109,7 @@ func (m *Map) GetToInt64(key string, def ...int64) (val int64) {
 	return
 }
 
-func (m *Map) GetToUint(key string, def ...uint) (val uint) {
+func (m Map) GetToUint(key string, def ...uint) (val uint) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Uint()
@@ -122,7 +122,7 @@ func (m *Map) GetToUint(key string, def ...uint) (val uint) {
 	return
 }
 
-func (m *Map) GetToUint8(key string, def ...uint8) (val uint8) {
+func (m Map) GetToUint8(key string, def ...uint8) (val uint8) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Uint8()
@@ -135,7 +135,7 @@ func (m *Map) GetToUint8(key string, def ...uint8) (val uint8) {
 	return
 }
 
-func (m *Map) GetToUint16(key string, def ...uint16) (val uint16) {
+func (m Map) GetToUint16(key string, def ...uint16) (val uint16) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Uint16()
@@ -148,7 +148,7 @@ func (m *Map) GetToUint16(key string, def ...uint16) (val uint16) {
 	return
 }
 
-func (m *Map) GetToUint32(key string, def ...uint32) (val uint32) {
+func (m Map) GetToUint32(key string, def ...uint32) (val uint32) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Uint32()
@@ -161,7 +161,7 @@ func (m *Map) GetToUint32(key string, def ...uint32) (val uint32) {
 	return
 }
 
-func (m *Map) GetToUint64(key string, def ...uint64) (val uint64) {
+func (m Map) GetToUint64(key string, def ...uint64) (val uint64) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Uint64()
@@ -174,7 +174,7 @@ func (m *Map) GetToUint64(key string, def ...uint64) (val uint64) {
 	return
 }
 
-func (m *Map) GetToFloat32(key string, def ...float32) (val float32) {
+func (m Map) GetToFloat32(key string, def ...float32) (val float32) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Float32()
@@ -187,7 +187,7 @@ func (m *Map) GetToFloat32(key string, def ...float32) (val float32) {
 	return
 }
 
-func (m *Map) GetToFloat64(key string, def ...float64) (val float64) {
+func (m Map) GetToFloat64(key string, def ...float64) (val float64) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Float64()
@@ -200,7 +200,7 @@ func (m *Map) GetToFloat64(key string, def ...float64) (val float64) {
 	return
 }
 
-func (m *Map) GetToTime(key string, def ...time.Time) (val time.Time) {
+func (m Map) GetToTime(key string, def ...time.Time) (val time.Time) {
 	var ok bool
 	var err error
 	v := m.Get(key)
@@ -219,7 +219,7 @@ func (m *Map) GetToTime(key string, def ...time.Time) (val time.Time) {
 	return
 }
 
-func (m *Map) GetToMap(key string, def ...Map) (val Map) {
+func (m Map) GetToMap(key string, def ...Map) (val Map) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Map()
@@ -232,7 +232,7 @@ func (m *Map) GetToMap(key string, def ...Map) (val Map) {
 	return
 }
 
-func (m *Map) GetToSlice(key string, def ...SliceType) (val SliceType) {
+func (m Map) GetToSlice(key string, def ...SliceType) (val SliceType) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Slice()
@@ -245,7 +245,7 @@ func (m *Map) GetToSlice(key string, def ...SliceType) (val SliceType) {
 	return
 }
 
-func (m *Map) GetToSliceValue(key string, def ...[]interface{}) (val []interface{}) {
+func (m Map) GetToSliceValue(key string, def ...[]interface{}) (val []interface{}) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Slice().Value()

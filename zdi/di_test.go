@@ -51,8 +51,10 @@ func TestMultiple(t *testing.T) {
 	})
 	tt.NoError(err)
 
-	_, err = di.Invoke(func(test []*testSt) {
+	err = di.InvokeWithErrorOnly(func(test []*testSt) error {
 		t.Log(test)
+		return nil
 	})
-	tt.NoError(err)
+	tt.Log(err)
+	tt.EqualTrue(err != nil)
 }

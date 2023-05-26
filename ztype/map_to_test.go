@@ -26,6 +26,7 @@ func TestMapTo(t *testing.T) {
 	tt.Equal(reflect.String, reflect.TypeOf(m["i"]).Kind())
 	tt.Equal(123, m.GetToInt("i"))
 	tt.Equal(reflect.Int, reflect.TypeOf(m["i"]).Kind())
+	tt.EqualTrue(reflect.String != reflect.TypeOf(m["i"]).Kind())
 
 	tt.Equal(0, m.GetToInt("i2"))
 	tt.Equal(456, m.GetToInt("i2", 456))
