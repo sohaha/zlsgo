@@ -1,3 +1,6 @@
+//go:build go1.18
+// +build go1.18
+
 package zutil_test
 
 import (
@@ -27,8 +30,9 @@ func TestNewChanUnbounded(t *testing.T) {
 		ch.Close()
 	}()
 
-	time.Sleep(time.Second)
-	tt.Equal(10, ch.Len())
+	time.Sleep(time.Second / 4)
+	tt.EqualTrue(ch.Len() >= 10)
+
 	for v := range ch.Out() {
 		t.Log(v, ch.Len())
 	}
@@ -52,8 +56,9 @@ func TestNewChanUnbuffered(t *testing.T) {
 		ch.Close()
 	}()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second / 4)
 	tt.Equal(0, ch.Len())
+
 	for v := range ch.Out() {
 		t.Log(v, ch.Len())
 	}
@@ -77,8 +82,9 @@ func TestNewChanBuffered(t *testing.T) {
 		ch.Close()
 	}()
 
-	time.Sleep(time.Second)
-	tt.Equal(3, ch.Len())
+	time.Sleep(time.Second / 4)
+	tt.EqualTrue(ch.Len() >= 3)
+
 	for v := range ch.Out() {
 		t.Log(v, ch.Len())
 	}

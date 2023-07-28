@@ -362,7 +362,7 @@ func TestFile(t *testing.T) {
 	}
 	res, err = Post("http://127.0.0.1:18181/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), Host("http://127.0.0.1:18181"), v, q, File("test\\package.json", "file"))
+	}), Host("127.0.0.1:18181"), v, q, File("test\\package.json", "file"))
 	if err != nil {
 		tt.EqualNil(err)
 		return
