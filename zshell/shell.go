@@ -47,7 +47,7 @@ func (s *ShellBuffer) String() string {
 }
 
 func ExecCommandHandle(ctx context.Context, command []string,
-	bef func(cmd *exec.Cmd), aft func(cmd *exec.Cmd, err error)) (code int,
+	bef func(cmd *exec.Cmd) error, aft func(cmd *exec.Cmd, err error)) (code int,
 	err error) {
 	var status syscall.WaitStatus
 	if len(command) == 0 || (len(command) == 1 && command[0] == "") {
@@ -60,14 +60,20 @@ func ExecCommandHandle(ctx context.Context, command []string,
 		cmd.Env = Env
 		Env = nil
 	}
+
 	if Debug {
 		fmt.Println("[Command]:", strings.Join(command, " "))
 	}
-	bef(cmd)
+
+	err = bef(cmd)
+	if err != nil {
+		return -1, err
+	}
+
 	err = cmd.Start()
 	isSuccess := false
-	defer func() {
-		if Debug {
+	if Debug {
+		defer func() {
 			userTime := time.Duration(0)
 			if cmd != nil && cmd.ProcessState != nil {
 				userTime = cmd.ProcessState.UserTime()
@@ -77,12 +83,17 @@ func ExecCommandHandle(ctx context.Context, command []string,
 			} else {
 				fmt.Println("[Fail]", status.ExitStatus(), " Used Time:", userTime)
 			}
-		}
-	}()
-	aft(cmd, err)
-	if err != nil {
-		return 1, err
+		}()
 	}
+
+	if aft != nil {
+		aft(cmd, err)
+	}
+
+	if err != nil {
+		return -1, err
+	}
+
 	err = cmd.Wait()
 	status = cmd.ProcessState.Sys().(syscall.WaitStatus)
 	isSuccess = cmd.ProcessState.Success()
@@ -161,7 +172,7 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 	stdErr io.Writer) (code int, outStr, errStr string, err error) {
 	stdout := newShellStdBuffer(stdOut)
 	stderr := newShellStdBuffer(stdErr)
-	code, err = ExecCommandHandle(ctx, command, func(cmd *exec.Cmd) {
+	code, err = ExecCommandHandle(ctx, command, func(cmd *exec.Cmd) error {
 		cmd.Stdout = stdout
 		cmd.Stdin = stdIn
 		cmd.Stderr = stderr
@@ -169,8 +180,8 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 			cmd.Dir = Dir
 			Dir = ""
 		}
-	}, func(cmd *exec.Cmd, err error) {
-	})
+		return nil
+	}, nil)
 	outStr = stdout.String()
 	errStr = stderr.String()
 	return

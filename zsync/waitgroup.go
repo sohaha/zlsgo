@@ -36,7 +36,6 @@ func (h *WaitGroup) GoTry(f func()) {
 			}
 			h.mu.Unlock()
 		}
-
 	}()
 }
 

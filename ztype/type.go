@@ -145,6 +145,22 @@ func (t Type) Slice() SliceType {
 	return ToSlice(t.v)
 }
 
+func (t Type) SliceMaps() Maps {
+	return t.Slice().Maps()
+}
+
+func (t Type) SliceValue() []interface{} {
+	return t.Slice().Value()
+}
+
+func (t Type) SliceString() []string {
+	return t.Slice().String()
+}
+
+func (t Type) SliceInt() []int {
+	return t.Slice().Int()
+}
+
 func (t Type) Exists() bool {
 	return t.v != nil
 }

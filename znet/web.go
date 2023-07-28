@@ -42,12 +42,13 @@ type (
 		done          *zutil.Bool
 		Engine        *Engine
 		Log           *zlog.Logger
-		Cache         *zcache.Table
-		renderError   ErrHandlerFunc
-		cacheQuery    url.Values
-		rawData       string
-		middleware    []handlerFn
-		mu            sync.RWMutex
+		// Deprecated: Please maintain your own cache
+		Cache       *zcache.Table
+		renderError ErrHandlerFunc
+		cacheQuery  url.Values
+		rawData     string
+		middleware  []handlerFn
+		mu          sync.RWMutex
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {

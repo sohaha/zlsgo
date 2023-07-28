@@ -15,6 +15,7 @@ func TestSSE(t *testing.T) {
 	s := SSE("http://127.0.0.1:18181/sse", NoRedirect(true))
 	i := 0
 	s.ResetMethod("GET")
+	s.ResetRetryNum(1)
 	s.OnMessage(func(ev *SSEEvent, err error) {
 		if err != nil {
 			t.Error(err)

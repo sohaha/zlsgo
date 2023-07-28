@@ -47,8 +47,6 @@ func NewMemoryFile(name string, opt ...MemoryFileOption) *MemoryFile {
 
 func (f *MemoryFile) flushLoop() {
 	ticker := time.NewTicker(time.Second * time.Duration(f.timing))
-	defer func() {
-	}()
 	for {
 		select {
 		case <-f.stopTiming:

@@ -42,8 +42,8 @@ var (
 )
 
 
-func New(min int, max ...int) *WorkPool {
-	minIdle := uint(min)
+func New(size int, max ...int) *WorkPool {
+	minIdle := uint(size)
 	if minIdle <= 0 {
 		minIdle = 1
 	}

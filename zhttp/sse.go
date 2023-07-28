@@ -20,6 +20,7 @@ type (
 		ctxCancel    context.CancelFunc
 		verifyHeader func(http.Header) bool
 		method       string
+		retryNum     int
 		readyState   int
 	}
 
@@ -55,6 +56,10 @@ func (sse *SSEEngine) Error() <-chan error {
 
 func (sse *SSEEngine) ResetMethod(method string) {
 	sse.method = method
+}
+
+func (sse *SSEEngine) ResetRetryNum(n int) {
+	sse.retryNum = n
 }
 
 func (sse *SSEEngine) VerifyHeader(fn func(http.Header) bool) {
@@ -105,6 +110,7 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 		readyState: 0,
 		ctx:        ctx,
 		method:     "POST",
+		retryNum:   -1,
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
 		errCh:      make(chan error),
@@ -208,6 +214,14 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 					}
 					return nil
 				})
+
+				if sse.retryNum >= 0 {
+					if sse.retryNum == 0 {
+						cancel()
+						return
+					}
+					sse.retryNum--
+				}
 			} else {
 				sse.errCh <- err
 			}

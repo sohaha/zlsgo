@@ -66,7 +66,6 @@ func (s *SSE) Push() {
 	defer ticker.Stop()
 
 	b := zstring.Buffer(7)
-
 sseFor:
 	for {
 		select {

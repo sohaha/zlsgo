@@ -19,6 +19,10 @@ type (
 		_ Nocmp
 		v uint32
 	}
+	Uint64 struct {
+		_ Nocmp
+		v uint64
+	}
 	Int64 struct {
 		_ Nocmp
 		v int64
@@ -113,32 +117,67 @@ func NewUint32(i uint32) *Uint32 {
 	}
 }
 
-func (ui32 *Uint32) Add(i uint32) uint32 {
-	return atomic.AddUint32(&ui32.v, i)
+func (u32 *Uint32) Add(i uint32) uint32 {
+	return atomic.AddUint32(&u32.v, i)
 }
 
-func (ui32 *Uint32) Sub(i uint32) uint32 {
-	return atomic.AddUint32(&ui32.v, -i)
+func (u32 *Uint32) Sub(i uint32) uint32 {
+	return atomic.AddUint32(&u32.v, -i)
 }
 
-func (ui32 *Uint32) Swap(i uint32) uint32 {
-	return atomic.SwapUint32(&ui32.v, i)
+func (u32 *Uint32) Swap(i uint32) uint32 {
+	return atomic.SwapUint32(&u32.v, i)
 }
 
-func (ui32 *Uint32) Load() uint32 {
-	return atomic.LoadUint32(&ui32.v)
+func (u32 *Uint32) Load() uint32 {
+	return atomic.LoadUint32(&u32.v)
 }
 
-func (ui32 *Uint32) Store(i uint32) {
-	atomic.StoreUint32(&ui32.v, i)
+func (u32 *Uint32) Store(i uint32) {
+	atomic.StoreUint32(&u32.v, i)
 }
 
-func (i32 *Uint32) CAS(old, new uint32) bool {
-	return atomic.CompareAndSwapUint32(&i32.v, old, new)
+func (u32 *Uint32) CAS(old, new uint32) bool {
+	return atomic.CompareAndSwapUint32(&u32.v, old, new)
 }
 
-func (ui32 *Uint32) String() string {
-	v := ui32.Load()
+func (u32 *Uint32) String() string {
+	v := u32.Load()
+	return strconv.FormatInt(int64(v), 10)
+}
+
+func NewUint64(i uint64) *Uint64 {
+	return &Uint64{
+		v: i,
+	}
+}
+
+func (u64 *Uint64) Add(i uint64) uint64 {
+	return atomic.AddUint64(&u64.v, i)
+}
+
+func (u64 *Uint64) Sub(i uint64) uint64 {
+	return atomic.AddUint64(&u64.v, -i)
+}
+
+func (u64 *Uint64) Swap(i uint64) uint64 {
+	return atomic.SwapUint64(&u64.v, i)
+}
+
+func (u64 *Uint64) Load() uint64 {
+	return atomic.LoadUint64(&u64.v)
+}
+
+func (u64 *Uint64) Store(i uint64) {
+	atomic.StoreUint64(&u64.v, i)
+}
+
+func (u64 *Uint64) CAS(old, new uint64) bool {
+	return atomic.CompareAndSwapUint64(&u64.v, old, new)
+}
+
+func (u64 *Uint64) String() string {
+	v := u64.Load()
 	return strconv.FormatInt(int64(v), 10)
 }
 

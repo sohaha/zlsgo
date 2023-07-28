@@ -53,7 +53,7 @@ func TestBash(t *testing.T) {
 	t.Log(res, errRes)
 
 	code, _, _, err = Run("lll")
-	tt.EqualExit(1, code)
+	tt.EqualExit(-1, code)
 	tt.EqualExit(true, err != nil)
 	t.Log(err)
 

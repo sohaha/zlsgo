@@ -19,9 +19,9 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("Slice", func(t *testing.T) {
-		t.Log(ztype.New("123").Slice())
-		t.Log(ztype.New(`{"name": "test"}`).Slice())
-		t.Log(ztype.New([]string{"1", "2"}).Slice())
+		t.Log(ztype.New("123").SliceValue())
+		t.Log(ztype.New(`{"name": "test"}`).SliceMaps())
+		t.Log(ztype.New([]string{"1", "2"}).SliceInt())
 		t.Log(ztype.New(map[string]interface{}{"abc": 123}).Slice())
 	})
 
@@ -117,7 +117,7 @@ func TestMapSet(t *testing.T) {
 
 	tt.EqualTrue(m.IsEmpty())
 	tt.EqualTrue(!m.Get("a").Exists())
-	m.Set("a", 1)
+	_ = m.Set("a", 1)
 	tt.EqualTrue(m.Get("a").Exists())
 	tt.Equal(1, m.Get("a").Int())
 	tt.EqualTrue(!m.IsEmpty())
@@ -126,7 +126,7 @@ func TestMapSet(t *testing.T) {
 
 	tt.EqualTrue(m2.IsEmpty())
 	tt.EqualTrue(!m2.Get("a").Exists())
-	m2.Set("a", 1)
+	_ = m2.Set("a", 1)
 	tt.EqualTrue(m2.Get("a").Exists())
 	tt.Equal(1, m2.Get("a").Int())
 	tt.EqualTrue(!m2.IsEmpty())
