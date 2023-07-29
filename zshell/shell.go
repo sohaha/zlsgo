@@ -2,6 +2,7 @@
 package zshell
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -49,10 +50,14 @@ func (s *ShellBuffer) String() string {
 func ExecCommandHandle(ctx context.Context, command []string,
 	bef func(cmd *exec.Cmd) error, aft func(cmd *exec.Cmd, err error)) (code int,
 	err error) {
-	var status syscall.WaitStatus
+	var (
+		isSuccess bool
+		status    syscall.WaitStatus
+	)
 	if len(command) == 0 || (len(command) == 1 && command[0] == "") {
 		return 1, errors.New("no such command")
 	}
+
 	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
 	if Env == nil {
 		cmd.Env = os.Environ()
@@ -71,10 +76,9 @@ func ExecCommandHandle(ctx context.Context, command []string,
 	}
 
 	err = cmd.Start()
-	isSuccess := false
 	if Debug {
 		defer func() {
-			userTime := time.Duration(0)
+			var userTime time.Duration
 			if cmd != nil && cmd.ProcessState != nil {
 				userTime = cmd.ProcessState.UserTime()
 			}
@@ -95,16 +99,21 @@ func ExecCommandHandle(ctx context.Context, command []string,
 	}
 
 	err = cmd.Wait()
-	status = cmd.ProcessState.Sys().(syscall.WaitStatus)
-	isSuccess = cmd.ProcessState.Success()
 
-	return status.ExitStatus(), err
+	code, isSuccess = cmdResult(cmd)
+	return code, err
+}
+
+func cmdResult(cmd *exec.Cmd) (code int, isSuccess bool) {
+	code = cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+	isSuccess = cmd.ProcessState.Success()
+	return
 }
 
 type pipeWork struct {
 	cmd *exec.Cmd
-	r   *io.PipeReader
-	w   *io.PipeWriter
+	// r   *io.PipeReader
+	w *io.PipeWriter
 }
 
 func PipeExecCommand(ctx context.Context, commands [][]string) (code int, outStr, errStr string, err error) {
@@ -201,11 +210,15 @@ func OutRun(command string, stdIn io.Reader, stdOut io.Writer,
 }
 
 func BgRun(command string) (err error) {
+	return BgRunContext(context.Background(), command)
+}
+
+func BgRunContext(ctx context.Context, command string) (err error) {
 	if strings.TrimSpace(command) == "" {
 		return errors.New("no such command")
 	}
 	arr := fixCommand(command)
-	cmd := exec.Command(arr[0], arr[1:]...)
+	cmd := exec.CommandContext(ctx, arr[0], arr[1:]...)
 	err = cmd.Start()
 	if Debug {
 		fmt.Println("[Command]: ", command)
@@ -217,6 +230,67 @@ func BgRun(command string) (err error) {
 		_ = cmd.Wait()
 	}()
 	return err
+}
+
+func CallbackRun(command string, callback func(out string, isBasic bool)) (<-chan int, func(string), error) {
+	return CallbackRunContext(context.Background(), command, callback)
+}
+
+func CallbackRunContext(ctx context.Context, command string, callback func(out string, isBasic bool)) (<-chan int, func(string), error) {
+	var (
+		cmd    *exec.Cmd
+		err    error
+		cancel context.CancelFunc
+		code   = make(chan int, 1)
+	)
+
+	ctx, cancel = context.WithCancel(ctx)
+
+	var in func(string)
+	read := func(stdout io.ReadCloser, isBasic bool) {
+		defer cancel()
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			callback(scanner.Text(), isBasic)
+		}
+	}
+
+	_, err = ExecCommandHandle(ctx, fixCommand(command), func(c *exec.Cmd) error {
+		cmd = c
+		stdin, err := c.StdinPipe()
+		if err != nil {
+			return err
+		}
+		in = func(s string) {
+			io.WriteString(stdin, s)
+		}
+		stdout, err := c.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		go read(stdout, true)
+		stderr, err := c.StderrPipe()
+		if err != nil {
+			return err
+		}
+		go read(stderr, false)
+		return errors.New("")
+	}, nil)
+
+	if err.Error() == "" {
+		err = cmd.Start()
+		if err == nil {
+			go func() {
+				_ = cmd.Wait()
+				c, _ := cmdResult(cmd)
+				code <- c
+			}()
+		} else {
+			code <- -1
+		}
+	}
+
+	return code, in, err
 }
 
 func fixCommand(command string) (runCommand []string) {

@@ -2,9 +2,11 @@ package zshell
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo/zutil"
 
@@ -78,4 +80,23 @@ func TestBash(t *testing.T) {
 	Env = []string{"kkk"}
 	code, res, errRes, err = OutRun("ls", os.Stdin, os.Stdout, os.Stdin)
 	t.Log(res, errRes, code, err)
+}
+
+func TestCallbackRun(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var i = 0
+	var code <-chan int
+	var err error
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	code, _, err = CallbackRunContext(ctx, "ping www.npmjs.com", func(out string, isBasic bool) {
+		fmt.Println(out)
+		i = i + 1
+		if i > 3 {
+			cancel()
+		}
+	})
+	tt.NoError(err)
+	tt.Log("code", <-code)
 }
