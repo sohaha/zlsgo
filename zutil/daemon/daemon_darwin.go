@@ -40,7 +40,7 @@ func (darwinSystem) Interactive() bool {
 
 func (darwinSystem) New(i Iface, c *Config) (s ServiceIface, err error) {
 	userService := optionUserServiceDefault
-	if s, ok := c.Option[optionUserService]; ok {
+	if s, ok := c.Options[optionUserService]; ok {
 		userService, _ = s.(bool)
 	}
 	s = &darwinLaunchdService{
@@ -121,15 +121,15 @@ func (s *darwinLaunchdService) Install() error {
 	defer f.Close()
 
 	keepAlive := optionKeepAliveDefault
-	if v, ok := s.Option[optionKeepAlive]; ok {
+	if v, ok := s.Options[optionKeepAlive]; ok {
 		keepAlive, _ = v.(bool)
 	}
 	load := optionRunAtLoadDefault
-	if v, ok := s.Option[optionRunAtLoad]; ok {
+	if v, ok := s.Options[optionRunAtLoad]; ok {
 		load, _ = v.(bool)
 	}
 	sessionCreate := optionSessionCreateDefault
-	if v, ok := s.Option[optionSessionCreate]; ok {
+	if v, ok := s.Options[optionSessionCreate]; ok {
 		sessionCreate, _ = v.(bool)
 	}
 
@@ -226,7 +226,7 @@ func (s *darwinLaunchdService) Run() error {
 	runWait := func() {
 		<-SingleKillSignal()
 	}
-	if v, ok := s.Option[optionRunWait]; ok {
+	if v, ok := s.Options[optionRunWait]; ok {
 		runWait, _ = v.(func())
 	}
 

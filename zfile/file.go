@@ -124,10 +124,15 @@ func SafePath(path string, pathRange ...string) string {
 
 // RealPath get an absolute path
 func RealPath(path string, addSlash ...bool) (realPath string) {
-	if len(path) == 0 || (path[0] != '/' && !filepath.IsAbs(path)) {
-		path = ProjectPath + "/" + path
+	if len(path) > 2 && path[1] == ':' {
+		realPath = path
+	} else {
+		if len(path) == 0 || (path[0] != '/' && !filepath.IsAbs(path)) {
+			path = ProjectPath + "/" + path
+		}
+		realPath, _ = filepath.Abs(path)
 	}
-	realPath, _ = filepath.Abs(path)
+
 	realPath = strings.Replace(realPath, "\\", "/", -1)
 	realPath = pathAddSlash(realPath, addSlash...)
 

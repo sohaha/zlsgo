@@ -121,7 +121,7 @@ func (w *windowsService) Install() error {
 		return fmt.Errorf("service %s already exists", w.Name)
 	}
 	password := ""
-	if p, ok := w.Option["Password"]; ok {
+	if p, ok := w.Options["Password"]; ok {
 		password, _ = p.(string)
 	}
 	s, err = m.CreateService(w.Name, exepath, mgr.Config{
@@ -141,7 +141,7 @@ func (w *windowsService) Install() error {
 		return fmt.Errorf("installAsEventCreate() failed: %s", err)
 	}
 	load := optionRunAtLoadDefault
-	if l, ok := w.Option[optionRunAtLoad]; ok {
+	if l, ok := w.Options[optionRunAtLoad]; ok {
 		load, _ = l.(bool)
 	}
 	if load {

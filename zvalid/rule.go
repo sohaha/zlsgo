@@ -244,7 +244,7 @@ func (v Engine) IsMail(customError ...string) Engine {
 	})
 }
 
-// IsURL isURL links
+// IsURL links
 func (v Engine) IsURL(customError ...string) Engine {
 	return pushQueue(&v, func(v *Engine) *Engine {
 		if ignore(v) {

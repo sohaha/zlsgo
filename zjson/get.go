@@ -191,9 +191,9 @@ func (r *Res) Array() []Res {
 	return rr.a
 }
 
-func (r *Res) Slice() ztype.SliceType {
+func (r *Res) Slice() *ztype.SliceType {
 	if !r.IsArray() {
-		return make(ztype.SliceType, 0)
+		return &ztype.SliceType{}
 	}
 
 	return ztype.ToSlice(r.Value())

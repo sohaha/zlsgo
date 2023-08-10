@@ -19,7 +19,7 @@ type FastCache struct {
 	mask       int32
 }
 
-type Option struct {
+type Options struct {
 	Callback   func(ActionKind, string, uintptr)
 	Expiration time.Duration
 	Bucket     uint16
@@ -28,8 +28,8 @@ type Option struct {
 }
 
 // NewFast Fast LRU cache
-func NewFast(opt ...func(o *Option)) *FastCache {
-	o := Option{
+func NewFast(opt ...func(o *Options)) *FastCache {
+	o := Options{
 		Cap:    1 << 10,
 		Bucket: 4,
 	}

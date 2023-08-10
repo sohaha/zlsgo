@@ -30,8 +30,8 @@ func TestDaemon(t *testing.T) {
 		I: 1,
 	}
 	s, err := New(o, &Config{
-		Name:   "zlsgo_daemon_test",
-		Option: map[string]interface{}{"UserService": false},
+		Name:    "zlsgo_daemon_test",
+		Options: map[string]interface{}{"UserService": false},
 	})
 	if err != nil {
 		return

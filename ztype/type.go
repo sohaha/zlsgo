@@ -138,9 +138,9 @@ func (t Type) MapString() map[string]interface{} {
 	return ToMapString(t.v)
 }
 
-func (t Type) Slice() SliceType {
+func (t Type) Slice() *SliceType {
 	if t.v == nil {
-		return make([]Type, 0)
+		return &SliceType{}
 	}
 	return ToSlice(t.v)
 }

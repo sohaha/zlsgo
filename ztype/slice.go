@@ -1,56 +1,61 @@
 package ztype
 
 import (
+	"encoding/json"
 	"reflect"
 )
 
 type SliceType []Type
 
-func (s SliceType) Len() int {
-	return len(s)
+func (s *SliceType) Len() int {
+	return len(*s)
 }
 
-func (s SliceType) Index(i int) Type {
-	if len(s) <= i {
+func (s SliceType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Value())
+}
+
+func (s *SliceType) Index(i int) Type {
+	if len(*s) <= i {
 		return Type{}
 	}
-	return s[i]
+	return (*s)[i]
 }
 
-func (s SliceType) Value() []interface{} {
-	ss := make([]interface{}, 0, len(s))
-	for _, val := range s {
+func (s *SliceType) Value() []interface{} {
+	ss := make([]interface{}, 0, len(*s))
+	for _, val := range *s {
 		ss = append(ss, val.Value())
 	}
 	return ss
 }
 
-func (s SliceType) String() []string {
-	ss := make([]string, 0, len(s))
-	for _, val := range s {
+func (s *SliceType) String() []string {
+	ss := make([]string, 0, len(*s))
+	for _, val := range *s {
 		ss = append(ss, val.String())
 	}
 	return ss
 }
 
-func (s SliceType) Int() []int {
-	ss := make([]int, 0, len(s))
-	for _, val := range s {
+func (s *SliceType) Int() []int {
+	ss := make([]int, 0, len(*s))
+	for _, val := range *s {
 		ss = append(ss, val.Int())
 	}
 	return ss
 }
 
-func (s SliceType) Maps() Maps {
-	ss := make(Maps, 0, len(s))
-	for _, val := range s {
+func (s *SliceType) Maps() Maps {
+	ss := make(Maps, 0, len(*s))
+	for _, val := range *s {
 		ss = append(ss, val.Map())
 	}
 	return ss
 }
 
 // Deprecated: please use ToSlice
-func Slice(value interface{}) SliceType {
+func Slice(value interface{}) *SliceType {
 	return ToSlice(value)
 }
 
@@ -63,10 +68,10 @@ func SliceStrToIface(slice []string) []interface{} {
 	return ss
 }
 
-func ToSlice(value interface{}) (s SliceType) {
-	s = make(SliceType, 0)
+func ToSlice(value interface{}) *SliceType {
+	s := SliceType{}
 	if value == nil {
-		return
+		return &s
 	}
 
 	switch val := value.(type) {
@@ -99,5 +104,5 @@ func ToSlice(value interface{}) (s SliceType) {
 			s = append(s, New(value))
 		}
 	}
-	return s
+	return &s
 }

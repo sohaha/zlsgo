@@ -98,7 +98,7 @@ func (s *systemd) String() string {
 
 func (s *systemd) configPath() (cp string, err error) {
 	userService := optionUserServiceDefault
-	if u, ok := s.Option[optionUserService]; ok {
+	if u, ok := s.Options[optionUserService]; ok {
 		userService = u.(bool)
 	}
 	if userService {
@@ -128,11 +128,11 @@ func (s *systemd) Install() error {
 	}
 	defer f.Close()
 	reloadSignal := ""
-	if v, ok := s.Option[optionReloadSignal]; ok {
+	if v, ok := s.Options[optionReloadSignal]; ok {
 		reloadSignal, _ = v.(string)
 	}
 	pidFile := ""
-	if v, ok := s.Option[optionPIDFile]; ok {
+	if v, ok := s.Options[optionPIDFile]; ok {
 		pidFile, _ = v.(string)
 	}
 	path := s.execPath()
@@ -185,7 +185,7 @@ func (s *systemd) Run() (err error) {
 	runWait := func() {
 		<-SingleKillSignal()
 	}
-	if v, ok := s.Option[optionRunWait]; ok {
+	if v, ok := s.Options[optionRunWait]; ok {
 		runWait, _ = v.(func())
 	}
 

@@ -117,9 +117,6 @@ type pipeWork struct {
 }
 
 func PipeExecCommand(ctx context.Context, commands [][]string) (code int, outStr, errStr string, err error) {
-	defer func() {
-		Dir = ""
-	}()
 	var (
 		cmds   []*pipeWork
 		out    bytes.Buffer
@@ -187,7 +184,6 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 		cmd.Stderr = stderr
 		if Dir != "" {
 			cmd.Dir = Dir
-			Dir = ""
 		}
 		return nil
 	}, nil)
@@ -236,7 +232,12 @@ func CallbackRun(command string, callback func(out string, isBasic bool)) (<-cha
 	return CallbackRunContext(context.Background(), command, callback)
 }
 
-func CallbackRunContext(ctx context.Context, command string, callback func(out string, isBasic bool)) (<-chan int, func(string), error) {
+type Options struct {
+	Env []string
+	Dir string
+}
+
+func CallbackRunContext(ctx context.Context, command string, callback func(out string, isBasic bool), opt ...func(option *Options)) (<-chan int, func(string), error) {
 	var (
 		cmd    *exec.Cmd
 		err    error
@@ -256,6 +257,16 @@ func CallbackRunContext(ctx context.Context, command string, callback func(out s
 	}
 
 	_, err = ExecCommandHandle(ctx, fixCommand(command), func(c *exec.Cmd) error {
+		o := Options{}
+		for _, v := range opt {
+			v(&o)
+		}
+		if len(o.Env) > 0 {
+			c.Env = append(c.Env, o.Env...)
+		}
+		if o.Dir != "" {
+			c.Dir = o.Dir
+		}
 		cmd = c
 		stdin, err := c.StdinPipe()
 		if err != nil {

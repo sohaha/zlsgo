@@ -53,8 +53,10 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 
 func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler ...Handler) {
 	var urlPattern string
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", relativePath))
-	fileServer := http.StripPrefix(relativePath, http.FileServer(fs))
+
+	ap := Utils.CompletionPath(relativePath, e.router.prefix)
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", ap))
+	fileServer := http.StripPrefix(ap, http.FileServer(fs))
 
 	handler := func(c *Context) {
 		for key, value := range c.header {
@@ -67,7 +69,6 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 				}
 			}
 		}
-
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
 	if strings.HasSuffix(relativePath, "/") {
@@ -219,6 +220,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		prefix:     prefix,
 		trees:      e.router.trees,
 		middleware: middleware,
+		notFound:   e.router.notFound,
 	}
 	engine = &Engine{
 		router:              route,
@@ -462,10 +464,12 @@ func (e *Engine) Use(middleware ...Handler) {
 func (e *Engine) HandleNotFound(c *Context) {
 	middleware := e.router.middleware
 	c.prevData.Code.Store(http.StatusNotFound)
+
 	if e.router.notFound != nil {
 		handleAction(c, e.router.notFound, middleware)
 		return
 	}
+
 	handleAction(c, func(_ *Context) error {
 		c.Byte(404, []byte("404 page not found"))
 		return nil

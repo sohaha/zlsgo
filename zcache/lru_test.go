@@ -94,7 +94,7 @@ func TestLRUCacheExpire(t *testing.T) {
 func TestLRUCache(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	l := zcache.NewFast(func(o *zcache.Option) {
+	l := zcache.NewFast(func(o *zcache.Options) {
 		o.Expiration = time.Second / 2
 		o.Bucket = 4
 		o.Cap = 10

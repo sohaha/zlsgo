@@ -13,7 +13,7 @@ type (
 	// Config configuration
 	Config struct {
 		Custom func(c *znet.Context) (key string, expiration time.Duration)
-		zcache.Option
+		zcache.Options
 	}
 	cacheContext struct {
 		Type    string
@@ -29,13 +29,13 @@ func New(opt ...func(conf *Config)) znet.HandlerFunc {
 		},
 	}
 
-	cache := zcache.NewFast(func(o *zcache.Option) {
-		conf.Option = *o
-		conf.Option.Expiration = time.Minute * 10
+	cache := zcache.NewFast(func(o *zcache.Options) {
+		conf.Options = *o
+		conf.Options.Expiration = time.Minute * 10
 		for _, f := range opt {
 			f(&conf)
 		}
-		*o = conf.Option
+		*o = conf.Options
 	})
 
 	return func(c *znet.Context) {

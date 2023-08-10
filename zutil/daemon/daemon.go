@@ -41,7 +41,7 @@ type (
 	}
 	// Config provides the setup for a ServiceIface. The Name field is required.
 	Config struct {
-		Option      map[string]interface{}
+		Options     map[string]interface{}
 		Name        string
 		DisplayName string
 		Description string

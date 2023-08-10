@@ -58,7 +58,7 @@ func ReflectPtr(r reflect.Value) reflect.Value {
 
 func InArray(needle, hystack interface{}) bool {
 	nt := ToString(needle)
-	for _, item := range Slice(hystack) {
+	for _, item := range *ToSlice(hystack) {
 		if nt == ToString(item) {
 			return true
 		}

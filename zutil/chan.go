@@ -18,7 +18,7 @@ type (
 		q       []T
 	}
 
-	Option struct {
+	Options struct {
 		Cap int
 	}
 )

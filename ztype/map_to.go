@@ -232,13 +232,13 @@ func (m Map) GetToMap(key string, def ...Map) (val Map) {
 	return
 }
 
-func (m Map) GetToSlice(key string, def ...SliceType) (val SliceType) {
+func (m Map) GetToSlice(key string, def ...*SliceType) (val *SliceType) {
 	v := m.Get(key)
 	if v.Exists() {
 		val = v.Slice()
 		_ = m.Set(key, val)
 	} else if len(def) > 0 {
-		val = def[0]
+		val = (def)[0]
 		_ = m.Set(key, val)
 	}
 

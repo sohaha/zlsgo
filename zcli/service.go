@@ -146,7 +146,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			daemonConfig = &daemon.Config{
 				Name:        name,
 				Description: description,
-				Option:      map[string]interface{}{
+				Options:     map[string]interface{}{
 					// "UserService": true,
 				},
 			}
