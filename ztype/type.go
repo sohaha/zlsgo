@@ -134,13 +134,9 @@ func (t Type) Float64(def ...float64) float64 {
 	return ToFloat64(t.v)
 }
 
-func (t Type) MapString() map[string]interface{} {
-	return ToMapString(t.v)
-}
-
-func (t Type) Slice() *SliceType {
+func (t Type) Slice() SliceType {
 	if t.v == nil {
-		return &SliceType{}
+		return SliceType{}
 	}
 	return ToSlice(t.v)
 }

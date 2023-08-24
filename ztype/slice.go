@@ -2,65 +2,66 @@ package ztype
 
 import (
 	"encoding/json"
-	"reflect"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 type SliceType []Type
 
-func (s *SliceType) Len() int {
-	return len(*s)
+func (s SliceType) Len() int {
+	return len(s)
 }
 
 func (s SliceType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.Value())
 }
 
-func (s *SliceType) Index(i int) Type {
-	if len(*s) <= i {
+func (s SliceType) Index(i int) Type {
+	if len(s) <= i {
 		return Type{}
 	}
-	return (*s)[i]
+	return s[i]
 }
 
-func (s *SliceType) Value() []interface{} {
-	ss := make([]interface{}, 0, len(*s))
-	for _, val := range *s {
-		ss = append(ss, val.Value())
+func (s SliceType) Value() []interface{} {
+	ss := make([]interface{}, 0, len(s))
+	for i := range s {
+		ss = append(ss, s[i].Value())
 	}
 	return ss
 }
 
-func (s *SliceType) String() []string {
-	ss := make([]string, 0, len(*s))
-	for _, val := range *s {
-		ss = append(ss, val.String())
+func (s SliceType) String() []string {
+	ss := make([]string, 0, len(s))
+	for i := range s {
+		ss = append(ss, s[i].String())
 	}
 	return ss
 }
 
-func (s *SliceType) Int() []int {
-	ss := make([]int, 0, len(*s))
-	for _, val := range *s {
-		ss = append(ss, val.Int())
+func (s SliceType) Int() []int {
+	ss := make([]int, 0, len(s))
+	for i := range s {
+		ss = append(ss, s[i].Int())
 	}
 	return ss
 }
 
-func (s *SliceType) Maps() Maps {
-	ss := make(Maps, 0, len(*s))
-	for _, val := range *s {
-		ss = append(ss, val.Map())
+func (s SliceType) Maps() Maps {
+	ss := make(Maps, 0, len(s))
+	for i := range s {
+		ss = append(ss, s[i].Map())
 	}
 	return ss
 }
 
 // Deprecated: please use ToSlice
-func Slice(value interface{}) *SliceType {
+func Slice(value interface{}) SliceType {
 	return ToSlice(value)
 }
 
-// SliceStrToIface  []string to []interface{}
-func SliceStrToIface(slice []string) []interface{} {
+// SliceStrToAny  []string to []interface{}
+func SliceStrToAny(slice []string) []interface{} {
 	ss := make([]interface{}, 0, len(slice))
 	for _, val := range slice {
 		ss = append(ss, val)
@@ -68,41 +69,36 @@ func SliceStrToIface(slice []string) []interface{} {
 	return ss
 }
 
-func ToSlice(value interface{}) *SliceType {
+func ToSlice(value interface{}) SliceType {
 	s := SliceType{}
 	if value == nil {
-		return &s
+		return s
 	}
 
 	switch val := value.(type) {
 	case []interface{}:
 		s = make(SliceType, 0, len(val))
-		for _, v := range val {
-			s = append(s, New(v))
+		for i := range val {
+			s = append(s, New(val[i]))
 		}
 	case []string:
 		s = make(SliceType, 0, len(val))
-		for _, v := range val {
-			s = append(s, New(v))
-
+		for i := range val {
+			s = append(s, New(val[i]))
 		}
 	case string:
 		if val != "" {
 			s = append(s, New(val))
 		}
 	default:
-		ref := reflect.Indirect(reflect.ValueOf(value))
-		switch ref.Kind() {
-		case reflect.Slice:
-			l := ref.Len()
-			v := ref.Slice(0, l)
-			for i := 0; i < l; i++ {
-				val := v.Index(i).Interface()
-				s = append(s, New(val))
+		var nval []interface{}
+		if conv.to("", value, zreflect.ValueOf(&nval)) == nil {
+			s = make(SliceType, 0, len(nval))
+			for i := range nval {
+				s = append(s, New(nval[i]))
 			}
-		default:
-			s = append(s, New(value))
 		}
 	}
-	return &s
+
+	return s
 }

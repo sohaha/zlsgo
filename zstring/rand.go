@@ -3,7 +3,9 @@ package zstring
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"io"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -49,6 +51,79 @@ func UniqueID(n int) string {
 		return Rand(n-2) + strconv.Itoa(time.Now().Nanosecond()/10000000)
 	}
 	return hex.EncodeToString(k)
+}
+
+type (
+	Weighteder struct {
+		choices []interface{}
+		totals  []uint32
+		max     uint32
+	}
+	choice struct {
+		Item   interface{}
+		Weight uint32
+	}
+)
+
+func WeightedRand(choices map[interface{}]uint32) (interface{}, error) {
+	w, err := NewWeightedRand(choices)
+	if err != nil {
+		return nil, err
+	}
+	return w.Pick(), nil
+}
+
+func NewWeightedRand(choices map[interface{}]uint32) (*Weighteder, error) {
+	cs := make([]choice, 0, len(choices))
+	for k, v := range choices {
+		cs = append(cs, choice{Item: k, Weight: v})
+	}
+
+	sort.Slice(cs, func(i, j int) bool {
+		return cs[i].Weight < cs[j].Weight
+	})
+	w := &Weighteder{
+		totals:  make([]uint32, len(choices)),
+		choices: make([]interface{}, len(choices)),
+		max:     0,
+	}
+	for i := range cs {
+		if cs[i].Weight < 0 {
+			continue // ignore negative weights, can never be picked
+		}
+
+		if cs[i].Weight >= ^uint32(0) {
+			return nil, errors.New("weight overflowed")
+		}
+
+		if (^uint32(0) - w.max) <= cs[i].Weight {
+			return nil, errors.New("total weight overflowed")
+		}
+
+		w.max += cs[i].Weight
+		w.totals[i] = w.max
+		w.choices[i] = cs[i].Item
+	}
+
+	return w, nil
+}
+
+func (w *Weighteder) Pick() interface{} {
+	return w.choices[w.weightedSearch()]
+}
+
+func (w *Weighteder) weightedSearch() int {
+	x := RandUint32Max(w.max) + 1
+	i, j := 0, len(w.totals)
+	for i < j {
+		h := int(uint(i+j) >> 1)
+		if w.totals[h] < x {
+			i = h + 1
+		} else {
+			j = h
+		}
+	}
+	return i
 }
 
 var idWorkers, _ = NewIDWorker(0)

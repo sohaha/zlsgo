@@ -61,7 +61,11 @@ func (s *SSE) Push() {
 	s.net.write()
 	s.flush()
 
-	ticker := time.NewTicker(time.Duration(s.option.HeartbeatsTime) * time.Millisecond)
+	heartbeatsTime := s.option.HeartbeatsTime
+	if heartbeatsTime == 0 {
+		heartbeatsTime = 15000
+	}
+	ticker := time.NewTicker(time.Duration(heartbeatsTime) * time.Millisecond)
 
 	defer ticker.Stop()
 
@@ -147,6 +151,7 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 	}
 
 	s.events <- ev
+
 	return nil
 }
 
@@ -160,7 +165,7 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	ctx, cancel := context.WithCancel(context.TODO())
 	s := &SSE{
 		lastID:    id,
-		events:    make(chan *sseEvent),
+		events:    make(chan *sseEvent, 1),
 		net:       c,
 		ctx:       ctx,
 		ctxCancel: cancel,

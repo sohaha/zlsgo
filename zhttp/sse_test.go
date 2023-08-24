@@ -14,16 +14,15 @@ func TestSSE(t *testing.T) {
 
 	s := SSE("http://127.0.0.1:18181/sse", NoRedirect(true))
 	i := 0
-	s.ResetMethod("GET")
-	s.ResetRetryNum(1)
-	s.OnMessage(func(ev *SSEEvent, err error) {
-		if err != nil {
-			t.Error(err)
-			s.Close()
-			return
-		}
+	c, err := s.OnMessage(func(ev *SSEEvent) {
 		t.Logf("id:%s msg:%s [%s] %s\n", ev.ID, string(ev.Data), ev.Event, ev.Undefined)
 		i++
 	})
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	<-c
 	tt.Equal(2, i)
 }

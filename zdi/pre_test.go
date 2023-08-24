@@ -7,13 +7,14 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zdi"
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 type testFastr func(v1 time.Time, v2 *testSt) string
 
 func (f testFastr) Invoke(args []interface{}) ([]reflect.Value, error) {
 	s := f(args[0].(time.Time), args[1].(*testSt))
-	return []reflect.Value{reflect.ValueOf(s)}, nil
+	return []reflect.Value{zreflect.ValueOf(s)}, nil
 }
 
 type testFastRest func(v1 time.Time, v2 *testSt) string

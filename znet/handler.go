@@ -12,6 +12,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -25,7 +26,7 @@ var (
 
 func (h invokerCodeText) Invoke(_ []interface{}) ([]reflect.Value, error) {
 	code, text := h()
-	return []reflect.Value{reflect.ValueOf(code), reflect.ValueOf(text)}, nil
+	return []reflect.Value{zreflect.ValueOf(code), reflect.ValueOf(text)}, nil
 }
 
 func defErrorHandler() ErrHandlerFunc {

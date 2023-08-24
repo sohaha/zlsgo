@@ -23,9 +23,9 @@ type (
 	}
 	type2 struct {
 		E  *uint
-		G  map[string]int
+		G  map[string]int `z:"gg"`
 		S2 *type1
-		F  []string
+		F  []string `json:"fs"`
 		type1
 		S1 type1
 		D  bool
@@ -167,14 +167,21 @@ func TestTo(t *testing.T) {
 	tt.Equal(true, ztype.ToBool(str))
 	tt.Equal(false, ztype.ToBool(ni))
 
-}
+	v := map[string]interface{}{
+		"D":  true,
+		"E":  12,
+		"fs": []string{"1", "a"},
+		"gg": map[string]string{"a": "1"},
+	}
+	var d type2
+	tt.NoError(ztype.To(v, &d, func(conver *ztype.Conver) {
 
-// func BenchmarkToString0(b *testing.B) {
-// s := 123
-// for i := 0; i < b.N; i++ {
-// _ = strconv.Itoa(s)
-// }
-// }
+	}))
+	tt.Log(d)
+	tt.Equal(1, d.G["a"])
+	tt.EqualTrue(d.D)
+	tt.Equal(uint(12), *d.E)
+}
 
 func BenchmarkToString1(b *testing.B) {
 	s := true
@@ -251,21 +258,25 @@ func TestStructToMap(tt *testing.T) {
 			B: "Ss",
 		},
 	}
-	r := ztype.ToMapString(v)
-	t.Log(v, r)
-	j, err := zjson.Marshal(r)
-	t.EqualNil(err)
-	t.EqualExit(`{"D":true,"E":8,"F":["f1","f2"],"G":{"G1":1,"G2":2},"S1":{"B":"S1","A":2,"C1":0},"S2":{"B":"Ss","A":3,"C1":0}}`, string(j))
+	r := ztype.ToMap(v)
+	t.Log(r, v)
 
+	t.EqualExit(true, r.Get("D").Bool())
+	t.EqualExit(8, r.Get("E").Int())
+	t.EqualExit(2, r.Get("gg").Get("G2").Int())
+	t.EqualExit("2", r.Get("S1").Get("A").String())
+	t.EqualExit(r.Get("S1.A").String(), r.Get("S1").Get("A").String())
+	t.EqualExit("f2", r.Get("fs").SliceString()[1])
+	t.EqualExit(r.Get("fs.1").String(), r.Get("fs").SliceString()[1])
 	v2 := []string{"1", "2", "more"}
-	r = ztype.ToMapString(v2)
+	r = ztype.ToMap(v2)
 	t.Log(v2, r)
-	j, err = zjson.Marshal(v2)
+	j, err := zjson.Marshal(v2)
 	t.EqualNil(err)
 	t.EqualExit(`["1","2","more"]`, string(j))
 
 	v3 := "ok"
-	r = ztype.ToMapString(v3)
+	r = ztype.ToMap(v3)
 	t.Log(v3, r)
 	j, err = zjson.Marshal(v3)
 	t.EqualNil(err)
@@ -277,4 +288,20 @@ func TestToTime(t *testing.T) {
 	t.Log(ztype.ToTime(1677670200000))
 	t.Log(ztype.ToTime(1658049838))
 	t.Log(ztype.ToTime("2022-07-17 17:23:58"))
+}
+
+func TestToStruct(t *testing.T) {
+	tt := zls.NewTest(t)
+	v := map[string]interface{}{
+		"D":  true,
+		"E":  12,
+		"fs": []string{"1", "a"},
+	}
+	var d type2
+
+	tt.NoError(ztype.ToStruct(v, &d))
+
+	tt.Equal(true, d.D)
+	tt.Equal(2, len(d.F))
+	t.Log(d)
 }

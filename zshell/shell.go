@@ -233,8 +233,8 @@ func CallbackRun(command string, callback func(out string, isBasic bool)) (<-cha
 }
 
 type Options struct {
-	Env []string
 	Dir string
+	Env []string
 }
 
 func CallbackRunContext(ctx context.Context, command string, callback func(out string, isBasic bool), opt ...func(option *Options)) (<-chan int, func(string), error) {

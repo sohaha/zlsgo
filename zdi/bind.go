@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 func (inj *injector) Resolve(v ...Pointer) error {
 	for _, p := range v {
-		r := reflect.ValueOf(p)
+		r := zreflect.ValueOf(p)
 		rt := r.Type()
 		v := r
 		t := rt
@@ -52,7 +54,7 @@ func (inj *injector) Resolve(v ...Pointer) error {
 }
 
 func (inj *injector) Apply(p Pointer) error {
-	v := reflect.ValueOf(p)
+	v := zreflect.ValueOf(p)
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}

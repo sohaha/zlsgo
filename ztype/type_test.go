@@ -12,10 +12,10 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("Map", func(t *testing.T) {
-		t.Log(ztype.New("123").MapString())
-		t.Log(ztype.New(`{"name": "test"}`).MapString())
-		t.Log(ztype.New([]string{"1", "2"}).MapString())
-		t.Log(ztype.New(map[string]interface{}{"abc": 123}).MapString())
+		t.Log(ztype.New("123").Map())
+		t.Log(ztype.New(`{"name": "test"}`).Map())
+		t.Log(ztype.New([]string{"1", "2"}).Map())
+		t.Log(ztype.New(map[string]interface{}{"abc": 123}).Map())
 	})
 
 	t.Run("Slice", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestNewMap(t *testing.T) {
 			"uint64":  typ.Uint64(1),
 			"float32": typ.Float32(1),
 			"float64": typ.Float64(1),
-			"map":     typ.MapString(),
+			"map":     typ.Map(),
 			"slice_0": typ.Slice().Index(0).String("_s_"),
 		}
 		t.Logf("%s %+v", v, d)
@@ -67,7 +67,7 @@ func TestNewMapKeys(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	json := `{"a":1,"b.c":2,"d":{"e":3,"f":4},"g":[5,6],"h":{"i":{"j":"100","k":"101"},"o":["p","q",1,16.8]},"0":"00001"}`
-	m := zjson.Parse(json).MapString()
+	m := zjson.Parse(json).Map()
 
 	var arr ztype.Maps
 	_ = zjson.Unmarshal(`[`+json+`]`, &arr)

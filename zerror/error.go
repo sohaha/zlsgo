@@ -81,7 +81,10 @@ func SupText(err error, text string) error {
 // With returns the inner error's text
 func With(err error, text string, w ...External) error {
 	if err == nil {
-		return nil
+		return &Error{
+			stack:   zutil.Callers(3),
+			errText: &(&[1]string{text})[0],
+		}
 	}
 
 	for i := range w {
@@ -186,6 +189,44 @@ func UnwrapErrors(err error) (errs []string) {
 		} else {
 			errs = append(errs, e.err.Error())
 		}
+
+		err = e.Unwrap()
+	}
+}
+
+func UnwrapFirst(err error) (ferr error) {
+	for {
+		if err == nil {
+			return
+		}
+
+		e, ok := err.(*Error)
+		if !ok {
+			return err
+		}
+
+		if e.errText != nil {
+			ferr = errors.New(*e.errText)
+		} else {
+			ferr = e.err
+		}
+
+		err = e.Unwrap()
+	}
+}
+
+func UnwrapFirstCode(err error) (code ErrCode) {
+	for {
+		if err == nil {
+			return
+		}
+
+		e, ok := err.(*Error)
+		if !ok {
+			return
+		}
+
+		code = e.code
 
 		err = e.Unwrap()
 	}

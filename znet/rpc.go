@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
-	"reflect"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 type JSONRPCOption struct {
@@ -24,7 +25,7 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 	for name, v := range rcvr {
 		err := s.RegisterName(name, v)
 		if err == nil && o.Debug {
-			typ := reflect.TypeOf(v)
+			typ := zreflect.TypeOf(v)
 			for m := 0; m < typ.NumMethod(); m++ {
 				method := typ.Method(m)
 				mtype := method.Type

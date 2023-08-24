@@ -22,6 +22,32 @@ type Demo struct {
 	F float64
 }
 
+type SS struct {
+	Name     string   `json:"name"`
+	Gg       GG       `json:"g"`
+	To       []string `json:"t"`
+	IDs      []AA     `json:"ids"`
+	Property struct {
+		Name string `json:"n"`
+		Key  float64
+	} `json:"p"`
+	Abc int
+	ID  int `json:"id"`
+	Pid uint
+	To2 int `json:"t2"`
+}
+
+type GG struct {
+	Info string
+	P    []AA `json:"p"`
+}
+
+type AA struct {
+	Name string
+	Gg   GG  `json:"g"`
+	ID   int `json:"id"`
+}
+
 func TestGet2(t *testing.T) {
 	Parse(`{"a":null}`).Get("a").ForEach(func(key, value *Res) bool {
 		t.Log(key, value)
@@ -37,6 +63,7 @@ func TestGet2(t *testing.T) {
 	t.Log(get.raw)
 	t.Log(get.Get("b"))
 }
+
 func TestGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	SetModifiersState(true)
@@ -104,8 +131,8 @@ func TestGet(t *testing.T) {
 	}
 
 	parseData := Parse(demo)
-	t.Log(parseData.Map())
-	t.Log(parseData.MapKeys())
+	t.Log(parseData.MapRes())
+	t.Log(parseData.MapKeys("children"))
 
 	other.ForEach(func(key, value *Res) bool {
 		return true
@@ -176,6 +203,34 @@ func TestGet(t *testing.T) {
 	tt.Log(parseData.Get("@reverse").String())
 }
 
+func TestForEach(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	arr := Parse(`{"names":[{"name":1},{"name":2}],"values":[3,4]}`)
+	arr.ForEach(func(key, value *Res) bool {
+		tt.Log("key:", key, "value:", value.String())
+		return true
+	})
+
+	i := 0
+	arr.Get("names").ForEach(func(key, value *Res) bool {
+		tt.Log("key:", key.Int(), "value:", value.String())
+		tt.Equal(i, key.Int())
+		i++
+		return true
+	})
+}
+
+func TestUnmarshal(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	json := `{"id":666,"Pid":100,"name":"HelloWorld","g":{"Info":"基础"},"ids":[{"id":1,"Name":"用户1","g":{"Info":"详情","p":[{"Name":"n1","id":1},{"id":2}]}}]}`
+	var s SS
+	err := Unmarshal(json, &s)
+	tt.NoError(err)
+	tt.Logf("%+v", s)
+	tt.Equal("用户1", s.IDs[0].Name)
+	tt.Equal("n1", s.IDs[0].Gg.P[0].Name)
+}
+
 func TestEditJson(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	j := Parse(demo)
@@ -196,7 +251,7 @@ func TestEditJson(t *testing.T) {
 	_ = j.Set("new_path.0", "仙人掌兽")
 	_ = j.Set("new_path.1", "花仙兽")
 
-	t.Log(j.Get("friends.0").MapString())
+	t.Log(j.Get("friends.0").Map())
 
 	t.Log(string(Ugly([]byte(j.String()))))
 }

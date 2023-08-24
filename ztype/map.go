@@ -4,12 +4,15 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"unsafe"
 
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (
-	structTagPriority = []string{"zto", "json"}
+	tagName       = "z"
+	tagNameLesser = "json"
 )
 
 type Map map[string]interface{}
@@ -123,27 +126,30 @@ func ToMap(value interface{}) Map {
 	case map[string]interface{}:
 		return v
 	default:
-		return ToMapString(v)
+		return toMapString(v)
 	}
 }
 
-// ToSliceMapString to SliceMapString
-func ToSliceMapString(value interface{}) []map[string]interface{} {
-	if r, ok := value.([]map[string]interface{}); ok {
+// ToMaps to Slice Map
+func ToMaps(value interface{}) Maps {
+	switch r := value.(type) {
+	case Maps:
 		return r
+	case []map[string]interface{}:
+		return *(*Maps)(unsafe.Pointer(&r))
+	default:
+		ref := reflect.Indirect(zreflect.ValueOf(value))
+		m := make(Maps, 0)
+		l := ref.Len()
+		v := ref.Slice(0, l)
+		for i := 0; i < l; i++ {
+			m = append(m, toMapString(v.Index(i).Interface()))
+		}
+		return m
 	}
-	ref := reflect.Indirect(reflect.ValueOf(value))
-	m := make([]map[string]interface{}, 0)
-	l := ref.Len()
-	v := ref.Slice(0, l)
-	for i := 0; i < l; i++ {
-		m = append(m, ToMapString(v.Index(i).Interface()))
-	}
-	return m
 }
 
-// ToMapString ToMapString
-func ToMapString(value interface{}, tags ...string) map[string]interface{} {
+func toMapString(value interface{}, tags ...string) map[string]interface{} {
 	if value == nil {
 		return map[string]interface{}{}
 	}
@@ -209,7 +215,7 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 			m[ToString(k)] = v
 		}
 	default:
-		rv := reflect.ValueOf(val)
+		rv := zreflect.ValueOf(val)
 		kind := rv.Kind()
 		if kind == reflect.Ptr {
 			rv = rv.Elem()
@@ -223,49 +229,44 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 			}
 		case reflect.Struct:
 			rt := rv.Type()
-			name := ""
-			tagArray := structTagPriority
-			switch len(tags) {
-			case 0:
-			case 1:
-				tagArray = append(strings.Split(tags[0], ","), structTagPriority...)
-			default:
-				tagArray = append(tags, structTagPriority...)
-			}
+		ol:
 			for i := 0; i < rv.NumField(); i++ {
-				fieldName := rt.Field(i).Name
+				field := rt.Field(i)
+				fieldName := field.Name
 				if !zstring.IsUcfirst(fieldName) {
 					continue
 				}
-				name = ""
-				fieldTag := rt.Field(i).Tag
-				for _, tag := range tagArray {
-					if name = fieldTag.Get(tag); name != "" {
-						break
-					}
-				}
+
+				name, opt := zreflect.GetStructTag(field, tagName, tagNameLesser)
 				if name == "" {
-					name = strings.TrimSpace(fieldName)
-				} else {
-					name = strings.TrimSpace(name)
-					if name == "-" {
-						continue
-					}
-					array := strings.Split(name, ",")
-					if len(array) > 1 {
-						switch strings.TrimSpace(array[1]) {
-						case "omitempty":
-							if IsEmpty(rv.Field(i).Interface()) {
-								continue
-							} else {
-								name = strings.TrimSpace(array[0])
-							}
-						default:
-							name = strings.TrimSpace(array[0])
+					continue
+				}
+				array := strings.Split(opt, ",")
+				v := rv.Field(i)
+				for i := range array {
+					switch strings.TrimSpace(array[i]) {
+					case "omitempty":
+						if IsEmpty(v.Interface()) {
+							continue ol
 						}
 					}
 				}
-				m[name] = rv.Field(i).Interface()
+				fv := reflect.Indirect(v)
+				switch fv.Kind() {
+				case reflect.Struct:
+					m[name] = toMapString(v.Interface())
+					continue
+				case reflect.Slice:
+					if field.Type.Elem().Kind() == reflect.Struct {
+						mc := make([]map[string]interface{}, v.Len())
+						for i := 0; i < v.Len(); i++ {
+							mc[i] = toMapString(v.Index(i).Interface())
+						}
+						m[name] = mc
+						continue
+					}
+				}
+				m[name] = v.Interface()
 			}
 		default:
 			m["0"] = val
@@ -275,22 +276,8 @@ func ToMapString(value interface{}, tags ...string) map[string]interface{} {
 
 }
 
-func ToMapStringDeep(value interface{}, tags ...string) map[string]interface{} {
-	data := ToMapString(value, tags...)
-	for key, value := range data {
-		rv := reflect.ValueOf(value)
-		kind := rv.Kind()
-		if kind == reflect.Ptr {
-			rv = rv.Elem()
-			kind = rv.Kind()
-		}
-		switch kind {
-		case reflect.Struct:
-			delete(data, key)
-			for k, v := range ToMapStringDeep(value, tags...) {
-				data[k] = v
-			}
-		}
-	}
-	return data
+func ToMap2(v interface{}) Map {
+	var m map[string]interface{}
+	_ = conv.to("", v, zreflect.ValueOf(&m))
+	return m
 }

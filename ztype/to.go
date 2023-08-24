@@ -3,13 +3,15 @@ package ztype
 
 import (
 	"bytes"
-
 	// "encoding/json"
 	"encoding/json"
+	"errors"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 )
@@ -18,13 +20,13 @@ type appString interface {
 	String() string
 }
 
-// ToByte to []byte
+// ToByte To []byte
 func ToBytes(i interface{}) []byte {
 	s := ToString(i)
 	return zstring.String2Bytes(s)
 }
 
-// ToString to String
+// ToString To String
 func ToString(i interface{}) string {
 	if i == nil {
 		return ""
@@ -70,7 +72,7 @@ func ToString(i interface{}) string {
 	}
 }
 
-// ToBool to Bool
+// ToBool To Bool
 func ToBool(i interface{}) bool {
 	if v, ok := i.(bool); ok {
 		return v
@@ -81,7 +83,7 @@ func ToBool(i interface{}) bool {
 	return false
 }
 
-// ToInt to int
+// ToInt To int
 func ToInt(i interface{}) int {
 	if v, ok := i.(int); ok {
 		return v
@@ -89,7 +91,7 @@ func ToInt(i interface{}) int {
 	return int(ToInt64(i))
 }
 
-// ToInt8 to int8
+// ToInt8 To int8
 func ToInt8(i interface{}) int8 {
 	if v, ok := i.(int8); ok {
 		return v
@@ -97,7 +99,7 @@ func ToInt8(i interface{}) int8 {
 	return int8(ToInt64(i))
 }
 
-// ToInt16 to int16
+// ToInt16 To int16
 func ToInt16(i interface{}) int16 {
 	if v, ok := i.(int16); ok {
 		return v
@@ -105,7 +107,7 @@ func ToInt16(i interface{}) int16 {
 	return int16(ToInt64(i))
 }
 
-// ToInt32 to int32
+// ToInt32 To int32
 func ToInt32(i interface{}) int32 {
 	if v, ok := i.(int32); ok {
 		return v
@@ -113,7 +115,7 @@ func ToInt32(i interface{}) int32 {
 	return int32(ToInt64(i))
 }
 
-// ToInt64 to int64
+// ToInt64 To int64
 func ToInt64(i interface{}) int64 {
 	if i == nil {
 		return 0
@@ -168,7 +170,7 @@ func ToInt64(i interface{}) int64 {
 	}
 }
 
-// ToUint to uint
+// ToUint To uint
 func ToUint(i interface{}) uint {
 	if v, ok := i.(uint); ok {
 		return v
@@ -176,7 +178,7 @@ func ToUint(i interface{}) uint {
 	return uint(ToUint64(i))
 }
 
-// ToUint8 to uint8
+// ToUint8 To uint8
 func ToUint8(i interface{}) uint8 {
 	if v, ok := i.(uint8); ok {
 		return v
@@ -184,7 +186,7 @@ func ToUint8(i interface{}) uint8 {
 	return uint8(ToUint64(i))
 }
 
-// ToUint16 to uint16
+// ToUint16 To uint16
 func ToUint16(i interface{}) uint16 {
 	if v, ok := i.(uint16); ok {
 		return v
@@ -192,7 +194,7 @@ func ToUint16(i interface{}) uint16 {
 	return uint16(ToUint64(i))
 }
 
-// ToUint32 to uint32
+// ToUint32 To uint32
 func ToUint32(i interface{}) uint32 {
 	if v, ok := i.(uint32); ok {
 		return v
@@ -200,7 +202,7 @@ func ToUint32(i interface{}) uint32 {
 	return uint32(ToUint64(i))
 }
 
-// ToUint64 to uint64
+// ToUint64 To uint64
 func ToUint64(i interface{}) uint64 {
 	if i == nil {
 		return 0
@@ -254,7 +256,7 @@ func ToUint64(i interface{}) uint64 {
 	}
 }
 
-// ToFloat32 to float32
+// ToFloat32 To float32
 func ToFloat32(i interface{}) float32 {
 	if i == nil {
 		return 0
@@ -266,7 +268,7 @@ func ToFloat32(i interface{}) float32 {
 	return float32(v)
 }
 
-// ToFloat64 to float64
+// ToFloat64 To float64
 func ToFloat64(i interface{}) float64 {
 	if i == nil {
 		return 0
@@ -278,7 +280,7 @@ func ToFloat64(i interface{}) float64 {
 	return v
 }
 
-// ToTime to time.Time
+// ToTime To time.Time
 func ToTime(i interface{}, format ...string) (time.Time, error) {
 	switch val := i.(type) {
 	case time.Time:
@@ -299,4 +301,13 @@ func ToTime(i interface{}, format ...string) (time.Time, error) {
 		v := ToString(i)
 		return ztime.Parse(v, format...)
 	}
+}
+
+// ToStruct map or struct to struct
+func ToStruct(v interface{}, outVal interface{}) error {
+	val := zreflect.ValueOf(outVal)
+	if reflect.Indirect(val).Kind() != reflect.Struct {
+		return errors.New("result must be a struct")
+	}
+	return conv.to("", v, val)
 }

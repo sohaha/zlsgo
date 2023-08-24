@@ -74,23 +74,26 @@ func BenchmarkArrayNew(b *testing.B) {
 	arr, _ := zarray.Copy(testdata)
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v, _ := arr.Get(i, 7)
-		_ = v
-	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for i := 0; i < 7; i++ {
+				v, _ := arr.Get(i)
+				_ = v
+			}
+		}
+	})
 }
 
 func BenchmarkArrayRaw(b *testing.B) {
 	arr := testdata
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if len(arr) <= i {
-			v := "2"
-			_ = v
-			continue
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for i := 0; i < 7; i++ {
+				v := arr[i]
+				_ = v
+			}
 		}
-		v := arr[i]
-		_ = v
-	}
+	})
 }

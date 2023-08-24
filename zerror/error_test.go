@@ -131,3 +131,15 @@ func TestRawErr(t *testing.T) {
 	t.Log(err)
 	t.Logf("%+v", err)
 }
+
+func TestFirst(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	err := zerror.Wrap(errors.New("original"), ErrCode401, "The is 401")
+	err = zerror.Wrap(err, ErrCode404, "404")
+	err = zerror.Wrap(err, ErrCode500, "500")
+
+	ferr := zerror.UnwrapFirst(err)
+	tt.Equal("original", ferr.Error())
+	fcode := zerror.UnwrapFirstCode(err)
+	tt.Equal(ErrCode401, fcode)
+}

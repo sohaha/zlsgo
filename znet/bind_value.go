@@ -5,6 +5,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zreflect"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func (c *Context) Bind(obj interface{}) (err error) {
@@ -32,12 +33,9 @@ func (c *Context) BindQuery(obj interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	typ, err := zreflect.NewTyp(reflect.TypeOf(obj))
-	if err != nil {
-		return err
-	}
+	typ := zreflect.TypeOf(obj)
 	m := make(map[string]interface{}, len(q))
-	err = typ.ForEach(func(parent []string, index int, tag string, field reflect.StructField) error {
+	err = zreflect.ForEach(typ, func(parent []string, index int, tag string, field reflect.StructField) error {
 		kind := field.Type.Kind()
 		if kind == reflect.Struct {
 			m[tag] = c.QueryMap(tag)
@@ -51,29 +49,26 @@ func (c *Context) BindQuery(obj interface{}) (err error) {
 			}
 		}
 
-		return zreflect.SkipStruct
+		return zreflect.SkipChild
 	})
 	if err != nil {
 		return err
 	}
-	return zreflect.Map2Struct(m, obj)
+	return ztype.ToStruct(m, obj)
 }
 
 func (c *Context) BindForm(obj interface{}) error {
 	q := c.GetPostFormAll()
-	typ, err := zreflect.NewTyp(reflect.TypeOf(obj))
-	if err != nil {
-		return err
-	}
+	typ := zreflect.TypeOf(obj)
 	m := make(map[string]interface{}, len(q))
-	err = typ.ForEach(func(parent []string, index int, tag string, field reflect.StructField) error {
+	err := zreflect.ForEach(typ, func(parent []string, index int, tag string, field reflect.StructField) error {
 		kind := field.Type.Kind()
 		if kind == reflect.Struct {
 			m[tag] = c.PostFormMap(tag)
 		} else if kind == reflect.Slice {
 			sliceTyp := field.Type.Elem().Kind()
 			if sliceTyp == reflect.Struct {
-				// todo follow up support
+				// TODO follow up support
 			} else {
 				m[tag], _ = q[tag]
 			}
@@ -84,10 +79,10 @@ func (c *Context) BindForm(obj interface{}) error {
 			}
 		}
 
-		return zreflect.SkipStruct
+		return zreflect.SkipChild
 	})
 	if err != nil {
 		return err
 	}
-	return zreflect.Map2Struct(m, obj)
+	return ztype.ToStruct(m, obj)
 }

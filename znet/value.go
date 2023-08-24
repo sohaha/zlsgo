@@ -8,38 +8,36 @@ import (
 	"github.com/sohaha/zlsgo/zvalid"
 )
 
-type reqType uint8
-
 // Content-Type MIME of the most common data formats
 const (
-	mimeJSON                      = "application/json"
-	mimePlain                     = "text/plain"
-	mimePOSTForm                  = "application/x-www-form-urlencoded"
-	mimeMultipartPOSTForm         = "multipart/form-data"
-	isJSON                reqType = iota
-	isFrom
+	mimeJSON              = "application/json"
+	mimePlain             = "text/plain"
+	mimePOSTForm          = "application/x-www-form-urlencoded"
+	mimeMultipartPOSTForm = "multipart/form-data"
 )
 
 func (c *Context) valid(obj interface{}, v map[string]zvalid.Engine) error {
 	r := make([]*zvalid.ValidEle, 0, len(v))
-	val := reflect.ValueOf(obj)
-	typ, err := zreflect.NewVal(val)
-	val = val.Elem()
-	if err != nil {
-		return err
+	val := zreflect.ValueOf(obj)
+	if val.Kind() != reflect.Ptr {
+		return errors.New("result must be a pointer")
 	}
-	for k := range v {
-		i, ok := typ.CheckExistsField(k)
-		if !ok {
-			continue
-		}
+
+	val = val.Elem()
+	typ := zreflect.TypeOf(val)
+	for i := 0; i < typ.NumField(); i++ {
 		field := val.Field(i)
+		name, _ := zreflect.GetStructTag(typ.Field(i))
 		switch field.Kind() {
 		case reflect.String, reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
 			value := field.Interface()
-			r = append(r, zvalid.BatchVar(field, v[k].VerifiAny(value)))
+			if rv, ok := v[name]; ok {
+				r = append(r, zvalid.BatchVar(field, rv.VerifiAny(value)))
+			}
+		case reflect.Struct:
+		case reflect.Slice:
 		default:
-			return errors.New("value validation for " + k + " is not supported")
+			return errors.New("value validation for " + name + " is not supported")
 		}
 	}
 
@@ -51,5 +49,6 @@ func (c *Context) BindValid(obj interface{}, v map[string]zvalid.Engine) error {
 	if err != nil {
 		return err
 	}
+
 	return c.valid(obj, v)
 }

@@ -18,10 +18,9 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			g.Use(v)
 		}
 	}
-	of := reflect.ValueOf(s)
-	typ, err := zreflect.NewVal(of)
-	if err != nil {
-		return err
+	of := zreflect.ValueOf(s)
+	if !of.IsValid() {
+		return nil
 	}
 	initFn := of.MethodByName("Init")
 	if initFn.IsValid() {
@@ -40,11 +39,11 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 
 	}
 	handleName := "reflect.methodValueCall"
-	typeOf := typ.TypeOf()
+	typeOf := zreflect.TypeOf(of)
 
 	// methods := strings.Split("ANY|GET|Post|POST|PUT|DELETE|PATCH|HEAD|OPTIONS", "|")
 	return zutil.TryCatch(func() error {
-		return typ.ForEachMethod(func(i int, m reflect.Method, value reflect.Value) error {
+		return zreflect.ForEachMethod(of, func(i int, m reflect.Method, value reflect.Value) error {
 			if m.Name == "Init" {
 				return nil
 			}
@@ -57,9 +56,6 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			info, err := zstring.RegexExtract(regex, m.Name)
 			// info := strings.Split(zstring.CamelCaseToSnakeCase(m.Name, "-"), "-")
 			infoLen := len(info)
-
-			// Log.Dump(zstring.CamelCaseToSnakeCase(m.Name, "-"))
-
 			if err != nil || infoLen != 3 {
 				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)
 				if len(indexs) == 0 {

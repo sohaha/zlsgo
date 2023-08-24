@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -102,7 +103,7 @@ func TestReflectForNumField(t *testing.T) {
 		New     bool
 		Updated uint8
 	}{}
-	rv := reflect.ValueOf(test)
+	rv := zreflect.ValueOf(test)
 	rv = rv.Elem()
 	err := zutil.ReflectForNumField(rv, func(fieldName, fieldTag string, kind reflect.Kind, field reflect.Value) error {
 		t.Log(fieldTag, kind, field.Kind())
@@ -116,7 +117,7 @@ func TestSetValue(tt *testing.T) {
 	t.Log(666)
 	vv := &TestSt2{Name: "1"}
 
-	v := reflect.ValueOf(vv)
+	v := zreflect.ValueOf(vv)
 	err := zutil.ReflectForNumField(v.Elem(), func(fieldName, fieldTag string,
 		kind reflect.Kind, field reflect.Value) error {
 		if fieldName == "Test2" {

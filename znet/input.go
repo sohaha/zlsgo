@@ -2,6 +2,7 @@ package znet
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -30,11 +31,11 @@ func (c *Context) initPostForm() {
 	form := make(url.Values)
 	if c.Request.PostForm == nil {
 		(func() {
-			_, err := c.GetDataRaw()
+			body, err := c.GetDataRaw()
 			if err != nil {
 				return
 			}
-			values, _ := url.ParseQuery(c.rawData)
+			values, _ := url.ParseQuery(body)
 			c.Request.PostForm = values
 			v := c.ContentType()
 			if v == mimeMultipartPOSTForm {
@@ -190,6 +191,7 @@ func (c *Context) GetJSONs() (json *zjson.Res, err error) {
 	json = &zjson.Res{}
 	var body string
 	body, err = c.GetDataRaw()
+	fmt.Println(len(body), err)
 	if err != nil {
 		return
 	}
@@ -205,18 +207,27 @@ func (c *Context) GetJSONs() (json *zjson.Res, err error) {
 
 // GetDataRaw Get Raw Data
 func (c *Context) GetDataRaw() (string, error) {
-	if c.rawData != "" {
+	body, err := c.GetDataRawBytes()
+	if err != nil {
+		return "", err
+	}
+	return zstring.Bytes2String(body), err
+}
+
+// GetDataRawBytes Get Raw Data
+func (c *Context) GetDataRawBytes() ([]byte, error) {
+	if c.rawData != nil {
 		return c.rawData, nil
 	}
 	var err error
 	if c.Request.Body == nil {
-		err = errors.New("request.Body is nil")
-		return "", err
+		err = errors.New("request body is nil")
+		return nil, err
 	}
 	var body []byte
 	body, err = ioutil.ReadAll(c.Request.Body)
 	if err == nil {
-		c.rawData = zstring.Bytes2String(body)
+		c.rawData = body
 	}
 	return c.rawData, err
 }
@@ -341,7 +352,9 @@ func (c *Context) multipartReader(allowMixed bool) (*multipart.Reader, error) {
 	if !ok {
 		return nil, http.ErrMissingBoundary
 	}
-	_, _ = c.GetDataRaw()
-	body := strings.NewReader(c.rawData)
-	return multipart.NewReader(body, boundary), nil
+	body, err := c.GetDataRaw()
+	if err != nil {
+		return nil, err
+	}
+	return multipart.NewReader(strings.NewReader(body), boundary), nil
 }

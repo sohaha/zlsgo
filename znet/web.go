@@ -46,7 +46,7 @@ type (
 		Cache       *zcache.Table
 		renderError ErrHandlerFunc
 		cacheQuery  url.Values
-		rawData     string
+		rawData     []byte
 		middleware  []handlerFn
 		mu          sync.RWMutex
 	}

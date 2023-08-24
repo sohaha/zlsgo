@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/zutil"
@@ -166,13 +167,8 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 	if level == LogNot {
 		return
 	}
-	if log.prefix != "" {
-		buf.WriteString(log.prefix)
-	}
+
 	if log.flag&(BitDate|BitTime|BitMicroSeconds|BitLevel) != 0 {
-		if log.flag&BitLevel != 0 {
-			buf.WriteString(log.ColorTextWrap(LevelColous[level], Levels[level]+" "))
-		}
 
 		if log.flag&BitDate != 0 {
 			buf.WriteString(ztime.FormatTime(t, "Y/m/d "))
@@ -185,6 +181,10 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 				itoa(buf, t.Nanosecond()/1e3, 6) // "12:12:59.123456
 			}
 			buf.WriteByte(' ')
+		}
+
+		if log.flag&BitLevel != 0 {
+			buf.WriteString(log.ColorTextWrap(LevelColous[level], Levels[level]+" "))
 		}
 
 		if log.flag&(BitShortFile|BitLongFile) != 0 {
@@ -203,6 +203,10 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 			itoa(buf, line, -1)
 			buf.WriteString(": ")
 		}
+	}
+
+	if log.prefix != "" {
+		buf.WriteString(log.prefix)
 	}
 }
 
@@ -527,7 +531,7 @@ func sprint(a ...interface{}) string {
 func wrap(a []interface{}, force bool) []interface{} {
 	w := make([]interface{}, len(a))
 	for i, x := range a {
-		w[i] = formatter{v: reflect.ValueOf(x), force: force}
+		w[i] = formatter{v: zreflect.ValueOf(x), force: force}
 	}
 	return w
 }

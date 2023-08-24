@@ -19,8 +19,7 @@ type (
 		errCh        chan error
 		ctxCancel    context.CancelFunc
 		verifyHeader func(http.Header) bool
-		method       string
-		retryNum     int
+		option       SSEOption
 		readyState   int
 	}
 
@@ -54,33 +53,46 @@ func (sse *SSEEngine) Error() <-chan error {
 	return sse.errCh
 }
 
-func (sse *SSEEngine) ResetMethod(method string) {
-	sse.method = method
-}
-
-func (sse *SSEEngine) ResetRetryNum(n int) {
-	sse.retryNum = n
-}
-
 func (sse *SSEEngine) VerifyHeader(fn func(http.Header) bool) {
 	sse.verifyHeader = fn
 }
 
-func (sse *SSEEngine) OnMessage(fn func(*SSEEvent, error)) {
-	for {
-		select {
-		case <-sse.Done():
-			return
-		case err := <-sse.Error():
-			fn(nil, err)
-		case v := <-sse.Event():
-			fn(v, nil)
-		}
+func (sse *SSEEngine) OnMessage(fn func(*SSEEvent)) (<-chan struct{}, error) {
+	done := make(chan struct{}, 1)
+	select {
+	case <-sse.Done():
+		done <- struct{}{}
+		return done, nil
+	case e := <-sse.Error():
+		done <- struct{}{}
+		return done, e
+	case v := <-sse.Event():
+		go func() {
+			fn(v)
+			for {
+				select {
+				case <-sse.Done():
+					done <- struct{}{}
+					return
+				case <-sse.Error():
+					done <- struct{}{}
+					return
+				case v := <-sse.Event():
+					fn(v)
+				}
+			}
+		}()
+
+		return done, nil
 	}
 }
 
 func SSE(url string, v ...interface{}) *SSEEngine {
-	return std.SSE(url, v...)
+	sse, err := std.SSE(url, nil, v...)
+	if err != nil {
+		sse.errCh <- err
+	}
+	return sse
 }
 
 func (e *Engine) sseReq(method, url string, v ...interface{}) (*Res, error) {
@@ -99,18 +111,28 @@ func (e *Engine) sseReq(method, url string, v ...interface{}) (*Res, error) {
 	return r, nil
 }
 
-func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
+type SSEOption struct {
+	Method   string
+	RetryNum int
+}
+
+func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEngine, error) {
 	var (
 		retry     = 3000
 		currEvent = &SSEEvent{}
 	)
-
+	o := SSEOption{
+		Method:   "POST",
+		RetryNum: -1,
+	}
+	if opt != nil {
+		opt(&o)
+	}
 	ctx, cancel := context.WithCancel(context.TODO())
-	sse = &SSEEngine{
+	sse := &SSEEngine{
 		readyState: 0,
 		ctx:        ctx,
-		method:     "POST",
-		retryNum:   -1,
+		option:     o,
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
 		errCh:      make(chan error),
@@ -120,22 +142,18 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 	}
 
 	lastID := ""
+	data := append(v, Header{"Accept": "text/event-stream", "Connection": "keep-alive"}, sse.ctx)
+
+	r, err := e.sseReq(sse.option.Method, url, data...)
+	if err != nil {
+		return sse, err
+	}
 
 	go func() {
 		for {
 			if sse.ctx.Err() != nil {
 				break
 			}
-
-			data := v
-			if lastID != "" {
-				data = append(data, Header{"Last-Event-ID": lastID})
-			}
-			data = append(data, Header{"Accept": "text/event-stream"})
-			data = append(data, Header{"Connection": "keep-alive"})
-			data = append(data, sse.ctx)
-
-			r, err := e.sseReq(sse.method, url, data...)
 			if err == nil {
 				if r != nil {
 					if sse.verifyHeader != nil && !sse.verifyHeader(r.Response().Header) {
@@ -215,12 +233,12 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 					return nil
 				})
 
-				if sse.retryNum >= 0 {
-					if sse.retryNum == 0 {
+				if sse.option.RetryNum >= 0 {
+					if sse.option.RetryNum == 0 {
 						cancel()
 						return
 					}
-					sse.retryNum--
+					sse.option.RetryNum--
 				}
 			} else {
 				sse.errCh <- err
@@ -228,8 +246,13 @@ func (e *Engine) SSE(url string, v ...interface{}) (sse *SSEEngine) {
 
 			sse.readyState = 0
 			time.Sleep(time.Millisecond * time.Duration(retry))
+			ndata := data
+			if lastID != "" {
+				ndata = append(ndata, Header{"Last-Event-ID": lastID})
+			}
+			r, err = e.sseReq(sse.option.Method, url, ndata...)
 		}
 	}()
 
-	return
+	return sse, nil
 }

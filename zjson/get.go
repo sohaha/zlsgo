@@ -180,20 +180,20 @@ func (r *Res) Time(format ...string) (t time.Time) {
 	return t
 }
 
-func (r *Res) Array() []Res {
+func (r *Res) Array() []*Res {
 	if r.typ == Null {
-		return []Res{}
+		return []*Res{}
 	}
 	if r.typ != JSON {
-		return []Res{*r}
+		return []*Res{r}
 	}
 	rr := r.arrayOrMap('[', false)
 	return rr.a
 }
 
-func (r *Res) Slice() *ztype.SliceType {
+func (r *Res) Slice() ztype.SliceType {
 	if !r.IsArray() {
-		return &ztype.SliceType{}
+		return ztype.SliceType{}
 	}
 
 	return ztype.ToSlice(r.Value())
@@ -226,7 +226,7 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 		keys bool
 		i    int
 	)
-	key, value := &Res{}, &Res{}
+	key, value := Res{}, &Res{}
 	j := r.raw
 	for ; i < len(j); i++ {
 		if j[i] == '{' {
@@ -236,6 +236,9 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			break
 		} else if j[i] == '[' {
 			i++
+			key.typ = Number
+			key.num = -1
+			keys = true
 			break
 		}
 		if j[i] > ' ' {
@@ -247,6 +250,7 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 		vesc bool
 		ok   bool
 	)
+
 	for ; i < len(j); i++ {
 		if keys {
 			if j[i] != '"' {
@@ -257,11 +261,16 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			if !ok {
 				return
 			}
-			if vesc {
-				key.str = unescape(str[1 : len(str)-1])
+			if key.typ == Number {
+				key.num = key.num + 1
 			} else {
-				key.str = str[1 : len(str)-1]
+				if vesc {
+					key.str = unescape(str[1 : len(str)-1])
+				} else {
+					key.str = str[1 : len(str)-1]
+				}
 			}
+
 			key.raw = str
 			key.index = s
 		}
@@ -277,21 +286,21 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			return
 		}
 		value.index = s
-		if !fn(key, value) {
+		if !fn(&key, value) {
 			return
 		}
 	}
 }
 
-func (r *Res) Map() map[string]Res {
+func (r *Res) MapRes() map[string]*Res {
 	if r.typ != JSON {
-		return map[string]Res{}
+		return map[string]*Res{}
 	}
 	rr := r.arrayOrMap('{', false)
 	return rr.o
 }
 
-func (r *Res) MapString() map[string]interface{} {
+func (r *Res) Map() ztype.Map {
 	if !r.IsObject() {
 		return map[string]interface{}{}
 	}
@@ -300,18 +309,14 @@ func (r *Res) MapString() map[string]interface{} {
 }
 
 func (r *Res) MapKeys(exclude ...string) (keys []string) {
-	m := r.Map()
+	m := r.MapRes()
 	keys = make([]string, 0, len(m))
+lo:
 	for k := range m {
-		skip := false
 		for i := range exclude {
 			if k == exclude[i] {
-				skip = true
-				break
+				continue lo
 			}
-		}
-		if skip {
-			continue
 		}
 		keys = append(keys, k)
 	}
@@ -333,21 +338,21 @@ func (r *Res) Delete(path string) (err error) {
 }
 
 type arrayOrMapResult struct {
-	o  map[string]Res
+	o  map[string]*Res
 	oi map[string]interface{}
-	a  []Res
+	a  []*Res
 	ai []interface{}
 	vc byte
 }
 
 func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 	var (
-		value Res
 		count int
 		key   Res
 		i     int
 		j     = r.raw
 	)
+
 	if vc == 0 {
 		for ; i < len(j); i++ {
 			if j[i] == '{' || j[i] == '[' {
@@ -375,13 +380,13 @@ func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 		if valueize {
 			ar.oi = make(map[string]interface{})
 		} else {
-			ar.o = make(map[string]Res)
+			ar.o = make(map[string]*Res)
 		}
 	} else {
 		if valueize {
 			ar.ai = make([]interface{}, 0)
 		} else {
-			ar.a = make([]Res, 0)
+			ar.a = make([]*Res, 0)
 		}
 	}
 	for ; i < len(j); i++ {
@@ -391,6 +396,8 @@ func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 		if j[i] == ']' || j[i] == '}' {
 			break
 		}
+
+		var value Res
 		switch j[i] {
 		default:
 			if (j[i] >= '0' && j[i] <= '9') || j[i] == '-' {
@@ -433,7 +440,7 @@ func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 					}
 				} else {
 					if _, ok := ar.o[key.str]; !ok {
-						ar.o[key.str] = value
+						ar.o[key.str] = &value
 					}
 				}
 			}
@@ -442,7 +449,7 @@ func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 			if valueize {
 				ar.ai = append(ar.ai, value.Value())
 			} else {
-				ar.a = append(ar.a, value)
+				ar.a = append(ar.a, &value)
 			}
 		}
 	}
@@ -567,11 +574,11 @@ func tostr(json string) (raw string, str string) {
 	return json, json[1:]
 }
 
-func (r Res) Exists() bool {
+func (r *Res) Exists() bool {
 	return r.typ != Null || len(r.raw) != 0
 }
 
-func (r Res) Value() interface{} {
+func (r *Res) Value() interface{} {
 	if r.typ == String {
 		return r.str
 	}
@@ -1898,6 +1905,7 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 	if jsval.typ == Null {
 		return
 	}
+	// TODO Dev
 	t := val.Type()
 	switch val.Kind() {
 	default:
@@ -1919,7 +1927,8 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 			fmap.mu.Lock()
 			sf = make(map[string]int)
 			for i := 0; i < t.NumField(); i++ {
-				sf[zreflect.GetStructTag(t.Field(i))] = i
+				tag, _ := zreflect.GetStructTag(t.Field(i), "json")
+				sf[tag] = i
 			}
 			fmap.m[name] = sf
 			fmap.mu.Unlock()
@@ -1937,13 +1946,13 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 		if t.Elem().Kind() == reflect.Uint8 &&
 			jsval.typ == String {
 			data, _ := base64.StdEncoding.DecodeString(jsval.String())
-			val.Set(reflect.ValueOf(data))
+			val.Set(zreflect.ValueOf(data))
 		} else {
 			jsvals := jsval.Array()
 			l := len(jsvals)
 			slice := reflect.MakeSlice(t, l, l)
 			for i := 0; i < l; i++ {
-				assign(&jsvals[i], slice.Index(i), fmap)
+				assign(jsvals[i], slice.Index(i), fmap)
 			}
 			val.Set(slice)
 		}
@@ -1964,21 +1973,21 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 			kind := t.Elem().Kind()
 			switch kind {
 			case reflect.Interface:
-				val.Set(reflect.ValueOf(jsval.Value()))
+				val.Set(zreflect.ValueOf(jsval.Value()))
 			case reflect.Struct, reflect.Ptr:
 				v := reflect.MakeMap(t)
 				jsval.ForEach(func(key, value *Res) bool {
 					newval := reflect.New(t.Elem())
 					elem := newval.Elem()
 					assign(value, elem, fmap)
-					v.SetMapIndex(reflect.ValueOf(key.Value()), elem)
+					v.SetMapIndex(zreflect.ValueOf(key.Value()), elem)
 					return true
 				})
 				val.Set(v)
 			}
 		}
 	case reflect.Interface:
-		val.Set(reflect.ValueOf(jsval.Value()))
+		val.Set(zreflect.ValueOf(jsval.Value()))
 	case reflect.Bool:
 		val.SetBool(jsval.Bool())
 	case reflect.Float32, reflect.Float64:
@@ -2012,7 +2021,7 @@ func Unmarshal(json, v interface{}) error {
 	case Res:
 		r = &v
 	}
-	if v := reflect.ValueOf(v); v.Kind() == reflect.Ptr {
+	if v := zreflect.ValueOf(v); v.Kind() == reflect.Ptr {
 		if r.String() == "" {
 			return errors.New("invalid json")
 		}

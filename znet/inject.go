@@ -7,6 +7,7 @@ import (
 
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -118,7 +119,7 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 			return err
 		}
 	default:
-		val := reflect.ValueOf(v)
+		val := zreflect.ValueOf(v)
 		if val.Kind() != reflect.Func {
 			b := ztype.ToBytes(v)
 			isJSON := zjson.ValidBytes(b)

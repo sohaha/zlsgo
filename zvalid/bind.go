@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 // ValidEle ValidEle
@@ -89,7 +91,7 @@ func Var(target interface{}, source Engine, name ...string) error {
 	)
 	val, ok := target.(reflect.Value)
 	if !ok {
-		val = reflect.ValueOf(target)
+		val = zreflect.ValueOf(target)
 		if val.Kind() != reflect.Ptr {
 			if source.silent {
 				return nil
@@ -174,7 +176,7 @@ func setRawValue(k reflect.Kind, val reflect.Value, value string, sep string) er
 			if sep == "" {
 				return errors.New("过滤规则的分隔符参数(sep)未定义")
 			}
-			val.Set(reflect.ValueOf(strings.Split(value, sep)))
+			val.Set(zreflect.ValueOf(strings.Split(value, sep)))
 		}
 	default:
 		return typeErr
@@ -184,7 +186,7 @@ func setRawValue(k reflect.Kind, val reflect.Value, value string, sep string) er
 }
 
 func setDefaultValue(targetTypeOf reflect.Kind, targetValueOf reflect.Value, value interface{}) error {
-	valueTypeOf := reflect.ValueOf(value)
+	valueTypeOf := zreflect.ValueOf(value)
 	if valueTypeOf.Kind() != targetTypeOf {
 		return errors.New("值类型默认值类型不相同" + valueTypeOf.String() + "/" + targetTypeOf.String())
 	}

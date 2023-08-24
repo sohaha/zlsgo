@@ -3,40 +3,45 @@ package zreflect
 import (
 	"reflect"
 	"strings"
-	"time"
+	_ "unsafe"
 )
 
 const (
+	Tag            = "z"
 	ignoreTagValue = "-"
 	nameConnector  = "::"
 )
 
-func GetStructTag(field reflect.StructField) (tagValue string) {
-	tagValue = field.Tag.Get(Tag)
-	if checkTagValidity(tagValue) {
-		return tagValue
+func GetStructTag(field reflect.StructField, tags ...string) (tagValue, tagOpts string) {
+	if len(tags) > 0 {
+		for i := range tags {
+			tagValue = field.Tag.Get(tags[i])
+			if tagValue == ignoreTagValue {
+				return "", ""
+			}
+			if t, v := checkTagValidity(tagValue); t != "" {
+				return t, v
+			}
+		}
+	} else {
+		tagValue = field.Tag.Get(Tag)
+		if tagValue == ignoreTagValue {
+			return "", ""
+		}
+		if t, v := checkTagValidity(tagValue); t != "" {
+			return t, v
+		}
+
+		tagValue = field.Tag.Get("json")
+		if tagValue == ignoreTagValue {
+			return "", ""
+		}
+		if t, v := checkTagValidity(tagValue); t != "" {
+			return t, v
+		}
 	}
 
-	tagValue = field.Tag.Get("json")
-	if checkTagValidity(tagValue) {
-		return strings.Split(tagValue, ",")[0]
-	}
-
-	return field.Name
-}
-
-func checkTagValidity(tagValue string) bool {
-	if tagValue != "" && tagValue != ignoreTagValue {
-		return true
-	}
-	return false
-}
-
-func isTimeType(value reflect.Value) bool {
-	if _, ok := value.Interface().(time.Time); ok {
-		return true
-	}
-	return false
+	return field.Name, ""
 }
 
 func Nonzero(v reflect.Value) bool {
@@ -55,7 +60,7 @@ func Nonzero(v reflect.Value) bool {
 		return v.String() != ""
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if Nonzero(GetInterfaceField(v, i)) {
+			if Nonzero(reflect.Indirect(v.Field(i))) {
 				return true
 			}
 		}
@@ -73,14 +78,6 @@ func Nonzero(v reflect.Value) bool {
 		return v.Pointer() != 0
 	}
 	return true
-}
-
-func GetInterfaceField(v reflect.Value, i int) reflect.Value {
-	val := v.Field(i)
-	if val.Kind() == reflect.Interface && !val.IsNil() {
-		val = val.Elem()
-	}
-	return val
 }
 
 func CanExpand(t reflect.Type) bool {
@@ -116,10 +113,39 @@ func CanInline(t reflect.Type) bool {
 	return true
 }
 
-func IsLabelType(t reflect.Type) bool {
+func IsLabel(t reflect.Type) bool {
 	switch t.Kind() {
 	case reflect.Interface, reflect.Struct:
 		return true
 	}
 	return false
+}
+
+func checkTagValidity(tagValue string) (tag, tagOpts string) {
+	if tagValue == "" {
+		return "", ""
+	}
+	valueSplit := strings.SplitN(tagValue, ",", 2)
+	if len(valueSplit) < 2 {
+		return valueSplit[0], ""
+	}
+	return valueSplit[0], valueSplit[1]
+}
+
+//go:linkname ifaceIndir reflect.ifaceIndir
+//go:noescape
+func ifaceIndir(Type) bool
+
+func GetAbbrKind(val reflect.Value) reflect.Kind {
+	kind := val.Kind()
+	switch {
+	case kind >= reflect.Int && kind <= reflect.Int64:
+		return reflect.Int
+	case kind >= reflect.Uint && kind <= reflect.Uint64:
+		return reflect.Uint
+	case kind >= reflect.Float32 && kind <= reflect.Float64:
+		return reflect.Float64
+	default:
+		return kind
+	}
 }

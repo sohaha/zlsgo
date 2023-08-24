@@ -3,6 +3,8 @@ package ztype
 import (
 	"reflect"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 type (
@@ -62,7 +64,7 @@ func (b *StruBuilder) Copy(v *StruBuilder) *StruBuilder {
 
 func (b *StruBuilder) Merge(values ...interface{}) *StruBuilder {
 	for _, value := range values {
-		valueOf := reflect.Indirect(reflect.ValueOf(value))
+		valueOf := reflect.Indirect(zreflect.ValueOf(value))
 		typeOf := valueOf.Type()
 		for i := 0; i < valueOf.NumField(); i++ {
 			fval := valueOf.Field(i)

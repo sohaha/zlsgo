@@ -56,7 +56,7 @@ func SetValue(vTypeOf reflect.Kind, vValueOf reflect.Value, value interface{}) (
 		vValueOf.SetBool(v)
 	case reflect.Slice:
 		if value != nil {
-			vValueOf.Set(reflect.ValueOf(value))
+			vValueOf.Set(zreflect.ValueOf(value))
 		} else {
 			err = errors.New("must be slice")
 		}
@@ -161,14 +161,11 @@ func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
 
 // GetAllMethod get all methods of struct
 func GetAllMethod(s interface{}, fn func(numMethod int, m reflect.Method) error) error {
-	typ, err := zreflect.NewVal(reflect.ValueOf(s))
-	if err != nil {
-		return err
-	}
+	typ := zreflect.ValueOf(s)
 	if fn == nil {
 		return nil
 	}
-	return typ.ForEachMethod(func(index int, method reflect.Method, value reflect.Value) error {
+	return zreflect.ForEachMethod(typ, func(index int, method reflect.Method, value reflect.Value) error {
 		return fn(index, method)
 	})
 }
@@ -182,14 +179,14 @@ func RunAllMethod(st interface{}, args ...interface{}) (err error) {
 
 // RunAssignMethod run assign methods of struct
 func RunAssignMethod(st interface{}, filter func(methodName string) bool, args ...interface{}) (err error) {
-	valueOf := reflect.ValueOf(st)
+	valueOf := zreflect.ValueOf(st)
 	err = GetAllMethod(st, func(numMethod int, m reflect.Method) error {
 		if !filter(m.Name) {
 			return nil
 		}
 		var values []reflect.Value
 		for _, v := range args {
-			values = append(values, reflect.ValueOf(v))
+			values = append(values, zreflect.ValueOf(v))
 		}
 
 		return TryCatch(func() error {

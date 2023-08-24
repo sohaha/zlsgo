@@ -59,20 +59,47 @@ type other struct {
 	Sex int
 }
 
+type (
+	Str string
+	Obj struct {
+		Name Str `json:"name"`
+	}
+	u struct {
+		Other  *other
+		Name   Str                      `json:"name"`
+		Region struct{ Country string } `json:"reg"`
+		Objs   []Obj
+		Key    int
+		Status bool
+	}
+)
+
+var user = &u{
+	Name: "n666",
+	Key:  9,
+	Objs: []Obj{
+		{"n1"},
+		{"n2"},
+	},
+	Status: true,
+	Region: struct {
+		Country string
+	}{"中国"},
+}
+
 func TestToMap(T *testing.T) {
 	t := zlsgo.NewTest(T)
-	type Str string
 	type u struct {
-		Name   Str `json:"name"`
+		Name   string
 		Key    int
 		Status bool
 	}
 	user := &u{
-		Name:   "n666",
+		Name:   "666",
 		Key:    9,
 		Status: true,
 	}
-	userMap := map[string]interface{}{
+	userMap := Map{
 		"Name":   user.Name,
 		"Status": user.Status,
 		"Key":    user.Key,
@@ -81,63 +108,10 @@ func TestToMap(T *testing.T) {
 	t.Log(user)
 	t.Log(userMap)
 	t.Log(toUserMap)
-	t.Equal("n666", toUserMap.Get("name").String())
-
-	toUserMap.ForEach(func(k string, v Type) bool {
-		t.Log(k, v.String())
-		return true
-	})
-}
-
-func TestToMapInterface(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	type u struct {
-		Name   string
-		Key    int
-		Status bool
-	}
-	user := &u{
-		Name:   "666",
-		Key:    9,
-		Status: true,
-	}
-	userMap := map[string]interface{}{
-		"Name":   user.Name,
-		"Status": user.Status,
-		"Key":    user.Key,
-	}
-	toUserMap := ToMapString(user)
-	t.Log(user)
-	t.Log(userMap)
-	t.Log(toUserMap)
 	t.Equal(userMap, toUserMap)
 }
 
-func TestToMapString(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	type u struct {
-		Name   string
-		Key    int
-		Status bool
-	}
-	user := &u{
-		Name:   "666",
-		Key:    9,
-		Status: true,
-	}
-	userMap := map[string]interface{}{
-		"Name":   user.Name,
-		"Status": user.Status,
-		"Key":    user.Key,
-	}
-	toUserMap := ToMapString(user)
-	t.Log(user)
-	t.Log(userMap)
-	t.Log(toUserMap)
-	t.Equal(userMap, toUserMap)
-}
-
-func TestToMapStringDeep(T *testing.T) {
+func TestToMaps(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	type u struct {
 		Other  *other
@@ -145,39 +119,6 @@ func TestToMapStringDeep(T *testing.T) {
 		Key    int
 		Status bool
 	}
-
-	user := &u{
-		Name:   "666",
-		Key:    9,
-		Status: true,
-		Other: &other{
-			Sex: 18,
-		},
-	}
-	userMap := map[string]interface{}{
-		"Name":   user.Name,
-		"Status": user.Status,
-		"Key":    user.Key,
-		"Sex":    user.Other.Sex,
-	}
-	toUserMap := ToMapStringDeep(user)
-	t.Log(user)
-	t.Log(userMap)
-	t.Log(toUserMap)
-	t.Equal(userMap, toUserMap)
-}
-
-func TestToSliceMapString(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	type u struct {
-		Other  *other
-		Name   string
-		Key    int
-		Status bool
-	}
-	var data = make([]map[string]interface{}, 2)
-	data[0] = map[string]interface{}{"name": "hi"}
-	data[1] = map[string]interface{}{"name": "golang"}
 	var rawData = make([]u, 2)
 	rawData[0] = u{
 		Name:   "666",
@@ -192,7 +133,74 @@ func TestToSliceMapString(T *testing.T) {
 		Key:    9,
 		Status: true,
 	}
-	toSliceMapString := ToSliceMapString(rawData)
+	toSliceMapString := ToMaps(rawData)
 	t.Log(toSliceMapString)
-	t.Equal(18, toSliceMapString[0]["Other"].(*other).Sex)
+	t.Equal(18, toSliceMapString[0].Get("Other").Get("Sex").Int())
+
+	var data = make([]map[string]interface{}, 2)
+	data[0] = map[string]interface{}{"name": "hi"}
+	data[1] = map[string]interface{}{"name": "golang"}
+	toSliceMapString = ToMaps(data)
+	t.Equal("hi", toSliceMapString.Index(0).Get("name").String())
+
+	data2 := Maps{{"name": "hi"}, {"name": "golang"}}
+	toSliceMapString = ToMaps(data2)
+	t.Equal("hi", toSliceMapString.Index(0).Get("name").String())
+}
+
+func BenchmarkName(b *testing.B) {
+
+	b.Run("toMapString", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = toMapString(user)
+		}
+	})
+
+	b.Run("ToMap2", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = ToMap2(user)
+		}
+	})
+
+	b.Run("ToMap", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = ToMap(user)
+		}
+	})
+
+	b.Run("toMapString", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				_ = toMapString(user)
+			}
+		})
+	})
+
+	b.Run("ToMap2", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				_ = ToMap2(user)
+			}
+		})
+	})
+
+	b.Run("ToMap", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				_ = ToMap(user)
+			}
+		})
+	})
 }

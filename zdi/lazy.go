@@ -2,10 +2,12 @@ package zdi
 
 import (
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 func (inj *injector) Provide(provider interface{}, opt ...Option) (override []reflect.Type) {
-	val := reflect.ValueOf(provider)
+	val := zreflect.ValueOf(provider)
 	t := val.Type()
 	numout := t.NumOut()
 	for i := 0; i < numout; i++ {

@@ -2,6 +2,8 @@ package ztype
 
 import (
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 // IsByte Is []byte
@@ -81,13 +83,13 @@ func IsInt(v interface{}) bool {
 
 // IsStruct Is Struct
 func IsStruct(v interface{}) bool {
-	r := ReflectPtr(reflect.ValueOf(v))
+	r := reflectPtr(zreflect.ValueOf(v))
 	return r.Kind() == reflect.Struct
 }
 
 // IsInterface Is interface{}
 func IsInterface(v interface{}) bool {
-	r := ReflectPtr(reflect.ValueOf(v))
+	r := reflectPtr(zreflect.ValueOf(v))
 	return r.Kind() == reflect.Invalid
 }
 
@@ -128,7 +130,7 @@ func IsEmpty(value interface{}) bool {
 		return len(value) == 0
 	default:
 		// Finally using reflect.
-		rv := reflect.ValueOf(value)
+		rv := zreflect.ValueOf(value)
 		switch rv.Kind() {
 		case reflect.Chan,
 			reflect.Map,

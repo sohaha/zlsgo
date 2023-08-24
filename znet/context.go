@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/sohaha/zlsgo/zdi"
 )
@@ -240,10 +241,28 @@ func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok b
 
 // Value get context sharing data
 func (c *Context) MustValue(key string, def ...interface{}) (value interface{}) {
-	value, _ = c.Value(key, def)
+	value, _ = c.Value(key, def...)
 	return
 }
 
 func (c *Context) Injector() zdi.Injector {
 	return c.injector
+}
+func (c *Context) FileAttachment(filepath, filename string) {
+	if isASCII(filename) {
+		c.Writer.Header().Set("Content-Disposition", `attachment; filename="`+strings.Replace(filename, "\"", "\\\"", -1)+`"`)
+	} else {
+		c.Writer.Header().Set("Content-Disposition", `attachment; filename*=UTF-8''`+url.QueryEscape(filename))
+	}
+	http.ServeFile(c.Writer, c.Request, filepath)
+}
+
+// https://stackoverflow.com/questions/53069040/checking-a-string-contains-only-ascii-characters
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
 }

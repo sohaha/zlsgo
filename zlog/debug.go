@@ -249,9 +249,9 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 					if expand {
 						writeByte(pp, '\t')
 					}
-					showTypeInStruct = zreflect.IsLabelType(f.Type)
+					showTypeInStruct = zreflect.IsLabel(f.Type)
 				}
-				pp.printValue(zreflect.GetInterfaceField(v, i), showTypeInStruct, true)
+				pp.printValue(reflect.Indirect(v.Field(i)), showTypeInStruct, true)
 				if expand {
 					_, _ = io.WriteString(pp, ",\n")
 				} else if i < v.NumField()-1 {

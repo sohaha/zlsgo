@@ -320,7 +320,7 @@ func (e *Engine) releaseContext(c *Context) {
 	c.cacheQuery = nil
 	c.cacheForm = nil
 	c.injector = nil
-	c.rawData = c.rawData[0:0]
+	c.rawData = nil
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain
 	c.mu.Unlock()

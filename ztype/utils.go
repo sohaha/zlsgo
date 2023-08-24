@@ -3,6 +3,8 @@ package ztype
 import (
 	"reflect"
 	"strconv"
+
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 // GetType Get variable type
@@ -40,16 +42,16 @@ func GetType(s interface{}) string {
 	case []byte:
 		varType = "[]byte"
 	default:
-		v := reflect.ValueOf(s)
+		v := zreflect.TypeOf(s)
 		if v.Kind() == reflect.Invalid {
 			return "invalid"
 		}
-		varType = v.Type().String()
+		varType = v.String()
 	}
 	return varType
 }
 
-func ReflectPtr(r reflect.Value) reflect.Value {
+func reflectPtr(r reflect.Value) reflect.Value {
 	if r.Kind() == reflect.Ptr {
 		r = r.Elem()
 	}
@@ -58,7 +60,7 @@ func ReflectPtr(r reflect.Value) reflect.Value {
 
 func InArray(needle, hystack interface{}) bool {
 	nt := ToString(needle)
-	for _, item := range *ToSlice(hystack) {
+	for _, item := range ToSlice(hystack) {
 		if nt == ToString(item) {
 			return true
 		}
@@ -84,29 +86,47 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 			result, exist = val[p]
 		case map[string]string:
 			result, exist = val[p]
+		case map[string]int:
+			result, exist = val[p]
 		default:
-			i, err := strconv.Atoi(p)
-			if err == nil {
-				switch val := v.(type) {
-				case []Map:
-					if len(val) > i {
-						result = val[i]
-					} else {
-						exist = false
-					}
-				case []interface{}:
-					if len(val) > i {
-						result = val[i]
-					} else {
-						exist = false
-					}
-				case []string:
-					if len(val) > i {
-						result = val[i]
-					} else {
-						exist = false
+			vtyp := zreflect.TypeOf(v)
+			switch vtyp.Kind() {
+			case reflect.Map:
+				val := ToMap(v)
+				result, exist = val[p]
+			case reflect.Array, reflect.Slice:
+				i, err := strconv.Atoi(p)
+				if err == nil {
+					switch val := v.(type) {
+					case []Map:
+						if len(val) > i {
+							result = val[i]
+						} else {
+							exist = false
+						}
+					case []interface{}:
+						if len(val) > i {
+							result = val[i]
+						} else {
+							exist = false
+						}
+					case []string:
+						if len(val) > i {
+							result = val[i]
+						} else {
+							exist = false
+						}
+					default:
+						aval := ToSlice(v).Value()
+						if len(aval) > i {
+							result = aval[i]
+						} else {
+							exist = false
+						}
 					}
 				}
+			default:
+
 			}
 		}
 

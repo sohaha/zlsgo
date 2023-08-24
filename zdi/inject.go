@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/sohaha/zlsgo/zerror"
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 func (inj *injector) InvokeWithErrorOnly(f interface{}) (err error) {
@@ -28,7 +29,7 @@ func (inj *injector) InvokeWithErrorOnly(f interface{}) (err error) {
 
 func (inj *injector) Invoke(f interface{}) (values []reflect.Value, err error) {
 	catch := zerror.TryCatch(func() error {
-		t := reflect.TypeOf(f)
+		t := zreflect.TypeOf(f)
 		switch v := f.(type) {
 		case PreInvoker:
 			values, err = inj.fast(v, t, t.NumIn())
@@ -60,7 +61,7 @@ func (inj *injector) call(f interface{}, t reflect.Type, numIn int) ([]reflect.V
 			in[i] = val
 		}
 	}
-	return reflect.ValueOf(f).Call(in), nil
+	return zreflect.ValueOf(f).Call(in), nil
 }
 
 func (inj *injector) Map(val interface{}, opt ...Option) (override reflect.Type) {
@@ -75,7 +76,7 @@ func (inj *injector) Map(val interface{}, opt ...Option) (override reflect.Type)
 		override = o.key
 	}
 
-	inj.values[o.key] = reflect.ValueOf(val)
+	inj.values[o.key] = zreflect.ValueOf(val)
 	return
 }
 
