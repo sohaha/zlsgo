@@ -77,6 +77,7 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 	return m
 }
 
+// Delete a map data structure.
 func (m *Maper[K, V]) Delete(keys ...K) {
 	size := len(keys)
 	switch {
@@ -133,11 +134,15 @@ func (m *Maper[K, V]) Delete(keys ...K) {
 	}
 }
 
+// Has a parameter "key" of type K and returns a boolean value "ok".
 func (m *Maper[K, V]) Has(key K) (ok bool) {
 	_, ok = m.get(m.hasher(key), key)
 	return
 }
 
+// Get `Maper` struct is used to retrieve the value associated with a given key
+// from the hashmap. It takes a key as input and returns the corresponding value and a boolean
+// indicating whether the key exists in the hashmap.
 func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
 	return m.get(m.hasher(key), key)
 }
@@ -175,6 +180,11 @@ func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
 	return
 }
 
+// ProvideGet `Maper` struct is used to retrieve the value associated with a
+// given key from the hashmap. If the key exists in the hashmap, the function returns the value and
+// sets the `loaded` flag to true. If the key does not exist, the function calls the `provide` function
+// to compute the value and sets the `computed` flag to true. The computed value is then added to the
+// hashmap and returned.
 func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loaded, computed bool) {
 	var (
 		h        = m.hasher(key)
@@ -251,6 +261,9 @@ func (m *Maper[K, V]) set(h uintptr, key K, value V) {
 	}
 }
 
+// Swap `Maper` struct is used to atomically swap the value associated with a
+// given key in the hashmap. It takes a key and a new value as input parameters and returns the old
+// value that was swapped out and a boolean indicating whether the swap was successful.
 func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
 	var (
 		h        = m.hasher(key)
@@ -269,6 +282,8 @@ func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
 	return
 }
 
+// CAS `Maper` struct is used to perform a Compare-and-Swap operation on a
+// key-value pair in the hashmap.
 func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
 	var (
 		h        = m.hasher(key)
@@ -287,6 +302,10 @@ func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
 	return false
 }
 
+// ForEach `Maper` struct iterates over each key-value pair in the hashmap and
+// applies a lambda function to each pair. The lambda function takes a key and value as input
+// parameters and returns a boolean value. If the lambda function returns `true`, the iteration
+// continues to the next key-value pair. If the lambda function returns `false`, the iteration stops.
 func (m *Maper[K, V]) ForEach(lambda func(K, V) bool) {
 	for item := m.listHead.next(); item != nil && lambda(item.key, *item.value.Load()); item = item.next() {
 	}
@@ -306,7 +325,7 @@ func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
 }
 
-// MarshalJSON implements the json.Marshaler interface.
+// MarshalJSON convert the `Maper` object into a JSON-encoded byte slice.
 func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
 	gomap := make(map[K]V)
 	for i := m.listHead.next(); i != nil; i = i.next() {
@@ -315,7 +334,7 @@ func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(gomap)
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON used to deserialize a JSON-encoded byte slice into a `Maper` object.
 func (m *Maper[K, V]) UnmarshalJSON(i []byte) error {
 	gomap := make(map[K]V)
 	err := json.Unmarshal(i, &gomap)
@@ -328,6 +347,8 @@ func (m *Maper[K, V]) UnmarshalJSON(i []byte) error {
 	return nil
 }
 
+// Fillrate calculates the fill rate of the hashmap.
+// It returns the percentage of slots in the hashmap that are currently occupied by elements.
 func (m *Maper[K, V]) Fillrate() uintptr {
 	data := m.metadata.Load()
 

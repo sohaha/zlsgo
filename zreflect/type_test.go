@@ -13,10 +13,16 @@ func TestType(t *testing.T) {
 
 	typ := zreflect.TypeOf(zreflect.Demo)
 	ztyp := zreflect.NewType(zreflect.Demo)
+	vtyp := zreflect.NewType(zreflect.NewValue(zreflect.Demo))
+	zztyp := zreflect.NewType(ztyp)
+	zgtyp := zreflect.NewType(typ)
 	atyp := zreflect.NewValue(zreflect.Demo).Type()
 
 	tt.Equal(reflect.Struct, typ.Kind())
 	tt.Equal(reflect.Struct, ztyp.Native().Kind())
+	tt.Equal(reflect.Struct, vtyp.Native().Kind())
+	tt.Equal(reflect.Struct, zztyp.Native().Kind())
+	tt.Equal(reflect.Struct, zgtyp.Native().Kind())
 	tt.Equal(reflect.Struct, atyp.Native().Kind())
 
 	tt.Equal(typ.NumMethod(), ztyp.NumMethod())
