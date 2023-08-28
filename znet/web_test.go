@@ -643,16 +643,6 @@ func TestTemplateNew(t *testing.T) {
 		})
 	tt.Equal(200, w.Code)
 	tt.EqualExit(`ZlsGo-ok`, w.Body.String())
-	return
-	temple, _ := template.New("tmpTemplate/tpl-html.html").Parse(`{{.title}}`)
-	r.SetHTMLTemplate(temple)
-
-	w = newRequest(r, "GET", "/Template-define-2", "/Template-define-2",
-		func(c *Context) {
-			c.Template(200, "tmpTemplate/tpl-html.html", Data{"title": "ZlsGo"})
-		})
-	tt.Equal(200, w.Code)
-	tt.EqualExit(`ZlsGo`, w.Body.String())
 }
 
 func TestBind(t *testing.T) {

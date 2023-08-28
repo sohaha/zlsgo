@@ -165,5 +165,4 @@ func TestBindStructCase(t *testing.T) {
 		t.Log("Test:", v[0], v[1])
 		t.Log(w.Code, w.Body.String())
 	}
-	r.BindStructCase = nil
 }

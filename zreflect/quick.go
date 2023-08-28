@@ -8,7 +8,7 @@ import (
 func ForEachMethod(valof reflect.Value, fn func(index int, method reflect.Method, value reflect.Value) error) error {
 	numMethod := valof.NumMethod()
 	if numMethod == 0 {
-		return errors.New("method cannot be obtained")
+		return nil
 	}
 
 	tp := toRType(NewType(valof))

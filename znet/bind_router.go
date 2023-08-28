@@ -38,10 +38,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 		}
 
 	}
-	handleName := "reflect.methodValueCall"
-	typeOf := zreflect.TypeOf(of)
-
-	// methods := strings.Split("ANY|GET|Post|POST|PUT|DELETE|PATCH|HEAD|OPTIONS", "|")
+	typeOf := reflect.Indirect(of).Type()
 	return zutil.TryCatch(func() error {
 		return zreflect.ForEachMethod(of, func(i int, m reflect.Method, value reflect.Value) error {
 			if m.Name == "Init" {
@@ -71,7 +68,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			}
 
 			fn := value.Interface()
-			handleName = strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
+			handleName := strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
 			if e.BindStructCase != nil {
 				path = e.BindStructCase(path)
 			} else if e.BindStructDelimiter != "" {

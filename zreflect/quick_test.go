@@ -10,8 +10,14 @@ import (
 func TestForEachMethod(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	v := ValueOf(Demo)
-
 	err := ForEachMethod(v, func(index int, method reflect.Method, value reflect.Value) error {
+		tt.Log(index, method.Name, value.Kind())
+		return nil
+	})
+	tt.NoError(err)
+
+	v = ValueOf(&Demo)
+	err = ForEachMethod(v, func(index int, method reflect.Method, value reflect.Value) error {
 		tt.Log(index, method.Name, value.Kind())
 		return nil
 	})
