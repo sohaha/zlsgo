@@ -165,14 +165,25 @@ func getElText(r QueryHTML, full bool) string {
 		if n == nil {
 			return
 		}
+
 		if n.Type == html.TextNode {
 			b.WriteString(n.Data)
 		}
+
 		if full {
+			for i := range r.filter {
+				if n == r.filter[i] {
+					return
+				}
+			}
+			if matchElName(n, "script") || matchElName(n, "style") {
+				return
+			}
 			if n.Type == html.ElementNode {
 				f(n.FirstChild)
 			}
 		}
+
 		if n.NextSibling != nil {
 			f(n.NextSibling)
 		}

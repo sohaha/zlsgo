@@ -49,6 +49,9 @@ func TestVersion(T *testing.T) {
 	resetForTesting("-version")
 	Version = "1.0.1"
 	Run(func() {
+		current, b := Current()
+		t.Equal(nil, current)
+		t.EqualTrue(!b)
 		t.Log("Run", *globalDebug)
 	})
 }

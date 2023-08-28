@@ -134,15 +134,15 @@ func (t Type) Float64(def ...float64) float64 {
 	return ToFloat64(t.v)
 }
 
+func (t Type) Maps() Maps {
+	return t.Slice().Maps()
+}
+
 func (t Type) Slice() SliceType {
 	if t.v == nil {
 		return SliceType{}
 	}
 	return ToSlice(t.v)
-}
-
-func (t Type) SliceMaps() Maps {
-	return t.Slice().Maps()
 }
 
 func (t Type) SliceValue() []interface{} {

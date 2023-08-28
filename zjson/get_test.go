@@ -111,6 +111,8 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, Get(demo, "user").IsObject())
 	tt.EqualExit(true, Get(demo, "user").IsObject())
 	tt.EqualExit(true, Get(demo, "user").Exists())
+	tt.EqualExit("暴龙兽", Get(demo, "user").Map().Get("name").String())
+	tt.EqualExit("天使兽", Get(demo, "friends").Maps().Index(0).Get("name").String())
 	tt.EqualExit(true, other.IsArray())
 	tt.EqualExit(Get(demo, "friends.1").String(), Get(demo, "friends").Get("#(name=天女兽)").String())
 	tt.EqualExit(2, Get(demo, "friends.#").Int())
@@ -218,6 +220,13 @@ func TestForEach(t *testing.T) {
 		i++
 		return true
 	})
+
+	Parse(`[{"fen": 63.12, "date": "2023-08-24"}]`).ForEach(func(key, value *Res) bool {
+		tt.Log(key, value)
+		tt.Equal(63.12, value.Get("fen").Float())
+		return true
+	})
+
 }
 
 func TestUnmarshal(t *testing.T) {

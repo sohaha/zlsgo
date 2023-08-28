@@ -184,7 +184,7 @@ func TestFind(tt *testing.T) {
 	t.Equal(h.Find("div#Three").SelectBrother("div"), h.Find("div#Three ~ div"))
 	t.EqualTrue(h.Find("div#Tow.tow").Exist())
 	t.EqualTrue(h.Find("div.multiple.boxs .tow>i").Exist())
-	t.EqualTrue(!h.Find("div.multiple.boxs >   i").Exist())
+	t.EqualTrue(!h.Find(".multiple.boxs >   i").Exist())
 
 	t.Log(h.Select("div", map[string]string{"class": "multiple boxs"}).Select("", map[string]string{"class": "tow"}).SelectChild("i").Exist())
 	t.Log(h.Select("div", map[string]string{"class": "multiple boxs"}).Select("", map[string]string{"class": "tow"}).SelectChild("i").HTML())

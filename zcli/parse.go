@@ -138,6 +138,9 @@ func parseSubcommand(Args []string) {
 		FirstParameter += " " + name
 		fsArgs := Args[1:]
 		fs := flag.NewFlagSet(name, flag.ExitOnError)
+		flag.CommandLine.VisitAll(func(f *flag.Flag) {
+			fs.Var(f.Value, f.Name, f.Usage)
+		})
 		flag.CommandLine = fs
 		subcommand := &Subcommand{
 			Name:        cont.name,

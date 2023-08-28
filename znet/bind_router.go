@@ -49,12 +49,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			}
 			path, method, key := "", "", ""
 			methods := `ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS`
-			// regex := `^(` + methods + `){0,}([a-zA-Z]+){0,}(?i)(` + methods + `)(.*)`
-
-			// regex := `^(!(?i:` + methods + `)?([a-zA-Z]+))?(?i)(` + methods + `)(.*)$`
 			regex := `^(?i)(` + methods + `)(.*)$`
 			info, err := zstring.RegexExtract(regex, m.Name)
-			// info := strings.Split(zstring.CamelCaseToSnakeCase(m.Name, "-"), "-")
 			infoLen := len(info)
 			if err != nil || infoLen != 3 {
 				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)
@@ -76,7 +72,9 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 
 			fn := value.Interface()
 			handleName = strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
-			if e.BindStructDelimiter != "" {
+			if e.BindStructCase != nil {
+				path = e.BindStructCase(path)
+			} else if e.BindStructDelimiter != "" {
 				path = zstring.CamelCaseToSnakeCase(path, e.BindStructDelimiter)
 			}
 			if path == "" {

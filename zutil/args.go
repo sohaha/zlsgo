@@ -60,8 +60,8 @@ func NewArgs(opt ...ArgsOpt) *Args {
 	return args
 }
 
-// Map adds an arg to Args and returns a placeholder
-func (args *Args) Map(arg interface{}) string {
+// Var adds an arg to Args and returns a placeholder
+func (args *Args) Var(arg interface{}) string {
 	idx := args.add(arg, nil)
 	if idx < maxPredefinedArgs {
 		return predefinedArgs[idx]

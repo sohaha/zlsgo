@@ -64,6 +64,7 @@ type (
 		BindTag              string
 		webModeName          string
 		BindStructDelimiter  string
+		BindStructCase       func(string) string
 		BindStructSuffix     string
 		customMethodType     string
 		addr                 []addrSt

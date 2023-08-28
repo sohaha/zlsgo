@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"unsafe"
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/ztype"
@@ -166,9 +167,13 @@ func (v *v) String(def ...string) *string {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = flag.String(name, value, v.usage)
+		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+			return flag.String(name, value, v.usage)
+		}).(*string)
 	})
-	return flag.String(v.name, value, v.usage)
+	return v.setFlagVar(value, func() interface{} {
+		return flag.String(v.name, value, v.usage)
+	}).(*string)
 }
 
 func (v *v) Int(def ...int) *int {
@@ -177,9 +182,13 @@ func (v *v) Int(def ...int) *int {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = flag.Int(name, value, v.usage)
+		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+			return flag.Int(name, value, v.usage)
+		}).(*int)
 	})
-	return flag.Int(v.name, value, v.usage)
+	return v.setFlagVar(value, func() interface{} {
+		return flag.Int(v.name, value, v.usage)
+	}).(*int)
 }
 
 func (v *v) Bool(def ...bool) *bool {
@@ -188,9 +197,33 @@ func (v *v) Bool(def ...bool) *bool {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = flag.Bool(name, value, v.usage)
+		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+			return flag.Bool(name, value, v.usage)
+		}).(*bool)
 	})
-	return flag.Bool(v.name, value, v.usage)
+
+	return v.setFlagVar(value, func() interface{} {
+		return flag.Bool(v.name, value, v.usage)
+	}).(*bool)
+}
+
+func (v *v) setFlagVar(value interface{}, fn func() interface{}) (p interface{}) {
+	flag.VisitAll(func(f *flag.Flag) {
+		if f.Name == v.name {
+			switch value.(type) {
+			case bool:
+				p = (*bool)(unsafe.Pointer(&f.Value))
+			case string:
+				p = (*string)(unsafe.Pointer(&f.Value))
+			case int:
+				p = (*int)(unsafe.Pointer(&f.Value))
+			}
+		}
+	})
+	if p != nil {
+		return p
+	}
+	return fn()
 }
 
 func (v *v) setFlagbind(fn func(name string)) {

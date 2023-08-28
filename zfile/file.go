@@ -226,7 +226,7 @@ func GetMimeType(filename string, content []byte) (ctype string) {
 		ctype = http.DetectContentType(content)
 	}
 
-	if ctype == "" || strings.HasPrefix(ctype, "text/plain") {
+	if filename != "" && (ctype == "" || strings.HasPrefix(ctype, "text/plain")) {
 		ntype := mime.TypeByExtension(filepath.Ext(filename))
 		if ntype != "" {
 			ctype = ntype

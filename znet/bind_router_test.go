@@ -132,3 +132,38 @@ func TestBindStruct(t *testing.T) {
 	err = r.BindStruct(prefix, nil)
 	tt.Log(err)
 }
+
+func TestBindStructCase(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+	r.BindStructCase = func(s string) string {
+		tt.Log(s)
+		if s == "UserInfo" {
+			return "new-user-info"
+		}
+		return s
+	}
+	err := r.BindStruct("BindStructCase", &testController{}, func(c *Context) {
+		t.Log("go", c.Request.URL)
+		t.Log(c.GetAllParam())
+		c.Next()
+	})
+	tt.NoError(err)
+
+	methods := [][]string{
+		{"POST", "/BindStructCase/new-user-info.go"},
+	}
+	for _, v := range methods {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(v[0], v[1], nil)
+		r.ServeHTTP(w, req)
+		code := 200
+		if len(v) > 2 {
+			code = ztype.ToInt(v[2])
+		}
+		tt.Equal(code, w.Code)
+		t.Log("Test:", v[0], v[1])
+		t.Log(w.Code, w.Body.String())
+	}
+	r.BindStructCase = nil
+}

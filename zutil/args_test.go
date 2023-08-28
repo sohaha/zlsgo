@@ -37,7 +37,7 @@ func TestArgs(t *testing.T) {
 		sum.Add(1)
 		args := NewArgs()
 		for i := 2; i < len(c); i++ {
-			args.Map(c[i])
+			args.Var(c[i])
 		}
 		query, values := args.Compile(c[1].(string))
 		t.Log(query, values)
@@ -64,7 +64,7 @@ func TestArgsOnlyNamed(t *testing.T) {
 	for _, c := range tests {
 		args := NewArgs(WithOnlyNamed())
 		for i := 2; i < len(c); i++ {
-			args.Map(c[i])
+			args.Var(c[i])
 		}
 		query, values := args.Compile(c[1].(string))
 		t.Log(query, values)
@@ -90,7 +90,7 @@ func TestArgsString(t *testing.T) {
 	for _, c := range tests {
 		args := NewArgs()
 		for i := 2; i < len(c); i++ {
-			args.Map(c[i])
+			args.Var(c[i])
 		}
 		result := args.CompileString(c[1].(string))
 		t.Log(result)

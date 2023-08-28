@@ -8,7 +8,8 @@ import (
 
 type (
 	QueryHTML struct {
-		node *html.Node
+		node   *html.Node
+		filter []*html.Node
 	}
 	Els []QueryHTML
 )
@@ -132,7 +133,7 @@ func (r QueryHTML) SelectBrother(el string, args ...map[string]string) QueryHTML
 	brother := QueryHTML{}
 	for i := range child {
 		q := child[i]
-		if q == r {
+		if q.node == r.node {
 			index = i + 1
 			if len(child) > index {
 				brother = child[index]
@@ -160,8 +161,8 @@ func (r QueryHTML) SelectParent(el string, args ...map[string]string) QueryHTML 
 	return QueryHTML{node: &html.Node{}}
 }
 
-func (r QueryHTML) Find(el string) QueryHTML {
-	level := parseSelector(el)
+func (r QueryHTML) Find(text string) QueryHTML {
+	level := parseSelector(text)
 	if len(level) == 0 {
 		return QueryHTML{node: &html.Node{}}
 	}
@@ -182,26 +183,33 @@ func (r QueryHTML) Find(el string) QueryHTML {
 	return n
 }
 
-func parseSelector(el string) []*selector {
+func (r QueryHTML) Filter(el ...QueryHTML) QueryHTML {
+	for i := range el {
+		r.filter = append(r.filter, el[i].node)
+	}
+	return r
+}
+
+func parseSelector(text string) []*selector {
 	var (
 		ss []*selector
 		s  *selector
 	)
-	key, l := "", len(el)
+	key, l := "", len(text)
 	if l > 0 {
 		s = &selector{i: 0, Attr: make(map[string]string)}
 		for i := 0; i < l; {
-			v := el[i]
+			v := text[i]
 			add := 0
 			switch v {
 			case '#':
-				s.appendAttr(key, el, i)
+				s.appendAttr(key, text, i)
 				key = "id"
 			case '.':
-				s.appendAttr(key, el, i)
+				s.appendAttr(key, text, i)
 				key = "class"
 			case ' ', '>', '~':
-				s.appendAttr(key, el, i)
+				s.appendAttr(key, text, i)
 				if s.Name != "" || len(s.Attr) != 0 {
 					ss = append(ss, s)
 					s = &selector{i: i + 1, Attr: make(map[string]string)}
@@ -218,7 +226,7 @@ func parseSelector(el string) []*selector {
 	}
 
 	if s != nil {
-		s.appendAttr(key, el, l)
+		s.appendAttr(key, text, l)
 		ss = append(ss, s)
 	}
 	return ss

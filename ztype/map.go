@@ -273,11 +273,4 @@ func toMapString(value interface{}, tags ...string) map[string]interface{} {
 		}
 	}
 	return m
-
-}
-
-func ToMap2(v interface{}) Map {
-	var m map[string]interface{}
-	_ = conv.to("", v, zreflect.ValueOf(&m))
-	return m
 }

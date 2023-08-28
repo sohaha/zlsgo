@@ -28,6 +28,7 @@ func (cmd *testCmd) Flags(sub *Subcommand) {
 
 func (cmd *testCmd) Run(args []string) {
 	Log.Debug("run")
+	Log.Debug(Current())
 	cmd.run = true
 }
 

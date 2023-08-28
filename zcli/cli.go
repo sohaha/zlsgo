@@ -189,3 +189,10 @@ func Inputln(problem string, required bool) (text string) {
 	}
 	return Input(problem, required)
 }
+
+func Current() (interface{}, bool) {
+	if matchingCmd == nil {
+		return nil, false
+	}
+	return matchingCmd.command, true
+}

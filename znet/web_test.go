@@ -126,7 +126,6 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 func TestMain(m *testing.M) {
 	m.Run()
 	Shutdown()
-	zlog.Debug(333)
 }
 
 func TestWeb(t *testing.T) {

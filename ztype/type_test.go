@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("Slice", func(t *testing.T) {
 		t.Log(ztype.New("123").SliceValue())
-		t.Log(ztype.New(`{"name": "test"}`).SliceMaps())
+		t.Log(ztype.New(`{"name": "test"}`).Maps())
 		t.Log(ztype.New([]string{"1", "2"}).SliceInt())
 		t.Log(ztype.New(map[string]interface{}{"abc": 123}).Slice())
 	})

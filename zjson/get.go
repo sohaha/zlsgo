@@ -199,6 +199,14 @@ func (r *Res) Slice() ztype.SliceType {
 	return ztype.ToSlice(r.Value())
 }
 
+func (r *Res) Maps() ztype.Maps {
+	if !r.IsArray() {
+		return ztype.Maps{}
+	}
+
+	return ztype.ToMaps(r.Value())
+}
+
 func (r *Res) IsObject() bool {
 	return r.firstCharacter() == '{'
 }
@@ -238,7 +246,6 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			i++
 			key.typ = Number
 			key.num = -1
-			keys = true
 			break
 		}
 		if j[i] > ' ' {
@@ -252,7 +259,9 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 	)
 
 	for ; i < len(j); i++ {
-		if keys {
+		if key.typ == Number {
+			key.num = key.num + 1
+		} else if keys {
 			if j[i] != '"' {
 				continue
 			}
@@ -261,14 +270,10 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			if !ok {
 				return
 			}
-			if key.typ == Number {
-				key.num = key.num + 1
+			if vesc {
+				key.str = unescape(str[1 : len(str)-1])
 			} else {
-				if vesc {
-					key.str = unescape(str[1 : len(str)-1])
-				} else {
-					key.str = str[1 : len(str)-1]
-				}
+				key.str = str[1 : len(str)-1]
 			}
 
 			key.raw = str

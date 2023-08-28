@@ -22,6 +22,8 @@ type (
 		Child3 *DemoChildSt
 		Remark string `json:"remark"`
 		note   string
+		Any    interface{}
+		any    interface{}
 		Name   string `json:"username"`
 		Slice  [][]string
 		Hobby  []string
@@ -35,6 +37,7 @@ type (
 		child4 DemoChildSt
 		Age    uint
 		Lovely bool
+		pri    string
 	}
 	TestSt struct {
 		Name string

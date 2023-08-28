@@ -230,6 +230,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		customMethodType:    e.customMethodType,
 		Log:                 e.Log,
 		Cache:               e.Cache,
+		BindStructCase:      e.BindStructCase,
 		BindStructDelimiter: e.BindStructDelimiter,
 		BindStructSuffix:    e.BindStructSuffix,
 		templateFuncMap:     e.templateFuncMap,

@@ -42,6 +42,9 @@ func GetType(s interface{}) string {
 	case []byte:
 		varType = "[]byte"
 	default:
+		if s == nil {
+			return "nil"
+		}
 		v := zreflect.TypeOf(s)
 		if v.Kind() == reflect.Invalid {
 			return "invalid"
