@@ -21,22 +21,19 @@ func TestBase(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	workerNum := 5
 	p := zpool.New(workerNum)
-	var wg sync.WaitGroup
 	p.PanicFunc(func(err error) {
 		zlog.Printf("panic: %v", err)
 	})
 	for i := 0; i < workerNum*2; i++ {
 		ii := i
-		wg.Add(1)
 		err := p.Do(func() {
-			_ = ii
+			t.Log(ii)
 			time.Sleep(time.Millisecond)
-			wg.Done()
 		})
 		tt.EqualNil(err)
 	}
 
-	wg.Wait()
+	p.Wait()
 }
 
 func TestPool(t *testing.T) {

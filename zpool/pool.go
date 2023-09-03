@@ -170,6 +170,13 @@ func (wp *WorkPool) Close() {
 	wp.mu.Unlock()
 }
 
+// Wait for the task to finish
+func (wp *WorkPool) Wait() {
+	for 0 > uint(wp.usedNum.Load()) {
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 // Pause pause
 func (wp *WorkPool) Pause() {
 	wp.AdjustSize(0)
