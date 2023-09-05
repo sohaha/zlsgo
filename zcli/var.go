@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 	"strings"
-	"unsafe"
 
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/ztype"
@@ -167,11 +166,11 @@ func (v *v) String(def ...string) *string {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+		ShortValues[name] = setFlags(v, value, func() interface{} {
 			return flag.String(name, value, v.usage)
 		}).(*string)
 	})
-	return v.setFlagVar(value, func() interface{} {
+	return setFlags(v, value, func() interface{} {
 		return flag.String(v.name, value, v.usage)
 	}).(*string)
 }
@@ -182,11 +181,11 @@ func (v *v) Int(def ...int) *int {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+		ShortValues[name] = setFlags(v, value, func() interface{} {
 			return flag.Int(name, value, v.usage)
 		}).(*int)
 	})
-	return v.setFlagVar(value, func() interface{} {
+	return setFlags(v, value, func() interface{} {
 		return flag.Int(v.name, value, v.usage)
 	}).(*int)
 }
@@ -197,33 +196,48 @@ func (v *v) Bool(def ...bool) *bool {
 		value = def[0]
 	}
 	v.setFlagbind(func(name string) {
-		ShortValues[name] = v.setFlagVar(value, func() interface{} {
+		ShortValues[name] = setFlags(v, value, func() interface{} {
 			return flag.Bool(name, value, v.usage)
 		}).(*bool)
 	})
-
-	return v.setFlagVar(value, func() interface{} {
+	return setFlags(v, value, func() interface{} {
 		return flag.Bool(v.name, value, v.usage)
 	}).(*bool)
 }
 
-func (v *v) setFlagVar(value interface{}, fn func() interface{}) (p interface{}) {
-	flag.VisitAll(func(f *flag.Flag) {
-		if f.Name == v.name {
-			switch value.(type) {
-			case bool:
-				p = (*bool)(unsafe.Pointer(&f.Value))
-			case string:
-				p = (*string)(unsafe.Pointer(&f.Value))
-			case int:
-				p = (*int)(unsafe.Pointer(&f.Value))
-			}
-		}
-	})
-	if p != nil {
-		return p
+var flags = map[string]interface{}{}
+
+func setFlags(v *v, value interface{}, fn func() interface{}) (p interface{}) {
+	p, ok := flags[v.name]
+	if !ok {
+		flags[v.name] = fn()
+		return flags[v.name]
 	}
-	return fn()
+
+	switch val := value.(type) {
+	case bool:
+		b, ok := p.(*bool)
+		if !ok {
+			Error("flag %s type error, it needs to be an bool", v.name)
+		}
+		*b = val
+		return b
+	case string:
+		s, ok := p.(*string)
+		if !ok {
+			Error("flag %s type error, it needs to be an string", v.name)
+		}
+		*s = val
+		return s
+	case int:
+		i, ok := p.(*int)
+		if !ok {
+			Error("flag %s type error, it needs to be an int", v.name)
+		}
+		*i = val
+		return i
+	}
+	return nil
 }
 
 func (v *v) setFlagbind(fn func(name string)) {

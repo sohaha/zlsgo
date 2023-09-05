@@ -122,7 +122,7 @@ func (u32 *Uint32) Add(i uint32) uint32 {
 }
 
 func (u32 *Uint32) Sub(i uint32) uint32 {
-	return atomic.AddUint32(&u32.v, -i)
+	return atomic.AddUint32(&u32.v, ^(i - 1))
 }
 
 func (u32 *Uint32) Swap(i uint32) uint32 {
@@ -157,7 +157,7 @@ func (u64 *Uint64) Add(i uint64) uint64 {
 }
 
 func (u64 *Uint64) Sub(i uint64) uint64 {
-	return atomic.AddUint64(&u64.v, -i)
+	return atomic.AddUint64(&u64.v, ^(i - 1))
 }
 
 func (u64 *Uint64) Swap(i uint64) uint64 {

@@ -44,3 +44,37 @@ func TestURLMatchAndParse(t *testing.T) {
 	tt.EqualTrue(ok)
 	tt.Equal(2, len(match))
 }
+
+func Test_parsPattern(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	p, s := parsePattern([]string{`{name:[\w\p\-]+}.{ext:[\w]+}`}, "")
+	tt.Log(p, s)
+	tt.EqualExit(`([\w\p\-]+).([\w]+)`, p)
+	tt.EqualExit([]string{"name", "ext"}, s)
+
+	p, s = parsePattern([]string{"{name:[\\w\\d-]+}"}, "")
+	tt.Log(p, s)
+	tt.EqualExit("([\\w\\d-]+)", p)
+	tt.EqualExit([]string{"name"}, s)
+
+	p, s = parsePattern([]string{"{p:[\\w\\d-]+}.pth"}, "")
+	tt.Log(p, s)
+	tt.EqualExit("([\\w\\d-]+).pth", p)
+	tt.EqualExit([]string{"p"}, s)
+
+	p, s = parsePattern([]string{`{key:[^\/.]+}.{ext:[^/.]+}`}, "")
+	tt.Log(p, s)
+	tt.EqualExit(`([^\/.]+).([^/.]+)`, p)
+	tt.EqualExit([]string{"key", "ext"}, s)
+
+	p, s = parsePattern([]string{"{name:[^\\", ".]+}"}, "")
+	tt.Log(p, s)
+	tt.EqualExit("([^/.]+)", p)
+	tt.EqualExit([]string{"name"}, s)
+
+	p, s = parsePattern([]string{`xxx-(?P<name>[\w\p{Han}\-]+).(?P<ext>[a-zA-Z]+)`}, "")
+	tt.Log(p, s)
+	tt.EqualExit("xxx-(?P<name>[\\w\\p{Han}\\-]+).(?P<ext>[a-zA-Z]+)", p)
+	tt.EqualExit([]string{"name", "ext"}, s)
+}

@@ -720,17 +720,26 @@ func TestSetMode(T *testing.T) {
 func TestMoreMatchingRouter(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
-	w := newRequest(r, "GET", "/MoreMatchingRouter/file-1.txt",
-		`/MoreMatchingRouter/{name:[\w\d-]+}.{ext:[\w]+}`, func(c *Context) {
+	w := newRequest(r, "GET", "/MoreMatchingRouter/file-1-谁.txt",
+		`/MoreMatchingRouter/{name:[^\/.]+}.{ext:[\w]+}`, func(c *Context) {
 			tt.Log(c.GetAllParam())
-			tt.Equal("file-1", c.GetParam("name"))
+			tt.Equal("file-1-谁", c.GetParam("name"))
 			tt.Equal("txt", c.GetParam("ext"))
+		})
+	tt.Equal(200, w.Code)
+
+	w = newRequest(r, "GET", "/MoreMatchingRouter/bracket/file-text-谁.doc",
+		`/MoreMatchingRouter/bracket/file-(?P<name>[\w\p{Han}\-]+).(?P<ext>[a-zA-Z]+)`, func(c *Context) {
+			tt.Log(c.GetAllParam())
+			tt.Equal("text-谁", c.GetParam("name"))
+			tt.Equal("doc", c.GetParam("ext"))
 		})
 	tt.Equal(200, w.Code)
 
 	engine := r.GET("/MoreMatchingRouter/*", func(c *Context) string {
 		return c.GetParam("*")
 	})
+
 	w = request(engine, "GET", "/MoreMatchingRouter/t1/x2/z3", nil)
 	tt.Equal(200, w.Code)
 	tt.Equal("t1/x2/z3", w.Body.String())

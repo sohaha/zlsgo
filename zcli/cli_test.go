@@ -61,6 +61,7 @@ func TestCliOther(t *testing.T) {
 }
 
 func TestCliCommand(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	oldOsExit := osExit
 	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
@@ -69,7 +70,9 @@ func TestCliCommand(t *testing.T) {
 	osExit = myExit
 	requiredFlags = []string{}
 	resetForTesting("test", "-flag1")
-	Add("test", "test", &testCmd{})
+	Add("test", "test", &testCmd{
+		tt: tt,
+	})
 	Run()
 	showFlags(flag.CommandLine)
 }

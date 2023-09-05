@@ -6,10 +6,12 @@ import (
 	"html/template"
 	"net/http"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -25,26 +27,43 @@ var Utils = utils{
 }
 
 const (
-	defaultPattern = `[\w\p{Han}\.\- ]+`
+	defaultPattern = `[^\/.]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
 	allPattern     = `.*`
 	allKey         = `*`
 )
 
+var matchCache = zcache.NewFast(func(o *zcache.Options) {
+	o.LRU2Cap = 100
+})
+
 // URLMatchAndParse checks if the request matches the route path and returns a map of the parsed
 func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map[string]string, ok bool) {
-	ok = true
-	matchParams = make(map[string]string)
-	res := strings.Split(path, "/")
-	pattern, matchName := parsPattern(res, "/")
+	var (
+		pattern   string
+		matchName []string
+	)
+	matchParams, ok = make(map[string]string), true
+	if v, ok := matchCache.Get(path); ok {
+		m := v.([]string)
+		pattern = m[0]
+		matchName = m[1:]
+	} else {
+		res := strings.Split(path, "/")
+		pattern, matchName = parsePattern(res, "/")
+		matchCache.Set(path, append([]string{pattern}, matchName...))
+	}
+
 	if pattern == "" {
 		return nil, false
 	}
+
 	rr, err := zstring.RegexExtract(pattern, requestURL)
 	if err != nil || len(rr) == 0 {
 		return nil, false
 	}
+
 	if rr[0] == requestURL {
 		rr = rr[1:]
 		if len(matchName) != 0 {
@@ -60,54 +79,36 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 	return nil, false
 }
 
-func parsPattern(res []string, prefix string) (string, []string) {
+func parsePattern(res []string, prefix string) (string, []string) {
 	var (
 		matchName []string
 		pattern   string
 	)
-	for _, str := range res {
+	l := len(res)
+	for i := 0; i < l; i++ {
+		str := res[i]
 		if str == "" {
+			continue
+		}
+		if strings.HasSuffix(str, "\\") && i < l-1 {
+			res[i+1] = str[:len(str)-1] + "/" + res[i+1]
 			continue
 		}
 		pattern = pattern + prefix
 		l := len(str) - 1
-		i := strings.Index(str, "}")
-		i2 := strings.Index(str, "{")
-		firstChar := string(str[0])
-		// todo Need to optimize
+		i := strings.IndexRune(str, ')')
+		i2 := strings.IndexRune(str, '(')
+		firstChar := str[0]
+		// TODO Need to optimize
 		if i2 != -1 && i != -1 {
-			// lastChar := string(str[mu])
-			if i == l && i2 == 0 {
-				matchStr := str[1:l]
-				res := strings.Split(matchStr, ":")
-				matchName = append(matchName, res[0])
-				pattern = pattern + "(" + res[1] + ")"
-			} else {
-				if i2 != 0 {
-					p, m := parsPattern([]string{str[:i2]}, "")
-					if p != "" {
-						pattern = pattern + p
-						matchName = append(matchName, m...)
-					}
-					str = str[i2:]
-				}
-				if i >= 0 {
-					ni := i - i2
-					matchStr := str[1:ni]
-					res := strings.Split(matchStr, ":")
-					matchName = append(matchName, res[0])
-					pattern = pattern + "(" + res[1] + ")"
-					p, m := parsPattern([]string{str[ni+1:]}, "")
-					if p != "" {
-						pattern = pattern + p
-						matchName = append(matchName, m...)
-					}
-				} else {
-					pattern = pattern + str
-				}
+			r, err := regexp.Compile(str)
+			if err != nil {
+				return "", nil
 			}
-
-		} else if firstChar == ":" {
+			names := r.SubexpNames()
+			matchName = append(matchName, names[1:]...)
+			pattern = pattern + str
+		} else if firstChar == ':' {
 			matchStr := str
 			res := strings.Split(matchStr, ":")
 			key := res[1]
@@ -122,13 +123,51 @@ func parsPattern(res []string, prefix string) (string, []string) {
 			} else {
 				pattern = pattern + "(" + defaultPattern + ")"
 			}
-		} else if firstChar == "*" {
+		} else if firstChar == '*' {
 			pattern = pattern + "(" + allPattern + ")"
 			matchName = append(matchName, allKey)
 		} else {
-			pattern = pattern + str
+			i := strings.IndexRune(str, '}')
+			i2 := strings.IndexRune(str, '{')
+			if i2 != -1 && i != -1 {
+				if i == l && i2 == 0 {
+					matchStr := str[1:l]
+					res := strings.Split(matchStr, ":")
+					matchName = append(matchName, res[0])
+					pattern = pattern + "(" + res[1] + ")"
+				} else {
+					if i2 != 0 {
+						p, m := parsePattern([]string{str[:i2]}, "")
+						if p != "" {
+							pattern = pattern + p
+							matchName = append(matchName, m...)
+						}
+						str = str[i2:]
+					}
+					if i >= 0 {
+						ni := i - i2
+						if ni < 0 {
+							return "", nil
+						}
+						matchStr := str[1:ni]
+						res := strings.Split(matchStr, ":")
+						matchName = append(matchName, res[0])
+						pattern = pattern + "(" + res[1] + ")"
+						p, m := parsePattern([]string{str[ni+1:]}, "")
+						if p != "" {
+							pattern = pattern + p
+							matchName = append(matchName, m...)
+						}
+					} else {
+						pattern = pattern + str
+					}
+				}
+			} else {
+				pattern = pattern + str
+			}
 		}
 	}
+
 	return pattern, matchName
 }
 

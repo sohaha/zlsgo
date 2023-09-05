@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	zls "github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zjson"
@@ -21,14 +22,17 @@ type (
 		A  int
 		C1 float32
 	}
-	type2 struct {
+	JsonTime time.Time
+	type2    struct {
 		E  *uint
 		G  map[string]int `z:"gg"`
 		S2 *type1
 		F  []string `json:"fs"`
 		type1
-		S1 type1
-		D  bool
+		S1    type1
+		D     bool
+		Date  time.Time `z:"date_time"`
+		JDate JsonTime  `z:"j_date"`
 	}
 )
 
@@ -168,16 +172,20 @@ func TestTo(t *testing.T) {
 	tt.Equal(false, ztype.ToBool(ni))
 
 	v := map[string]interface{}{
-		"D":  true,
-		"E":  12,
-		"fs": []string{"1", "a"},
-		"gg": map[string]string{"a": "1"},
+		"D":         true,
+		"E":         12,
+		"fs":        []string{"1", "a"},
+		"gg":        map[string]string{"a": "1"},
+		"date_time": time.Now(),
+		"j_date":    time.Now(),
 	}
 	var d type2
 	tt.NoError(ztype.To(v, &d, func(conver *ztype.Conver) {
 
 	}))
 	tt.Log(d)
+	tt.Log(d.JDate)
+	tt.Log(d.Date)
 	tt.Equal(1, d.G["a"])
 	tt.EqualTrue(d.D)
 	tt.Equal(uint(12), *d.E)

@@ -7,6 +7,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/sohaha/zlsgo/zfile"
 )
 
 var (
@@ -55,9 +57,8 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 	var urlPattern string
 
 	ap := Utils.CompletionPath(relativePath, e.router.prefix)
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s", fs), "FILE", ap))
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s/", zfile.SafePath(fmt.Sprintf("%s", fs))), "FILE", ap))
 	fileServer := http.StripPrefix(ap, http.FileServer(fs))
-
 	handler := func(c *Context) {
 		for key, value := range c.header {
 			for i := range value {
@@ -94,7 +95,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 	handler := func(c *Context) {
 		c.File(filepath)
 	}
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s %-40s -> "+filepath, "FILE", relativePath))
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s %-40s -> "+zfile.SafePath(filepath)+"/", "FILE", relativePath))
 	e.GET(relativePath, handler)
 	e.HEAD(relativePath, handler)
 	log()

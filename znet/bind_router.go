@@ -18,7 +18,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			g.Use(v)
 		}
 	}
-	of := zreflect.ValueOf(s)
+	of := reflect.ValueOf(s)
 	if !of.IsValid() {
 		return nil
 	}

@@ -27,8 +27,9 @@ func TestBase(t *testing.T) {
 	for i := 0; i < workerNum*2; i++ {
 		ii := i
 		err := p.Do(func() {
-			t.Log(ii)
-			time.Sleep(time.Millisecond)
+			t.Log("run", ii)
+			time.Sleep(time.Millisecond * 300)
+			t.Log("done", ii)
 		})
 		tt.EqualNil(err)
 	}

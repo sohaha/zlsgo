@@ -20,6 +20,7 @@ type (
 		injector    zdi.Injector
 		queue       chan *worker
 		usedNum     *zutil.Int64
+		activeNum   *zutil.Int64
 		panicFunc   PanicFunc
 		New         func()
 		minIdle     uint
@@ -41,6 +42,15 @@ var (
 	ErrWaitTimeout = errors.New("pool wait timeout")
 )
 
+// type Options func(*WorkPool)
+// // func WithReleaseTime
+// func NewCustom(min int, opt Options) *WorkPool {
+// 	w := New(min)
+// 	if opt != nil {
+// 		opt(w)
+// 	}
+// 	return w
+// }
 
 func New(size int, max ...int) *WorkPool {
 	minIdle := uint(size)
@@ -61,6 +71,7 @@ func New(size int, max ...int) *WorkPool {
 		injector:    zdi.New(),
 		queue:       make(chan *worker, maxIdle),
 		usedNum:     zutil.NewInt64(0),
+		activeNum:   zutil.NewInt64(0),
 		releaseTime: time.Second * 60,
 		workers: sync.Pool{New: func() interface{} {
 			return &worker{
@@ -70,6 +81,8 @@ func New(size int, max ...int) *WorkPool {
 			}
 		}},
 	}
+	// todo 定时把队列写入到 chan
+
 	return w
 }
 
@@ -90,6 +103,7 @@ func (wp *WorkPool) PanicFunc(handler PanicFunc) {
 }
 
 func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) error {
+	wp.activeNum.Add(1)
 	if wp.IsClosed() {
 		return ErrPoolClosed
 	}
@@ -119,6 +133,7 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 		case uint(wp.usedNum.Load()) >= wp.minIdle:
 			wp.mu.Unlock()
 			// todo 超时处理
+			// 需要启动队列功能了
 			select {
 			case <-cxt.Done():
 				wp.mu.Lock()
@@ -136,6 +151,9 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 				} else {
 					return ErrPoolClosed
 				}
+				// default:
+				// todo 进入队列
+				// return nil
 			}
 		case uint(wp.usedNum.Load()) < wp.minIdle:
 			w := add()
@@ -172,7 +190,7 @@ func (wp *WorkPool) Close() {
 
 // Wait for the task to finish
 func (wp *WorkPool) Wait() {
-	for 0 > uint(wp.usedNum.Load()) {
+	for 0 < uint(wp.activeNum.Load()) {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
@@ -267,6 +285,7 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 				if err != nil && handler != nil {
 					handler(err)
 				}
+				wp.activeNum.Sub(1)
 				q <- w
 				timer.Reset(wp.releaseTime)
 			// case parameter := <-w.Parameter:
@@ -287,6 +306,7 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 				if err != nil && handler != nil {
 					handler(err)
 				}
+				wp.activeNum.Sub(1)
 				q <- w
 			case <-w.stop:
 				return

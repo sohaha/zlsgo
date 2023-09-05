@@ -1,9 +1,12 @@
 package ztype
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zreflect"
 )
 
 func TestMap(t *testing.T) {
@@ -80,6 +83,9 @@ var user = &u{
 	Objs: []Obj{
 		{"n1"},
 		{"n2"},
+		{"n3"},
+		{"n4"},
+		{"n5"},
 	},
 	Status: true,
 	Region: struct {
@@ -109,6 +115,19 @@ func TestToMap(T *testing.T) {
 	t.Log(userMap)
 	t.Log(toUserMap)
 	t.Equal(userMap, toUserMap)
+
+	t.Equal(1, ToMap(map[interface{}]interface{}{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[interface{}]string{"name": "1"}).Get("name").Int())
+	t.Equal(1, ToMap(map[interface{}]int{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[interface{}]uint{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[interface{}]float64{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[interface{}]bool{"name": true}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]interface{}{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]string{"name": "1"}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]int{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]uint{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]float64{"name": 1}).Get("name").Int())
+	t.Equal(1, ToMap(map[string]bool{"name": true}).Get("name").Int())
 }
 
 func TestToMaps(T *testing.T) {
@@ -146,4 +165,78 @@ func TestToMaps(T *testing.T) {
 	data2 := Maps{{"name": "hi"}, {"name": "golang"}}
 	toSliceMapString = ToMaps(data2)
 	t.Equal("hi", toSliceMapString.Index(0).Get("name").String())
+}
+
+func TestConvContainTime(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	type JsonTime time.Time
+
+	type S struct {
+		Date1 JsonTime `z:"date"`
+		Date2 time.Time
+		Name  string
+	}
+
+	now := time.Now()
+	v := map[string]interface{}{
+		"date":  now,
+		"Date2": now,
+		"Name":  "123",
+	}
+
+	var s S
+	isTime := zreflect.TypeOf(time.Time{})
+	err := To(v, &s, func(conver *Conver) {
+		conver.ConvHook = func(i reflect.Value, o reflect.Type) (reflect.Value, error) {
+			t := i.Type()
+			if t == isTime && t.ConvertibleTo(o) {
+				return i.Convert(o), nil
+			}
+			return i, nil
+		}
+	})
+	tt.NoError(err)
+
+	tt.Equal(now.Unix(), time.Time(s.Date1).Unix())
+	tt.Equal(now.Unix(), s.Date2.Unix())
+}
+
+func BenchmarkName(b *testing.B) {
+
+	b.Run("toMapString", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = toMapString(user)
+		}
+	})
+
+	b.Run("ToMap", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = ToMap(user)
+		}
+	})
+
+	b.Run("toMapString", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				_ = toMapString(user)
+			}
+		})
+	})
+
+	b.Run("ToMap", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				_ = ToMap(user)
+			}
+		})
+	})
 }

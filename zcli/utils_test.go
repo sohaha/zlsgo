@@ -18,10 +18,11 @@ type testCmd struct {
 	flag2 *int
 	flag3 *string
 	run   bool
+	tt    *zls.TestUtil
 }
 
 func (cmd *testCmd) Flags(sub *Subcommand) {
-	cmd.flag1 = SetVar("flag1", "Name about flag1").Required().Bool()
+	cmd.flag1 = SetVar("flag1", "Name about flag1").Required().Bool(true)
 	cmd.flag2 = SetVar("flag2", "Name about flag2").Int(1)
 	cmd.flag3 = SetVar("flag333333333333333333333333333333333333", "Name about flag333333333333333333333333333333").String("666")
 }
@@ -29,6 +30,8 @@ func (cmd *testCmd) Flags(sub *Subcommand) {
 func (cmd *testCmd) Run(args []string) {
 	Log.Debug("run")
 	Log.Debug(Current())
+	Log.Debug("flag1", *cmd.flag1)
+	cmd.tt.EqualExit(true, *cmd.flag1)
 	cmd.run = true
 }
 

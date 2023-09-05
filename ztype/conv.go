@@ -17,23 +17,27 @@ type Conver struct {
 	Squash     bool
 	Deep       bool
 	Merge      bool
+	ConvHook   func(i reflect.Value, o reflect.Type) (reflect.Value, error)
 }
 
 var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}
 
 func To(input, out interface{}, opt ...func(*Conver)) error {
+	return ValueConv(input, zreflect.ValueOf(out), opt...)
+}
+
+func ValueConv(input interface{}, out reflect.Value, opt ...func(*Conver)) error {
 	o := conv
 	for _, f := range opt {
 		f(&o)
 	}
-	val := zreflect.ValueOf(out)
-	if val.Kind() != reflect.Ptr {
+	if out.Kind() != reflect.Ptr {
 		return errors.New("out must be a pointer")
 	}
-	if !val.Elem().CanAddr() {
+	if !out.Elem().CanAddr() {
 		return errors.New("out must be addressable (a pointer)")
 	}
-	return o.to("input", input, val)
+	return o.to("input", input, out)
 }
 
 func (d *Conver) to(name string, input interface{}, outVal reflect.Value) error {
@@ -45,20 +49,30 @@ func (d *Conver) to(name string, input interface{}, outVal reflect.Value) error 
 		}
 	}
 
+	t := outVal.Type()
 	if input == nil {
 		if d.ZeroFields {
-			outVal.Set(reflect.Zero(outVal.Type()))
+			outVal.Set(reflect.Zero(t))
 		}
 		return nil
 	}
 
 	if !inputVal.IsValid() {
-		outVal.Set(reflect.Zero(outVal.Type()))
+		outVal.Set(reflect.Zero(t))
 		return nil
 	}
 
 	var err error
 	outputKind := zreflect.GetAbbrKind(outVal)
+
+	if d.ConvHook != nil {
+		if i, err := d.ConvHook(inputVal, t); err != nil {
+			return err
+		} else {
+			input = i.Interface()
+		}
+	}
+
 	switch outputKind {
 	case reflect.Bool:
 		outVal.SetBool(ToBool(input))
@@ -131,23 +145,21 @@ func (d *Conver) basic(name string, data interface{}, val reflect.Value) error {
 
 func (d *Conver) toStruct(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.Indirect(zreflect.ValueOf(data))
-
 	if dataVal.Type() == val.Type() {
 		val.Set(dataVal)
 		return nil
 	}
 
-	dataValKind := dataVal.Kind()
-	switch dataValKind {
+	switch dataVal.Kind() {
 	case reflect.Map:
 		return d.toStructFromMap(name, dataVal, val)
 	case reflect.Struct:
 		mapType := reflect.TypeOf((map[string]interface{})(nil))
 		mval := reflect.MakeMap(mapType)
 		addrVal := reflect.New(mval.Type())
-
 		reflect.Indirect(addrVal).Set(mval)
-		if err := d.toMapFromStruct(name, dataVal, reflect.Indirect(addrVal), mval); err != nil {
+		err := d.toMapFromStruct(name, dataVal, reflect.Indirect(addrVal), mval)
+		if err != nil {
 			return err
 		}
 
@@ -367,10 +379,12 @@ func (d *Conver) toMapFromMap(name string, dataVal reflect.Value, val reflect.Va
 	return nil
 }
 
-func (d *Conver) toMapFromStruct(_ string, dataVal reflect.Value, val reflect.Value, valMap reflect.Value) error {
+func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect.Value, valMap reflect.Value) error {
 	typ := dataVal.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+
+		fmt.Println(name, f.PkgPath, f.Name, dataVal.IsValid())
 		if f.PkgPath != "" {
 			continue
 		}
