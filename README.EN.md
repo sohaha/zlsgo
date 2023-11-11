@@ -116,7 +116,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] Injection
 - [x] Server Sent Event
 - [ ] [Database](https://github.com/sohaha/zdb)
-- [ ] ...
+- [ ] ...(Read more [documentation](https://docs.73zls.com/zls-go/#))
 
 ## LICENSE
 

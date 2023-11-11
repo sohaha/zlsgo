@@ -24,7 +24,7 @@ const (
 	BitDate         int                                 = 1 << iota // Date marker  2019/01/23
 	BitTime                                                         // Time Label Bit  01:23:12
 	BitMicroSeconds                                                 // Microsecond label bit 01:23:12.111222
-	BitLongFile                                                     // Full file name /home/go/src/github.com/sohaha/zlsgo/doc.go
+	BitLongFile                                                     // Full file name, example: /home/go/src/github.com/sohaha/zlsgo/doc.go
 	BitShortFile                                                    // Final File name   doc.go
 	BitLevel                                                        // Current log level
 	BitStdFlag      = BitDate | BitTime                             // Standard header log format

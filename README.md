@@ -118,7 +118,7 @@ func main(){
 - [x] 依赖注入
 - [x] Server Sent 推送
 - [ ] [数据库操作](https://github.com/sohaha/zdb)
-- [ ] ...
+- [ ] ...(更多请阅读[文档](https://docs.73zls.com/zls-go/#))
 
 ## LICENSE
 
