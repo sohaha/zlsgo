@@ -2,7 +2,6 @@ package znet
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -191,7 +190,6 @@ func (c *Context) GetJSONs() (json *zjson.Res, err error) {
 	json = &zjson.Res{}
 	var body string
 	body, err = c.GetDataRaw()
-	fmt.Println(len(body), err)
 	if err != nil {
 		return
 	}
