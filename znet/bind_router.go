@@ -103,7 +103,11 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			}
 
 			if ok && e.IsDebug() {
-				e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l), method, p))
+				f := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l)
+				if e.webMode == testCode {
+					f = "%s %-40s"
+				}
+				e.Log.Debug(routeLog(e.Log, f, method, p))
 			}
 			return nil
 		})

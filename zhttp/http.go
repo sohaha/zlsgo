@@ -116,7 +116,7 @@ var (
 // New create a new *Engine
 func New() *Engine {
 	//noinspection ALL
-	return &Engine{flag: BitStdFlags, debug: Debug}
+	return &Engine{flag: BitStdFlags, debug: Debug.Load()}
 }
 
 func (p *param) getValues() url.Values {
@@ -365,7 +365,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	}
 
 	if //noinspection GoBoolExpressions
-	Debug || e.debug {
+	Debug.Load() || e.debug {
 		zlog.Println(resp.Dump())
 	}
 	return

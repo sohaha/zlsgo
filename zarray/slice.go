@@ -43,6 +43,18 @@ func Shuffle[T any](collection []T) []T {
 	return n
 }
 
+// Reverse creates a slice of reversed values
+func Reverse[T any](collection []T) []T {
+	l := len(collection)
+	n := make([]T, l)
+	copy(n, collection)
+	for i := 0; i < l/2; i++ {
+		n[i], n[l-i-1] = n[l-i-1], n[i]
+	}
+
+	return n
+}
+
 // Filter iterates over eents of collection
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	l := len(slice)

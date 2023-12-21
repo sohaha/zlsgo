@@ -104,6 +104,18 @@ func (m Maps) Index(i int) Map {
 	return m[i]
 }
 
+func (m Maps) Last() Map {
+	l := m.Len()
+	if l == 0 {
+		return Map{}
+	}
+	return m[l-1]
+}
+
+func (m Maps) First() Map {
+	return m.Index(0)
+}
+
 func (m Maps) ForEach(fn func(i int, value Map) bool) {
 	for i := range m {
 		v := m[i]
@@ -174,10 +186,6 @@ func toMapString(value interface{}, tags ...string) map[string]interface{} {
 		for k, v := range val {
 			m[ToString(k)] = v
 		}
-	case map[interface{}]float32:
-		for k, v := range val {
-			m[ToString(k)] = v
-		}
 	case map[interface{}]float64:
 		for k, v := range val {
 			m[ToString(k)] = v
@@ -191,10 +199,6 @@ func toMapString(value interface{}, tags ...string) map[string]interface{} {
 			m[k] = v
 		}
 	case map[string]uint:
-		for k, v := range val {
-			m[k] = v
-		}
-	case map[string]float32:
 		for k, v := range val {
 			m[k] = v
 		}

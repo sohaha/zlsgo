@@ -165,6 +165,59 @@ func (p *zprinter) printInline(v reflect.Value, x interface{}, showType bool) {
 	}
 }
 
+func (p *zprinter) printStruct(v reflect.Value, showType bool) (stop bool) {
+	t := v.Type()
+	if v.CanAddr() {
+		addr := v.UnsafeAddr()
+		vis := visit{v: addr, typ: t}
+		if vd, ok := p.visited[vis]; ok && vd < p.depth {
+			p.fmtString(t.String()+"{(CYCLIC REFERENCE)}", false)
+			return true
+		}
+		p.visited[vis] = p.depth
+	}
+
+	if showType {
+		_, _ = io.WriteString(p, t.String())
+	}
+
+	writeByte(p, '{')
+	if zreflect.Nonzero(v) {
+		expand := !zreflect.CanInline(v.Type())
+		pp := p
+		if expand {
+			writeByte(p, '\n')
+			pp = p.indent()
+		}
+		for i := 0; i < v.NumField(); i++ {
+			showTypeInStruct := true
+			if f := t.Field(i); f.Name != "" {
+				_, _ = io.WriteString(pp, f.Name)
+				writeByte(pp, ':')
+				if expand {
+					writeByte(pp, '\t')
+				}
+				showTypeInStruct = zreflect.IsLabel(f.Type)
+			}
+			val := v.Field(i)
+			if val.Kind() == reflect.Interface && !val.IsNil() {
+				val = val.Elem()
+			}
+			pp.printValue(val, showTypeInStruct, true)
+			if expand {
+				_, _ = io.WriteString(pp, ",\n")
+			} else if i < v.NumField()-1 {
+				_, _ = io.WriteString(pp, ", ")
+			}
+		}
+		if expand {
+			_ = pp.tw.Flush()
+		}
+	}
+	writeByte(p, '}')
+	return false
+}
+
 func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 	if p.depth > 10 {
 		_, _ = io.WriteString(p, "!%v(DEPTH EXCEEDED)")
@@ -219,50 +272,9 @@ func (p *zprinter) printValue(v reflect.Value, showType, quote bool) {
 		}
 		writeByte(p, '}')
 	case reflect.Struct:
-		t := v.Type()
-		if v.CanAddr() {
-			addr := v.UnsafeAddr()
-			vis := visit{v: addr, typ: t}
-			if vd, ok := p.visited[vis]; ok && vd < p.depth {
-				p.fmtString(t.String()+"{(CYCLIC REFERENCE)}", false)
-				break // don't print v again
-			}
-			p.visited[vis] = p.depth
+		if p.printStruct(v, showType) {
+			break
 		}
-
-		if showType {
-			_, _ = io.WriteString(p, t.String())
-		}
-		writeByte(p, '{')
-		if zreflect.Nonzero(v) {
-			expand := !zreflect.CanInline(v.Type())
-			pp := p
-			if expand {
-				writeByte(p, '\n')
-				pp = p.indent()
-			}
-			for i := 0; i < v.NumField(); i++ {
-				showTypeInStruct := true
-				if f := t.Field(i); f.Name != "" {
-					_, _ = io.WriteString(pp, f.Name)
-					writeByte(pp, ':')
-					if expand {
-						writeByte(pp, '\t')
-					}
-					showTypeInStruct = zreflect.IsLabel(f.Type)
-				}
-				pp.printValue(reflect.Indirect(v.Field(i)), showTypeInStruct, true)
-				if expand {
-					_, _ = io.WriteString(pp, ",\n")
-				} else if i < v.NumField()-1 {
-					_, _ = io.WriteString(pp, ", ")
-				}
-			}
-			if expand {
-				_ = pp.tw.Flush()
-			}
-		}
-		writeByte(p, '}')
 	case reflect.Interface:
 		switch e := v.Elem(); {
 		case e.Kind() == reflect.Invalid:

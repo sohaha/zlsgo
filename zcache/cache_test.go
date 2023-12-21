@@ -238,6 +238,15 @@ func TestAccessCount(t *testing.T) {
 	t.Log(i, err)
 }
 
+// func TestExportJSON(t *testing.T) {
+// 	cache := zcache.New("ExportJSON")
+// 	cache.Set("tmp1", &testSt{Name: "isName", Key: 100}, 1, true)
+// 	cache.Set("tmp2", 666, 2)
+// 	cache.Set("tmp3", "is string", 2)
+// 	jsonData := cache.ExportJSON()
+// 	t.Log(jsonData)
+// }
+
 func TestDo(t *testing.T) {
 	var g sync.WaitGroup
 	for i := 1; i <= 10; i++ {

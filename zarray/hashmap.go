@@ -68,7 +68,7 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 		numItems: zutil.NewUintptr(0),
 	}
 	m.numItems.Store(0)
-	if len(size) > 0 {
+	if len(size) > 0 && size[0] != 0{
 		m.allocate(size[0])
 	} else {
 		m.allocate(defaultSize)
@@ -323,6 +323,21 @@ func (m *Maper[K, V]) SetHasher(hasher func(K) uintptr) {
 
 func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
+}
+
+func (m *Maper[K, V]) Clear()  {
+	index := make([]*element[K, V], defaultSize)
+	header := (*reflect.SliceHeader)(unsafe.Pointer(&index))
+
+	newdata := &metadata[K, V]{
+		keyshifts: strconv.IntSize - log2(defaultSize),
+		data:      unsafe.Pointer(header.Data),
+		index:     index,
+	}
+
+	m.listHead.nextPtr.Store(nil)
+	m.metadata.Store(newdata)
+	m.numItems.Store(0)
 }
 
 // MarshalJSON convert the `Maper` object into a JSON-encoded byte slice.

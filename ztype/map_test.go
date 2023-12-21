@@ -162,9 +162,13 @@ func TestToMaps(T *testing.T) {
 	toSliceMapString = ToMaps(data)
 	t.Equal("hi", toSliceMapString.Index(0).Get("name").String())
 
-	data2 := Maps{{"name": "hi"}, {"name": "golang"}}
+	data2 := Maps{{"name": "hi"}, {"name": "golang"}, {"name": "!"}}
 	toSliceMapString = ToMaps(data2)
 	t.Equal("hi", toSliceMapString.Index(0).Get("name").String())
+	t.EqualTrue(!data2.IsEmpty())
+
+	t.Equal("hi", data2.First().Get("name").String())
+	t.Equal("!", data2.Last().Get("name").String())
 }
 
 func TestConvContainTime(t *testing.T) {

@@ -23,6 +23,10 @@ func TestRand(t *testing.T) {
 	t.Log(zarray.Rand(l))
 }
 
+func TestReverse(t *testing.T) {
+	t.Log(zarray.Reverse(l))
+}
+
 func TestFilter(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	nl := zarray.Filter(l, func(index int, item int) bool {

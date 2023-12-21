@@ -321,7 +321,7 @@ func (e *Engine) SetMode(value string) {
 		level = zlog.LogDump
 		e.webMode = debugCode
 	case TestMode:
-		level = zlog.LogInfo
+		level = zlog.LogDebug
 		e.webMode = testCode
 	default:
 		e.Log.Panic("web mode unknown: " + value)

@@ -60,6 +60,11 @@ func templatesDebug(e *Engine, t *template.Template) {
 func routeAddLog(e *Engine, method string, path string, action Handler, middlewareCount int) {
 	if e.IsDebug() {
 		v := zreflect.ValueOf(action)
+		if e.webMode == testCode {
+			e.Log.Debug(routeLog(e.Log, "%s %-40s", method, path))
+			return
+		}
+
 		if v.Kind() == reflect.Func {
 			e.Log.Debug(routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", runtime.FuncForPC(v.Pointer()).Name(), middlewareCount), method, path))
 		} else {

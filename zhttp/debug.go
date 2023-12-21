@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 var (
-	Debug = false
+	Debug = zutil.NewBool(false)
 )
 
 type dumpConn struct {

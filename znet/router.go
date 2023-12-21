@@ -57,7 +57,11 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 	var urlPattern string
 
 	ap := Utils.CompletionPath(relativePath, e.router.prefix)
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, fmt.Sprintf("%%s %%-40s -> %s/", zfile.SafePath(fmt.Sprintf("%s", fs))), "FILE", ap))
+	f := fmt.Sprintf("%%s %%-40s -> %s/", zfile.SafePath(fmt.Sprintf("%s", fs)))
+	if e.webMode == testCode {
+		f = "%s %-40s"
+	}
+	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, f, "FILE", ap))
 	fileServer := http.StripPrefix(ap, http.FileServer(fs))
 	handler := func(c *Context) {
 		for key, value := range c.header {
@@ -95,7 +99,12 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 	handler := func(c *Context) {
 		c.File(filepath)
 	}
-	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, "%s %-40s -> "+zfile.SafePath(filepath)+"/", "FILE", relativePath))
+
+	tip := routeLog(e.Log, "%s %-40s -> "+zfile.SafePath(filepath)+"/", "FILE", relativePath)
+	if e.webMode == testCode {
+		tip = routeLog(e.Log, "%s %-40s", "FILE", relativePath)
+	}
+	log := temporarilyTurnOffTheLog(e, tip)
 	e.GET(relativePath, handler)
 	e.HEAD(relativePath, handler)
 	log()
