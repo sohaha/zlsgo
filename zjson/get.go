@@ -199,6 +199,14 @@ func (r *Res) Slice() ztype.SliceType {
 	return ztype.ToSlice(r.Value())
 }
 
+func (r *Res) SliceString() []string {
+	return r.Slice().String()
+}
+
+func (r *Res) SliceInt() []int {
+	return r.Slice().Int()
+}
+
 func (r *Res) Maps() ztype.Maps {
 	if !r.IsArray() {
 		return ztype.Maps{}

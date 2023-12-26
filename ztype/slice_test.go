@@ -11,6 +11,11 @@ func TestSlice(t *testing.T) {
 	value := "ddd"
 	res := Slice(value)
 	tt.Log(res)
+
+	res = Slice([]interface{}{"1", 2, 3.0})
+	tt.Equal("1", res.First().String())
+	tt.Equal("3", res.Last().String())
+
 	m := []map[string]interface{}{{"h": "ddd"}}
 	res = ToSlice(m)
 	tt.Log(res)

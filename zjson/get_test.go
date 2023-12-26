@@ -112,7 +112,8 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(true, Get(demo, "user").IsObject())
 	tt.EqualExit(true, Get(demo, "user").Exists())
 	tt.EqualExit("暴龙兽", Get(demo, "user").Map().Get("name").String())
-	tt.EqualExit("天使兽", Get(demo, "friends").Maps().Index(0).Get("name").String())
+	tt.EqualExit("天使兽", Get(demo, "friends").Maps().First().Get("name").String())
+	tt.EqualExit(Get(demo, "friends").Maps().First().Get("name").String(), Get(demo, "friends").Maps().Index(0).Get("name").String())
 	tt.EqualExit(true, other.IsArray())
 	tt.EqualExit(Get(demo, "friends.1").String(), Get(demo, "friends").Get("#(name=天女兽)").String())
 	tt.EqualExit(2, Get(demo, "friends.#").Int())
@@ -121,6 +122,8 @@ func TestGet(t *testing.T) {
 	tt.EqualExit("[\"天女兽\"]", Get(demo, "[friends.1.name]").String())
 	tt.EqualExit(false, Valid("{{}"))
 	tt.EqualExit(true, Valid(demo))
+	tt.EqualExit("阿古兽", Get(demo, "children").SliceString()[0])
+	tt.EqualExit(0, Get(demo, "children").SliceInt()[0])
 
 	ForEachLine(demo+demo, func(line *Res) bool {
 		return true

@@ -17,10 +17,18 @@ func (s SliceType) MarshalJSON() ([]byte, error) {
 }
 
 func (s SliceType) Index(i int) Type {
-	if len(s) <= i {
+	if i < 0 || i >= len(s) {
 		return Type{}
 	}
 	return s[i]
+}
+
+func (s SliceType) Last() Type {
+	return s.Index(len(s) - 1)
+}
+
+func (s SliceType) First() Type {
+	return s.Index(0)
 }
 
 func (s SliceType) Value() []interface{} {
@@ -54,6 +62,14 @@ func (s SliceType) Maps() Maps {
 	}
 	return ss
 }
+
+// func (s SliceType) Slice() []SliceType {
+// 	ss := make([]SliceType, 0, len(s))
+// 	for i := range s {
+// 		ss = append(ss, s[i].Slice())
+// 	}
+// 	return ss
+// }
 
 // Deprecated: please use ToSlice
 func Slice(value interface{}) SliceType {
