@@ -126,14 +126,10 @@ func TestPoolCap(t *testing.T) {
 	tt.EqualExit(uint(0), p.Cap())
 
 	newSize := 5
-	go func() {
-		tt.EqualExit(uint(0), p.Cap())
-		time.Sleep(time.Second)
-		p.Continue(newSize)
-		tt.EqualExit(uint(newSize), p.Cap())
-	}()
+	p.Continue(newSize)
+	tt.EqualExit(uint(newSize), p.Cap())
 
-	restarSum := 6
+	restarSum := 7
 	g.Add(restarSum)
 
 	for i := 0; i < restarSum; i++ {
@@ -149,13 +145,13 @@ func TestPoolCap(t *testing.T) {
 		}()
 	}
 	g.Wait()
-	tt.EqualExit(uint(newSize), p.Cap())
+	tt.EqualExit(uint(restarSum), p.Cap())
 
 	p.Continue(1000)
 	tt.EqualExit(uint(maxsize), p.Cap())
 
 	p.Close()
-	p.Continue(1000)
+	tt.EqualExit(uint(0), p.Cap())
 }
 
 func TestPoolPanicFunc(t *testing.T) {
@@ -223,12 +219,13 @@ func TestPoolTimeout(t *testing.T) {
 		}, time.Second/3)
 		t.Log(err)
 		if v > 0 {
-			tt.EqualTrue(err == zpool.ErrWaitTimeout)
+			tt.Equal(err, zpool.ErrWaitTimeout)
 		}
 		if err == zpool.ErrWaitTimeout {
 			t.Log(v)
 		}
 	}
+	p.Wait()
 }
 
 func TestPoolAuto(t *testing.T) {

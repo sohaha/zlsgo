@@ -19,14 +19,15 @@ type (
 
 	DemoSt struct {
 		Date2  time.Time
+		Any    interface{}
+		any    interface{}
 		Child3 *DemoChildSt
 		Remark string `json:"remark"`
 		note   string
-		Any    interface{}
-		any    interface{}
 		Name   string `json:"username"`
-		Slice  [][]string
+		pri    string
 		Hobby  []string
+		Slice  [][]string
 		Child  struct {
 			Title       string `json:"child_user_title"`
 			DemoChild2  Child2 `json:"demo_child_2"`
@@ -37,7 +38,6 @@ type (
 		child4 DemoChildSt
 		Age    uint
 		Lovely bool
-		pri    string
 	}
 	TestSt struct {
 		Name string

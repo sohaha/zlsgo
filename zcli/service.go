@@ -135,21 +135,18 @@ func LaunchServiceRun(name string, description string, fn func(), config ...*dae
 
 // LaunchService Launch Service
 func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIface, error) {
-
 	once.Do(func() {
-		var daemonConfig *daemon.Config
+		daemonConfig := &daemon.Config{
+			Name:        name,
+			Description: description,
+			Options: map[string]interface{}{
+				"UserService": true,
+			},
+		}
 		if len(config) > 0 {
 			daemonConfig = config[0]
 			daemonConfig.Name = name
 			daemonConfig.Description = description
-		} else {
-			daemonConfig = &daemon.Config{
-				Name:        name,
-				Description: description,
-				Options:     map[string]interface{}{
-					// "UserService": true,
-				},
-			}
 		}
 
 		// The file path is redirected to the current execution file path

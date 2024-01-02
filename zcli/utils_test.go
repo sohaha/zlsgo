@@ -17,8 +17,8 @@ type testCmd struct {
 	flag1 *bool
 	flag2 *int
 	flag3 *string
-	run   bool
 	tt    *zls.TestUtil
+	run   bool
 }
 
 func (cmd *testCmd) Flags(sub *Subcommand) {

@@ -59,9 +59,9 @@ func New(size int, max ...int) *WorkPool {
 	}
 	maxIdle := minIdle
 	if len(max) > 0 && max[0] > 0 {
-		max := uint(max[0])
-		if max > maxIdle {
-			maxIdle = max
+		m := uint(max[0])
+		if m > maxIdle {
+			maxIdle = m
 		}
 	}
 
@@ -103,10 +103,10 @@ func (wp *WorkPool) PanicFunc(handler PanicFunc) {
 }
 
 func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) error {
-	wp.activeNum.Add(1)
 	if wp.IsClosed() {
 		return ErrPoolClosed
 	}
+	wp.activeNum.Add(1)
 	wp.mu.Lock()
 	run := func(w *worker) {
 		if fn != nil {
@@ -131,29 +131,22 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 	default:
 		switch {
 		case uint(wp.usedNum.Load()) >= wp.minIdle:
-			wp.mu.Unlock()
-			// todo 超时处理
-			// 需要启动队列功能了
-			select {
-			case <-cxt.Done():
-				wp.mu.Lock()
-				if uint(wp.usedNum.Load()) >= wp.maxIdle {
-					wp.mu.Unlock()
-					return ErrWaitTimeout
-				}
+			if uint(wp.usedNum.Load()) < wp.maxIdle {
 				w := add()
 				run(w)
 				return nil
-				// 尝试扩大容量？
+			}
+			wp.mu.Unlock()
+			select {
+			case <-cxt.Done():
+				wp.activeNum.Sub(1)
+				return ErrWaitTimeout
 			case w := <-wp.queue:
 				if w != nil {
 					run(w)
 				} else {
 					return ErrPoolClosed
 				}
-				// default:
-				// todo 进入队列
-				// return nil
 			}
 		case uint(wp.usedNum.Load()) < wp.minIdle:
 			w := add()

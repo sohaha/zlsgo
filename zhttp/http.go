@@ -524,7 +524,6 @@ func (m *multipartHelper) upload(req *http.Request, upload func(io.Writer, io.Re
 
 func (m *multipartHelper) Upload(req *http.Request) {
 	bodyBuf := zutil.GetBuff(1048576)
-	defer zutil.PutBuff(bodyBuf)
 	bodyWriter := multipart.NewWriter(bodyBuf)
 
 	m.upload(req, nil, bodyWriter)
@@ -532,6 +531,9 @@ func (m *multipartHelper) Upload(req *http.Request) {
 
 	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
 	b := bytes.NewReader(bodyBuf.Bytes())
+
+	zutil.PutBuff(bodyBuf)
+
 	req.Body = ioutil.NopCloser(b)
 	req.ContentLength = int64(b.Len())
 }

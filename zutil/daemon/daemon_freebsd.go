@@ -103,10 +103,7 @@ func (s *freebsdRcdService) Install() error {
 	if v, ok := s.Options[optionKeepAlive]; ok {
 		keepAlive, _ = v.(bool)
 	}
-	load := optionRunAtLoadDefault
-	if v, ok := s.Options[optionRunAtLoad]; ok {
-		load, _ = v.(bool)
-	}
+	load := isServiceRestart(s.Config)
 	sessionCreate := optionSessionCreateDefault
 	if v, ok := s.Options[optionSessionCreate]; ok {
 		sessionCreate, _ = v.(bool)

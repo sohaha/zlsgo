@@ -24,15 +24,15 @@ type (
 	}
 	JsonTime time.Time
 	type2    struct {
-		E  *uint
-		G  map[string]int `z:"gg"`
-		S2 *type1
-		F  []string `json:"fs"`
-		type1
-		S1    type1
-		D     bool
 		Date  time.Time `z:"date_time"`
 		JDate JsonTime  `z:"j_date"`
+		E     *uint
+		G     map[string]int `z:"gg"`
+		S2    *type1
+		F     []string `json:"fs"`
+		type1
+		S1 type1
+		D  bool
 	}
 )
 

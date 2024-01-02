@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/sohaha/zlsgo/zshell"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 func (c *Config) execPath() (path string) {
@@ -76,4 +77,12 @@ func runcmd(commands []string, in *bytes.Reader, out, outErr *bytes.Buffer) erro
 		err = errors.New(errMsg)
 	}
 	return err
+}
+
+func isServiceRestart(c *Config) bool {
+	load := optionRunAtLoadDefault
+	if l, ok := c.Options[optionRunAtLoad]; ok {
+		load = ztype.ToBool(l)
+	}
+	return load
 }

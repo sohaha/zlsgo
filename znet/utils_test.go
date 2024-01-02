@@ -39,10 +39,16 @@ func TestURLMatchAndParse(t *testing.T) {
 	tt.EqualTrue(ok)
 	tt.Equal(1, len(match))
 
+	match, ok = Utils.URLMatchAndParse("/hi/1.1/123", "/:name/:code/:id")
+	t.Log(match)
+	tt.EqualTrue(ok)
+	tt.Equal(3, len(match))
+
 	match, ok = Utils.URLMatchAndParse("/aaa/hi", "/:name/:*")
 	t.Log(match)
 	tt.EqualTrue(ok)
 	tt.Equal(2, len(match))
+
 }
 
 func Test_parsPattern(t *testing.T) {
@@ -57,6 +63,11 @@ func Test_parsPattern(t *testing.T) {
 	tt.Log(p, s)
 	tt.EqualExit("([\\w\\d-]+)", p)
 	tt.EqualExit([]string{"name"}, s)
+
+	p, s = parsePattern([]string{":name", ":id"}, "/")
+	tt.Log(p, s)
+	tt.EqualExit("/([^\\/]+)/([\\d]+)", p)
+	tt.EqualExit([]string{"name", "id"}, s)
 
 	p, s = parsePattern([]string{"{p:[\\w\\d-]+}.pth"}, "")
 	tt.Log(p, s)

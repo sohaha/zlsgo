@@ -12,12 +12,12 @@ import (
 
 type Conver struct {
 	MatchName  func(mapKey, fieldName string) bool
+	ConvHook   func(i reflect.Value, o reflect.Type) (reflect.Value, error)
 	TagName    string
 	ZeroFields bool
 	Squash     bool
 	Deep       bool
 	Merge      bool
-	ConvHook   func(i reflect.Value, o reflect.Type) (reflect.Value, error)
 }
 
 var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}

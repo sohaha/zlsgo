@@ -137,7 +137,6 @@ func (args *Args) CompileString(format string, initialValue ...interface{}) stri
 // Compile compiles builder's format to standard sql and returns associated args
 func (args *Args) Compile(format string, initialValue ...interface{}) (query string, values []interface{}) {
 	buf := GetBuff(256)
-	defer PutBuff(buf)
 	idx := strings.IndexRune(format, '$')
 	offset := 0
 	values = initialValue
@@ -174,6 +173,8 @@ func (args *Args) Compile(format string, initialValue ...interface{}) (query str
 	}
 
 	query = buf.String()
+
+	PutBuff(buf)
 
 	if len(args.sqlNamedArgs) > 0 {
 		ints := make([]int, 0, len(args.sqlNamedArgs))

@@ -64,13 +64,13 @@ func requestLog(c *Context) {
 		var status string
 		end := time.Now()
 		statusCode := zutil.GetBuff()
-		defer zutil.PutBuff(statusCode)
 		latency := end.Sub(c.startTime)
 		code := c.prevData.Code.Load()
 		statusCode.WriteString(" ")
 		statusCode.WriteString(strconv.FormatInt(int64(code), 10))
 		statusCode.WriteString(" ")
 		s := statusCode.String()
+		zutil.PutBuff(statusCode)
 		switch {
 		case code >= 200 && code <= 299:
 			status = c.Log.ColorBackgroundWrap(zlog.ColorBlack, zlog.ColorGreen, s)

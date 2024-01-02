@@ -2,18 +2,16 @@ package daemon
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/sohaha/zlsgo/zshell"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
-
-	"github.com/sohaha/zlsgo/zshell"
 )
 
 type (
@@ -71,6 +69,7 @@ func (w *windowsService) setError(err error) {
 	defer w.errSync.Unlock()
 	w.stopStartErr = err
 }
+
 func (w *windowsService) getError() error {
 	w.errSync.Lock()
 	defer w.errSync.Unlock()
@@ -140,11 +139,8 @@ func (w *windowsService) Install() error {
 		_ = s.Delete()
 		return fmt.Errorf("installAsEventCreate() failed: %s", err)
 	}
-	load := optionRunAtLoadDefault
-	if l, ok := w.Options[optionRunAtLoad]; ok {
-		load, _ = l.(bool)
-	}
-	if load {
+
+	if isServiceRestart(w.Config) {
 		_ = s.SetRecoveryActions([]mgr.RecoveryAction{
 			{
 				Type:  mgr.ServiceRestart,
@@ -162,27 +158,25 @@ func (w *windowsService) Uninstall() error {
 		return err
 	}
 	defer m.Disconnect()
+
 	s, err := m.OpenService(w.Name)
 	if err != nil {
 		return fmt.Errorf("service %s is not installed", w.Name)
 	}
 	defer s.Close()
-	_ = s.SetRecoveryActions([]mgr.RecoveryAction{
-		{
-			Type:  mgr.NoAction,
-			Delay: 0,
-		},
-	}, 0)
-	_ = zshell.BgRun("taskkill /F /pid " + strconv.Itoa(os.Getpid()))
+
 	_ = w.Stop()
-	if err = s.Delete(); err != nil {
+
+	err = s.Delete()
+	if err != nil {
 		return err
 	}
+
 	err = eventlog.Remove(w.Name)
 	if err != nil {
 		return fmt.Errorf("removeEventLogSource() failed: %s", err)
 	}
-	// log.Warn("after uninstalling, you need to restart the system to take effect")
+
 	return nil
 }
 
@@ -220,6 +214,16 @@ func (w *windowsService) Start() error {
 		return err
 	}
 	defer s.Close()
+
+	if isServiceRestart(w.Config) {
+		_ = s.SetRecoveryActions([]mgr.RecoveryAction{
+			{
+				Type:  mgr.ServiceRestart,
+				Delay: 0,
+			},
+		}, 0)
+	}
+
 	return s.Start()
 }
 
@@ -229,30 +233,31 @@ func (w *windowsService) Stop() error {
 		return err
 	}
 	defer m.Disconnect()
+
 	s, err := m.OpenService(w.Name)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
+
+	if isServiceRestart(w.Config) {
+		_ = s.SetRecoveryActions([]mgr.RecoveryAction{
+			{
+				Type:  mgr.NoAction,
+				Delay: 0,
+			},
+		}, 0)
+	}
 
 	return w.stopWait(s)
 }
 
 func (w *windowsService) Restart() error {
-	m, err := connect()
+	err := w.Stop()
 	if err != nil {
 		return err
 	}
-	defer m.Disconnect()
-	s, err := m.OpenService(w.Name)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	_ = w.stopWait(s)
-
-	return s.Start()
+	return w.Start()
 }
 
 func (w *windowsService) Status() string {
@@ -275,20 +280,35 @@ func (w *windowsService) Status() string {
 		return "Running"
 	case svc.StopPending:
 		return "StopPending"
+	case svc.Stopped:
+		return "Stop"
 	}
 	return strconv.Itoa(int(q.State))
+}
+
+func (w *windowsService) forceKeep(processId uint32) error {
+	ss := "taskkill /F /pid " + strconv.Itoa(int(processId))
+	_, _, _, err := zshell.Run(ss)
+	return err
 }
 
 func (w *windowsService) stopWait(s *mgr.Service) error {
 	status, err := s.Control(svc.Stop)
 	if err != nil {
-		return err
+		if !strings.Contains(err.Error(), "not valid") {
+			return err
+		}
+		status, err = s.Query()
+		if err != nil {
+			return err
+		}
+		_ = w.forceKeep(status.ProcessId)
 	}
-	timeDuration := time.Millisecond * 50
+
+	timeDuration := time.Millisecond * 100
 	timeout := time.After(getStopTimeout() + (timeDuration * 2))
 	tick := time.NewTicker(timeDuration)
 	defer tick.Stop()
-
 	for status.State != svc.Stopped {
 		select {
 		case <-tick.C:
@@ -297,6 +317,7 @@ func (w *windowsService) stopWait(s *mgr.Service) error {
 				return err
 			}
 		case <-timeout:
+			_ = w.forceKeep(status.ProcessId)
 			break
 		}
 	}

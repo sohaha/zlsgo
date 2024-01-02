@@ -27,7 +27,7 @@ var Utils = utils{
 }
 
 const (
-	defaultPattern = `[^\/.]+`
+	defaultPattern = `[^\/]+`
 	idPattern      = `[\d]+`
 	idKey          = `id`
 	allPattern     = `.*`
