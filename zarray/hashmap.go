@@ -68,7 +68,7 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 		numItems: zutil.NewUintptr(0),
 	}
 	m.numItems.Store(0)
-	if len(size) > 0 && size[0] != 0{
+	if len(size) > 0 && size[0] != 0 {
 		m.allocate(size[0])
 	} else {
 		m.allocate(defaultSize)
@@ -325,7 +325,7 @@ func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
 }
 
-func (m *Maper[K, V]) Clear()  {
+func (m *Maper[K, V]) Clear() {
 	index := make([]*element[K, V], defaultSize)
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&index))
 
@@ -333,11 +333,27 @@ func (m *Maper[K, V]) Clear()  {
 		keyshifts: strconv.IntSize - log2(defaultSize),
 		data:      unsafe.Pointer(header.Data),
 		index:     index,
+		count:     zutil.NewUintptr(0),
 	}
 
 	m.listHead.nextPtr.Store(nil)
 	m.metadata.Store(newdata)
 	m.numItems.Store(0)
+}
+
+// Keys returns the keys of the map.
+func (m *Maper[K, V]) Keys() (keys []K) {
+	keys = make([]K, m.Len())
+	var (
+		idx  = 0
+		item = m.listHead.next()
+	)
+	for item != nil {
+		keys[idx] = item.key
+		idx++
+		item = item.next()
+	}
+	return
 }
 
 // MarshalJSON convert the `Maper` object into a JSON-encoded byte slice.

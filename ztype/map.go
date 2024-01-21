@@ -22,6 +22,10 @@ func (m Map) DeepCopy() Map {
 	for k := range m {
 		switch v := m[k].(type) {
 		case Map:
+			if v == nil {
+				newMap[k] = v
+				continue
+			}
 			newMap[k] = v.DeepCopy()
 		case map[string]interface{}:
 			newMap[k] = Map(v).DeepCopy()

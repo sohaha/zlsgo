@@ -115,6 +115,7 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 - [x] HTML Parse
 - [x] Injection
 - [x] Server Sent Event
+- [x] High-performance HashMap
 - [ ] [Database](https://github.com/sohaha/zdb)
 - [ ] ...(Read more [documentation](https://docs.73zls.com/zls-go/#))
 

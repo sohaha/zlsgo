@@ -71,6 +71,11 @@ func TestHashMap(t *testing.T) {
 		return true
 	})
 
+	t.Log(m.Keys())
+	m.Clear()
+	t.Log(m.Keys())
+	m.Set(9, "yes")
+	t.Log(m.Keys())
 }
 
 func TestHashMapOverwrite(t *testing.T) {

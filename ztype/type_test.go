@@ -70,7 +70,8 @@ func TestNewMapKeys(t *testing.T) {
 	m := zjson.Parse(json).Map()
 
 	var arr ztype.Maps
-	_ = zjson.Unmarshal(`[`+json+`]`, &arr)
+	err := zjson.Unmarshal(`[`+json+`]`, &arr)
+	tt.NoError(err)
 
 	tt.EqualTrue(!arr.IsEmpty())
 	tt.Equal(1, arr.Len())
