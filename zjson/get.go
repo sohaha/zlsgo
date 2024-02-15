@@ -66,7 +66,7 @@ func (r *Res) Raw() string {
 }
 
 func (r *Res) Bytes() []byte {
-	return zstring.String2Bytes(r.raw)
+	return zstring.String2Bytes(r.String())
 }
 
 func (r *Res) String() string {

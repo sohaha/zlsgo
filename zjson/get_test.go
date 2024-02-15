@@ -7,6 +7,7 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 type Demo struct {
@@ -74,6 +75,8 @@ func TestGet(t *testing.T) {
 	other := Get(demo, "other")
 	t.Log(other.Array(), other.Raw())
 	tt.EqualExit("暴龙兽", name)
+	tt.EqualExit(name, string(user.Get("name").Bytes()))
+	tt.EqualExit("-999", Get(demo, "ii").String())
 	tt.EqualExit(666, Get(demo, "other.1").Int())
 	tt.Log(Get(demo, "other.1").typ.String())
 	tt.EqualExit(0, Get(demo, "other.2").Int())
@@ -279,6 +282,15 @@ func TestModifiers(t *testing.T) {
 	t.Log(Get(demo, "friends|@reverse").String())
 	t.Log(Get(demo, "friends|@ugly").String())
 	t.Log(Get(demo, "friends|@format").String())
+}
+
+func TestType(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.EqualExit(float64(1), Get(`{"a":true}`, "a").Float())
+	tt.EqualExit(float64(0), Get(`{"a":false}`, "a").Float())
+	tt.EqualExit(ztype.Map{}, Get(`{}`, "a").Map())
+	tt.EqualExit(ztype.Maps{}, Get(`{}`, "a").Maps())
+	tt.EqualExit([]*Res{}, Get(`{}`, "a").Array())
 }
 
 func BenchmarkGet(b *testing.B) {
