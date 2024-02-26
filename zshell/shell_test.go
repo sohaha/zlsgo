@@ -100,3 +100,20 @@ func TestCallbackRun(t *testing.T) {
 	tt.NoError(err)
 	tt.Log("code", <-code)
 }
+
+func Test_fixCommand(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	e := []string{"ping", "www.npmjs.com"}
+	r := fixCommand("ping www.npmjs.com")
+	tt.Equal(e, r)
+
+	e = []string{"ls", "-a", "/Applications/Google Chrome.app"}
+	r = fixCommand("ls -a /Applications/Google\\ Chrome.app")
+	tt.Equal(e, r)
+
+	e = []string{"networksetup", "-setwebproxystate", "USB 10/100/1000 LAN", "on"}
+	r = fixCommand(`networksetup -setwebproxystate "USB 10/100/1000 LAN" on`)
+	tt.Equal(e, r)
+
+}

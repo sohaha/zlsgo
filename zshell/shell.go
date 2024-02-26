@@ -305,16 +305,33 @@ func CallbackRunContext(ctx context.Context, command string, callback func(out s
 }
 
 func fixCommand(command string) (runCommand []string) {
-	tmp := ""
-	for _, v := range strings.Split(command, " ") {
-		if strings.HasSuffix(v, "\\") {
-			tmp += v[:len(v)-1] + " "
-		} else {
-			if tmp != "" {
-				v = tmp + v
-				tmp = ""
+	var current []rune
+	quoted := false
+	quoteType := '\000'
+	escaped := false
+	for i, c := range command {
+		if escaped {
+			current = append(current, c)
+			escaped = false
+		} else if c == '\\' {
+			escaped = true
+		} else if c == '"' || c == '\'' {
+			if quoted && c == quoteType {
+				quoted = false
+				quoteType = '\000'
+			} else if !quoted {
+				quoted = true
+				quoteType = c
 			}
-			runCommand = append(runCommand, v)
+		} else if c == ' ' && !quoted {
+			runCommand = append(runCommand, string(current))
+			current = nil
+		} else {
+			current = append(current, c)
+		}
+
+		if i == len(command)-1 {
+			runCommand = append(runCommand, string(current))
 		}
 	}
 	return
