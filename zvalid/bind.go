@@ -25,6 +25,9 @@ func (v Engine) Silent() Engine {
 // Default if a filtering error occurs, the default value is assigned to the variable
 func (v Engine) Default(value interface{}) Engine {
 	return pushQueue(&v, func(v *Engine) *Engine {
+		if v.value == "" {
+			v.err = setError(v, "未设置验证值")
+		}
 		v.defaultValue = value
 		return v
 	}, true)
