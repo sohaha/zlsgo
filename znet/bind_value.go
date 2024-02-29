@@ -30,9 +30,6 @@ func (c *Context) BindJSON(obj interface{}) error {
 
 func (c *Context) BindQuery(obj interface{}) (err error) {
 	q := c.GetAllQueryMaps()
-	if err != nil {
-		return err
-	}
 	typ := zreflect.TypeOf(obj)
 	m := make(map[string]interface{}, len(q))
 	err = zreflect.ForEach(typ, func(parent []string, index int, tag string, field reflect.StructField) error {

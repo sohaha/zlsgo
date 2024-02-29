@@ -45,8 +45,8 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags []string) (err error) {
 
 var parseDone sync.Once
 
-// Parse Parse
-func Parse(arg ...[]string) {
+// Parse Parse command line arguments
+func Parse(arg ...[]string) (hasflag bool) {
 	parseDone.Do(func() {
 		if Version != "" {
 			flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()
@@ -55,6 +55,7 @@ func Parse(arg ...[]string) {
 			flagDetach = SetVar("detach", GetLangText("detach")).short("D").Bool()
 		}
 	})
+
 	var argsData []string
 	if len(arg) == 1 {
 		argsData = arg[0]
@@ -82,7 +83,10 @@ func Parse(arg ...[]string) {
 			}
 		}
 	}
-	if len(argsData) > 0 && argsData[0][0] != '-' {
+
+	hasflag = len(argsData) > 0
+
+	if hasflag && argsData[0][0] != '-' {
 		parseSubcommand(argsData)
 		if matchingCmd != nil {
 			matchingCmd.command.Run(args)
@@ -103,6 +107,7 @@ func Parse(arg ...[]string) {
 		osExit(0)
 		return
 	}
+	return
 }
 
 func parseCommand(outHelp bool) {

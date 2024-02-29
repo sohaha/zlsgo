@@ -67,8 +67,8 @@ func (c *JobTable) ForceRun() (nextTime time.Duration) {
 	return nextTime
 }
 
-func (c *JobTable) Run() {
-	go func() {
+func (c *JobTable) Run(block ...bool) {
+	run := func() {
 		t := time.NewTimer(time.Second)
 		for {
 			c.RLock()
@@ -81,7 +81,13 @@ func (c *JobTable) Run() {
 			t.Reset(NextTime)
 			<-t.C
 		}
-	}()
+	}
+	if len(block) > 0 && block[0] {
+		run()
+		return
+	}
+
+	go run()
 }
 
 func (c *JobTable) Stop() {
