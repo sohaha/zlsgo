@@ -89,7 +89,7 @@ func OpTextWrap(op Op, text string) string {
 	if !isSupportColor() {
 		return text
 	}
-	return fmt.Sprintf("\x1b[%dm%s", op, text)
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", op, text)
 }
 
 // ColorBackgroundWrap ColorBackgroundWrap
