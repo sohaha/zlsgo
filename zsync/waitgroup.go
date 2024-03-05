@@ -12,18 +12,26 @@ type WaitGroup struct {
 	mu  sync.RWMutex
 }
 
+func (h *WaitGroup) Add(delta int) {
+	h.wg.Add(delta)
+}
+
+func (h *WaitGroup) Done() {
+	h.wg.Done()
+}
+
 func (h *WaitGroup) Go(f func()) {
-	h.wg.Add(1)
+	h.Add(1)
 	go func() {
-		defer h.wg.Done()
+		defer h.Done()
 		f()
 	}()
 }
 
 func (h *WaitGroup) GoTry(f func()) {
-	h.wg.Add(1)
+	h.Add(1)
 	go func() {
-		defer h.wg.Done()
+		defer h.Done()
 		err := zerror.TryCatch(func() error {
 			f()
 			return nil

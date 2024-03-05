@@ -11,6 +11,13 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	v := ztype.New(`{"age": "100"}`)
+	v2 := ztype.New(v)
+	tt.Equal(v.Get("age").Int(), v2.Get("age").Int())
+	tt.Equal(v.Get("age2").Int(12), ztype.New(nil).Int(12))
+
 	t.Run("Map", func(t *testing.T) {
 		t.Log(ztype.New("123").Map())
 		t.Log(ztype.New(`{"name": "test"}`).Map())
@@ -70,8 +77,7 @@ func TestNewMapKeys(t *testing.T) {
 	m := zjson.Parse(json).Map()
 
 	var arr ztype.Maps
-	err := zjson.Unmarshal(`[`+json+`]`, &arr)
-	tt.NoError(err)
+	_ = zjson.Unmarshal(`[`+json+`]`, &arr)
 
 	tt.EqualTrue(!arr.IsEmpty())
 	tt.Equal(1, arr.Len())

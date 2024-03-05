@@ -11,7 +11,7 @@ type Type struct {
 func New(v interface{}) Type {
 	switch val := v.(type) {
 	case Type:
-		return Type{v: val}
+		return val
 	default:
 		return Type{v: v}
 	}

@@ -147,7 +147,7 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 			t = i + 1
 		}
 
-		if exist == false {
+		if !exist {
 			break
 		}
 	}
