@@ -4,6 +4,7 @@
 package zshell
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -34,4 +35,12 @@ func RunNewProcess(filemd5 string) (pid int, err error) {
 		}
 	}
 	return syscall.ForkExec(file, args, execSpec)
+}
+
+func RunBash(ctx context.Context, command string) (code int, outStr, errStr string, err error) {
+	return ExecCommand(ctx, []string{
+		"bash",
+		"-c",
+		command,
+	}, nil, nil, nil)
 }

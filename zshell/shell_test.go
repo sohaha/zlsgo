@@ -117,3 +117,11 @@ func Test_fixCommand(t *testing.T) {
 	tt.Equal(e, r)
 
 }
+
+func TestRunBash(t *testing.T) {
+	if zutil.IsWin() {
+		t.Log(RunBash(context.Background(), "dir"))
+	} else {
+		t.Log(RunBash(context.Background(), "ls && ls"))
+	}
+}

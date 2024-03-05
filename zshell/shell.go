@@ -237,22 +237,18 @@ type Options struct {
 	Env []string
 }
 
-func CallbackRunContext(ctx context.Context, command string, callback func(out string, isBasic bool), opt ...func(option *Options)) (<-chan int, func(string), error) {
+func CallbackRunContext(ctx context.Context, command string, callback func(str string, isStdout bool), opt ...func(option *Options)) (<-chan int, func(string), error) {
 	var (
-		cmd    *exec.Cmd
-		err    error
-		cancel context.CancelFunc
-		code   = make(chan int, 1)
+		cmd  *exec.Cmd
+		err  error
+		code = make(chan int, 1)
 	)
 
-	ctx, cancel = context.WithCancel(ctx)
-
 	var in func(string)
-	read := func(stdout io.ReadCloser, isBasic bool) {
-		defer cancel()
+	read := func(stdout io.ReadCloser, isStdout bool) {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			callback(scanner.Text(), isBasic)
+			callback(scanner.Text(), isStdout)
 		}
 	}
 
