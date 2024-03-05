@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -43,11 +44,17 @@ func (darwinSystem) New(i Iface, c *Config) (s ServiceIface, err error) {
 	if s, ok := c.Options[optionUserService]; ok {
 		userService, _ = s.(bool)
 	}
+
+	if c.Context == nil {
+		c.Context = context.Background()
+	}
+
 	s = &darwinLaunchdService{
 		i:           i,
 		Config:      c,
 		userService: userService,
 	}
+
 	if !userService {
 		err = isSudo()
 	}
@@ -221,7 +228,10 @@ func (s *darwinLaunchdService) Run() error {
 		return err
 	}
 	runWait := func() {
-		<-SingleKillSignal()
+		select {
+		case <-SingleKillSignal():
+		case <-s.Config.Context.Done():
+		}
 	}
 	if v, ok := s.Options[optionRunWait]; ok {
 		runWait, _ = v.(func())

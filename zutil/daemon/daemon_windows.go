@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -50,10 +51,15 @@ func (windowsSystem) Interactive() bool {
 }
 
 func (windowsSystem) New(i Iface, c *Config) (ServiceIface, error) {
+	if c.Context == nil {
+		c.Context = context.Background()
+	}
+
 	ws := &windowsService{
 		i:      i,
 		Config: c,
 	}
+
 	return ws, nil
 }
 
@@ -198,7 +204,10 @@ func (w *windowsService) Run() error {
 		return err
 	}
 
-	<-SingleKillSignal()
+	select {
+	case <-SingleKillSignal():
+	case <-w.Config.Context.Done():
+	}
 
 	return w.i.Stop(w)
 }

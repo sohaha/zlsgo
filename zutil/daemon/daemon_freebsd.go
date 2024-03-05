@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,12 +47,16 @@ func (freebsdSystem) New(i Iface, c *Config) (ServiceIface, error) {
 	if s, ok := c.Options[optionUserService]; ok {
 		userService, _ = s.(bool)
 	}
+
+	if c.Context == nil {
+		c.Context = context.Background()
+	}
+
 	s := &freebsdRcdService{
 		i:           i,
 		Config:      c,
 		userService: userService,
 	}
-
 	return s, nil
 }
 
@@ -213,7 +218,10 @@ func (s *freebsdRcdService) Run() error {
 		return err
 	}
 	runWait := func() {
-		<-SingleKillSignal()
+		select {
+		case <-SingleKillSignal():
+		case <-s.Config.Context.Done():
+		}
 	}
 	if v, ok := s.Options[optionRunWait]; ok {
 		runWait, _ = v.(func())

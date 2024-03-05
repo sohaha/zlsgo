@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -81,6 +82,10 @@ func isSystemd() bool {
 }
 
 func newSystemdService(i Iface, c *Config) (ServiceIface, error) {
+	if c.Context == nil {
+		c.Context = context.Background()
+	}
+
 	s := &systemd{
 		i:      i,
 		Config: c,
@@ -183,7 +188,10 @@ func (s *systemd) Run() (err error) {
 	}
 
 	runWait := func() {
-		<-SingleKillSignal()
+		select {
+		case <-SingleKillSignal():
+		case <-s.Config.Context.Done():
+		}
 	}
 	if v, ok := s.Options[optionRunWait]; ok {
 		runWait, _ = v.(func())

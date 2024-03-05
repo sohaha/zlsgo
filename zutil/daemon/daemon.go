@@ -2,6 +2,7 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 )
 
@@ -50,6 +51,7 @@ type (
 		WorkingDir  string
 		RootDir     string
 		Arguments   []string
+		Context     context.Context
 	}
 )
 
