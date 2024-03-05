@@ -375,7 +375,7 @@ func (e *Engine) StartUp() []*serverMap {
 			if e.AllowQuerySemicolons {
 				e.Log.SetIgnoreLog(errURLQuerySemicolon)
 			}
-			var err error
+			errChan := make(chan error, 1)
 			isTls := cfg.Cert != "" || cfg.Config != nil
 			addr := getAddr(cfg.addr)
 			hostname := getHostname(addr, isTls)
@@ -390,15 +390,21 @@ func (e *Engine) StartUp() []*serverMap {
 
 			srvMap.Store(addr, &serverMap{e, srv})
 
-			time.AfterFunc(time.Millisecond*100, func() {
-				wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
-				wrapMode := ""
-				if e.webMode > 0 {
-					wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
-				}
-				e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
-			})
 			wg.Done()
+
+			go func() {
+				select {
+				case <-errChan:
+				default:
+					wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
+					wrapMode := ""
+					if e.webMode > 0 {
+						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
+					}
+					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
+				}
+			}()
+
 			if isTls {
 				if cfg.Config != nil {
 					srv.TLSConfig = cfg.Config
@@ -420,15 +426,18 @@ func (e *Engine) StartUp() []*serverMap {
 						e.Log.Errorf("HTTP Listen: %s\n", err)
 					}(e)
 				}
-				err = srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
+				errChan <- srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
 			} else {
-				err = srv.ListenAndServe()
+				errChan <- srv.ListenAndServe()
 			}
+
+			err := <-errChan
 			if err != nil && err != http.ErrServerClosed {
 				e.Log.Fatalf("Listen: %s\n", err)
 			} else if err != http.ErrServerClosed {
 				e.Log.Info(err)
 			}
+
 		}(cfg, e)
 	}
 
@@ -489,6 +498,10 @@ var (
 
 // Run serve
 func Run(cb ...func(name, addr string)) {
+	RunContext(context.Background(), cb...)
+}
+
+func RunContext(ctx context.Context, cb ...func(name, addr string)) {
 	for n, e := range zservers {
 		ss := e.StartUp()
 		wg.Add(len(ss))
@@ -501,7 +514,12 @@ func Run(cb ...func(name, addr string)) {
 		}
 	}
 
-	shutdown(<-daemon.SingleKillSignal())
+	select {
+	case <-ctx.Done():
+		shutdown(true)
+	case signal := <-daemon.SingleKillSignal():
+		shutdown(signal)
+	}
 }
 
 func runNewProcess() {
