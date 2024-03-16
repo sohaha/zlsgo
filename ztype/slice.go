@@ -2,6 +2,7 @@ package ztype
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/sohaha/zlsgo/zreflect"
 )
@@ -72,8 +73,8 @@ func (s SliceType) Maps() Maps {
 // }
 
 // Deprecated: please use ToSlice
-func Slice(value interface{}) SliceType {
-	return ToSlice(value)
+func Slice(value interface{}, noConv ...bool) SliceType {
+	return ToSlice(value, noConv...)
 }
 
 // SliceStrToAny  []string to []interface{}
@@ -85,10 +86,10 @@ func SliceStrToAny(slice []string) []interface{} {
 	return ss
 }
 
-func ToSlice(value interface{}) SliceType {
-	s := SliceType{}
+func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
+	s = SliceType{}
 	if value == nil {
-		return s
+		return
 	}
 
 	switch val := value.(type) {
@@ -102,19 +103,38 @@ func ToSlice(value interface{}) SliceType {
 		for i := range val {
 			s = append(s, New(val[i]))
 		}
-	case string:
-		if val != "" {
-			s = append(s, New(val))
+	case []int:
+		s = make(SliceType, 0, len(val))
+		for i := range val {
+			s = append(s, New(val[i]))
+		}
+	case []int64:
+		s = make(SliceType, 0, len(val))
+		for i := range val {
+			s = append(s, New(val[i]))
 		}
 	default:
 		var nval []interface{}
-		if conv.to("", value, zreflect.ValueOf(&nval)) == nil {
-			s = make(SliceType, 0, len(nval))
-			for i := range nval {
-				s = append(s, New(nval[i]))
+		vof := zreflect.ValueOf(&nval)
+		to := func() {
+			if conv.to("", value, vof) == nil {
+				s = make(SliceType, 0, len(nval))
+				for i := range nval {
+					s = append(s, New(nval[i]))
+				}
 			}
+		}
+
+		switch vof.Type().Kind() {
+		case reflect.Slice:
+			to()
+		default:
+			if len(noConv) > 0 && noConv[0] {
+				return
+			}
+			to()
 		}
 	}
 
-	return s
+	return
 }

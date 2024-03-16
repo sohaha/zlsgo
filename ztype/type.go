@@ -138,23 +138,23 @@ func (t Type) Maps() Maps {
 	return t.Slice().Maps()
 }
 
-func (t Type) Slice() SliceType {
+func (t Type) Slice(noConv ...bool) SliceType {
 	if t.v == nil {
 		return SliceType{}
 	}
-	return ToSlice(t.v)
+	return ToSlice(t.v, noConv...)
 }
 
-func (t Type) SliceValue() []interface{} {
-	return t.Slice().Value()
+func (t Type) SliceValue(noConv ...bool) []interface{} {
+	return t.Slice(noConv...).Value()
 }
 
-func (t Type) SliceString() []string {
-	return t.Slice().String()
+func (t Type) SliceString(noConv ...bool) []string {
+	return t.Slice(noConv...).String()
 }
 
-func (t Type) SliceInt() []int {
-	return t.Slice().Int()
+func (t Type) SliceInt(noConv ...bool) []int {
+	return t.Slice(noConv...).Int()
 }
 
 func (t Type) Exists() bool {
