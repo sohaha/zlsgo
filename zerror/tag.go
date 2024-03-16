@@ -22,6 +22,12 @@ const (
 func (t TagKind) Wrap(err error, text string) error {
 	return With(err, text, WrapTag(t))
 }
+func (t TagKind) Text(text string) error {
+	return &withTag{
+		wrapErr: &Error{errText: &text},
+		tag:     t,
+	}
+}
 
 type withTag struct {
 	wrapErr error
