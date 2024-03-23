@@ -72,10 +72,12 @@ var (
 )
 
 func (c *Context) renderProcessing(code int32, r render) {
-	if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
-		return
+	// if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
+	// 	return
+	// }
+	if code != 0 {
+		c.prevData.Code.Store(code)
 	}
-	c.prevData.Code.Store(code)
 	c.mu.Lock()
 	c.render = r
 	c.mu.Unlock()
@@ -252,6 +254,10 @@ func (c *Context) Abort(code ...int32) {
 	if len(code) > 0 {
 		c.prevData.Code.Store(code[0])
 	}
+}
+
+func (c *Context) IsAbort() bool {
+	return c.stopHandle.Load()
 }
 
 // Redirect Redirect

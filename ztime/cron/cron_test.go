@@ -71,7 +71,7 @@ func TestRun(tt *testing.T) {
 		t.Equal(true, time.Now().UnixNano() > now.UnixNano())
 		g.Done()
 	})
-	cron.Run()
+	cron.Run(false)
 	g.Wait()
 	cron.Stop()
 	ii := atomic.LoadInt64(&i)

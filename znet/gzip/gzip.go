@@ -27,7 +27,6 @@ func New(conf Config) znet.HandlerFunc {
 		} else {
 			c.Next()
 			p := c.PrevContent()
-
 			if len(p.Content) < conf.MinContentLength {
 				return
 			}

@@ -417,6 +417,10 @@ func TestPost(tt *testing.T) {
 
 	w = newRequest(r, "POST", "/Post2", "/Post2", func(c *Context) {
 		c.String(200, "ok")
+	}, func(c *Context) {
+		T.Equal(false, c.IsAbort())
+		c.Next()
+		T.Equal(true, c.IsAbort())
 	},
 		func(c *Context) {
 			c.Abort(222)

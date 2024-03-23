@@ -9,6 +9,13 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+// CopySlice copy a slice
+func CopySlice[T any](l []T) []T {
+	nl := make([]T, len(l))
+	copy(nl, l)
+	return nl
+}
+
 // Rand A random eents
 func Rand[T any](collection []T) T {
 	l := len(collection)
@@ -16,6 +23,7 @@ func Rand[T any](collection []T) T {
 		var zero T
 		return zero
 	}
+
 	i := zstring.RandInt(0, l-1)
 	return collection[i]
 }
@@ -33,10 +41,8 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
 
 // Shuffle creates a slice of shuffled values
 func Shuffle[T any](collection []T) []T {
-	l := len(collection)
-	n := make([]T, l)
-	copy(n, collection)
-	rand.Shuffle(l, func(i, j int) {
+	n := CopySlice(collection)
+	rand.Shuffle(len(n), func(i, j int) {
 		n[i], n[j] = n[j], n[i]
 	})
 
@@ -45,9 +51,8 @@ func Shuffle[T any](collection []T) []T {
 
 // Reverse creates a slice of reversed values
 func Reverse[T any](collection []T) []T {
-	l := len(collection)
-	n := make([]T, l)
-	copy(n, collection)
+	n := CopySlice(collection)
+	l := len(n)
 	for i := 0; i < l/2; i++ {
 		n[i], n[l-i-1] = n[l-i-1], n[i]
 	}
@@ -57,15 +62,18 @@ func Reverse[T any](collection []T) []T {
 
 // Filter iterates over eents of collection
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
-	l := len(slice)
-	res := make([]T, 0, l)
-	for i := 0; i < l; i++ {
-		v := slice[i]
-		if predicate(i, v) {
-			res = append(res, v)
+	slice = CopySlice(slice)
+
+	j := 0
+	for i := range slice {
+		if !predicate(i, slice[i]) {
+			continue
 		}
+		slice[j] = slice[i]
+		j++
 	}
-	return res
+
+	return slice[:j:j]
 }
 
 // Contains returns true if an eent is present in a collection
@@ -93,19 +101,15 @@ func Find[T any](collection []T, predicate func(index int, item T) bool) (res T,
 
 // Unique returns a duplicate-free version of an array
 func Unique[T comparable](collection []T) []T {
-	res := make([]T, 0, len(collection))
 	repeat := make(map[T]struct{}, len(collection))
 
-	for _, item := range collection {
+	return Filter(collection, func(_ int, item T) bool {
 		if _, ok := repeat[item]; ok {
-			continue
+			return false
 		}
-
 		repeat[item] = struct{}{}
-		res = append(res, item)
-	}
-
-	return res
+		return true
+	})
 }
 
 func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
