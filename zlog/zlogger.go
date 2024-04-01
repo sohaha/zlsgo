@@ -77,13 +77,13 @@ var LevelColous = []Color{
 type (
 	// Logger logger struct
 	Logger struct {
-		out           io.Writer
-		file          *zfile.MemoryFile
-		prefix        string
-		fileDir       string
-		fileName      string
-		ignoreLogs    []string
-		buf           bytes.Buffer
+		out        io.Writer
+		file       *zfile.MemoryFile
+		prefix     string
+		fileDir    string
+		fileName   string
+		ignoreLogs []string
+		// buf           bytes.Buffer
 		calldDepth    int
 		level         int
 		flag          int
@@ -203,8 +203,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 }
 
 // outPut Output log
-func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
-	prefixText ...string) error {
+func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), prefixText ...string) error {
 
 	if log.ignoreLogs != nil && len(s) > 0 {
 		p := s
@@ -218,43 +217,44 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 		}
 	}
 
-	log.mu.Lock()
-	var after func()
-	if fn != nil {
-		after = fn()
-	}
-	defer func() {
-		if after != nil {
-			after()
-		}
-		log.mu.Unlock()
-	}()
-
 	if log.out == ioutil.Discard {
 		return nil
 	}
+
+	var after func()
+	if fn != nil {
+		log.mu.Lock()
+		after = fn()
+	}
+
+	defer func() {
+		if after != nil {
+			after()
+			log.mu.Unlock()
+		}
+	}()
 
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
 
-	log.buf.Reset()
-
+	buf := zutil.GetBuff(len(s) + 34)
 	now := ztime.Time()
 	if level != LogNot {
 		file, line := log.fileLocation(level)
-		log.formatHeader(&log.buf, now, file, line, level)
+		log.formatHeader(buf, now, file, line, level)
 	}
 
 	if log.prefix != "" {
-		log.buf.WriteString(log.prefix)
+		buf.WriteString(log.prefix)
 	}
 
-	log.buf.WriteString(s)
+	buf.WriteString(s)
 	if isWrap && len(s) > 0 && s[len(s)-1] != '\n' {
-		log.buf.WriteByte('\n')
+		buf.WriteByte('\n')
 	}
-	_, err := log.out.Write(log.buf.Bytes())
+	_, err := log.out.Write(buf.Bytes())
+	zutil.PutBuff(buf)
 	return err
 }
 
