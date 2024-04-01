@@ -78,7 +78,7 @@ func (log *Logger) setLogfile(filepath string, archive bool) {
 	log.fileDir = fileDir
 	log.fileName = fileName
 	if log.fileAndStdout {
-		log.out = io.MultiWriter(log.file, os.Stdout)
+		log.out = io.MultiWriter(log.file, log.out)
 	} else {
 		log.out = fileObj
 	}

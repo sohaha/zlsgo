@@ -88,6 +88,7 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 	}
 	e.GET(urlPattern, handler, moreHandler...)
 	e.HEAD(urlPattern, handler, moreHandler...)
+	e.OPTIONS(urlPattern, handler, moreHandler...)
 	log()
 }
 

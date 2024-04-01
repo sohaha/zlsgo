@@ -164,10 +164,6 @@ func (log *Logger) OpTextWrap(color Op, text string) string {
 }
 
 func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, line int, level int) {
-	if level == LogNot {
-		return
-	}
-
 	if log.flag&(BitDate|BitTime|BitMicroSeconds|BitLevel) != 0 {
 
 		if log.flag&BitDate != 0 {
@@ -204,10 +200,6 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 			buf.WriteString(": ")
 		}
 	}
-
-	if log.prefix != "" {
-		buf.WriteString(log.prefix)
-	}
 }
 
 // outPut Output log
@@ -242,28 +234,22 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(),
 		return nil
 	}
 
-	isNotLevel := level == LogNot
-	if log.level < level {
-		return nil
-	}
-
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
-	now := time.Now()
-	var file string
-	var line int
-	if !isNotLevel && (log.flag&(BitShortFile|BitLongFile) != 0) {
-		var ok bool
-		_, file, line, ok = runtime.Caller(log.calldDepth)
-		if !ok {
-			file = "unknown-file"
-			line = 0
-		}
-	}
 
 	log.buf.Reset()
-	log.formatHeader(&log.buf, now, file, line, level)
+
+	now := ztime.Time()
+	if level != LogNot {
+		file, line := log.fileLocation(level)
+		log.formatHeader(&log.buf, now, file, line, level)
+	}
+
+	if log.prefix != "" {
+		log.buf.WriteString(log.prefix)
+	}
+
 	log.buf.WriteString(s)
 	if isWrap && len(s) > 0 && s[len(s)-1] != '\n' {
 		log.buf.WriteByte('\n')
@@ -284,11 +270,17 @@ func (log *Logger) Println(v ...interface{}) {
 
 // Debugf Debugf
 func (log *Logger) Debugf(format string, v ...interface{}) {
+	if log.level < LogDebug {
+		return
+	}
 	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Debug Debug
 func (log *Logger) Debug(v ...interface{}) {
+	if log.level < LogDebug {
+		return
+	}
 	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, nil)
 }
 
@@ -311,68 +303,107 @@ func (log *Logger) Dump(v ...interface{}) {
 
 // Successf output Success
 func (log *Logger) Successf(format string, v ...interface{}) {
+	if log.level < LogSuccess {
+		return
+	}
 	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Success output Success
 func (log *Logger) Success(v ...interface{}) {
+	if log.level < LogSuccess {
+		return
+	}
 	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, nil)
 }
 
 // Infof output Info
 func (log *Logger) Infof(format string, v ...interface{}) {
+	if log.level < LogInfo {
+		return
+	}
 	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Info output Info
 func (log *Logger) Info(v ...interface{}) {
+	if log.level < LogInfo {
+		return
+	}
 	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, nil)
 }
 
 // Tipsf output Tips
 func (log *Logger) Tipsf(format string, v ...interface{}) {
+	if log.level < LogTips {
+		return
+	}
 	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Tips output Tips
 func (log *Logger) Tips(v ...interface{}) {
+	if log.level < LogTips {
+		return
+	}
 	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, nil)
 }
 
 // Warnf output Warn
 func (log *Logger) Warnf(format string, v ...interface{}) {
+	if log.level < LogWarn {
+		return
+	}
 	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Warn output Warn
 func (log *Logger) Warn(v ...interface{}) {
+	if log.level < LogWarn {
+		return
+	}
 	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, nil)
 }
 
 // Errorf output Error
 func (log *Logger) Errorf(format string, v ...interface{}) {
+	if log.level < LogError {
+		return
+	}
 	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, nil)
 }
 
 // Error output Error
 func (log *Logger) Error(v ...interface{}) {
+	if log.level < LogError {
+		return
+	}
 	_ = log.outPut(LogError, fmt.Sprintln(v...), true, nil)
 }
 
 // Fatalf output Fatal
 func (log *Logger) Fatalf(format string, v ...interface{}) {
+	if log.level < LogFatal {
+		return
+	}
 	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, nil)
 	osExit(1)
 }
 
 // Fatal output Fatal
 func (log *Logger) Fatal(v ...interface{}) {
+	if log.level < LogFatal {
+		return
+	}
 	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, nil)
 	osExit(1)
 }
 
 // Panicf output Panic
 func (log *Logger) Panicf(format string, v ...interface{}) {
+	if log.level < LogPanic {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, nil)
 	panic(s)
@@ -380,6 +411,9 @@ func (log *Logger) Panicf(format string, v ...interface{}) {
 
 // Panic output panic
 func (log *Logger) Panic(v ...interface{}) {
+	if log.level < LogPanic {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	_ = log.outPut(LogPanic, s, true, nil)
 	panic(s)
@@ -387,6 +421,9 @@ func (log *Logger) Panic(v ...interface{}) {
 
 // Stack output Stack
 func (log *Logger) Stack(v interface{}) {
+	if log.level < LogTrack {
+		return
+	}
 	var s string
 	switch e := v.(type) {
 	case error:
@@ -401,6 +438,9 @@ func (log *Logger) Stack(v interface{}) {
 
 // Track output Track
 func (log *Logger) Track(v string, i ...int) {
+	if log.level < LogTrack {
+		return
+	}
 	b, skip, max, index := zutil.GetBuff(), 4, 1, 1
 	il := len(i)
 	if il > 0 {
@@ -514,6 +554,10 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 	}
 }
 
+func (log *Logger) ResetWriter(w io.Writer) {
+	log.out = w
+}
+
 func formatArgs(args ...interface{}) []interface{} {
 	formatted := make([]interface{}, 0, len(args))
 	for _, a := range args {
@@ -557,4 +601,16 @@ func prependArgName(names []string, values []interface{}) []interface{} {
 		prepended[i] = fmt.Sprintf("%s=%s", name, value)
 	}
 	return prepended
+}
+
+func (log *Logger) fileLocation(level int) (file string, line int) {
+	if log.flag&(BitShortFile|BitLongFile) != 0 {
+		var ok bool
+		_, file, line, ok = runtime.Caller(log.calldDepth)
+		if !ok {
+			file = "unknown-file"
+			line = 0
+		}
+	}
+	return
 }

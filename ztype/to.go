@@ -66,10 +66,14 @@ func ToString(i interface{}) string {
 		if f, ok := value.(appString); ok {
 			return f.String()
 		}
-		jsonContent, _ := json.Marshal(value)
-		jsonContent = bytes.Trim(jsonContent, `"`)
-		return zstring.Bytes2String(jsonContent)
+		return toJsonString(value)
 	}
+}
+
+func toJsonString(value interface{}) string {
+	jsonContent, _ := json.Marshal(value)
+	jsonContent = bytes.Trim(jsonContent, `"`)
+	return zstring.Bytes2String(jsonContent)
 }
 
 // ToBool To Bool

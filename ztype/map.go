@@ -165,7 +165,7 @@ func ToMaps(value interface{}) Maps {
 	}
 }
 
-func toMapString(value interface{}, tags ...string) map[string]interface{} {
+func toMapString(value interface{}) map[string]interface{} {
 	if value == nil {
 		return map[string]interface{}{}
 	}
@@ -223,62 +223,66 @@ func toMapString(value interface{}, tags ...string) map[string]interface{} {
 			m[ToString(k)] = v
 		}
 	default:
-		rv := zreflect.ValueOf(val)
-		kind := rv.Kind()
-		if kind == reflect.Ptr {
-			rv = rv.Elem()
-			kind = rv.Kind()
-		}
-		switch kind {
-		case reflect.Map:
-			ks := rv.MapKeys()
-			for _, k := range ks {
-				m[ToString(k.Interface())] = rv.MapIndex(k).Interface()
-			}
-		case reflect.Struct:
-			rt := rv.Type()
-		ol:
-			for i := 0; i < rv.NumField(); i++ {
-				field := rt.Field(i)
-				fieldName := field.Name
-				if !zstring.IsUcfirst(fieldName) {
-					continue
-				}
-
-				name, opt := zreflect.GetStructTag(field, tagName, tagNameLesser)
-				if name == "" {
-					continue
-				}
-				array := strings.Split(opt, ",")
-				v := rv.Field(i)
-				for i := range array {
-					switch strings.TrimSpace(array[i]) {
-					case "omitempty":
-						if IsEmpty(v.Interface()) {
-							continue ol
-						}
-					}
-				}
-				fv := reflect.Indirect(v)
-				switch fv.Kind() {
-				case reflect.Struct:
-					m[name] = toMapString(v.Interface())
-					continue
-				case reflect.Slice:
-					if field.Type.Elem().Kind() == reflect.Struct {
-						mc := make([]map[string]interface{}, v.Len())
-						for i := 0; i < v.Len(); i++ {
-							mc[i] = toMapString(v.Index(i).Interface())
-						}
-						m[name] = mc
-						continue
-					}
-				}
-				m[name] = v.Interface()
-			}
-		default:
-			m["0"] = val
-		}
+		toMapStringReflect(&m, value)
 	}
 	return m
+}
+
+func toMapStringReflect(m *map[string]interface{}, val interface{}) {
+	rv := zreflect.ValueOf(val)
+	kind := rv.Kind()
+	if kind == reflect.Ptr {
+		rv = rv.Elem()
+		kind = rv.Kind()
+	}
+	switch kind {
+	case reflect.Map:
+		ks := rv.MapKeys()
+		for _, k := range ks {
+			(*m)[ToString(k.Interface())] = rv.MapIndex(k).Interface()
+		}
+	case reflect.Struct:
+		rt := rv.Type()
+	ol:
+		for i := 0; i < rv.NumField(); i++ {
+			field := rt.Field(i)
+			fieldName := field.Name
+			if !zstring.IsUcfirst(fieldName) {
+				continue
+			}
+
+			name, opt := zreflect.GetStructTag(field, tagName, tagNameLesser)
+			if name == "" {
+				continue
+			}
+			array := strings.Split(opt, ",")
+			v := rv.Field(i)
+			for i := range array {
+				switch strings.TrimSpace(array[i]) {
+				case "omitempty":
+					if IsEmpty(v.Interface()) {
+						continue ol
+					}
+				}
+			}
+			fv := reflect.Indirect(v)
+			switch fv.Kind() {
+			case reflect.Struct:
+				(*m)[name] = toMapString(v.Interface())
+				continue
+			case reflect.Slice:
+				if field.Type.Elem().Kind() == reflect.Struct {
+					mc := make([]map[string]interface{}, v.Len())
+					for i := 0; i < v.Len(); i++ {
+						mc[i] = toMapString(v.Index(i).Interface())
+					}
+					(*m)[name] = mc
+					continue
+				}
+			}
+			(*m)[name] = v.Interface()
+		}
+	default:
+		(*m)["0"] = val
+	}
 }
