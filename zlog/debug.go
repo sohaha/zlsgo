@@ -23,7 +23,7 @@ type indentWriter struct {
 	bol bool
 }
 
-func NewIndentWriter(w io.Writer, pre ...[]byte) io.Writer {
+func newIndentWriter(w io.Writer, pre ...[]byte) io.Writer {
 	return &indentWriter{
 		w:   w,
 		pre: pre,
@@ -152,7 +152,7 @@ func (fo formatter) passThrough(f fmt.State, c rune) {
 func (p *zprinter) indent() *zprinter {
 	q := *p
 	q.tw = tabwriter.NewWriter(p.Writer, 4, 4, 1, ' ', 0)
-	q.Writer = NewIndentWriter(q.tw, []byte{'\t'})
+	q.Writer = newIndentWriter(q.tw, []byte{'\t'})
 	return &q
 }
 

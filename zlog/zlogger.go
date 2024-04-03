@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -16,6 +15,7 @@ import (
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/ztype"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -217,10 +217,6 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 		}
 	}
 
-	if log.out == ioutil.Discard {
-		return nil
-	}
-
 	var after func()
 	if fn != nil {
 		log.mu.Lock()
@@ -239,9 +235,11 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 	}
 
 	buf := zutil.GetBuff(len(s) + 34)
+	defer zutil.PutBuff(buf)
+
 	now := ztime.Time()
 	if level != LogNot {
-		file, line := log.fileLocation(level)
+		file, line := log.fileLocation()
 		log.formatHeader(buf, now, file, line, level)
 	}
 
@@ -254,7 +252,6 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 		buf.WriteByte('\n')
 	}
 	_, err := log.out.Write(buf.Bytes())
-	zutil.PutBuff(buf)
 	return err
 }
 
@@ -265,7 +262,7 @@ func (log *Logger) Printf(format string, v ...interface{}) {
 
 // Println Println
 func (log *Logger) Println(v ...interface{}) {
-	_ = log.outPut(LogNot, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogNot, sprintStr(v...)+"\n", true, nil)
 }
 
 // Debugf Debugf
@@ -281,7 +278,7 @@ func (log *Logger) Debug(v ...interface{}) {
 	if log.level < LogDebug {
 		return
 	}
-	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogDebug, sprintStr(v...)+"\n", true, nil)
 }
 
 // Dump pretty print format
@@ -314,7 +311,7 @@ func (log *Logger) Success(v ...interface{}) {
 	if log.level < LogSuccess {
 		return
 	}
-	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogSuccess, sprintStr(v...)+"\n", true, nil)
 }
 
 // Infof output Info
@@ -330,7 +327,7 @@ func (log *Logger) Info(v ...interface{}) {
 	if log.level < LogInfo {
 		return
 	}
-	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogInfo, sprintStr(v...)+"\n", true, nil)
 }
 
 // Tipsf output Tips
@@ -346,7 +343,7 @@ func (log *Logger) Tips(v ...interface{}) {
 	if log.level < LogTips {
 		return
 	}
-	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogTips, sprintStr(v...)+"\n", true, nil)
 }
 
 // Warnf output Warn
@@ -362,7 +359,14 @@ func (log *Logger) Warn(v ...interface{}) {
 	if log.level < LogWarn {
 		return
 	}
-	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogWarn, sprintStr(v...)+"\n", true, nil)
+}
+
+func sprintStr(v ...interface{}) string {
+	if len(v) == 1 {
+		return ztype.ToString(v[0])
+	}
+	return fmt.Sprint(v...)
 }
 
 // Errorf output Error
@@ -378,7 +382,7 @@ func (log *Logger) Error(v ...interface{}) {
 	if log.level < LogError {
 		return
 	}
-	_ = log.outPut(LogError, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogError, sprintStr(v...)+"\n", true, nil)
 }
 
 // Fatalf output Fatal
@@ -395,7 +399,7 @@ func (log *Logger) Fatal(v ...interface{}) {
 	if log.level < LogFatal {
 		return
 	}
-	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, nil)
+	_ = log.outPut(LogFatal, sprintStr(v...)+"\n", true, nil)
 	osExit(1)
 }
 
@@ -414,7 +418,7 @@ func (log *Logger) Panic(v ...interface{}) {
 	if log.level < LogPanic {
 		return
 	}
-	s := fmt.Sprintln(v...)
+	s := sprintStr(v...) + "\n"
 	_ = log.outPut(LogPanic, s, true, nil)
 	panic(s)
 }
@@ -603,10 +607,10 @@ func prependArgName(names []string, values []interface{}) []interface{} {
 	return prepended
 }
 
-func (log *Logger) fileLocation(level int) (file string, line int) {
+func (log *Logger) fileLocation() (file string, line int) {
 	if log.flag&(BitShortFile|BitLongFile) != 0 {
 		var ok bool
-		_, file, line, ok = runtime.Caller(log.calldDepth)
+		_, file, line, ok = runtime.Caller(log.calldDepth + 1)
 		if !ok {
 			file = "unknown-file"
 			line = 0

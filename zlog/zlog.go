@@ -193,7 +193,3 @@ func Stack(v interface{}) {
 func Discard() {
 	Log.Discard()
 }
-
-func init() {
-	Log.calldDepth = 3
-}
