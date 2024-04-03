@@ -364,7 +364,9 @@ func (log *Logger) Warn(v ...interface{}) {
 
 func sprintStr(v ...interface{}) string {
 	if len(v) == 1 {
-		return ztype.ToString(v[0])
+		if _, ok := v[0].(error); !ok {
+			return ztype.ToString(v[0])
+		}
 	}
 	return fmt.Sprint(v...)
 }
