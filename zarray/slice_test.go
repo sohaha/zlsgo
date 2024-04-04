@@ -45,11 +45,25 @@ func TestMap(t *testing.T) {
 	tt.Equal([]string{"1//", "2//", "3//"}, nl)
 }
 
+func TestParallelMap(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	expected := zarray.Map(l2, func(i int, v int) string {
+		return ztype.ToString(v) + "//"
+	})
+
+	actual := zarray.ParallelMap(l2, func(i int, v int) string {
+		return ztype.ToString(v) + "//"
+	}, uint(len(l2)+1))
+	tt.Equal(expected, actual)
+}
+
 func TestDiff(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	n1, n2 := zarray.Diff(l2, l)
 
+	t.Log(l2, l)
+	t.Log(n1, n2)
 	tt.Equal([]int{34, 6, 7, 98, 6, 67, 54, 543, 345, 435, 43543, 435, 42, 3423, 54, 6}, n1)
 	tt.Equal([]int{}, n2)
 }

@@ -7,16 +7,18 @@ import (
 	"math/rand"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zsync"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
-// CopySlice copy a slice
+// CopySlice copy a slice.
 func CopySlice[T any](l []T) []T {
 	nl := make([]T, len(l))
 	copy(nl, l)
 	return nl
 }
 
-// Rand A random eents
+// Rand A random eents.
 func Rand[T any](collection []T) T {
 	l := len(collection)
 	if l == 0 {
@@ -28,7 +30,7 @@ func Rand[T any](collection []T) T {
 	return collection[i]
 }
 
-// Map manipulates a slice and transforms it to a slice of another type
+// Map manipulates a slice and transforms it to a slice of another type.
 func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
 	res := make([]R, len(collection))
 
@@ -39,7 +41,40 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
 	return res
 }
 
-// Shuffle creates a slice of shuffled values
+// ParallelMap Parallel manipulates a slice and transforms it to a slice of another type.
+// If the calculation does not involve time-consuming operations, we recommend using a Map.
+func ParallelMap[T any, R any](collection []T, iteratee func(int, T) R, workers uint) []R {
+	inLen, workTotal := len(collection), int(workers)
+
+	res := make([]R, inLen)
+	if inLen == 0 {
+		return res
+	}
+
+	if inLen < workTotal {
+		workTotal = inLen
+	} else if workTotal == 0 {
+		workTotal = 1
+	}
+
+	idx := zutil.NewInt64(0)
+	task := func() {
+		i := int(idx.Add(1) - 1)
+		for ; i < inLen; i = int(idx.Add(1) - 1) {
+			res[i] = iteratee(i, collection[i])
+		}
+	}
+
+	var wg zsync.WaitGroup
+	for i := 0; i < workTotal; i++ {
+		wg.Go(task)
+	}
+	_ = wg.Wait()
+
+	return res
+}
+
+// Shuffle creates a slice of shuffled values.
 func Shuffle[T any](collection []T) []T {
 	n := CopySlice(collection)
 	rand.Shuffle(len(n), func(i, j int) {
@@ -49,7 +84,7 @@ func Shuffle[T any](collection []T) []T {
 	return n
 }
 
-// Reverse creates a slice of reversed values
+// Reverse creates a slice of reversed values.
 func Reverse[T any](collection []T) []T {
 	n := CopySlice(collection)
 	l := len(n)
@@ -60,7 +95,7 @@ func Reverse[T any](collection []T) []T {
 	return n
 }
 
-// Filter iterates over eents of collection
+// Filter iterates over eents of collection.
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	slice = CopySlice(slice)
 
@@ -76,7 +111,7 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	return slice[:j:j]
 }
 
-// Contains returns true if an eent is present in a collection
+// Contains returns true if an eent is present in a collection.
 func Contains[T comparable](collection []T, v T) bool {
 	for _, item := range collection {
 		if item == v {
@@ -99,7 +134,7 @@ func Find[T any](collection []T, predicate func(index int, item T) bool) (res T,
 	return
 }
 
-// Unique returns a duplicate-free version of an array
+// Unique returns a duplicate-free version of an array.
 func Unique[T comparable](collection []T) []T {
 	repeat := make(map[T]struct{}, len(collection))
 
@@ -112,6 +147,7 @@ func Unique[T comparable](collection []T) []T {
 	})
 }
 
+// Diff returns the difference between two slices.
 func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	l, r := []T{}, []T{}
 
@@ -140,6 +176,7 @@ func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	return l, r
 }
 
+// Pop returns an eent and removes it from the slice.
 func Pop[T comparable](list *[]T) (v T) {
 	l := len(*list)
 	if l == 0 {
@@ -151,6 +188,7 @@ func Pop[T comparable](list *[]T) (v T) {
 	return
 }
 
+// Shift returns an eent and removes it from the slice.
 func Shift[T comparable](list *[]T) (v T) {
 	l := len(*list)
 	if l == 0 {
