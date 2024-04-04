@@ -52,7 +52,7 @@ func Parse(arg ...[]string) (hasflag bool) {
 			flagVersion = SetVar("version", GetLangText("version")).short("V").Bool()
 		}
 		if EnableDetach {
-			flagDetach = SetVar("detach", GetLangText("detach")).short("D").Bool()
+			flagDetach = SetVar("detach", GetLangText("detach")).Bool()
 		}
 	})
 

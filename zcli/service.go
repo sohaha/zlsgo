@@ -3,6 +3,7 @@ package zcli
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -143,10 +144,25 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 				"UserService": true,
 			},
 		}
+		if len(os.Args) > 2 {
+			daemonConfig.Arguments = os.Args[2:]
+		}
+
 		if len(config) > 0 {
-			daemonConfig = config[0]
-			daemonConfig.Name = name
-			daemonConfig.Description = description
+			nconf := config[0]
+			if nconf.Name == "" {
+				nconf.Name = name
+			}
+			if nconf.Description == "" {
+				nconf.Description = description
+			}
+			if len(nconf.Options) == 0 {
+				nconf.Options = daemonConfig.Options
+			}
+			if len(nconf.Arguments) == 0 {
+				nconf.Arguments = daemonConfig.Arguments
+			}
+			daemonConfig = nconf
 		}
 
 		// The file path is redirected to the current execution file path
@@ -155,6 +171,7 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 			gogccflags, zfile.RealPath(zfile.ProgramPath()+"../../../..")) {
 			zfile.ProjectPath = zfile.ProgramPath()
 		}
+
 		service, serviceErr = daemon.New(&app{
 			run: fn,
 		}, daemonConfig)

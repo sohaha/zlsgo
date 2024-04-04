@@ -15,7 +15,6 @@ import (
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
-	"github.com/sohaha/zlsgo/ztype"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -249,7 +248,7 @@ func (log *Logger) Printf(format string, v ...interface{}) {
 
 // Println Println
 func (log *Logger) Println(v ...interface{}) {
-	_ = log.outPut(LogNot, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogNot, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Debugf Debugf
@@ -265,7 +264,7 @@ func (log *Logger) Debug(v ...interface{}) {
 	if log.level < LogDebug {
 		return
 	}
-	_ = log.outPut(LogDebug, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Dump pretty print format
@@ -298,7 +297,7 @@ func (log *Logger) Success(v ...interface{}) {
 	if log.level < LogSuccess {
 		return
 	}
-	_ = log.outPut(LogSuccess, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Infof output Info
@@ -314,7 +313,7 @@ func (log *Logger) Info(v ...interface{}) {
 	if log.level < LogInfo {
 		return
 	}
-	_ = log.outPut(LogInfo, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Tipsf output Tips
@@ -330,7 +329,7 @@ func (log *Logger) Tips(v ...interface{}) {
 	if log.level < LogTips {
 		return
 	}
-	_ = log.outPut(LogTips, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Warnf output Warn
@@ -346,17 +345,7 @@ func (log *Logger) Warn(v ...interface{}) {
 	if log.level < LogWarn {
 		return
 	}
-	_ = log.outPut(LogWarn, sprintStr(v...)+"\n", true, log.calldDepth)
-}
-
-func sprintStr(v ...interface{}) string {
-	if len(v) == 1 {
-		if _, ok := v[0].(error); !ok {
-			return ztype.ToString(v[0])
-		}
-	}
-
-	return fmt.Sprint(v...)
+	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Errorf output Error
@@ -372,7 +361,7 @@ func (log *Logger) Error(v ...interface{}) {
 	if log.level < LogError {
 		return
 	}
-	_ = log.outPut(LogError, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogError, fmt.Sprintln(v...), true, log.calldDepth)
 }
 
 // Fatalf output Fatal
@@ -389,7 +378,7 @@ func (log *Logger) Fatal(v ...interface{}) {
 	if log.level < LogFatal {
 		return
 	}
-	_ = log.outPut(LogFatal, sprintStr(v...)+"\n", true, log.calldDepth)
+	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, log.calldDepth)
 	osExit(1)
 }
 
@@ -408,7 +397,7 @@ func (log *Logger) Panic(v ...interface{}) {
 	if log.level < LogPanic {
 		return
 	}
-	s := sprintStr(v...) + "\n"
+	s := fmt.Sprintln(v...)
 	_ = log.outPut(LogPanic, s, true, log.calldDepth)
 	panic(s)
 }
