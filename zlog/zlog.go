@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	Log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 3)
+	Log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 4)
 	osExit = func(code int) {
 		if zutil.IsDoubleClickStartUp() {
 			_, _ = fmt.Scanln()
@@ -91,12 +91,7 @@ func Dump(v ...interface{}) {
 			args = prependArgName(names, args)
 		}
 	}
-	_ = Log.outPut(LogDump, fmt.Sprintln(args...), true, func() func() {
-		Log.calldDepth--
-		return func() {
-			Log.calldDepth++
-		}
-	})
+	_ = Log.outPut(LogDump, fmt.Sprintln(args...), true, Log.calldDepth-1)
 }
 
 // Successf Successf

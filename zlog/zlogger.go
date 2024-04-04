@@ -114,7 +114,7 @@ func New(moduleName ...string) *Logger {
 	if len(moduleName) > 0 {
 		name = moduleName[0]
 	}
-	return NewZLog(os.Stderr, name, BitDefault, LogDump, true, 2)
+	return NewZLog(os.Stderr, name, BitDefault, LogDump, true, 3)
 }
 
 // NewZLog Create log
@@ -203,7 +203,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 }
 
 // outPut Output log
-func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), prefixText ...string) error {
+func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, prefixText ...string) error {
 
 	if log.ignoreLogs != nil && len(s) > 0 {
 		p := s
@@ -217,19 +217,6 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 		}
 	}
 
-	var after func()
-	if fn != nil {
-		log.mu.Lock()
-		after = fn()
-	}
-
-	defer func() {
-		if after != nil {
-			after()
-			log.mu.Unlock()
-		}
-	}()
-
 	if len(prefixText) > 0 {
 		s = prefixText[0] + s
 	}
@@ -239,7 +226,7 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 
 	now := ztime.Time()
 	if level != LogNot {
-		file, line := log.fileLocation()
+		file, line := log.fileLocation(calldDepth)
 		log.formatHeader(buf, now, file, line, level)
 	}
 
@@ -257,12 +244,12 @@ func (log *Logger) outPut(level int, s string, isWrap bool, fn func() func(), pr
 
 // Printf formats according to a format specifier and writes to standard output
 func (log *Logger) Printf(format string, v ...interface{}) {
-	_ = log.outPut(LogNot, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogNot, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Println Println
 func (log *Logger) Println(v ...interface{}) {
-	_ = log.outPut(LogNot, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogNot, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Debugf Debugf
@@ -270,7 +257,7 @@ func (log *Logger) Debugf(format string, v ...interface{}) {
 	if log.level < LogDebug {
 		return
 	}
-	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Debug Debug
@@ -278,7 +265,7 @@ func (log *Logger) Debug(v ...interface{}) {
 	if log.level < LogDebug {
 		return
 	}
-	_ = log.outPut(LogDebug, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogDebug, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Dump pretty print format
@@ -295,7 +282,7 @@ func (log *Logger) Dump(v ...interface{}) {
 		}
 	}
 
-	_ = log.outPut(LogDump, fmt.Sprintln(args...), true, nil)
+	_ = log.outPut(LogDump, fmt.Sprintln(args...), true, log.calldDepth)
 }
 
 // Successf output Success
@@ -303,7 +290,7 @@ func (log *Logger) Successf(format string, v ...interface{}) {
 	if log.level < LogSuccess {
 		return
 	}
-	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Success output Success
@@ -311,7 +298,7 @@ func (log *Logger) Success(v ...interface{}) {
 	if log.level < LogSuccess {
 		return
 	}
-	_ = log.outPut(LogSuccess, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogSuccess, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Infof output Info
@@ -319,7 +306,7 @@ func (log *Logger) Infof(format string, v ...interface{}) {
 	if log.level < LogInfo {
 		return
 	}
-	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Info output Info
@@ -327,7 +314,7 @@ func (log *Logger) Info(v ...interface{}) {
 	if log.level < LogInfo {
 		return
 	}
-	_ = log.outPut(LogInfo, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogInfo, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Tipsf output Tips
@@ -335,7 +322,7 @@ func (log *Logger) Tipsf(format string, v ...interface{}) {
 	if log.level < LogTips {
 		return
 	}
-	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Tips output Tips
@@ -343,7 +330,7 @@ func (log *Logger) Tips(v ...interface{}) {
 	if log.level < LogTips {
 		return
 	}
-	_ = log.outPut(LogTips, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogTips, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Warnf output Warn
@@ -351,7 +338,7 @@ func (log *Logger) Warnf(format string, v ...interface{}) {
 	if log.level < LogWarn {
 		return
 	}
-	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Warn output Warn
@@ -359,7 +346,7 @@ func (log *Logger) Warn(v ...interface{}) {
 	if log.level < LogWarn {
 		return
 	}
-	_ = log.outPut(LogWarn, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogWarn, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 func sprintStr(v ...interface{}) string {
@@ -368,6 +355,7 @@ func sprintStr(v ...interface{}) string {
 			return ztype.ToString(v[0])
 		}
 	}
+
 	return fmt.Sprint(v...)
 }
 
@@ -376,7 +364,7 @@ func (log *Logger) Errorf(format string, v ...interface{}) {
 	if log.level < LogError {
 		return
 	}
-	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, log.calldDepth)
 }
 
 // Error output Error
@@ -384,7 +372,7 @@ func (log *Logger) Error(v ...interface{}) {
 	if log.level < LogError {
 		return
 	}
-	_ = log.outPut(LogError, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogError, sprintStr(v...)+"\n", true, log.calldDepth)
 }
 
 // Fatalf output Fatal
@@ -392,7 +380,7 @@ func (log *Logger) Fatalf(format string, v ...interface{}) {
 	if log.level < LogFatal {
 		return
 	}
-	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, nil)
+	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, log.calldDepth)
 	osExit(1)
 }
 
@@ -401,7 +389,7 @@ func (log *Logger) Fatal(v ...interface{}) {
 	if log.level < LogFatal {
 		return
 	}
-	_ = log.outPut(LogFatal, sprintStr(v...)+"\n", true, nil)
+	_ = log.outPut(LogFatal, sprintStr(v...)+"\n", true, log.calldDepth)
 	osExit(1)
 }
 
@@ -411,7 +399,7 @@ func (log *Logger) Panicf(format string, v ...interface{}) {
 		return
 	}
 	s := fmt.Sprintf(format, v...)
-	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, nil)
+	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, log.calldDepth)
 	panic(s)
 }
 
@@ -421,7 +409,7 @@ func (log *Logger) Panic(v ...interface{}) {
 		return
 	}
 	s := sprintStr(v...) + "\n"
-	_ = log.outPut(LogPanic, s, true, nil)
+	_ = log.outPut(LogPanic, s, true, log.calldDepth)
 	panic(s)
 }
 
@@ -439,7 +427,7 @@ func (log *Logger) Stack(v interface{}) {
 	default:
 		s = fmt.Sprintf("%v", e)
 	}
-	_ = log.outPut(LogTrack, s, true, nil)
+	_ = log.outPut(LogTrack, s, true, log.calldDepth)
 }
 
 // Track output Track
@@ -476,7 +464,7 @@ func (log *Logger) Track(v string, i ...int) {
 	})
 	text := b.String()
 	zutil.PutBuff(b)
-	_ = log.outPut(LogTrack, text, true, nil)
+	_ = log.outPut(LogTrack, text, true, log.calldDepth)
 }
 
 func callerName(skip int) (name, file string, line int, ok bool) {
@@ -531,7 +519,7 @@ func (log *Logger) GetLogLevel() int {
 }
 
 func (log *Logger) Write(b []byte) (n int, err error) {
-	_ = log.outPut(LogWarn, zstring.Bytes2String(b), false, nil)
+	_ = log.outPut(LogWarn, zstring.Bytes2String(b), false, log.calldDepth)
 	return len(b), nil
 }
 
@@ -609,10 +597,10 @@ func prependArgName(names []string, values []interface{}) []interface{} {
 	return prepended
 }
 
-func (log *Logger) fileLocation() (file string, line int) {
+func (log *Logger) fileLocation(calldDepth int) (file string, line int) {
 	if log.flag&(BitShortFile|BitLongFile) != 0 {
 		var ok bool
-		_, file, line, ok = runtime.Caller(log.calldDepth + 1)
+		_, file, line, ok = runtime.Caller(calldDepth)
 		if !ok {
 			file = "unknown-file"
 			line = 0
