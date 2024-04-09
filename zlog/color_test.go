@@ -26,3 +26,13 @@ func TestColor(t *testing.T) {
 	OutAllColor()
 	T.Equal(testText, ColorTextWrap(ColorGreen, testText))
 }
+
+func TestTrimAnsi(t *testing.T) {
+	tt := zls.NewTest(t)
+
+	testText := "ok\x1b[31m"
+	tt.Equal("ok", TrimAnsi(testText))
+
+	testText = ColorTextWrap(ColorGreen, "ok")
+	tt.Equal("ok", TrimAnsi(testText))
+}

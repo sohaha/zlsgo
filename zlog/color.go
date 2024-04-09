@@ -165,3 +165,8 @@ func init() {
 func isSupportColor() bool {
 	return !DisableColor && IsSupportColor()
 }
+
+func TrimAnsi(str string) string {
+	str, _ = zstring.RegexReplace(`\x1b\[[0-9;]*[a-zA-Z]`, str, "")
+	return str
+}
