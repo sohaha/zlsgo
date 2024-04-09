@@ -76,12 +76,12 @@ var LevelColous = []Color{
 type (
 	// Logger logger struct
 	Logger struct {
-		out        io.Writer
-		file       *zfile.MemoryFile
-		prefix     string
-		fileDir    string
-		fileName   string
-		ignoreLogs []string
+		out         io.Writer
+		file        *zfile.MemoryFile
+		prefix      string
+		fileDir     string
+		fileName    string
+		writeBefore []func(level int, log string) bool
 		// buf           bytes.Buffer
 		calldDepth    int
 		level         int
@@ -203,14 +203,13 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, lin
 
 // outPut Output log
 func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, prefixText ...string) error {
-
-	if log.ignoreLogs != nil && len(s) > 0 {
+	if log.writeBefore != nil && len(s) > 0 {
 		p := s
 		if isWrap {
 			p = p[:len(p)-1]
 		}
-		for _, v := range log.ignoreLogs {
-			if zstring.Match(p, v) {
+		for i := range log.writeBefore {
+			if log.writeBefore[i](level, p) {
 				return nil
 			}
 		}
@@ -513,7 +512,18 @@ func (log *Logger) Write(b []byte) (n int, err error) {
 }
 
 func (log *Logger) SetIgnoreLog(logs ...string) {
-	log.ignoreLogs = append(log.ignoreLogs, logs...)
+	log.WriteBefore(func(level int, log string) bool {
+		for _, v := range logs {
+			if zstring.Match(log, v) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func (log *Logger) WriteBefore(fn ...func(level int, log string) bool) {
+	log.writeBefore = append(log.writeBefore, fn...)
 }
 
 func itoa(buf *bytes.Buffer, i int, wid int) {
