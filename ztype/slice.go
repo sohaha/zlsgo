@@ -91,36 +91,49 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 	if value == nil {
 		return
 	}
-
+	nc := len(noConv) > 0 && noConv[0]
 	switch val := value.(type) {
 	case []interface{}:
-		s = make(SliceType, 0, len(val))
+		s = make(SliceType, len(val))
 		for i := range val {
-			s = append(s, New(val[i]))
+			s[i] = New(val[i])
 		}
 	case []string:
-		s = make(SliceType, 0, len(val))
+		s = make(SliceType, len(val))
 		for i := range val {
-			s = append(s, New(val[i]))
+			s[i] = New(val[i])
 		}
 	case []int:
-		s = make(SliceType, 0, len(val))
+		s = make(SliceType, len(val))
 		for i := range val {
-			s = append(s, New(val[i]))
+			s[i] = New(val[i])
 		}
 	case []int64:
-		s = make(SliceType, 0, len(val))
+		s = make(SliceType, len(val))
 		for i := range val {
-			s = append(s, New(val[i]))
+			s[i] = New(val[i])
 		}
+	case string:
+		if nc {
+			return
+		}
+		var nval []interface{}
+		if err := json.Unmarshal([]byte(val), &nval); err == nil {
+			s = make(SliceType, len(nval))
+			for i := range nval {
+				s[i] = New(nval[i])
+			}
+			return
+		}
+		s = SliceType{New(val)}
 	default:
 		var nval []interface{}
 		vof := zreflect.ValueOf(&nval)
 		to := func() {
 			if conv.to("", value, vof) == nil {
-				s = make(SliceType, 0, len(nval))
+				s = make(SliceType, len(nval))
 				for i := range nval {
-					s = append(s, New(nval[i]))
+					s[i] = New(nval[i])
 				}
 			}
 		}
@@ -129,7 +142,7 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 		case reflect.Slice:
 			to()
 		default:
-			if len(noConv) > 0 && noConv[0] {
+			if nc {
 				return
 			}
 			to()

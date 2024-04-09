@@ -11,6 +11,7 @@ import (
 	"github.com/sohaha/zlsgo/zerror"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zshell"
+	"github.com/sohaha/zlsgo/zutil"
 	"github.com/sohaha/zlsgo/zutil/daemon"
 )
 
@@ -137,11 +138,15 @@ func LaunchServiceRun(name string, description string, fn func(), config ...*dae
 // LaunchService Launch Service
 func LaunchService(name string, description string, fn func(), config ...*daemon.Config) (daemon.ServiceIface, error) {
 	once.Do(func() {
+		userService := false
+		if zutil.IsMac() {
+			userService = true
+		}
 		daemonConfig := &daemon.Config{
 			Name:        name,
 			Description: description,
 			Options: map[string]interface{}{
-				"UserService": true,
+				"UserService": userService,
 			},
 		}
 		if len(os.Args) > 2 {
