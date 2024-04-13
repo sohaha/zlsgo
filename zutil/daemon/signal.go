@@ -2,41 +2,49 @@ package daemon
 
 import (
 	"sync"
-
-	"github.com/sohaha/zlsgo/zutil"
 )
 
 var (
 	singleSignal sync.Once
-	single       = make(chan bool)
-	singleNum    = zutil.NewInt32(0)
+	single            = make(chan bool)
+	singleNum    uint = 0
+	singleLock   sync.Mutex
 )
 
 func singelDo() {
 	singleSignal.Do(func() {
 		go func() {
 			kill := KillSignal()
+			singleLock.Lock()
 			for {
-				if int(singleNum.Sub(1)) < 0 {
-					singleNum.Add(1)
+				if singleNum == 0 {
 					break
 				}
+
+				singleNum--
 				single <- kill
 			}
 			close(single)
+			singleLock.Unlock()
 		}()
 	})
 }
 
 func SingleKillSignal() <-chan bool {
-	singleNum.Add(1)
+	singleLock.Lock()
+	defer singleLock.Unlock()
+
+	singleNum++
 	singelDo()
 
 	return single
 }
 
 func ReSingleKillSignal() {
-	if singleNum.Load() > 0 {
+	singleLock.Lock()
+	defer singleLock.Unlock()
+
+	if singleNum > 0 {
 		return
 	}
 

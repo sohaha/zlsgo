@@ -35,7 +35,10 @@ func TestSignal(t *testing.T) {
 		tip = "kill"
 		t.Log(k, ok)
 	}
+}
 
+func TestSingleKillSignal(t *testing.T) {
+	tt := zls.NewTest(t)
 	go func() {
 		time.Sleep(time.Second * 1)
 		process, err := os.FindProcess(os.Getpid())
@@ -43,7 +46,7 @@ func TestSignal(t *testing.T) {
 		process.Signal(os.Interrupt)
 	}()
 
-	now = time.Now()
+	now := time.Now()
 	<-SingleKillSignal()
 	tt.EqualTrue(time.Since(now) > time.Second*1)
 
