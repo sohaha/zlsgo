@@ -22,7 +22,6 @@ import (
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zshell"
-	"github.com/sohaha/zlsgo/zstring"
 )
 
 type (
@@ -147,7 +146,6 @@ var (
 	shutdownDone func()
 	// CloseHotRestart Close Hot Restart
 	CloseHotRestart bool
-	fileMd5         string
 	zservers        = map[string]*Engine{}
 	defaultAddr     = addrSt{
 		addr: ":3788",
@@ -160,7 +158,6 @@ var (
 
 func init() {
 	Log.ResetFlags(zlog.BitTime | zlog.BitLevel)
-	fileMd5, _ = zstring.Md5File(os.Args[0])
 }
 
 // New returns a newly initialized Engine object that implements the Engine
@@ -245,9 +242,9 @@ func (e *Engine) SetCustomMethodField(field string) {
 	e.customMethodType = field
 }
 
+// Deprecated: If you need to verify if a program is trustworthy, please implement it yourself.
 // CloseHotRestartFileMd5 CloseHotRestartFileMd5
 func CloseHotRestartFileMd5() {
-	fileMd5 = ""
 }
 
 // Deprecated: please use SetTemplate(znet.NewHTML())
@@ -510,24 +507,11 @@ func RunContext(ctx context.Context, cb ...func(name, addr string)) {
 		}
 	}
 
-wait:
 	select {
 	case <-ctx.Done():
 		shutdown(true)
 	case signal := <-daemon.SingleKillSignal():
 		if !signal && !CloseHotRestart {
-			if fileMd5 == "" {
-				Log.Warn("ignore execution file md5 check")
-			} else {
-				file := os.Args[0]
-				currentMd5, err := zstring.Md5File(file)
-				if err != nil || fileMd5 != currentMd5 {
-					Log.Warn("md5 verification of the file failed")
-					daemon.ReSingleKillSignal()
-					goto wait
-				}
-			}
-
 			if err := runNewProcess(); err != nil {
 				Log.Error(err)
 			}

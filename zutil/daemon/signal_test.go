@@ -47,7 +47,8 @@ func TestSingleKillSignal(t *testing.T) {
 	}()
 
 	now := time.Now()
-	<-SingleKillSignal()
+	isKill := <-SingleKillSignal()
+	tt.Log(isKill)
 	tt.EqualTrue(time.Since(now) > time.Second*1)
 
 	ReSingleKillSignal()
@@ -59,6 +60,7 @@ func TestSingleKillSignal(t *testing.T) {
 	}()
 
 	now = time.Now()
-	<-SingleKillSignal()
+	isKill = <-SingleKillSignal()
+	tt.Log(isKill)
 	tt.EqualTrue(time.Since(now) > time.Second*2)
 }
