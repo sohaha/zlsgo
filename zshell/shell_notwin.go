@@ -11,19 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-
-	"github.com/sohaha/zlsgo/zstring"
 )
 
-func RunNewProcess(filemd5 string) (pid int, err error) {
-	args := os.Args
-	file := args[0]
-	if filemd5 != "" {
-		currentMd5, err := zstring.Md5File(file)
-		if err != nil || filemd5 != currentMd5 {
-			return 0, errors.New("md5 verification of the file failed")
-		}
-	}
+func RunNewProcess(file string, args []string) (pid int, err error) {
 	execSpec := &syscall.ProcAttr{
 		Env:   os.Environ(),
 		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},

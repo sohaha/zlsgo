@@ -459,10 +459,6 @@ func shutdown(sigkill bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	if !sigkill && !CloseHotRestart {
-		runNewProcess()
-	}
-
 	for _, s := range srvs {
 		r := s.engine
 		if sigkill {
@@ -514,20 +510,35 @@ func RunContext(ctx context.Context, cb ...func(name, addr string)) {
 		}
 	}
 
+wait:
 	select {
 	case <-ctx.Done():
 		shutdown(true)
 	case signal := <-daemon.SingleKillSignal():
+		if !signal && !CloseHotRestart {
+			if fileMd5 == "" {
+				Log.Warn("ignore execution file md5 check")
+			} else {
+				file := os.Args[0]
+				currentMd5, err := zstring.Md5File(file)
+				if err != nil || fileMd5 != currentMd5 {
+					Log.Warn("md5 verification of the file failed")
+					daemon.ReSingleKillSignal()
+					goto wait
+				}
+			}
+
+			if err := runNewProcess(); err != nil {
+				Log.Error(err)
+			}
+		}
+
 		shutdown(signal)
 	}
 }
 
-func runNewProcess() {
-	if fileMd5 == "" {
-		Log.Warn("ignore execution file md5 check")
-	}
-	_, err := zshell.RunNewProcess(fileMd5)
-	if err != nil {
-		Log.Error(err)
-	}
+func runNewProcess() error {
+	args := os.Args
+	_, err := zshell.RunNewProcess(args[0], args)
+	return err
 }

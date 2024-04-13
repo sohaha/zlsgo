@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -35,4 +36,26 @@ func TestSignal(t *testing.T) {
 		t.Log(k, ok)
 	}
 
+	go func() {
+		time.Sleep(time.Second * 1)
+		process, err := os.FindProcess(os.Getpid())
+		tt.NoError(err, true)
+		process.Signal(os.Interrupt)
+	}()
+
+	now = time.Now()
+	<-SingleKillSignal()
+	tt.EqualTrue(time.Since(now) > time.Second*1)
+
+	ReSingleKillSignal()
+	go func() {
+		time.Sleep(time.Second * 2)
+		process, err := os.FindProcess(os.Getpid())
+		tt.NoError(err, true)
+		process.Signal(os.Interrupt)
+	}()
+
+	now = time.Now()
+	<-SingleKillSignal()
+	tt.EqualTrue(time.Since(now) > time.Second*2)
 }
