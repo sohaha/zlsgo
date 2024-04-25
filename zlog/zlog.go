@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	Log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 4)
+	log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 4)
 	osExit = func(code int) {
 		if zutil.IsDoubleClickStartUp() {
 			_, _ = fmt.Scanln()
@@ -20,67 +20,67 @@ var (
 
 // GetFlags Get the tag bits
 func GetFlags() int {
-	return Log.GetFlags()
+	return log.GetFlags()
 }
 
 // DisableConsoleColor DisableConsoleColor
 func DisableConsoleColor() {
-	Log.DisableConsoleColor()
+	log.DisableConsoleColor()
 }
 
 // ForceConsoleColor ForceConsoleColor
 func ForceConsoleColor() {
-	Log.ForceConsoleColor()
+	log.ForceConsoleColor()
 }
 
 // ResetFlags Setting Markup Bits
 func ResetFlags(flag int) {
-	Log.ResetFlags(flag)
+	log.ResetFlags(flag)
 }
 
 // AddFlag Set flag Tags
 func AddFlag(flag int) {
-	Log.AddFlag(flag)
+	log.AddFlag(flag)
 }
 
 // SetPrefix Setting log header prefix
 func SetPrefix(prefix string) {
-	Log.SetPrefix(prefix)
+	log.SetPrefix(prefix)
 }
 
 // SetFile Setting up log files
 func SetFile(filepath string, archive ...bool) {
-	Log.SetFile(filepath, archive...)
+	log.SetFile(filepath, archive...)
 }
 
 // SetSaveFile SetSaveFile
 func SetSaveFile(filepath string, archive ...bool) {
-	Log.SetSaveFile(filepath, archive...)
+	log.SetSaveFile(filepath, archive...)
 }
 
 // SetLogLevel Setting log display level
 func SetLogLevel(level int) {
-	Log.SetLogLevel(level)
+	log.SetLogLevel(level)
 }
 
 // GetLogLevel Setting log display level
 func GetLogLevel() int {
-	return Log.level
+	return log.level
 }
 
 // Debugf Debugf
 func Debugf(format string, v ...interface{}) {
-	Log.Debugf(format, v...)
+	log.Debugf(format, v...)
 }
 
 // Debug Debug
 func Debug(v ...interface{}) {
-	Log.Debug(v...)
+	log.Debug(v...)
 }
 
 // Dump Dump
 func Dump(v ...interface{}) {
-	if Log.level < LogDump {
+	if log.level < LogDump {
 		return
 	}
 	args := formatArgs(v...)
@@ -91,100 +91,100 @@ func Dump(v ...interface{}) {
 			args = prependArgName(names, args)
 		}
 	}
-	_ = Log.outPut(LogDump, fmt.Sprintln(args...), true, Log.calldDepth-1)
+	_ = log.outPut(LogDump, fmt.Sprintln(args...), true, log.calldDepth-1)
 }
 
 // Successf Successf
 func Successf(format string, v ...interface{}) {
-	Log.Successf(format, v...)
+	log.Successf(format, v...)
 }
 
 // Success Success
 func Success(v ...interface{}) {
-	Log.Success(v...)
+	log.Success(v...)
 }
 
 // Infof Infof
 func Infof(format string, v ...interface{}) {
-	Log.Infof(format, v...)
+	log.Infof(format, v...)
 }
 
 // Info Info
 func Info(v ...interface{}) {
-	Log.Info(v...)
+	log.Info(v...)
 }
 
 // Tipsf Tipsf
 func Tipsf(format string, v ...interface{}) {
-	Log.Tipsf(format, v...)
+	log.Tipsf(format, v...)
 }
 
 // Tips Tips
 func Tips(v ...interface{}) {
-	Log.Tips(v...)
+	log.Tips(v...)
 }
 
 // Warnf Warnf
 func Warnf(format string, v ...interface{}) {
-	Log.Warnf(format, v...)
+	log.Warnf(format, v...)
 }
 
 // Warn Warn
 func Warn(v ...interface{}) {
-	Log.Warn(v...)
+	log.Warn(v...)
 }
 
 // Errorf Errorf
 func Errorf(format string, v ...interface{}) {
-	Log.Errorf(format, v...)
+	log.Errorf(format, v...)
 }
 
 // Error Error
 func Error(v ...interface{}) {
-	Log.Error(v...)
+	log.Error(v...)
 }
 
 // Printf Printf
 func Printf(format string, v ...interface{}) {
-	Log.Printf(format, v...)
+	log.Printf(format, v...)
 }
 
 // Println Println
 func Println(v ...interface{}) {
-	Log.Println(v...)
+	log.Println(v...)
 }
 
 // Fatalf Fatalf
 func Fatalf(format string, v ...interface{}) {
-	Log.Fatalf(format, v...)
+	log.Fatalf(format, v...)
 }
 
 // Fatal Fatal
 func Fatal(v ...interface{}) {
-	Log.Fatal(v...)
+	log.Fatal(v...)
 }
 
 // Panicf Panicf
 func Panicf(format string, v ...interface{}) {
-	Log.Panicf(format, v...)
+	log.Panicf(format, v...)
 }
 
 // Panic panic
 func Panic(v ...interface{}) {
-	Log.Panic(v...)
+	log.Panic(v...)
 }
 
 // Track Track
 func Track(v string, i ...int) {
-	Log.Track(v, i...)
+	log.Track(v, i...)
 }
 
 // Stack Stack
 func Stack(v interface{}) {
-	Log.Stack(v)
+	log.Stack(v)
 }
 
 // Discard Discard
 func Discard() {
-	Log.Discard()
+	log.Discard()
 }

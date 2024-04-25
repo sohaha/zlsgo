@@ -20,7 +20,7 @@ func TestLogFile(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	ResetFlags(BitLevel | BitMicroSeconds)
 	defer zfile.Rmdir("tmp2/")
-	logPath := "./tmp2/Log.log"
+	logPath := "./tmp2/log.log"
 	SetSaveFile(logPath)
 	Success("ok1")
 	var ws sync.WaitGroup

@@ -20,7 +20,7 @@ var (
 func init() {
 	// abs, _ := filepath.Abs(".")
 	// ProjectPath = RealPath(abs)
-	ProjectPath = ProgramPath(true)
+	ProjectPath = ProgramPath()
 	if strings.Contains(ProjectPath, TmpPath("")) {
 		ProjectPath = RootPath()
 	}
@@ -95,7 +95,7 @@ func logSize(n, b float64) float64 {
 // RootPath Project Launch Path
 func RootPath() string {
 	path, _ := filepath.Abs(".")
-	return RealPath(path, true)
+	return RealPath(path)
 }
 
 func TmpPath(pattern ...string) string {
@@ -115,9 +115,9 @@ func TmpPath(pattern ...string) string {
 func SafePath(path string, pathRange ...string) string {
 	base := ""
 	if len(pathRange) == 0 {
-		base = RootPath()
+		base = ProjectPath
 	} else {
-		base = RealPath(pathRange[0], true)
+		base = RealPath(pathRange[0], false)
 	}
 	return strings.TrimPrefix(RealPath(path, false), base)
 }

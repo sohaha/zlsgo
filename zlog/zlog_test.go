@@ -16,7 +16,7 @@ func TestLogs(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	text := "Text"
 
-	Log.SetIgnoreLog("test")
+	log.SetIgnoreLog("test")
 	SetLogLevel(LogDump)
 	Debug("test")
 	Debug("debug")
@@ -50,7 +50,7 @@ func TestLogs(T *testing.T) {
 	ForceConsoleColor()
 	ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
 	SetFile("tmp/Log.log")
-	CleanLog(Log)
+	CleanLog(log)
 	log := New(text)
 	log.SetPrefix(text)
 	t.EqualExit(log.GetPrefix(), text)
