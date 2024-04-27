@@ -18,51 +18,66 @@ var (
 	}
 )
 
+// SetDefault set default logger
+func SetDefault(l *Logger) {
+	log = l
+}
+
+// Deprecated: please use SetDefault
 // GetFlags Get the tag bits
 func GetFlags() int {
 	return log.GetFlags()
 }
 
+// Deprecated: please use SetDefault
 // DisableConsoleColor DisableConsoleColor
 func DisableConsoleColor() {
 	log.DisableConsoleColor()
 }
 
+// Deprecated: please use SetDefault
 // ForceConsoleColor ForceConsoleColor
 func ForceConsoleColor() {
 	log.ForceConsoleColor()
 }
 
+// Deprecated: please use SetDefault
 // ResetFlags Setting Markup Bits
 func ResetFlags(flag int) {
 	log.ResetFlags(flag)
 }
 
+// Deprecated: please use SetDefault
 // AddFlag Set flag Tags
 func AddFlag(flag int) {
 	log.AddFlag(flag)
 }
 
+// Deprecated: please use SetDefault
 // SetPrefix Setting log header prefix
 func SetPrefix(prefix string) {
 	log.SetPrefix(prefix)
 }
 
+// Deprecated: please use SetDefault
 // SetFile Setting up log files
 func SetFile(filepath string, archive ...bool) {
 	log.SetFile(filepath, archive...)
 }
 
+// Deprecated: please use SetDefault
 // SetSaveFile SetSaveFile
 func SetSaveFile(filepath string, archive ...bool) {
 	log.SetSaveFile(filepath, archive...)
 }
 
+// Deprecated: please use SetDefault
 // SetLogLevel Setting log display level
 func SetLogLevel(level int) {
 	log.SetLogLevel(level)
 }
 
+// Deprecated: please use SetDefault
 // GetLogLevel Setting log display level
 func GetLogLevel() int {
 	return log.level

@@ -18,7 +18,7 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-// Log header information tag bit, using bitmap mode
+// log header information tag bit, using bitmap mode
 const (
 	BitDate         int                                 = 1 << iota // Date marker  2019/01/23
 	BitTime                                                         // Time Label Bit  01:23:12
