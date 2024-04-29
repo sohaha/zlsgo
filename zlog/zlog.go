@@ -20,7 +20,7 @@ var (
 
 // SetDefault set default logger
 func SetDefault(l *Logger) {
-	log = l
+	log = NewZLog(l.out, l.prefix, l.flag, l.level, l.color, l.calldDepth+1)
 }
 
 // Deprecated: please use SetDefault
