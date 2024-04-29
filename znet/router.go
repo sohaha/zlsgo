@@ -437,12 +437,12 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if _, ok := e.router.trees[req.Method]; !ok {
-		e.HandleNotFound(c)
+		e.handleNotFound(c)
 		return
 	}
 
 	if e.FindHandle(c, req, p, true) {
-		e.HandleNotFound(c)
+		e.handleNotFound(c)
 	}
 }
 
@@ -473,7 +473,7 @@ func (e *Engine) Use(middleware ...Handler) {
 	}
 }
 
-func (e *Engine) HandleNotFound(c *Context) {
+func (e *Engine) handleNotFound(c *Context) {
 	middleware := e.router.middleware
 	c.prevData.Code.Store(http.StatusNotFound)
 
@@ -486,6 +486,11 @@ func (e *Engine) HandleNotFound(c *Context) {
 		c.Byte(404, []byte("404 page not found"))
 		return nil
 	}, middleware)
+}
+
+func (e *Engine) HandleNotFound(c *Context) {
+	e.handleNotFound(c)
+	c.stopHandle.Store(true)
 }
 
 func handleAction(c *Context, handler handlerFn, middleware []handlerFn) {

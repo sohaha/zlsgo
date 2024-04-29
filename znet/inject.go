@@ -56,7 +56,7 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	if h == nil {
 		return func(c *Context) error {
-			return errors.New("Handler is nil")
+			return errors.New("handler is nil")
 		}
 	}
 
@@ -74,9 +74,15 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	case func(*Context) (interface{}, error):
 		return func(c *Context) error {
 			res, err := v(c)
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
 			if err != nil {
 				return err
 			}
+
 			if res == nil {
 				res = struct{}{}
 			}
@@ -89,6 +95,11 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	case func(*Context) (ztype.Map, error):
 		return func(c *Context) error {
 			res, err := v(c)
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
 			if err != nil {
 				return err
 			}
@@ -103,6 +114,11 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	case zdi.PreInvoker:
 		return func(c *Context) error {
 			v, err := c.injector.Invoke(v)
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
 			if err != nil {
 				return err
 			}
@@ -115,6 +131,11 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	case func() (int, string):
 		return func(c *Context) error {
 			v, err := c.injector.Invoke(invokerCodeText(v))
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
 			c.String(int32(v[0].Int()), v[1].String())
 			return err
 		}
@@ -135,6 +156,11 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 
 		return func(c *Context) error {
 			v, err := c.injector.Invoke(v)
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
 			if err != nil {
 				return err
 			}
