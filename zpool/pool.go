@@ -256,6 +256,7 @@ func (wp *WorkPool) PreInit() error {
 func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicFunc) {
 	defer func() {
 		if r := recover(); r != nil {
+			wp.activeNum.Sub(1)
 			err, ok := r.(error)
 			if !ok {
 				err = fmt.Errorf("%v", r)
