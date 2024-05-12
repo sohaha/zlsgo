@@ -47,12 +47,13 @@ type (
 
 	// Maper implements the concurrent hashmap
 	Maper[K hashable, V any] struct {
-		gsf      singleflight.Group
-		listHead *element[K, V]
-		hasher   func(K) uintptr
-		metadata atomicPointer[metadata[K, V]]
-		resizing *zutil.Uint32
-		numItems *zutil.Uintptr
+		gsf         singleflight.Group
+		listHead    *element[K, V]
+		hasher      func(K) uintptr
+		metadata    atomicPointer[metadata[K, V]]
+		resizing    *zutil.Uint32
+		numItems    *zutil.Uintptr
+		defaultSize uintptr
 	}
 
 	deletionRequest[K hashable] struct {
@@ -63,16 +64,18 @@ type (
 
 func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 	m := &Maper[K, V]{
-		listHead: newListHead[K, V](),
-		resizing: zutil.NewUint32(0),
-		numItems: zutil.NewUintptr(0),
+		listHead:    newListHead[K, V](),
+		resizing:    zutil.NewUint32(0),
+		numItems:    zutil.NewUintptr(0),
+		defaultSize: defaultSize,
 	}
+
 	m.numItems.Store(0)
 	if len(size) > 0 && size[0] != 0 {
-		m.allocate(size[0])
-	} else {
-		m.allocate(defaultSize)
+		m.defaultSize = size[0]
 	}
+
+	m.allocate(defaultSize)
 	m.setDefaultHasher()
 	return m
 }
@@ -202,7 +205,7 @@ func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loa
 		}
 	}
 
-	r := false
+	var r bool
 	_, _, _ = m.gsf.Do(strconv.FormatInt(int64(h), 10), func() (interface{}, error) {
 		actual, loaded = provide()
 		if loaded {
@@ -326,16 +329,13 @@ func (m *Maper[K, V]) Len() uintptr {
 }
 
 func (m *Maper[K, V]) Clear() {
-	index := make([]*element[K, V], defaultSize)
+	index := make([]*element[K, V], m.defaultSize)
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&index))
-
 	newdata := &metadata[K, V]{
-		keyshifts: strconv.IntSize - log2(defaultSize),
+		keyshifts: strconv.IntSize - log2(m.defaultSize),
 		data:      unsafe.Pointer(header.Data),
 		index:     index,
-		count:     zutil.NewUintptr(0),
 	}
-
 	m.listHead.nextPtr.Store(nil)
 	m.metadata.Store(newdata)
 	m.numItems.Store(0)

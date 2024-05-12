@@ -42,6 +42,7 @@ type (
 	}
 	// Config provides the setup for a ServiceIface. The Name field is required.
 	Config struct {
+		Context     context.Context
 		Options     map[string]interface{}
 		Name        string
 		DisplayName string
@@ -51,7 +52,6 @@ type (
 		WorkingDir  string
 		RootDir     string
 		Arguments   []string
-		Context     context.Context
 	}
 )
 
