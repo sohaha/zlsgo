@@ -81,7 +81,7 @@ func ToBool(i interface{}) bool {
 	if v, ok := i.(bool); ok {
 		return v
 	}
-	if s := ToString(i); s != "" && s != "0" && s != "false" {
+	if s := ToString(i); s != "" && s != "0" && !strings.EqualFold(s, "false") {
 		return true
 	}
 	return false

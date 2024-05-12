@@ -170,6 +170,7 @@ func TestTo(t *testing.T) {
 	tt.Equal(true, ztype.ToBool(b))
 	tt.Equal(true, ztype.ToBool(str))
 	tt.Equal(false, ztype.ToBool(ni))
+	tt.Equal(false, ztype.ToBool("FAlse"))
 
 	v := map[string]interface{}{
 		"D":         true,
@@ -180,9 +181,7 @@ func TestTo(t *testing.T) {
 		"j_date":    time.Now(),
 	}
 	var d type2
-	tt.NoError(ztype.To(v, &d, func(conver *ztype.Conver) {
-
-	}))
+	tt.NoError(ztype.To(v, &d))
 	tt.Log(d)
 	tt.Log(d.JDate)
 	tt.Log(d.Date)
