@@ -335,6 +335,7 @@ func (m *Maper[K, V]) Clear() {
 		keyshifts: strconv.IntSize - log2(m.defaultSize),
 		data:      unsafe.Pointer(header.Data),
 		index:     index,
+		count:     zutil.NewUintptr(0),
 	}
 	m.listHead.nextPtr.Store(nil)
 	m.metadata.Store(newdata)
