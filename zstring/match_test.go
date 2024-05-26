@@ -70,6 +70,16 @@ func TestMatch(T *testing.T) {
 	t.EqualExit(true, Match(u, "/api/hello/kiki/{k999,k1}"))
 }
 
+func TestMatch_fold(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tt.EqualExit(false, Match(s, "hello P*"))
+	tt.EqualExit(true, Match(s, "hello P*", true))
+
+	tt.EqualExit(false, Match("你好呀 A!", "你好呀 a!"))
+	tt.EqualExit(true, Match("你好呀 A!", "你好呀 a!", true))
+}
+
 func TestIsPattern(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	t.Equal(true, IsPattern("hello ?ickup"))
@@ -77,20 +87,32 @@ func TestIsPattern(T *testing.T) {
 	t.Equal(false, IsPattern("hello pickup"))
 }
 
+func BenchmarkMatch(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Match(z, "hello ki*")
+	}
+}
+
+func BenchmarkMatch_fold(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Match(z, "hello ki*", true)
+	}
+}
+
 func BenchmarkMatch1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Match(z, "hello *")
+		Match(z, "he?lo ki*")
 	}
 }
 
-func BenchmarkMatch2(b *testing.B) {
+func BenchmarkRegexMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		RegexMatch(`hello`, z)
+		RegexMatch(`hello ki*`, z)
 	}
 }
 
-func BenchmarkMatch3(b *testing.B) {
+func BenchmarkContains(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		strings.Contains(z, "hello ")
+		strings.Contains(z, "hello ki")
 	}
 }
