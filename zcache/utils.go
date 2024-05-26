@@ -1,5 +1,9 @@
 package zcache
 
+import (
+	"github.com/sohaha/zlsgo/ztime"
+)
+
 type ActionKind int
 
 func (k ActionKind) String() string {
@@ -100,6 +104,11 @@ func (c *lruCache) delete(k string) (_ *node, _ int, e int64) {
 func (c *lruCache) forEach(walker func(key string, iface interface{}) bool) {
 	for idx := c.dlList[0][n]; idx != 0; idx = c.dlList[idx][n] {
 		if !c.nodes[idx-1].isDelete {
+			if c.nodes[idx-1].expireAt != 0 && (ztime.Clock()*1000 >= c.nodes[idx-1].expireAt) {
+				n, _, _ := c.delete(c.nodes[idx-1].key)
+				n.value.value, n.value.byteValue = nil, nil
+				continue
+			}
 			if c.nodes[idx-1].value.byteValue != nil {
 				if !walker(c.nodes[idx-1].key, c.nodes[idx-1].value.byteValue) {
 					return

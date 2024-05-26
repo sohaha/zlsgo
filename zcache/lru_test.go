@@ -6,11 +6,16 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zcache"
+	"github.com/sohaha/zlsgo/zsync"
+	"github.com/sohaha/zlsgo/ztype"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestLRUCacheExpire(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	l := zcache.NewFast()
+	l := zcache.NewFast(func(o *zcache.Options) {
+		o.LRU2Cap = 10
+	})
 
 	l.Set("key1", "value1")
 	l.Set("key3", "value3", time.Second*1)
@@ -139,5 +144,62 @@ func TestLRUCache(t *testing.T) {
 		tt.EqualTrue(!ok)
 		tt.Equal(nil, v)
 	}
+}
 
+func TestProvideGet(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	l := zcache.NewFast(func(o *zcache.Options) {})
+
+	var wg zsync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Go(func() {
+			_, _ = l.ProvideGet("key1", func() (interface{}, bool) {
+				tt.Log("    ", "value1")
+				return "value1", true
+			}, time.Second/2)
+		})
+	}
+	wg.Wait()
+	t.Log(l.Get("key1"))
+	time.Sleep(time.Second * 1)
+	t.Log(l.Get("key1"))
+
+	for i := 0; i < 100; i++ {
+		wg.Go(func() {
+			_, _ = l.ProvideGet("key1", func() (interface{}, bool) {
+				tt.Log("    ", "value2")
+				return "value2", true
+			}, time.Second/2)
+		})
+	}
+	wg.Wait()
+	t.Log(l.Get("key1"))
+
+	time.Sleep(time.Second * 1)
+	t.Log(l.Get("key1"))
+}
+
+func TestForEach(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	c, i := zcache.NewFast(), zutil.NewInt64(0)
+
+	for i := 0; i < 100; i++ {
+		c.Set(ztype.ToString(i), i, time.Millisecond*time.Duration(i))
+	}
+
+	c.ForEach(func(key string, value interface{}) bool {
+		i.Add(1)
+		return true
+	})
+
+	time.Sleep(time.Millisecond * 50)
+
+	c.ForEach(func(key string, value interface{}) bool {
+		i.Sub(1)
+		return true
+	})
+
+	tt.EqualTrue(i.Load() != 0)
 }

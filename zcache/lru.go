@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/ztype"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -114,6 +115,14 @@ func (l *FastCache) Get(key string) (interface{}, bool) {
 	return nil, false
 }
 
+// GetAny value of key from cache with result, support dynamic type
+func (l *FastCache) GetAny(key string) (ztype.Type, bool) {
+	if v, ok := l.Get(key); ok {
+		return ztype.New(v), true
+	}
+	return ztype.Type{}, false
+}
+
 // GetBytes value of key from cache with result
 func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 	if i, b, ok := l.get(key); ok {
@@ -132,21 +141,29 @@ func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool), e
 		return *i, true
 	}
 
-	_, _, _ = l.gsf.Do(key, func() (value interface{}, err error) {
+	v, err, _ := l.gsf.Do(key, func() (value interface{}, err error) {
 		value, ok := provide()
 		if ok {
 			l.Set(key, value, expiration...)
 		}
 		return
 	})
+	if err != nil {
+		return nil, false
+	}
 
-	return l.Get(key)
+	l.gsf.Forget(key)
+
+	return v, true
 }
 
 func (l *FastCache) getValue(key string, idx, level int32) (*node, int) {
 	n, s := l.insts[idx][level].get(key)
-	if s > 0 && !n.isDelete && (n.expireAt == 0 || (ztime.Clock()*1000 <= n.expireAt)) {
-		return n, s
+	if s > 0 {
+		if !n.isDelete && (n.expireAt == 0 || (ztime.Clock()*1000 <= n.expireAt)) {
+			return n, s
+		}
+		n.isDelete, n.value.value, n.value.byteValue = true, nil, nil
 	}
 	return nil, 0
 }
@@ -207,6 +224,7 @@ func (l *FastCache) Delete(key string) {
 	} else if l.callback != nil {
 		l.callback(DELETE, key, uintptr(0))
 	}
+
 	l.locks[idx].Unlock()
 }
 
