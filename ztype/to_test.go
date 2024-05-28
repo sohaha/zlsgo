@@ -190,6 +190,33 @@ func TestTo(t *testing.T) {
 	tt.Equal(uint(12), *d.E)
 }
 
+func TestConv(t *testing.T) {
+	tt := zls.NewTest(t)
+	a := struct {
+		Tags    []string
+		Options map[string]string
+		Name    string
+	}{
+		Name: "test",
+		Tags: []string{"a", "b"},
+		Options: map[string]string{
+			"key": "value",
+		},
+	}
+
+	b := ztype.Map{"name": "dev", "tags": []string{"c", "d", "e"}, "options": map[string]string{"new_key": "new_value"}}
+	tt.Log(ztype.To(b, &a))
+	tt.Log(a)
+
+	tt.Equal("dev", a.Name)
+	tt.Equal([]string{"c", "d", "e"}, a.Tags)
+	tt.Equal("new_value", a.Options["new_key"])
+	tt.Equal(1, len(a.Options))
+
+	tt.Log(ztype.ToStruct(ztype.Map{"tags": []string{"e"}, "options": map[string]string{"3": "4"}}, &a))
+	tt.Log(a)
+}
+
 func BenchmarkToString1(b *testing.B) {
 	s := true
 	for i := 0; i < b.N; i++ {

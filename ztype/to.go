@@ -313,5 +313,5 @@ func ToStruct(v interface{}, outVal interface{}) error {
 	if reflect.Indirect(val).Kind() != reflect.Struct {
 		return errors.New("result must be a struct")
 	}
-	return conv.to("", v, val)
+	return conv.to("", v, val, true)
 }

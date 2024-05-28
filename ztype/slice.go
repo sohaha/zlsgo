@@ -130,7 +130,7 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 		var nval []interface{}
 		vof := zreflect.ValueOf(&nval)
 		to := func() {
-			if conv.to("", value, vof) == nil {
+			if conv.to("", value, vof, true) == nil {
 				s = make(SliceType, len(nval))
 				for i := range nval {
 					s[i] = New(nval[i])

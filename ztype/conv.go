@@ -37,10 +37,10 @@ func ValueConv(input interface{}, out reflect.Value, opt ...func(*Conver)) error
 	if !out.Elem().CanAddr() {
 		return errors.New("out must be addressable (a pointer)")
 	}
-	return o.to("input", input, out)
+	return o.to("input", input, out, true)
 }
 
-func (d *Conver) to(name string, input interface{}, outVal reflect.Value) error {
+func (d *Conver) to(name string, input interface{}, outVal reflect.Value, deep bool) error {
 	var inputVal reflect.Value
 	if input != nil {
 		inputVal = zreflect.ValueOf(input)
@@ -89,7 +89,7 @@ func (d *Conver) to(name string, input interface{}, outVal reflect.Value) error 
 	case reflect.Struct:
 		err = d.toStruct(name, input, outVal)
 	case reflect.Map:
-		err = d.toMap(name, input, outVal)
+		err = d.toMap(name, input, outVal, deep)
 	case reflect.Ptr:
 		err = d.toPtr(name, input, outVal)
 	case reflect.Slice:
@@ -115,7 +115,7 @@ func (d *Conver) basic(name string, data interface{}, val reflect.Value) error {
 			elem = nVal
 		}
 
-		if err := d.to(name, data, elem); err != nil || !copied {
+		if err := d.to(name, data, elem, true); err != nil || !copied {
 			return err
 		}
 
@@ -280,7 +280,7 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 			fieldName = name + "." + fieldName
 		}
 
-		if err := d.to(fieldName, rawMapVal.Interface(), fieldValue); err != nil {
+		if err := d.to(fieldName, rawMapVal.Interface(), fieldValue, false); err != nil {
 			return err
 		}
 	}
@@ -291,7 +291,7 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 			remain[key] = dataVal.MapIndex(zreflect.ValueOf(key)).Interface()
 		}
 
-		if err := d.toMap(name, remain, remainField.val); err != nil {
+		if err := d.toMap(name, remain, remainField.val, true); err != nil {
 			return err
 		}
 	}
@@ -299,13 +299,13 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 	return nil
 }
 
-func (d *Conver) toMap(name string, data interface{}, val reflect.Value) error {
+func (d *Conver) toMap(name string, data interface{}, val reflect.Value, deep bool) error {
 	valType := val.Type()
 	valKeyType := valType.Key()
 	valElemType := valType.Elem()
 	valMap := val
 
-	if valMap.IsNil() || d.ZeroFields {
+	if valMap.IsNil() || d.ZeroFields || !deep {
 		mapType := reflect.MapOf(valKeyType, valElemType)
 		valMap = reflect.MakeMap(mapType)
 	}
@@ -332,7 +332,7 @@ func (d *Conver) toMapFromSlice(name string, dataVal reflect.Value, val reflect.
 	for i := 0; i < dataVal.Len(); i++ {
 		err := d.to(
 			name+"["+strconv.Itoa(i)+"]",
-			dataVal.Index(i).Interface(), val)
+			dataVal.Index(i).Interface(), val, true)
 		if err != nil {
 			return err
 		}
@@ -361,13 +361,13 @@ func (d *Conver) toMapFromMap(name string, dataVal reflect.Value, val reflect.Va
 	for _, k := range dataVal.MapKeys() {
 		fieldName := name + "[" + k.String() + "]"
 		currentKey := reflect.Indirect(reflect.New(valKeyType))
-		if err := d.to(fieldName, k.Interface(), currentKey); err != nil {
+		if err := d.to(fieldName, k.Interface(), currentKey, true); err != nil {
 			return err
 		}
 
 		v := dataVal.MapIndex(k).Interface()
 		currentVal := reflect.Indirect(reflect.New(valElemType))
-		if err := d.to(fieldName, v, currentVal); err != nil {
+		if err := d.to(fieldName, v, currentVal, true); err != nil {
 			return err
 		}
 
@@ -383,8 +383,6 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 	typ := dataVal.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
-
-		fmt.Println(name, f.PkgPath, f.Name, dataVal.IsValid())
 		if f.PkgPath != "" {
 			continue
 		}
@@ -413,11 +411,11 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 		}
 
 		if opt != "" {
-			if strings.Index(opt, "omitempty") != -1 && !zreflect.Nonzero(v) {
+			if strings.Contains(opt, "omitempty") && !zreflect.Nonzero(v) {
 				continue
 			}
 
-			squash = squash || strings.Index(opt, "squash") != -1
+			squash = squash || strings.Contains(opt, "squash")
 			if squash {
 				if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
 					v = v.Elem()
@@ -440,7 +438,7 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 			addrVal := reflect.New(vMap.Type())
 			reflect.Indirect(addrVal).Set(vMap)
 
-			err := d.to(keyName, x.Interface(), reflect.Indirect(addrVal))
+			err := d.to(keyName, x.Interface(), reflect.Indirect(addrVal), false)
 			if err != nil {
 				return err
 			}
@@ -497,13 +495,13 @@ func (d *Conver) toPtr(name string, data interface{}, val reflect.Value) error {
 			realVal = reflect.New(valElemType)
 		}
 
-		if err := d.to(name, data, reflect.Indirect(realVal)); err != nil {
+		if err := d.to(name, data, reflect.Indirect(realVal), true); err != nil {
 			return err
 		}
 
 		val.Set(realVal)
 	} else {
-		if err := d.to(name, data, reflect.Indirect(val)); err != nil {
+		if err := d.to(name, data, reflect.Indirect(val), true); err != nil {
 			return err
 		}
 	}
@@ -552,7 +550,7 @@ func (d *Conver) toSlice(name string, data interface{}, val reflect.Value) error
 		}
 		currentField := valSlice.Index(i)
 		fieldName := name + "[" + strconv.Itoa(i) + "]"
-		if err := d.to(fieldName, currentData, currentField); err != nil {
+		if err := d.to(fieldName, currentData, currentField, true); err != nil {
 			return err
 		}
 	}
@@ -592,7 +590,7 @@ func (d *Conver) toArray(name string, data interface{}, val reflect.Value) error
 		currentField := valArray.Index(i)
 
 		fieldName := name + "[" + strconv.Itoa(i) + "]"
-		if err := d.to(fieldName, currentData, currentField); err != nil {
+		if err := d.to(fieldName, currentData, currentField, true); err != nil {
 			return err
 		}
 	}
