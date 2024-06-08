@@ -37,6 +37,13 @@ func TestForEach(t *testing.T) {
 		return SkipChild
 	})
 	tt.NoError(err)
+
+	typ = TypeOf(&Demo)
+	err = ForEach(typ, func(parent []string, index int, tag string, field reflect.StructField) error {
+		tt.Log(parent, index, tag, field.Name)
+		return SkipChild
+	})
+	tt.NoError(err)
 }
 
 func TestForEachValue(t *testing.T) {
@@ -44,6 +51,13 @@ func TestForEachValue(t *testing.T) {
 	v := ValueOf(Demo)
 
 	err := ForEachValue(v, func(parent []string, index int, tag string, field reflect.StructField, value reflect.Value) error {
+		tt.Log(parent, index, tag, field.Name, value.Interface())
+		return nil
+	})
+	tt.NoError(err)
+
+	v = ValueOf(&Demo)
+	err = ForEachValue(v, func(parent []string, index int, tag string, field reflect.StructField, value reflect.Value) error {
 		tt.Log(parent, index, tag, field.Name, value.Interface())
 		return nil
 	})
