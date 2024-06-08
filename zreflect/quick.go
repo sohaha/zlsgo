@@ -31,6 +31,9 @@ var (
 // ForEach For Each Struct field
 func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, field reflect.StructField) error) (err error) {
 	var forField func(typ reflect.Type, parent []string) error
+	if typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
 	forField = func(typ reflect.Type, parent []string) error {
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
@@ -60,7 +63,9 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 	if !Nonzero(val) {
 		return errors.New("reflect.Value is zero")
 	}
-
+	if val.Kind() == reflect.Pointer {
+		val = val.Elem()
+	}
 	typ := toRType(NewType(val))
 	var forField func(val reflect.Value, typ reflect.Type, parent []string) error
 	forField = func(val reflect.Value, typ reflect.Type, parent []string) error {
