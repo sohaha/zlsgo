@@ -4,6 +4,7 @@ package zfile
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"math"
 	"mime"
@@ -13,9 +14,7 @@ import (
 	"strings"
 )
 
-var (
-	ProjectPath = "./"
-)
+var ProjectPath = "./"
 
 func init() {
 	// abs, _ := filepath.Abs(".")
@@ -107,7 +106,10 @@ func TmpPath(pattern ...string) string {
 	if p == "" {
 		path, _ = filepath.Split(path)
 	}
-	path, _ = filepath.EvalSymlinks(path)
+
+	if p, err := filepath.EvalSymlinks(path); err == nil {
+		path = p
+	}
 	return RealPath(path)
 }
 
@@ -140,11 +142,13 @@ func RealPath(path string, addSlash ...bool) (realPath string) {
 }
 
 // RealPathMkdir get an absolute path, create it if it doesn't exist
+// If you want to ensure that the directory can be created successfully, please use HasReadWritePermission to check the permission first
 func RealPathMkdir(path string, addSlash ...bool) string {
 	realPath := RealPath(path, addSlash...)
 	if DirExist(realPath) {
 		return realPath
 	}
+
 	_ = os.MkdirAll(realPath, os.ModePerm)
 	return realPath
 }
@@ -162,7 +166,9 @@ func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 	err := os.RemoveAll(realPath)
 	ok = err == nil
 	if ok && len(notIncludeSelf) > 0 && notIncludeSelf[0] {
-		_ = os.Mkdir(path, os.ModePerm)
+		if err := os.Mkdir(path, os.ModePerm); err != nil {
+			ok = false
+		}
 	}
 	return
 }
@@ -233,4 +239,27 @@ func GetMimeType(filename string, content []byte) (ctype string) {
 		}
 	}
 	return ctype
+}
+
+// HasPermission check file or directory permission
+func HasPermission(path string, perm os.FileMode, noUp ...bool) bool {
+	path = RealPath(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if len(noUp) == 0 || !noUp[0] {
+				return HasPermission(filepath.Dir(path), perm, false)
+			}
+			return false
+		}
+
+		return !os.IsPermission(err)
+	}
+
+	return info.Mode()&perm == perm
+}
+
+// HasReadWritePermission check file or directory read and write permission
+func HasReadWritePermission(path string) bool {
+	return HasPermission(path, fs.FileMode(0o600))
 }

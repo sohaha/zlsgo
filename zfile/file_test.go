@@ -84,6 +84,12 @@ func TestFile(t *testing.T) {
 	t.Log(path, testPath, ok)
 }
 
+func TestProgramPath(t *testing.T) {
+	tt := NewTest(t)
+	ePath := ProgramPath(true)
+	tt.Log(ePath)
+}
+
 func TestPut(t *testing.T) {
 	var err error
 	tt := NewTest(t)
@@ -117,4 +123,33 @@ func TestGetMimeType(t *testing.T) {
 	m = GetMimeType("test", []byte("<html></html>"))
 	tt.Log(m)
 	tt.Equal("text/html", strings.Split(m, ";")[0])
+}
+
+func TestPermissionDenied(t *testing.T) {
+	tt := NewTest(t)
+	dir := "./permission_denied"
+
+	os.Mkdir(dir, 0o000)
+	defer Rmdir(dir)
+
+	tt.Run("NotPermission", func(tt *TestUtil) {
+		tt.EqualTrue(!HasReadWritePermission(dir))
+		tt.EqualTrue(!HasReadWritePermission(dir + "/ddd"))
+	})
+
+	tt.Run("Exist", func(tt *TestUtil) {
+		tt.EqualTrue(HasReadWritePermission("./"))
+	})
+
+	tt.Run("NotExist", func(tt *TestUtil) {
+		tt.EqualTrue(HasReadWritePermission("./ddd2"))
+	})
+
+	tt.Run("Custom", func(tt *TestUtil) {
+		tt.EqualTrue(!HasPermission(dir, 0o400))
+		tt.EqualTrue(!HasPermission(dir+"/ddd2", 0o400))
+		tt.EqualTrue(HasPermission("./ddd2", 0o400))
+		tt.EqualTrue(!HasPermission("./ddd2", 0o400, true))
+		tt.Log(HasPermission("/", 0o664))
+	})
 }
