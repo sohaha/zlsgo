@@ -23,3 +23,7 @@ func SignalChan() (<-chan os.Signal, func()) {
 		signal.Stop(quit)
 	}
 }
+
+func IsSudo() bool {
+	return isSudo() == nil
+}

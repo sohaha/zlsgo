@@ -98,3 +98,7 @@ func TestDetach(t *testing.T) {
 	t.Log(isDetach("detach"))
 	t.Log(isDetach("dd"))
 }
+
+func TestIsSudo(t *testing.T) {
+	t.Log(IsSudo())
+}

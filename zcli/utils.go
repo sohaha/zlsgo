@@ -178,3 +178,7 @@ func isDetach(a string) bool {
 	}
 	return false
 }
+
+func IsSudo() bool {
+	return daemon.IsSudo()
+}

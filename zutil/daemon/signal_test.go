@@ -64,3 +64,8 @@ func TestSingleKillSignal(t *testing.T) {
 	tt.Log(isKill)
 	tt.EqualTrue(time.Since(now) > time.Second*2)
 }
+
+func TestIsSudo(t *testing.T) {
+	tt := zls.NewTest(t)
+	tt.Log(IsSudo())
+}

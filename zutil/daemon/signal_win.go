@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 )
@@ -22,4 +23,10 @@ func SignalChan() (<-chan os.Signal, func()) {
 	return quit, func() {
 		signal.Stop(quit)
 	}
+}
+
+func IsSudo() bool {
+	cmd := exec.Command("net", "session")
+	err := cmd.Run()
+	return err == nil
 }
