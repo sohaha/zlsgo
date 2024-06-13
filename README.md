@@ -7,6 +7,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/sohaha/zlsgo)](https://goreportcard.com/report/github.com/sohaha/zlsgo)
 [![codecov](https://codecov.io/gh/sohaha/zlsgo/branch/master/graph/badge.svg)](https://codecov.io/gh/sohaha/zlsgo)
 
+<a href="https://hellogithub.com/repository/8b1c797863764fd3af917054564a7ba0" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=8b1c797863764fd3af917054564a7ba0&claim_uid=pqVQnIAD3xNjt2y" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 ![luckything](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fa4bcc6b2-32ef-4a7d-ba1c-65a0330f632d%2Flogo.png?table=block&id=37f366ec-0593-4a21-94c0-c24023a85354&width=590&cache=v2)
 
 ## 文档
