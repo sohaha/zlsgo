@@ -547,8 +547,28 @@ func itoa(buf *bytes.Buffer, i int, wid int) {
 	}
 }
 
-func (log *Logger) ResetWriter(w io.Writer) {
-	log.out = w
+func (log *Logger) Writer() logWriter {
+	return logWriter{log: log}
+}
+
+type logWriter struct {
+	log *Logger
+}
+
+func (wr logWriter) Get() io.Writer {
+	return wr.log.out
+}
+
+func (wr logWriter) Set(w io.Writer) {
+	wr.log.out = w
+}
+
+func (wr logWriter) Reset(l *Logger) {
+	wr.log.out = l.out
+	wr.log.color = l.color
+	wr.log.prefix = l.prefix
+	wr.log.flag = l.flag
+	wr.log.level = l.level
 }
 
 func formatArgs(args ...interface{}) []interface{} {

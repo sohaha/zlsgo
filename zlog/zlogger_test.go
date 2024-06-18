@@ -25,12 +25,19 @@ func TestCustomWriter(t *testing.T) {
 		Writer: os.Stderr,
 	}
 
-	l1 := zlog.NewZLog(w, "Custom1", zlog.BitDefault|zlog.BitLongFile, zlog.LogDump, true, 3)
+	l1 := zlog.NewZLog(w, "[Custom1] ", zlog.BitLevel, zlog.LogDump, true, 3)
 	l1.Info("Test")
 
 	// or
 
-	l2 := zlog.New("Custom2")
-	l2.ResetWriter(w)
+	l2 := zlog.New("[Custom2] ")
 	l2.Info("Test")
+	l2.Writer().Set(w)
+	l2.Info("Test 2")
+
+	// or
+	l3 := zlog.New("[Custom3] ")
+	l3.Info("Test")
+	l3.Writer().Reset(l2)
+	l3.Info("Test")
 }
