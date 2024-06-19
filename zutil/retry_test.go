@@ -1,6 +1,7 @@
 package zutil
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -13,16 +14,16 @@ func TestRetry(tt *testing.T) {
 	t.Run("Success", func(t *zlsgo.TestUtil) {
 		i := 0
 		now := time.Now()
-		ok := DoRetry(5, func() bool {
+		err := DoRetry(5, func() error {
 			if i < 3 {
 				i++
-				return false
+				return errors.New("error")
 			}
-			return true
+			return nil
 		}, func(rc *RetryConf) {
 			rc.Interval = time.Second / 5
 		})
-		t.EqualTrue(ok)
+		t.NoError(err)
 		t.EqualTrue(time.Since(now).Seconds() < 1)
 		t.Equal(3, i)
 	})
@@ -30,17 +31,17 @@ func TestRetry(tt *testing.T) {
 	t.Run("Success BackOffDelay", func(t *zlsgo.TestUtil) {
 		i := 0
 		now := time.Now()
-		ok := DoRetry(5, func() bool {
+		err := DoRetry(5, func() error {
 			if i < 3 {
 				i++
-				return false
+				return errors.New("error")
 			}
-			return true
+			return nil
 		}, func(rc *RetryConf) {
 			rc.BackOffDelay = true
 			rc.Interval = time.Second / 5
 		})
-		t.EqualTrue(ok)
+		t.NoError(err)
 		t.EqualTrue(time.Since(now).Seconds() < 6)
 		t.EqualTrue(time.Since(now).Seconds() > 2)
 		t.Equal(3, i)
@@ -49,13 +50,13 @@ func TestRetry(tt *testing.T) {
 	t.Run("Failed", func(t *zlsgo.TestUtil) {
 		i := 0
 		now := time.Now()
-		ok := DoRetry(5, func() bool {
+		err := DoRetry(5, func() error {
 			i++
-			return false
+			return errors.New("error")
 		}, func(rc *RetryConf) {
 			rc.Interval = time.Second / 5
 		})
-		t.EqualTrue(!ok)
+		t.EqualTrue(err != nil)
 		t.EqualTrue(time.Since(now).Seconds() > 1)
 		t.Equal(6, i)
 	})

@@ -1,6 +1,7 @@
 package zutil
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 )
@@ -19,7 +20,7 @@ type RetryConf struct {
 }
 
 // DoRetry is a general retry function
-func DoRetry(sum int, fn func() bool, opt ...func(*RetryConf)) (ok bool) {
+func DoRetry(sum int, fn func() error, opt ...func(*RetryConf)) (err error) {
 	o := RetryConf{
 		maxRetry:         sum,
 		Interval:         time.Second,
@@ -29,13 +30,13 @@ func DoRetry(sum int, fn func() bool, opt ...func(*RetryConf)) (ok bool) {
 		opt[i](&o)
 	}
 
-	ok = fn()
-	if ok {
+	err = fn()
+	if err == nil {
 		return
 	}
 
 	if o.maxRetry == 0 {
-		return false
+		return errors.New("maxRetry must be greater than 0")
 	}
 
 	i, now := 1, time.Now()
@@ -48,8 +49,8 @@ func DoRetry(sum int, fn func() bool, opt ...func(*RetryConf)) (ok bool) {
 			break
 		}
 
-		ok = fn()
-		if ok {
+		err = fn()
+		if err == nil {
 			break
 		}
 
