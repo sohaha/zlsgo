@@ -93,18 +93,16 @@ func (e *Engine) Connect(url string, v ...interface{}) (*Res, error) {
 }
 
 func (e *Engine) DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (res *Res, err error) {
-	if !zutil.DoRetry(attempt, func() bool {
+	zutil.DoRetry(attempt, func() error {
 		res, err = fn()
-		return err == nil
+		return err
 	}, func(rc *zutil.RetryConf) {
 		if sleep == 0 {
 			rc.BackOffDelay = true
 		} else {
 			rc.Interval = sleep
 		}
-	}) {
-		return res, errors.New("the number of retries has been exhausted")
-	}
+	})
 
 	return
 }
