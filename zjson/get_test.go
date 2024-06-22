@@ -246,6 +246,32 @@ func TestUnmarshal(t *testing.T) {
 	tt.Equal("n1", s.IDs[0].Gg.P[0].Name)
 }
 
+func TestUnmarshal2(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	json := `{"u1":[{"name":"HH","id":1},{"name":"HBB","id":2}]}`
+	var m map[string][]map[string]any
+	err := Unmarshal(json, &m)
+	tt.NoError(err)
+	tt.Logf("%+v", m)
+	tt.Equal("HH", m["u1"][0]["name"])
+	tt.Equal(2.0, m["u1"][1]["id"])
+
+	json = `{"u2":{"u3":1}}`
+	var m2 map[string]map[string]any
+	err = Unmarshal(json, &m2)
+	tt.NoError(err)
+	tt.Logf("%+v", m2)
+	tt.Equal(1.0, m2["u2"]["u3"])
+
+	json = `{"u4":2}`
+	var m3 map[string]int
+	err = Unmarshal(json, &m3)
+	tt.NoError(err)
+	tt.Logf("%+v", m3)
+	tt.Equal(2, m3["u4"])
+
+}
+
 func TestEditJson(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	j := Parse(demo)
