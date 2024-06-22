@@ -1983,21 +1983,15 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 		key := t.Key()
 		s := key.Kind() == reflect.String
 		if s {
-			kind := t.Elem().Kind()
-			switch kind {
-			case reflect.Interface:
-				val.Set(zreflect.ValueOf(jsval.Value()))
-			case reflect.Struct, reflect.Ptr:
-				v := reflect.MakeMap(t)
-				jsval.ForEach(func(key, value *Res) bool {
-					newval := reflect.New(t.Elem())
-					elem := newval.Elem()
-					assign(value, elem, fmap)
-					v.SetMapIndex(zreflect.ValueOf(key.Value()), elem)
-					return true
-				})
-				val.Set(v)
-			}
+			v := reflect.MakeMap(t)
+			jsval.ForEach(func(key, value *Res) bool {
+				newval := reflect.New(t.Elem())
+				elem := newval.Elem()
+				assign(value, elem, fmap)
+				v.SetMapIndex(zreflect.ValueOf(key.Value()), elem)
+				return true
+			})
+			val.Set(v)
 		}
 	case reflect.Interface:
 		val.Set(zreflect.ValueOf(jsval.Value()))
