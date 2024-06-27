@@ -22,7 +22,7 @@ func TestLocalTime(t *testing.T) {
 
 	now := time.Now()
 	lt := ztime.LocalTime{now}
-	tt.Equal(now, lt.Time)
+	tt.Equal(now.Unix(), lt.Unix())
 
 	j, err := json.Marshal(lt)
 	tt.NoError(err)
@@ -49,4 +49,11 @@ func TestLocalTime(t *testing.T) {
 	tt.NoError(err)
 	tt.Log(string(j2))
 	tt.EqualTrue(string(j2) != string(nj))
+
+	lt3 := ztime.LocalTime{}
+	lt3.Scan(data.Birthday)
+	tt.Log(lt3.String())
+
+	lt3.Scan(data.BirthdayLocal)
+	tt.Log(lt3.String())
 }

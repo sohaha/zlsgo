@@ -22,11 +22,23 @@ func (t LocalTime) Value() (driver.Value, error) {
 	return t.Time, nil
 }
 
-func (t *LocalTime) Scan(v interface{}) error {
-	if value, ok := v.(time.Time); ok {
-		*t = LocalTime{Time: value}
-		return nil
-	}
+func (t LocalTime) String() string {
+	return inlay.FormatTime(t.Time, "2006-01-02 15:04:05.999999999 -0700 MST")
+}
 
-	return fmt.Errorf("expected time.Time, got %T", v)
+func (t LocalTime) Format(layout string) string {
+	return inlay.FormatTime(t.Time, layout)
+}
+
+func (t *LocalTime) Scan(v interface{}) error {
+	switch vv := v.(type) {
+	case time.Time:
+		*t = LocalTime{Time: vv}
+		return nil
+	case LocalTime:
+		*t = vv
+		return nil
+	default:
+		return fmt.Errorf("expected time.Time, got %T", v)
+	}
 }
