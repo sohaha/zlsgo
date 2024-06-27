@@ -1,6 +1,8 @@
 package ztype
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -25,6 +27,12 @@ const (
 	typeMapStruct
 	typeSliceStruct
 )
+
+func NewStructFromValue(v interface{}) (*StruBuilder, error) {
+	b := NewStruct()
+	err := b.Merge(v)
+	return b, err
+}
 
 func NewStruct() *StruBuilder {
 	return &StruBuilder{
@@ -62,10 +70,18 @@ func (b *StruBuilder) Copy(v *StruBuilder) *StruBuilder {
 	return b
 }
 
-func (b *StruBuilder) Merge(values ...interface{}) *StruBuilder {
+func (b *StruBuilder) String() string {
+	return ToString(b.Interface())
+}
+
+func (b *StruBuilder) Merge(values ...interface{}) error {
 	for _, value := range values {
 		valueOf := reflect.Indirect(zreflect.ValueOf(value))
 		typeOf := valueOf.Type()
+		if typeOf.Kind() != reflect.Struct {
+			return errors.New("value must be struct")
+		}
+
 		for i := 0; i < valueOf.NumField(); i++ {
 			fval := valueOf.Field(i)
 			ftyp := typeOf.Field(i)
@@ -73,7 +89,7 @@ func (b *StruBuilder) Merge(values ...interface{}) *StruBuilder {
 		}
 	}
 
-	return b
+	return nil
 }
 
 // func (b *StruBuilder) AddFunc(name string, fieldType interface{}, tag ...string) *StruBuilder {
@@ -126,6 +142,12 @@ func (b *StruBuilder) GetField(name string) *StruField {
 		return nil
 	}
 	return b.fields[name]
+}
+
+// 全部字段名
+func (b *StruBuilder) FieldNames() []string {
+	fmt.Println(b.fieldKeys)
+	return b.fieldKeys
 }
 
 func (b *StruBuilder) Interface() interface{} {

@@ -11,13 +11,14 @@ import (
 )
 
 type Conver struct {
-	MatchName  func(mapKey, fieldName string) bool
-	ConvHook   func(i reflect.Value, o reflect.Type) (reflect.Value, error)
-	TagName    string
-	ZeroFields bool
-	Squash     bool
-	Deep       bool
-	Merge      bool
+	MatchName     func(mapKey, fieldName string) bool
+	ConvHook      func(name string, i reflect.Value, o reflect.Type) (reflect.Value, bool)
+	TagName       string
+	IgnoreTagName bool
+	ZeroFields    bool
+	Squash        bool
+	Deep          bool
+	Merge         bool
 }
 
 var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}
@@ -37,7 +38,7 @@ func ValueConv(input interface{}, out reflect.Value, opt ...func(*Conver)) error
 	if !out.Elem().CanAddr() {
 		return errors.New("out must be addressable (a pointer)")
 	}
-	return o.to("input", input, out, true)
+	return o.to("", input, out, true)
 }
 
 func (d *Conver) to(name string, input interface{}, outVal reflect.Value, deep bool) error {
@@ -66,13 +67,13 @@ func (d *Conver) to(name string, input interface{}, outVal reflect.Value, deep b
 	outputKind := zreflect.GetAbbrKind(outVal)
 
 	if d.ConvHook != nil {
-		if i, err := d.ConvHook(inputVal, t); err != nil {
-			return err
+		if i, next := d.ConvHook(name, inputVal, t); !next {
+			outVal.Set(i)
+			return nil
 		} else {
 			input = i.Interface()
 		}
 	}
-
 	switch outputKind {
 	case reflect.Bool:
 		outVal.SetBool(ToBool(input))
@@ -210,20 +211,21 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 
 			squash := d.Squash && fieldVal.Kind() == reflect.Struct && fieldType.Anonymous
 			remain := false
-			_, opt := zreflect.GetStructTag(fieldType, d.TagName, tagNameLesser)
-			tagParts := strings.Split(opt, ",")
-			for _, tag := range tagParts {
-				if tag == "squash" {
-					squash = true
-					break
-				}
+			if !d.IgnoreTagName {
+				_, opt := zreflect.GetStructTag(fieldType, d.TagName, tagNameLesser)
+				tagParts := strings.Split(opt, ",")
+				for _, tag := range tagParts {
+					if tag == "squash" {
+						squash = true
+						break
+					}
 
-				if tag == "remain" {
-					remain = true
-					break
+					if tag == "remain" {
+						remain = true
+						break
+					}
 				}
 			}
-
 			if squash {
 				if fieldVal.Kind() != reflect.Struct {
 					return fmt.Errorf("cannot squash non-struct type '%s'", fieldVal.Type())
@@ -243,7 +245,12 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 
 	for _, f := range fields {
 		field, fieldValue := f.field, f.val
-		fieldName, _ := zreflect.GetStructTag(field, d.TagName, tagNameLesser)
+		var fieldName string
+		if d.IgnoreTagName {
+			fieldName = field.Name
+		} else {
+			fieldName, _ = zreflect.GetStructTag(field, d.TagName, tagNameLesser)
+		}
 		rawMapKey := zreflect.ValueOf(fieldName)
 		rawMapVal := dataVal.MapIndex(rawMapKey)
 		if !rawMapVal.IsValid() {
@@ -388,21 +395,37 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 		}
 
 		v := dataVal.Field(i)
-		if !v.Type().AssignableTo(valMap.Type().Elem()) {
-			return fmt.Errorf("cannot assign type '%s' to map value field of type '%s'", v.Type(), valMap.Type().Elem())
+		vTyp := v.Type()
+		if !vTyp.AssignableTo(valMap.Type().Elem()) {
+			return fmt.Errorf("cannot assign type '%s' to map value field of type '%s'", vTyp, valMap.Type().Elem())
 		}
 
-		keyName, opt := zreflect.GetStructTag(f, d.TagName, tagNameLesser)
-		if keyName == "" {
-			continue
+		var (
+			keyName string
+			opt     string
+		)
+
+		if d.IgnoreTagName {
+			keyName = f.Name
+		} else {
+			keyName, opt = zreflect.GetStructTag(f, d.TagName, tagNameLesser)
+			if keyName == "" {
+				continue
+			}
 		}
+
 		squash := d.Squash && v.Kind() == reflect.Struct && f.Anonymous
 
 		if !(v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct) {
 			nv := v.Elem()
 			for i := 0; i < typ.NumField(); i++ {
 				f := typ.Field(i)
-				keyName, _ := zreflect.GetStructTag(f, d.TagName, tagNameLesser)
+				var keyName string
+				if d.IgnoreTagName {
+					keyName = f.Name
+				} else {
+					keyName, _ = zreflect.GetStructTag(f, d.TagName, tagNameLesser)
+				}
 				if keyName != "" {
 					v = nv
 					break
@@ -421,35 +444,40 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 					v = v.Elem()
 				}
 				if v.Kind() != reflect.Struct {
-					return fmt.Errorf("cannot squash non-struct type '%s'", v.Type())
+					return fmt.Errorf("cannot squash non-struct type '%s'", vTyp)
 				}
 			}
 		}
 
 		switch v.Kind() {
 		case reflect.Struct:
-			x := reflect.New(v.Type())
-			x.Elem().Set(v)
-			vType := valMap.Type()
-			vKeyType := vType.Key()
-			vElemType := vType.Elem()
-			mType := reflect.MapOf(vKeyType, vElemType)
-			vMap := reflect.MakeMap(mType)
-			addrVal := reflect.New(vMap.Type())
-			reflect.Indirect(addrVal).Set(vMap)
+			switch vTyp.String() {
+			case "time.Time", "ztime.LocalTime":
+				valMap.SetMapIndex(zreflect.ValueOf(keyName), v)
+			default:
+				x := reflect.New(vTyp)
+				x.Elem().Set(v)
+				vType := valMap.Type()
+				vKeyType := vType.Key()
+				vElemType := vType.Elem()
+				mType := reflect.MapOf(vKeyType, vElemType)
+				vMap := reflect.MakeMap(mType)
+				addrVal := reflect.New(vMap.Type())
+				reflect.Indirect(addrVal).Set(vMap)
 
-			err := d.to(keyName, x.Interface(), reflect.Indirect(addrVal), false)
-			if err != nil {
-				return err
-			}
-
-			vMap = reflect.Indirect(addrVal)
-			if squash {
-				for _, k := range vMap.MapKeys() {
-					valMap.SetMapIndex(k, vMap.MapIndex(k))
+				err := d.to(keyName, x.Interface(), reflect.Indirect(addrVal), false)
+				if err != nil {
+					return err
 				}
-			} else {
-				valMap.SetMapIndex(zreflect.ValueOf(keyName), vMap)
+
+				vMap = reflect.Indirect(addrVal)
+				if squash {
+					for _, k := range vMap.MapKeys() {
+						valMap.SetMapIndex(k, vMap.MapIndex(k))
+					}
+				} else {
+					valMap.SetMapIndex(zreflect.ValueOf(keyName), vMap)
+				}
 			}
 
 		default:

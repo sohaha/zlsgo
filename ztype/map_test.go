@@ -48,7 +48,7 @@ func TestMapNil(t *testing.T) {
 	t.Log(err)
 	tt.EqualTrue(err != nil)
 
-	var m2 = &Map{}
+	m2 := &Map{}
 	tt.Equal(true, m2.IsEmpty())
 	err = m.Delete("no")
 	t.Log(err)
@@ -138,7 +138,7 @@ func TestToMaps(T *testing.T) {
 		Key    int
 		Status bool
 	}
-	var rawData = make([]u, 2)
+	rawData := make([]u, 2)
 	rawData[0] = u{
 		Name:   "666",
 		Key:    9,
@@ -156,7 +156,7 @@ func TestToMaps(T *testing.T) {
 	t.Log(toSliceMapString)
 	t.Equal(18, toSliceMapString[0].Get("Other").Get("Sex").Int())
 
-	var data = make([]map[string]interface{}, 2)
+	data := make([]map[string]interface{}, 2)
 	data[0] = map[string]interface{}{"name": "hi"}
 	data[1] = map[string]interface{}{"name": "golang"}
 	toSliceMapString = ToMaps(data)
@@ -192,12 +192,12 @@ func TestConvContainTime(t *testing.T) {
 	var s S
 	isTime := zreflect.TypeOf(time.Time{})
 	err := To(v, &s, func(conver *Conver) {
-		conver.ConvHook = func(i reflect.Value, o reflect.Type) (reflect.Value, error) {
+		conver.ConvHook = func(name string, i reflect.Value, o reflect.Type) (reflect.Value, bool) {
 			t := i.Type()
 			if t == isTime && t.ConvertibleTo(o) {
-				return i.Convert(o), nil
+				return i.Convert(o), true
 			}
-			return i, nil
+			return i, true
 		}
 	})
 	tt.NoError(err)
@@ -207,7 +207,6 @@ func TestConvContainTime(t *testing.T) {
 }
 
 func BenchmarkName(b *testing.B) {
-
 	b.Run("toMapString", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
