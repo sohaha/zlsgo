@@ -5,10 +5,10 @@ package zarray
 
 import (
 	"math/rand"
-	"sync/atomic"
 
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zsync"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 // CopySlice copy a slice.
@@ -43,7 +43,7 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint
 	}
 
 	var (
-		idx atomic.Int64
+		idx = zutil.NewInt64(0)
 		wg  zsync.WaitGroup
 	)
 
