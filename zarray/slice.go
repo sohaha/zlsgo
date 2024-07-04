@@ -5,10 +5,10 @@ package zarray
 
 import (
 	"math/rand"
+	"sync/atomic"
 
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zsync"
-	"github.com/sohaha/zlsgo/zutil"
 )
 
 // CopySlice copy a slice.
@@ -31,47 +31,43 @@ func Rand[T any](collection []T) T {
 }
 
 // Map manipulates a slice and transforms it to a slice of another type.
-func Map[T any, R any](collection []T, iteratee func(int, T) R) []R {
-	res := make([]R, len(collection))
+func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint) []R {
+	colLen := len(collection)
+	res := make([]R, colLen)
 
-	for i, item := range collection {
-		res[i] = iteratee(i, item)
+	if len(parallel) == 0 {
+		for i := range collection {
+			res[i] = iteratee(i, collection[i])
+		}
+		return res
 	}
+
+	var (
+		idx atomic.Int64
+		wg  zsync.WaitGroup
+	)
+
+	task := func() {
+		i := int(idx.Add(1) - 1)
+		for ; i < colLen; i = int(idx.Add(1) - 1) {
+			res[i] = iteratee(i, collection[i])
+		}
+	}
+
+	for i := 0; i < int(parallel[0]); i++ {
+		wg.Go(task)
+	}
+
+	wg.Wait()
 
 	return res
 }
 
 // ParallelMap Parallel manipulates a slice and transforms it to a slice of another type.
 // If the calculation does not involve time-consuming operations, we recommend using a Map.
+// Deprecated: please use Map
 func ParallelMap[T any, R any](collection []T, iteratee func(int, T) R, workers uint) []R {
-	inLen, workTotal := len(collection), int(workers)
-
-	res := make([]R, inLen)
-	if inLen == 0 {
-		return res
-	}
-
-	if inLen < workTotal {
-		workTotal = inLen
-	} else if workTotal == 0 {
-		workTotal = 1
-	}
-
-	idx := zutil.NewInt64(0)
-	task := func() {
-		i := int(idx.Add(1) - 1)
-		for ; i < inLen; i = int(idx.Add(1) - 1) {
-			res[i] = iteratee(i, collection[i])
-		}
-	}
-
-	var wg zsync.WaitGroup
-	for i := 0; i < workTotal; i++ {
-		wg.Go(task)
-	}
-	_ = wg.Wait()
-
-	return res
+	return Map(collection, iteratee, workers)
 }
 
 // Shuffle creates a slice of shuffled values.
