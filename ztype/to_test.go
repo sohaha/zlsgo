@@ -202,9 +202,12 @@ func TestConv(t *testing.T) {
 		Tags    []string
 		Options map[string]string
 		Name    *string
+		Name2   string
+		Name3   *string
 		Nick    string
 		Date    *_time `json:"d"`
 		Day     ztime.LocalTime
+		Day2    *time.Time
 	}{
 		Name: &name,
 		Nick: name,
