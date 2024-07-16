@@ -4,10 +4,12 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 var (
@@ -266,6 +268,16 @@ func toMapStringReflect(m *map[string]interface{}, val interface{}) {
 				}
 			}
 			fv := reflect.Indirect(v)
+			if fv.IsValid() && isTime(fv.Type().String()) {
+				switch v := fv.Interface().(type) {
+				case time.Time:
+					(*m)[name] = ztime.FormatTime(v)
+				case ztime.LocalTime:
+					(*m)[name] = v.String()
+				}
+				continue
+			}
+
 			switch fv.Kind() {
 			case reflect.Struct:
 				(*m)[name] = toMapString(v.Interface())
