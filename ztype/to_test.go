@@ -8,6 +8,7 @@ import (
 
 	zls "github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -192,26 +193,45 @@ func TestTo(t *testing.T) {
 
 func TestConv(t *testing.T) {
 	tt := zls.NewTest(t)
+
+	type _time time.Time
+	now := _time(time.Now())
+	otime, _ := ztime.Parse("2021-11-25 00:00:00")
+	name := "test"
 	a := struct {
 		Tags    []string
 		Options map[string]string
-		Name    string
+		Name    *string
+		Nick    string
+		Date    *_time `json:"d"`
+		Day     ztime.LocalTime
 	}{
-		Name: "test",
+		Name: &name,
+		Nick: name,
 		Tags: []string{"a", "b"},
+		Date: &now,
+		Day:  ztime.LocalTime{Time: time.Time(now)},
 		Options: map[string]string{
 			"key": "value",
 		},
 	}
 
-	b := ztype.Map{"name": "dev", "tags": []string{"c", "d", "e"}, "options": map[string]string{"new_key": "new_value"}}
+	var a2 ztype.Map
+	tt.NoError(ztype.To(a, &a2))
+	tt.Equal(a2.Get("Nick").String(), a.Nick)
+	tt.Equal(a2.Get("Day").String(), ztime.FormatTime(time.Time(now)))
+	tt.Log(a2)
+
+	b := ztype.Map{"name": "dev", "tags": []string{"c", "d", "e"}, "options": map[string]string{"new_key": "new_value"}, "d": ztime.FormatTime(otime), "Day": ztime.FormatTime(otime)}
 	tt.Log(ztype.To(b, &a))
 	tt.Log(a)
 
-	tt.Equal("dev", a.Name)
+	tt.Equal("dev", *(a.Name))
 	tt.Equal([]string{"c", "d", "e"}, a.Tags)
 	tt.Equal("new_value", a.Options["new_key"])
 	tt.Equal(1, len(a.Options))
+	tt.Equal(ztime.FormatTime(otime), ztime.FormatTime(a.Day.Time))
+	tt.Equal(ztime.FormatTime(otime), ztime.FormatTime(time.Time(*(a.Date))))
 
 	tt.Log(ztype.ToStruct(ztype.Map{"tags": []string{"e"}, "options": map[string]string{"3": "4"}}, &a))
 	tt.Log(a)

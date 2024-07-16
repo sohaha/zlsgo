@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sohaha/zlsgo/zreflect"
+	"github.com/sohaha/zlsgo/ztime"
 )
 
 type Conver struct {
@@ -167,6 +168,20 @@ func (d *Conver) toStruct(name string, data interface{}, val reflect.Value) erro
 		return d.toStructFromMap(name, reflect.Indirect(addrVal), val)
 
 	default:
+		vTyp := val.Type()
+		vTypStr := vTyp.String()
+		if (isTime(vTypStr) || vTyp.ConvertibleTo(timeType)) && dataVal.Kind() == reflect.String {
+			t, err := ztime.Parse(data.(string))
+			if err == nil {
+				if vTypStr == "ztime.LocalTime" {
+					val.Set(zreflect.ValueOf(ztime.LocalTime{Time: t}))
+					return nil
+				}
+
+				val.Set(zreflect.ValueOf(t).Convert(vTyp))
+				return nil
+			}
+		}
 		return fmt.Errorf("'%s' expected a map, got '%s'", name, dataVal.Kind())
 	}
 }
@@ -400,6 +415,10 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 			return fmt.Errorf("cannot assign type '%s' to map value field of type '%s'", vTyp, valMap.Type().Elem())
 		}
 
+		if vTyp.Kind() == reflect.Pointer {
+			vTyp = v.Elem().Type()
+		}
+
 		var (
 			keyName string
 			opt     string
@@ -451,10 +470,9 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 
 		switch v.Kind() {
 		case reflect.Struct:
-			switch vTyp.String() {
-			case "time.Time", "ztime.LocalTime":
+			if isTime(vTyp.String()) {
 				valMap.SetMapIndex(zreflect.ValueOf(keyName), v)
-			default:
+			} else {
 				x := reflect.New(vTyp)
 				x.Elem().Set(v)
 				vType := valMap.Type()
@@ -479,7 +497,6 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 					valMap.SetMapIndex(zreflect.ValueOf(keyName), vMap)
 				}
 			}
-
 		default:
 			valMap.SetMapIndex(zreflect.ValueOf(keyName), v)
 		}
@@ -637,4 +654,13 @@ func (d *Conver) toFunc(name string, data interface{}, val reflect.Value) error 
 	}
 	val.Set(dataVal)
 	return nil
+}
+
+func isTime(vTyp string) bool {
+	switch vTyp {
+	case "time.Time", "ztime.LocalTime":
+		return true
+	}
+
+	return false
 }

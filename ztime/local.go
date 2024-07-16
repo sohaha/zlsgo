@@ -23,7 +23,7 @@ func (t LocalTime) Value() (driver.Value, error) {
 }
 
 func (t LocalTime) String() string {
-	return inlay.FormatTime(t.Time, "2006-01-02 15:04:05.999999999 -0700 MST")
+	return inlay.FormatTime(t.Time)
 }
 
 func (t LocalTime) Format(layout string) string {

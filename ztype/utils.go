@@ -3,6 +3,7 @@ package ztype
 import (
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/sohaha/zlsgo/zreflect"
 )
@@ -160,3 +161,5 @@ func parsePath(path string, v interface{}) (interface{}, bool) {
 
 	return val, exist
 }
+
+var timeType = reflect.TypeOf(time.Time{})
