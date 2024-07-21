@@ -71,6 +71,8 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 			v(c)
 			return nil
 		}
+	case func(c *Context) error:
+		return v
 	case func(*Context) (interface{}, error):
 		return func(c *Context) error {
 			res, err := v(c)
