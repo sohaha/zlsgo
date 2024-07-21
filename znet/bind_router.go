@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
@@ -22,6 +23,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 	if !of.IsValid() {
 		return nil
 	}
+
 	initFn := of.MethodByName("Init")
 	if initFn.IsValid() {
 		before, ok := initFn.Interface().(func(e *Engine))
@@ -36,12 +38,26 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				}
 			}
 		}
-
 	}
+
+	preInvokerFn := of.MethodByName("PreInvoker")
+	var preInvokers []reflect.Type
+	if preInvokerFn.IsValid() {
+		before, ok := preInvokerFn.Interface().(func() []zdi.PreInvoker)
+		if ok {
+			pres := before()
+			for i := range pres {
+				preInvokers = append(preInvokers, reflect.TypeOf(pres[i]))
+			}
+		} else {
+			return fmt.Errorf("func: [%s] is not an effective routing method", "PreInvoker")
+		}
+	}
+
 	typeOf := reflect.Indirect(of).Type()
 	return zutil.TryCatch(func() error {
 		return zreflect.ForEachMethod(of, func(i int, m reflect.Method, value reflect.Value) error {
-			if m.Name == "Init" {
+			if m.Name == "Init" || m.Name == "PreInvoker" {
 				return nil
 			}
 			path, method, key := "", "", ""
@@ -67,7 +83,17 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				method = strings.ToUpper(info[1])
 			}
 
-			fn := value.Interface()
+			var fn interface{}
+			for i := range preInvokers {
+				if value.Type().ConvertibleTo(preInvokers[i]) {
+					fn = value.Convert(preInvokers[i]).Interface()
+					break
+				}
+			}
+			if fn == nil {
+				fn = value.Interface()
+			}
+
 			handleName := strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
 			if e.BindStructCase != nil {
 				path = e.BindStructCase(path)
@@ -88,6 +114,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			}
 			if path == "/" {
 				path = ""
+			} else if path == "s" {
+				path = "/"
 			}
 
 			var (

@@ -8,53 +8,48 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
-type testErrController struct {
-}
+type testErrController struct{}
 
 func (t *testErrController) Init(e *Engine) error {
 	return errors.New("test error")
 }
 
-type testController struct {
-}
+type testController struct{}
 
 func (t *testController) Init(e *Engine) {
 	e.Log.Debug("initialization")
 }
 
-func (t *testController) GETUser(_ *Context) {
+func (t *testController) PreInvoker() []zdi.PreInvoker {
+	return []zdi.PreInvoker{(*invokerCodeText)(nil)}
+}
 
+func (t *testController) GETUser(_ *Context) {
 }
 
 func (t *testController) GETGetUser(_ *Context) {
-
 }
 
 func (t *testController) POSTUserInfo(_ *Context) {
-
 }
 
 func (t *testController) PUTUserInfo(_ *Context) {
-
 }
 
 func (t *testController) DELETEUserInfo(_ *Context) {
-
 }
 
 func (t *testController) PATCHUserInfo(_ *Context) {
-
 }
 
 func (t *testController) HEADUserInfo(_ *Context) {
-
 }
 
 func (t *testController) OPTIONSUserInfo(_ *Context) {
-
 }
 
 func (t *testController) AnyOk(c *Context) error {
@@ -63,15 +58,12 @@ func (t *testController) AnyOk(c *Context) error {
 }
 
 func (t *testController) IDGET(_ *Context) {
-
 }
 
 func (t *testController) IDGETUser(_ *Context) {
-
 }
 
 func (t *testController) FullGETFile(_ *Context) {
-
 }
 
 func TestBindStruct(t *testing.T) {
