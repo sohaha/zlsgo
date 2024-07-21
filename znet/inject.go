@@ -143,21 +143,33 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 		}
 	default:
 		val := zreflect.ValueOf(v)
-		if val.Kind() != reflect.Func {
-			b := ztype.ToBytes(v)
-			isJSON := zjson.ValidBytes(b)
-			return func(c *Context) error {
-				c.Byte(http.StatusOK, b)
-				if isJSON {
-					c.SetContentType(ContentTypeJSON)
-				}
-				return nil
+
+		var fn interface{}
+		for i := range preInvokers {
+			if val.Type().ConvertibleTo(preInvokers[i]) {
+				fn = val.Convert(preInvokers[i]).Interface()
+				break
 			}
-			// panic("znet Handler is not a function: " + val.Kind().String())
+		}
+
+		if fn == nil {
+			if val.Kind() != reflect.Func {
+				b := ztype.ToBytes(v)
+				isJSON := zjson.ValidBytes(b)
+				return func(c *Context) error {
+					c.Byte(http.StatusOK, b)
+					if isJSON {
+						c.SetContentType(ContentTypeJSON)
+					}
+					return nil
+				}
+				// panic("znet Handler is not a function: " + val.Kind().String())
+			}
+			fn = v
 		}
 
 		return func(c *Context) error {
-			v, err := c.injector.Invoke(v)
+			v, err := c.injector.Invoke(fn)
 
 			if c.stopHandle.Load() {
 				return nil

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -22,16 +21,14 @@ type testController struct{}
 
 func (t *testController) Init(e *Engine) {
 	e.Log.Debug("initialization")
-}
-
-func (t *testController) PreInvoker() []zdi.PreInvoker {
-	return []zdi.PreInvoker{(*invokerCodeText)(nil)}
+	RegisterPreInvoker((invokerCodeText)(nil), (*CustomInvoker)(nil))
 }
 
 func (t *testController) GETUser(_ *Context) {
 }
 
-func (t *testController) GETGetUser(_ *Context) {
+func (t *testController) GETGetUser(_ *Context) (b []byte) {
+	return []byte("GETUser")
 }
 
 func (t *testController) POSTUserInfo(_ *Context) {

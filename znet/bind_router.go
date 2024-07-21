@@ -11,6 +11,23 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
+var preInvokers = make([]reflect.Type, 0)
+
+// RegisterPreInvoker Register Pre Invoker
+func RegisterPreInvoker(invoker ...zdi.PreInvoker) {
+loop:
+	for i := range invoker {
+		typ := zreflect.TypeOf(invoker[i])
+		for i := range preInvokers {
+			if preInvokers[i] == typ {
+				continue loop
+			}
+		}
+
+		preInvokers = append(preInvokers, typ)
+	}
+}
+
 // BindStruct Bind Struct
 func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) error {
 	g := e.Group(prefix)
@@ -40,24 +57,10 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 		}
 	}
 
-	preInvokerFn := of.MethodByName("PreInvoker")
-	var preInvokers []reflect.Type
-	if preInvokerFn.IsValid() {
-		before, ok := preInvokerFn.Interface().(func() []zdi.PreInvoker)
-		if ok {
-			pres := before()
-			for i := range pres {
-				preInvokers = append(preInvokers, reflect.TypeOf(pres[i]))
-			}
-		} else {
-			return fmt.Errorf("func: [%s] is not an effective routing method", "PreInvoker")
-		}
-	}
-
 	typeOf := reflect.Indirect(of).Type()
 	return zutil.TryCatch(func() error {
 		return zreflect.ForEachMethod(of, func(i int, m reflect.Method, value reflect.Value) error {
-			if m.Name == "Init" || m.Name == "PreInvoker" {
+			if m.Name == "Init" {
 				return nil
 			}
 			path, method, key := "", "", ""
@@ -83,16 +86,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				method = strings.ToUpper(info[1])
 			}
 
-			var fn interface{}
-			for i := range preInvokers {
-				if value.Type().ConvertibleTo(preInvokers[i]) {
-					fn = value.Convert(preInvokers[i]).Interface()
-					break
-				}
-			}
-			if fn == nil {
-				fn = value.Interface()
-			}
+			fn := value.Interface()
 
 			handleName := strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
 			if e.BindStructCase != nil {
