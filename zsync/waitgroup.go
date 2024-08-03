@@ -8,8 +8,19 @@ import (
 
 type WaitGroup struct {
 	err error
+	ch  chan struct{}
 	wg  sync.WaitGroup
 	mu  sync.RWMutex
+}
+
+func NewWaitGroup(max ...uint) *WaitGroup {
+	wg := &WaitGroup{}
+
+	if len(max) > 0 {
+		wg.ch = make(chan struct{}, max[0])
+	}
+
+	return wg
 }
 
 func (h *WaitGroup) Add(delta int) {
@@ -21,22 +32,37 @@ func (h *WaitGroup) Done() {
 }
 
 func (h *WaitGroup) Go(f func()) {
+	if h.ch != nil {
+		h.ch <- struct{}{}
+	}
 	h.Add(1)
 	go func() {
-		defer h.Done()
+		defer func() {
+			if h.ch != nil {
+				<-h.ch
+			}
+			h.Done()
+		}()
 		f()
 	}()
 }
 
 func (h *WaitGroup) GoTry(f func()) {
+	if h.ch != nil {
+		h.ch <- struct{}{}
+	}
 	h.Add(1)
 	go func() {
-		defer h.Done()
+		defer func() {
+			if h.ch != nil {
+				<-h.ch
+			}
+			h.Done()
+		}()
 		err := zerror.TryCatch(func() error {
 			f()
 			return nil
 		})
-
 		if err != nil {
 			h.mu.Lock()
 			if h.err == nil {
