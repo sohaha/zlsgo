@@ -126,6 +126,8 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 			return
 		}
 		s = SliceType{New(val)}
+	case Type:
+		return ToSlice(val.Value())
 	default:
 		var nval []interface{}
 		vof := zreflect.ValueOf(&nval)

@@ -55,7 +55,6 @@ func (iw *IDWorker) timeGen() int64 {
 
 func (iw *IDWorker) timeReGen(last int64) int64 {
 	ts := iw.timeGen()
-	println(ts, last, last-ts)
 	for {
 		if ts < last {
 			ts = iw.timeGen()
