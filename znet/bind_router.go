@@ -64,7 +64,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				return nil
 			}
 			path, method, key := "", "", ""
-			methods := `ANY|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS`
+			methods := strings.Join(methodsKeys, "|")
 			regex := `^(?i)(` + methods + `)(.*)$`
 			info, err := zstring.RegexExtract(regex, m.Name)
 			infoLen := len(info)
@@ -118,11 +118,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				ok bool
 			)
 
-			if method == "ANY" {
-				p, l, ok = g.handleAny(path, Utils.ParseHandlerFunc(fn), nil, nil)
-			} else {
-				p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn), nil, nil)
-			}
+			p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn), nil, nil)
 
 			if ok && e.IsDebug() {
 				f := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l)

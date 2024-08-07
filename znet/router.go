@@ -11,6 +11,8 @@ import (
 	"github.com/sohaha/zlsgo/zfile"
 )
 
+const anyMethod = "ANY"
+
 var (
 	// ErrGenerateParameters is returned when generating a route withRequestLog wrong parameters.
 	ErrGenerateParameters = errors.New("params contains wrong parameters")
@@ -34,8 +36,16 @@ var (
 		http.MethodOptions: {},
 		http.MethodConnect: {},
 		http.MethodTrace:   {},
+		anyMethod:          {},
 	}
+	methodsKeys = make([]string, 0, len(methods))
 )
+
+func init() {
+	for k := range methods {
+		methodsKeys = append(methodsKeys, k)
+	}
+}
 
 type (
 	// contextKeyType Private Value Structure for Each Request
@@ -112,14 +122,7 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 }
 
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
-	middleware, firstMiddleware := handlerFuncs(moreHandler)
-	_, l, ok := e.handleAny(path, Utils.ParseHandlerFunc(action), middleware, firstMiddleware)
-
-	if ok {
-		routeAddLog(e, "ANY", Utils.CompletionPath(path, e.router.prefix), action, l)
-	}
-
-	return e
+	return e.Handle(anyMethod, path, action, moreHandler...)
 }
 
 func (e *Engine) Customize(method, path string, action Handler, moreHandler ...Handler) *Engine {
@@ -385,16 +388,6 @@ func (e *Engine) addHandle(method string, path string, handle handlerFn, beforeh
 	return path, len(middleware) + 1, true
 }
 
-func (e *Engine) handleAny(path string, handle handlerFn, beforehandle []handlerFn, moreHandler []handlerFn) (p string, l int, ok bool) {
-	for key := range methods {
-		p, l, ok = e.addHandle(key, path, handle, beforehandle, moreHandler)
-		if !ok {
-			return p, l, false
-		}
-	}
-	return
-}
-
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p := req.URL.Path
 	if !e.ShowFavicon && p == "/favicon.ico" {
@@ -436,23 +429,30 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if _, ok := e.router.trees[req.Method]; !ok {
-		e.handleNotFound(c)
-		return
-	}
-
 	if e.FindHandle(c, req, p, true) {
 		e.handleNotFound(c)
 	}
 }
 
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
+	var anyTrees bool
 	t, ok := e.router.trees[req.Method]
+	if !ok {
+		t, ok = e.router.trees[anyMethod]
+		anyTrees = true
+	}
 	if !ok {
 		return true
 	}
 
 	handler, middleware, ok := Utils.TreeFind(t, requestURL)
+	if !ok && !anyTrees {
+		t, ok = e.router.trees[anyMethod]
+		if ok {
+			handler, middleware, ok = Utils.TreeFind(t, requestURL)
+		}
+	}
+
 	if !ok {
 		return true
 	}

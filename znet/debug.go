@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"html/template"
+	"net/http"
 	"reflect"
 	"runtime"
 
@@ -22,17 +23,17 @@ func routeLog(log *zlog.Logger, tf, method, path string) string {
 	}
 
 	switch method {
-	case "GET":
+	case http.MethodGet:
 		method = log.ColorTextWrap(zlog.ColorLightCyan, mtd)
-	case "POST":
+	case http.MethodPost:
 		method = log.ColorTextWrap(zlog.ColorLightBlue, mtd)
-	case "PUT":
+	case http.MethodPut:
 		method = log.ColorTextWrap(zlog.ColorLightGreen, mtd)
-	case "DELETE":
+	case http.MethodDelete:
 		method = log.ColorTextWrap(zlog.ColorRed, mtd)
-	case "ANY":
+	case anyMethod:
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
-	case "OPTIONS":
+	case http.MethodOptions:
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
 	case "FILE":
 		method = log.ColorTextWrap(zlog.ColorLightMagenta, mtd)
