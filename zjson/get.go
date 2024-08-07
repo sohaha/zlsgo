@@ -12,6 +12,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
@@ -616,7 +617,7 @@ func (r *Res) Value() interface{} {
 }
 
 func parseString(json string, i int) (int, string, bool, bool) {
-	var s = i
+	s := i
 	for ; i < len(json); i++ {
 		if json[i] > '\\' {
 			continue
@@ -653,7 +654,7 @@ func parseString(json string, i int) (int, string, bool, bool) {
 }
 
 func parseNumber(json string, i int) (int, string) {
-	var s = i
+	s := i
 	i++
 	for ; i < len(json); i++ {
 		if json[i] <= ' ' || json[i] == ',' || json[i] == ']' ||
@@ -665,7 +666,7 @@ func parseNumber(json string, i int) (int, string) {
 }
 
 func parseLiteral(json string, i int) (int, string) {
-	var s = i
+	s := i
 	i++
 	for ; i < len(json); i++ {
 		if json[i] < 'a' || json[i] > 'z' {
@@ -1004,7 +1005,7 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 		for ; i < len(c.json); i++ {
 			if c.json[i] == '"' {
 				i++
-				var s = i
+				s := i
 				for ; i < len(c.json); i++ {
 					if c.json[i] > '\\' {
 						continue
@@ -1139,6 +1140,7 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 	}
 	return i, false
 }
+
 func queryMatches(rp *arrayPathResult, value *Res) bool {
 	rpv := rp.query.value
 	if len(rpv) > 2 && rpv[0] == '"' && rpv[len(rpv)-1] == '"' {
@@ -1211,6 +1213,7 @@ func queryMatches(rp *arrayPathResult, value *Res) bool {
 	}
 	return false
 }
+
 func parseArray(c *parseContext, i int, path string) (int, bool) {
 	var pmatch, vesc, ok, hit bool
 	var val string
@@ -1433,7 +1436,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 							c.pipe = right
 							c.piped = true
 						}
-						var jsons = make([]byte, 0, 64)
+						jsons := make([]byte, 0, 64)
 						jsons = append(jsons, '[')
 						for j, k := 0, 0; j < len(alog); j++ {
 							_, res, ok := parseAny(c.json, alog[j], true)
@@ -1748,7 +1751,7 @@ func Get(json, path string) *Res {
 	}
 
 	var i int
-	var c = &parseContext{json: json, value: &Res{}}
+	c := &parseContext{json: json, value: &Res{}}
 	if len(path) >= 2 && path[0] == '.' && path[1] == '.' {
 		c.lines = true
 		parseArray(c, 0, path[2:])
@@ -1785,7 +1788,7 @@ func runeit(json string) rune {
 }
 
 func unescape(json string) string {
-	var str = make([]byte, 0, len(json))
+	str := make([]byte, 0, len(json))
 	for i := 0; i < len(json); i++ {
 		switch {
 		case json[i] < ' ':
@@ -1984,10 +1987,11 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 		s := key.Kind() == reflect.String
 		if s {
 			kind := t.Elem().Kind()
+			zlog.Debug(kind)
 			switch kind {
 			case reflect.Interface:
 				val.Set(zreflect.ValueOf(jsval.Value()))
-			case reflect.Struct, reflect.Ptr:
+			default:
 				v := reflect.MakeMap(t)
 				jsval.ForEach(func(key, value *Res) bool {
 					newval := reflect.New(t.Elem())
@@ -2223,6 +2227,7 @@ func validstring(data []byte, i int) (outi int, ok bool) {
 	}
 	return i, false
 }
+
 func validnumber(data []byte, i int) (outi int, ok bool) {
 	i--
 	if data[i] == '-' {
@@ -2295,6 +2300,7 @@ func validtrue(data []byte, i int) (outi int, ok bool) {
 	}
 	return i, false
 }
+
 func validfalse(data []byte, i int) (outi int, ok bool) {
 	if i+4 <= len(data) && data[i] == 'a' && data[i+1] == 'l' &&
 		data[i+2] == 's' && data[i+3] == 'e' {
