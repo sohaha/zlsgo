@@ -27,7 +27,11 @@ func TestPipe(t *testing.T) {
 		{"grep", "shell_notwin"},
 	}
 
-	code, outStr, errStr, err := PipeExecCommand(ctx, commands)
+	code, outStr, errStr, err := PipeExecCommand(ctx, commands, func(o Options) Options {
+		o.Dir = "."
+		return o
+	})
+
 	t.Log(outStr, errStr, err)
 	tt.EqualExit(0, code)
 	tt.EqualExit("shell_notwin.go", strings.Trim(outStr, " \n"))
@@ -60,7 +64,10 @@ func TestBash(t *testing.T) {
 	t.Log(err)
 
 	if !zutil.IsWin() {
-		code, _, _, err = Run("ls")
+		code, _, _, err = Run("ls", func(o Options) Options {
+			o.Dir = "."
+			return o
+		})
 		tt.EqualExit(0, code)
 		tt.EqualExit(true, err == nil)
 		t.Log(err)
@@ -85,7 +92,7 @@ func TestBash(t *testing.T) {
 func TestCallbackRun(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	var i = 0
+	i := 0
 	var code <-chan int
 	var err error
 
@@ -96,6 +103,8 @@ func TestCallbackRun(t *testing.T) {
 		if i > 3 {
 			cancel()
 		}
+	}, func(o Options) Options {
+		return o
 	})
 	tt.NoError(err)
 	tt.Log("code", <-code)
@@ -115,13 +124,8 @@ func Test_fixCommand(t *testing.T) {
 	e = []string{"networksetup", "-setwebproxystate", "USB 10/100/1000 LAN", "on"}
 	r = fixCommand(`networksetup -setwebproxystate "USB 10/100/1000 LAN" on`)
 	tt.Equal(e, r)
-
 }
 
 func TestRunBash(t *testing.T) {
-	if zutil.IsWin() {
-		t.Log(RunBash(context.Background(), "dir"))
-	} else {
-		t.Log(RunBash(context.Background(), "ls && ls"))
-	}
+	t.Log(RunBash(context.Background(), "ls && ls"))
 }
