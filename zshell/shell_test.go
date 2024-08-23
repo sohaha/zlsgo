@@ -27,9 +27,8 @@ func TestPipe(t *testing.T) {
 		{"grep", "shell_notwin"},
 	}
 
-	code, outStr, errStr, err := PipeExecCommand(ctx, commands, func(o Options) Options {
+	code, outStr, errStr, err := PipeExecCommand(ctx, commands, func(o *Options) {
 		o.Dir = "."
-		return o
 	})
 
 	t.Log(outStr, errStr, err)
@@ -64,9 +63,8 @@ func TestBash(t *testing.T) {
 	t.Log(err)
 
 	if !zutil.IsWin() {
-		code, _, _, err = Run("ls", func(o Options) Options {
+		code, _, _, err = Run("ls", func(o *Options) {
 			o.Dir = "."
-			return o
 		})
 		tt.EqualExit(0, code)
 		tt.EqualExit(true, err == nil)
@@ -103,8 +101,7 @@ func TestCallbackRun(t *testing.T) {
 		if i > 3 {
 			cancel()
 		}
-	}, func(o Options) Options {
-		return o
+	}, func(o *Options) {
 	})
 	tt.NoError(err)
 	tt.Log("code", <-code)

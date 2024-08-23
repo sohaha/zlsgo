@@ -2,10 +2,10 @@ package zshell
 
 import "os/exec"
 
-func wrapOptions(cmd *exec.Cmd, opt ...func(o Options) Options) {
+func wrapOptions(cmd *exec.Cmd, opt ...func(o *Options)) {
 	o := Options{}
 	for _, v := range opt {
-		o = v(o)
+		v(&o)
 	}
 
 	if o.Dir != "" {

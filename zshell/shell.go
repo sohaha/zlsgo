@@ -117,7 +117,7 @@ type pipeWork struct {
 	w *io.PipeWriter
 }
 
-func PipeExecCommand(ctx context.Context, commands [][]string, opt ...func(o Options) Options) (code int, outStr, errStr string, err error) {
+func PipeExecCommand(ctx context.Context, commands [][]string, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
 	var (
 		cmds   []*pipeWork
 		out    bytes.Buffer
@@ -173,7 +173,7 @@ func PipeExecCommand(ctx context.Context, commands [][]string, opt ...func(o Opt
 	return status, out.String(), "", nil
 }
 
-func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer, stdErr io.Writer, opt ...func(o Options) Options) (code int, outStr, errStr string, err error) {
+func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer, stdErr io.Writer, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
 	stdout := newShellStdBuffer(stdOut)
 	stderr := newShellStdBuffer(stdErr)
 	code, err = ExecCommandHandle(ctx, command, func(cmd *exec.Cmd) error {
@@ -188,11 +188,11 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 	return
 }
 
-func Run(command string, opt ...func(o Options) Options) (code int, outStr, errStr string, err error) {
+func Run(command string, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
 	return RunContext(context.Background(), command, opt...)
 }
 
-func RunContext(ctx context.Context, command string, opt ...func(o Options) Options) (code int, outStr, errStr string, err error) {
+func RunContext(ctx context.Context, command string, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
 	return ExecCommand(ctx, fixCommand(command), nil, nil, nil, opt...)
 }
 
@@ -200,11 +200,11 @@ func OutRun(command string, stdIn io.Reader, stdOut io.Writer, stdErr io.Writer,
 	return ExecCommand(context.Background(), fixCommand(command), stdIn, stdOut, stdErr)
 }
 
-func BgRun(command string, opt ...func(o Options) Options) (err error) {
+func BgRun(command string, opt ...func(o *Options)) (err error) {
 	return BgRunContext(context.Background(), command, opt...)
 }
 
-func BgRunContext(ctx context.Context, command string, opt ...func(o Options) Options) (err error) {
+func BgRunContext(ctx context.Context, command string, opt ...func(o *Options)) (err error) {
 	if strings.TrimSpace(command) == "" {
 		return errors.New("no such command")
 	}
@@ -224,7 +224,7 @@ func BgRunContext(ctx context.Context, command string, opt ...func(o Options) Op
 	return err
 }
 
-func CallbackRun(command string, callback func(out string, isBasic bool), opt ...func(o Options) Options) (<-chan int, func(string), error) {
+func CallbackRun(command string, callback func(out string, isBasic bool), opt ...func(o *Options)) (<-chan int, func(string), error) {
 	return CallbackRunContext(context.Background(), command, callback, opt...)
 }
 
@@ -233,7 +233,7 @@ type Options struct {
 	Env []string
 }
 
-func CallbackRunContext(ctx context.Context, command string, callback func(str string, isStdout bool), opt ...func(o Options) Options) (<-chan int, func(string), error) {
+func CallbackRunContext(ctx context.Context, command string, callback func(str string, isStdout bool), opt ...func(o *Options)) (<-chan int, func(string), error) {
 	var (
 		cmd  *exec.Cmd
 		err  error
