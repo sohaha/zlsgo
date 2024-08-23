@@ -12,7 +12,6 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zreflect"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
@@ -1987,7 +1986,6 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 		s := key.Kind() == reflect.String
 		if s {
 			kind := t.Elem().Kind()
-			zlog.Debug(kind)
 			switch kind {
 			case reflect.Interface:
 				val.Set(zreflect.ValueOf(jsval.Value()))
