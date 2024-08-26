@@ -128,7 +128,23 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 	if opt != nil {
 		opt(&o)
 	}
-	ctx, cancel := context.WithCancel(context.TODO())
+	var (
+		ctx    context.Context
+		cancel context.CancelFunc
+	)
+
+	for i := range v {
+		if c, ok := v[i].(context.Context); ok {
+			ctx = c
+		}
+	}
+
+	if ctx == nil {
+		ctx, cancel = context.WithCancel(context.TODO())
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+
 	sse := &SSEEngine{
 		readyState: 0,
 		ctx:        ctx,
