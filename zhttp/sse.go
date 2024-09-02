@@ -87,12 +87,8 @@ func (sse *SSEEngine) OnMessage(fn func(*SSEEvent)) (<-chan struct{}, error) {
 	}
 }
 
-func SSE(url string, v ...interface{}) *SSEEngine {
-	sse, err := std.SSE(url, nil, v...)
-	if err != nil {
-		sse.errCh <- err
-	}
-	return sse
+func SSE(url string, v ...interface{}) (*SSEEngine, error) {
+	return std.SSE(url, nil, v...)
 }
 
 func (e *Engine) sseReq(method, url string, v ...interface{}) (*Res, error) {
@@ -128,14 +124,30 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 	if opt != nil {
 		opt(&o)
 	}
-	ctx, cancel := context.WithCancel(context.TODO())
+	var (
+		ctx    context.Context
+		cancel context.CancelFunc
+	)
+
+	for i := range v {
+		if c, ok := v[i].(context.Context); ok {
+			ctx = c
+		}
+	}
+
+	if ctx == nil {
+		ctx, cancel = context.WithCancel(context.TODO())
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+
 	sse := &SSEEngine{
 		readyState: 0,
 		ctx:        ctx,
 		option:     o,
 		ctxCancel:  cancel,
 		eventCh:    make(chan *SSEEvent),
-		errCh:      make(chan error),
+		errCh:      make(chan error, 1),
 		verifyHeader: func(h http.Header) bool {
 			return strings.Contains(h.Get("Content-Type"), "text/event-stream")
 		},
@@ -143,7 +155,6 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 
 	lastID := ""
 	data := append(v, Header{"Accept": "text/event-stream", "Connection": "keep-alive"}, sse.ctx)
-
 	r, err := e.sseReq(sse.option.Method, url, data...)
 	if err != nil {
 		return sse, err
@@ -233,17 +244,14 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 					return nil
 				})
 
-				if sse.option.RetryNum >= 0 {
-					if sse.option.RetryNum == 0 {
-						cancel()
-						return
-					}
-					sse.option.RetryNum--
-				}
-			} else {
-				sse.errCh <- err
 			}
-
+			if sse.option.RetryNum >= 0 {
+				if sse.option.RetryNum == 0 {
+					cancel()
+					return
+				}
+				sse.option.RetryNum--
+			}
 			sse.readyState = 0
 			time.Sleep(time.Millisecond * time.Duration(retry))
 			ndata := data
