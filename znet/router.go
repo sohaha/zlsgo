@@ -102,6 +102,7 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 		}
 
 		c.prevData.Type = zfile.GetMimeType(p, c.prevData.Content)
+		c.SetContentType(c.prevData.Type)
 		c.prevData.Code.Store(http.StatusOK)
 	}
 	if strings.HasSuffix(relativePath, "/") {
