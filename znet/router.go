@@ -3,6 +3,8 @@ package znet
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
 	"path"
 	"regexp"
@@ -63,6 +65,18 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	}
 }
 
+func (c *Context) toHTTPError(err error) {
+	if errors.Is(err, fs.ErrNotExist) {
+		c.String(http.StatusNotFound, "404 page not found")
+		return
+	}
+	if errors.Is(err, fs.ErrPermission) {
+		c.String(http.StatusForbidden, "403 Forbidden")
+		return
+	}
+	c.String(http.StatusInternalServerError, "500 Internal Server Error")
+}
+
 func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler ...Handler) {
 	var urlPattern string
 
@@ -72,19 +86,23 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 		f = "%s %-40s"
 	}
 	log := temporarilyTurnOffTheLog(e, routeLog(e.Log, f, "FILE", ap))
-	fileServer := http.StripPrefix(ap, http.FileServer(fs))
 	handler := func(c *Context) {
-		for key, value := range c.header {
-			for i := range value {
-				header := value[i]
-				if i == 0 {
-					c.Writer.Header().Set(key, header)
-				} else {
-					c.Writer.Header().Add(key, header)
-				}
-			}
+		p := strings.TrimPrefix(c.Request.URL.Path, relativePath)
+		f, err := fs.Open(p)
+		if err != nil {
+			c.toHTTPError(err)
+			return
 		}
-		fileServer.ServeHTTP(c.Writer, c.Request)
+
+		defer f.Close()
+		c.prevData.Content, err = io.ReadAll(f)
+		if err != nil {
+			c.toHTTPError(err)
+			return
+		}
+
+		c.prevData.Type = zfile.GetMimeType(p, c.prevData.Content)
+		c.prevData.Code.Store(http.StatusOK)
 	}
 	if strings.HasSuffix(relativePath, "/") {
 		urlPattern = path.Join(relativePath, "*")
@@ -106,7 +124,7 @@ func (e *Engine) Static(relativePath, root string, moreHandler ...Handler) {
 	e.StaticFS(relativePath, http.Dir(root), moreHandler...)
 }
 
-func (e *Engine) StaticFile(relativePath, filepath string) {
+func (e *Engine) StaticFile(relativePath, filepath string, moreHandler ...Handler) {
 	handler := func(c *Context) {
 		c.File(filepath)
 	}
@@ -116,8 +134,9 @@ func (e *Engine) StaticFile(relativePath, filepath string) {
 		tip = routeLog(e.Log, "%s %-40s", "FILE", relativePath)
 	}
 	log := temporarilyTurnOffTheLog(e, tip)
-	e.GET(relativePath, handler)
-	e.HEAD(relativePath, handler)
+	e.GET(relativePath, handler, moreHandler...)
+	e.HEAD(relativePath, handler, moreHandler...)
+	e.OPTIONS(relativePath, handler, moreHandler...)
 	log()
 }
 

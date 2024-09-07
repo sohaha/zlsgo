@@ -180,7 +180,6 @@ func TestMoreMethod(t *testing.T) {
 	g.TRACE("/", h("TRACE"))
 	g.POST("/", h("POST"))
 	g.PUT("/", h("PUT"))
-
 	for _, v := range []string{"CONNECT", "TRACE", "PUT", "DELETE", "POST", "OPTIONS"} {
 		w = httptest.NewRecorder()
 		req, _ = http.NewRequest(v, "/TestMore/", nil)
@@ -658,8 +657,10 @@ func TestBind(t *testing.T) {
 	}
 	tt := zlsgo.NewTest(t)
 	r := newServer()
-	w := newRequest(r, "POST", []string{"/TestBind",
-		`{"appid":"Aid","appids":[{"label":"isLabel","id":"333"}]}`, ContentTypeJSON}, "/TestBind", func(c *Context) {
+	w := newRequest(r, "POST", []string{
+		"/TestBind",
+		`{"appid":"Aid","appids":[{"label":"isLabel","id":"333"}]}`, ContentTypeJSON,
+	}, "/TestBind", func(c *Context) {
 		json, _ := c.GetJSONs()
 		var appids []AppInfo
 		json.Get("appids").ForEach(func(key, value *zjson.Res) bool {
@@ -886,4 +887,14 @@ func TestMethodAndName(t *testing.T) {
 	t.Log(u)
 
 	t.Log(r.GenerateURL(http.MethodPost, "non existent", nil))
+}
+
+func TestStatic(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := New("Static")
+	r.StaticFile("/web.go", "../znet/web.go")
+	r.Static("/ss", "../")
+	w := request(r, "GET", "/ss/znet/web.go", nil)
+	tt.Equal(200, w.Code)
+	tt.EqualTrue(len(w.Body.String()) > 10*zfile.KB)
 }
