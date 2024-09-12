@@ -11,8 +11,10 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
-var l = []int{0, 1, 2, 3, 4, 5}
-var l2 = []int{0, 1, 2, 3, 4, 5, 2, 34, 5, 6, 7, 98, 6, 67, 54, 543, 345, 435, 43543, 435, 3, 2, 42, 3423, 54, 6, 5}
+var (
+	l  = []int{0, 1, 2, 3, 4, 5}
+	l2 = []int{0, 1, 2, 3, 4, 5, 2, 34, 5, 6, 7, 98, 6, 67, 54, 543, 345, 435, 43543, 435, 3, 2, 42, 3423, 54, 6, 5}
+)
 
 func TestShuffle(t *testing.T) {
 	t.Log(zarray.Shuffle(l))
@@ -127,4 +129,12 @@ func TestFind(t *testing.T) {
 	})
 	tt.EqualTrue(!ok)
 	tt.Equal("", v["name"])
+}
+
+func TestSlice(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Equal([]string{"a", "b", "c"}, zarray.Slice[string]("a,b,c"))
+	tt.Equal([]int{1, 2, 3}, zarray.Slice[int]("1,2,3"))
+	tt.Equal([]float64{1.1, 2.2, 3.3}, zarray.Slice[float64]("1.1,2.2,3.3"))
+	tt.Equal([]int{}, zarray.Slice[int](""))
 }

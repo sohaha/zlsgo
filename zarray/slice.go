@@ -5,9 +5,11 @@ package zarray
 
 import (
 	"math/rand"
+	"strings"
 
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zsync"
+	"github.com/sohaha/zlsgo/ztype"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -194,4 +196,19 @@ func Shift[T comparable](list *[]T) (v T) {
 	v = (*list)[0]
 	*list = (*list)[1:]
 	return
+}
+
+// Slice converts a string to a slice.
+func Slice[T comparable](s string) []T {
+	if s == "" {
+		return []T{}
+	}
+
+	ss := strings.Split(s, ",")
+	res := make([]T, len(ss))
+	for i := range ss {
+		ztype.To(zstring.TrimSpace(ss[i]), &res[i])
+	}
+
+	return res
 }
