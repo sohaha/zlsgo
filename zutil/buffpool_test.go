@@ -103,7 +103,7 @@ var sizeString = strings.Repeat("0", 1024*1024)
 
 func BenchmarkPoolBytesPoolMinSize_max(b *testing.B) {
 	v := []byte(sizeString)
-	s := 16
+	s := uint(16)
 	for i := 0; i < b.N; i++ {
 		var content = zutil.GetBuff(s)
 		content.Write(v)
@@ -117,7 +117,7 @@ func BenchmarkPoolBytesPoolMinSize_max(b *testing.B) {
 
 func BenchmarkPoolBytesPoolMaxSize_max(b *testing.B) {
 	v := []byte(sizeString)
-	s := 1024 * 1024
+	s := uint(1024 * 1024)
 	for i := 0; i < b.N; i++ {
 		var content = zutil.GetBuff(s)
 		content.Write(v)

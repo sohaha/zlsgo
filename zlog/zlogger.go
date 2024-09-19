@@ -219,7 +219,7 @@ func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, pref
 		s = prefixText[0] + s
 	}
 
-	buf := zutil.GetBuff(len(s) + 34)
+	buf := zutil.GetBuff(uint(len(s) + 34))
 	defer zutil.PutBuff(buf)
 
 	now := ztime.Time()

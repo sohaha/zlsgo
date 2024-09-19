@@ -130,7 +130,10 @@ func TestPermissionDenied(t *testing.T) {
 	dir := "./permission_denied"
 
 	os.Mkdir(dir, 0o000)
-	defer Rmdir(dir)
+	defer func() {
+		os.Chmod(dir, 777)
+		Rmdir(dir)
+	}()
 
 	tt.Run("NotPermission", func(tt *TestUtil) {
 		tt.EqualTrue(!HasReadWritePermission(dir))
