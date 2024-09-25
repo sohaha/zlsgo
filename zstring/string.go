@@ -204,17 +204,19 @@ func TrimLine(s string) string {
 	return str
 }
 
+var space = [...]uint8{127, 128, 133, 160, 194, 226, 227}
+
+func well(s uint8) bool {
+	for i := range space {
+		if space[i] == s {
+			return true
+		}
+	}
+	return false
+}
+
 // TrimSpace TrimSpace
 func TrimSpace(s string) string {
-	space := [...]uint8{127, 128, 133, 160, 194, 226, 227}
-	well := func(s uint8) bool {
-		for i := range space {
-			if space[i] == s {
-				return true
-			}
-		}
-		return false
-	}
 	for len(s) > 0 {
 		if (s[0] <= 31) || s[0] <= ' ' || well(s[0]) {
 			s = s[1:]

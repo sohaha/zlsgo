@@ -1,3 +1,4 @@
+// Package zerror provides error related operations
 package zerror
 
 import (
@@ -22,9 +23,7 @@ type (
 	External func(err error) error
 )
 
-var (
-	goROOT = zutil.GOROOT()
-)
+var goROOT = zutil.GOROOT()
 
 func New(code ErrCode, text string, w ...External) error {
 	var err error = &Error{

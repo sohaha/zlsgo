@@ -1,3 +1,4 @@
+// Package zdi provides dependency injection
 package zdi
 
 import (
