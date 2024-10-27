@@ -872,7 +872,7 @@ func TestMethodAndName(t *testing.T) {
 	r := New("TestMethodAndName")
 	r.SetMode(DebugMode)
 	g := r.Group("/TestMethodAndName")
-	h := func(s string) func(c *Context) {
+	h := func(_ string) func(c *Context) {
 		return func(c *Context) {
 			c.String(200, c.GetParam("id"))
 		}
