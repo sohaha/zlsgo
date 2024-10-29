@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
 
 var ProjectPath = "./"
@@ -262,4 +264,90 @@ func HasPermission(path string, perm os.FileMode, noUp ...bool) bool {
 // HasReadWritePermission check file or directory read and write permission
 func HasReadWritePermission(path string) bool {
 	return HasPermission(path, fs.FileMode(0o600))
+}
+
+type fileInfo struct {
+	path    string
+	size    uint64
+	modTime time.Time
+}
+
+type fileInfos []fileInfo
+
+func (f fileInfos) Len() int           { return len(f) }
+func (f fileInfos) Less(i, j int) bool { return f[i].modTime.Before(f[j].modTime) }
+func (f fileInfos) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+
+type DirStatOptions struct {
+	MaxSize  uint64 // max size
+	MaxTotal uint64 // max total files
+}
+
+// StatDir get directory size and total files
+func StatDir(path string, options ...DirStatOptions) (size, total uint64, err error) {
+	var (
+		totalSize   uint64
+		totalFiles  uint64
+		files       = make([]fileInfo, 0, 1024)
+		needCollect = len(options) > 0 && (options[0].MaxSize > 0 || options[0].MaxTotal > 0)
+	)
+
+	err = filepath.WalkDir(path, func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
+
+		if !d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+
+			fileSize := uint64(info.Size())
+			totalSize += fileSize
+			totalFiles++
+
+			if needCollect {
+				files = append(files, fileInfo{
+					path:    filePath,
+					size:    fileSize,
+					modTime: info.ModTime(),
+				})
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return totalSize, totalFiles, err
+	}
+
+	if needCollect {
+		needCleanup := totalSize > options[0].MaxSize
+		if options[0].MaxTotal > 0 && totalFiles > options[0].MaxTotal {
+			needCleanup = true
+		}
+
+		if needCleanup {
+			sort.Sort(fileInfos(files))
+			for i := 0; i < len(files); i++ {
+				if (options[0].MaxSize == 0 || totalSize <= options[0].MaxSize) &&
+					(options[0].MaxTotal == 0 || totalFiles <= options[0].MaxTotal) {
+					break
+				}
+
+				if err := os.Remove(files[i].path); err != nil {
+					return totalSize, totalFiles, fmt.Errorf("failed to delete file %s: %v", files[i].path, err)
+				}
+				totalSize -= files[i].size
+				totalFiles--
+			}
+		}
+	}
+
+	return totalSize, totalFiles, nil
 }

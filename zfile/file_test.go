@@ -1,6 +1,7 @@
 package zfile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,10 +131,7 @@ func TestPermissionDenied(t *testing.T) {
 	dir := "./permission_denied"
 
 	os.Mkdir(dir, 0o000)
-	defer func() {
-		os.Chmod(dir, 777)
-		Rmdir(dir)
-	}()
+	defer Rmdir(dir)
 
 	tt.Run("NotPermission", func(tt *TestUtil) {
 		tt.EqualTrue(!HasReadWritePermission(dir))
@@ -155,4 +153,27 @@ func TestPermissionDenied(t *testing.T) {
 		tt.EqualTrue(!HasPermission("./ddd2", 0o400, true))
 		tt.Log(HasPermission("/", 0o664))
 	})
+}
+
+func TestGetDirSize(t *testing.T) {
+	tt := NewTest(t)
+
+	tmp := RealPathMkdir("./tmp-size")
+	defer Rmdir(tmp)
+
+	for i := 0; i < 20; i++ {
+		WriteFile(filepath.Join(tmp, fmt.Sprintf("file-%d.txt", i)), []byte(strings.Repeat("a", (i+1)*8*KB)))
+	}
+
+	size, total, err := StatDir(tmp)
+	tt.NoError(err)
+	tt.EqualTrue(size > 1*MB)
+	tt.EqualTrue(total == 20)
+	tt.Log(SizeFormat(size), size)
+
+	size, total, err = StatDir(tmp, DirStatOptions{MaxSize: 1 * MB, MaxTotal: 3})
+	tt.NoError(err)
+	tt.EqualTrue(size < 1*MB)
+	tt.EqualTrue(total == 3)
+	tt.Log(SizeFormat(size), size)
 }

@@ -43,6 +43,6 @@ func (c *Context) Valid(defRule zvalid.Engine, key string, name ...string) zvali
 	return valid(defRule, value, key, name...)
 }
 
-func valid(defRule zvalid.Engine, value, key string, name ...string) (valid zvalid.Engine) {
+func valid(defRule zvalid.Engine, value, _ string, name ...string) (valid zvalid.Engine) {
 	return defRule.Verifi(value, name...)
 }
