@@ -1,9 +1,13 @@
 package zutil
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
+	"unicode"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -37,10 +41,12 @@ func Getenv(name string, def ...string) string {
 	return val
 }
 
+// GOROOT return go root path
 func GOROOT() string {
 	return zfile.RealPath(runtime.GOROOT())
 }
 
+// Loadenv load env from file
 func Loadenv(filenames ...string) (err error) {
 	filenames = filenamesOrDefault(filenames)
 
@@ -60,15 +66,61 @@ func filenamesOrDefault(filenames []string) []string {
 	return filenames
 }
 
-func loadFile(filename string) error {
-	return zfile.ReadLineFile(filename, func(line int, data []byte) error {
-		e := strings.Split(zstring.Bytes2String(data), "=")
-		var value string
-		if len(e) > 1 {
-			value = e[1]
+func locateKeyName(src []byte) (key string, cutset []byte, err error) {
+	src = bytes.TrimLeftFunc(src, isSpace)
+	offset := 0
+loop:
+	for i, char := range src {
+		rchar := rune(char)
+		if isSpace(rchar) {
+			continue
 		}
 
-		_ = os.Setenv(zstring.TrimSpace(e[0]), strings.TrimSpace(value))
+		switch char {
+		case '=', ':':
+			key = string(src[0:i])
+			offset = i + 1
+			break loop
+		case '_':
+		default:
+			if unicode.IsLetter(rchar) || unicode.IsNumber(rchar) || rchar == '.' {
+				continue
+			}
+
+			return "", nil, fmt.Errorf(`unexpected character %q in variable name near %q`, char, src)
+		}
+	}
+
+	if len(src) == 0 {
+		return "", nil, errors.New("zero length string")
+	}
+
+	key = strings.TrimRightFunc(key, unicode.IsSpace)
+	cutset = bytes.TrimLeftFunc(src[offset:], isSpace)
+	return key, cutset, nil
+}
+
+func isSpace(r rune) bool {
+	switch r {
+	case '\t', '\v', '\f', '\r', ' ', 0x85, 0xA0:
+		return true
+	}
+	return false
+}
+
+func loadFile(filename string) error {
+	return zfile.ReadLineFile(filename, func(line int, data []byte) error {
+		key, value, err := locateKeyName(data)
+		if err != nil {
+			return nil
+		}
+
+		value = bytes.TrimSpace(value)
+		if len(value) > 0 && (value[0] == '"' || value[0] == '\'' && value[0] == value[len(value)-1]) {
+			value = value[1 : len(value)-1]
+		}
+
+		_ = os.Setenv(key, zstring.Bytes2String(value))
 		return nil
 	})
 }

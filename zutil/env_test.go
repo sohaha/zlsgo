@@ -34,11 +34,14 @@ func TestGOROOT(t *testing.T) {
 
 func TestLoadenv(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	_ = zfile.WriteFile(".env", []byte("myos=linux\n name=zls "))
+	_ = zfile.WriteFile(".env", []byte("myos=linux\n name=zls \n\n  time=\"2024-11-14 23:59:01\" \n#comment='comment'\n description=\"hello world\""))
 	defer zfile.Rmdir(".env")
 
 	tt.NoError(zutil.Loadenv())
 
 	tt.Equal("linux", zutil.Getenv("myos"))
 	tt.Equal("zls", zutil.Getenv("name"))
+	tt.Equal("2024-11-14 23:59:01", zutil.Getenv("time"))
+	tt.Equal("", zutil.Getenv("comment"))
+	tt.Equal("hello world", zutil.Getenv("description"))
 }

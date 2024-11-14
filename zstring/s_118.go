@@ -1,12 +1,4 @@
-//go:build !go1.10
-// +build !go1.10
+//go:build go1.18
+// +build go1.18
 
 package zstring
-
-import "bytes"
-
-// Buffer Buffer
-func Buffer(size ...int) *bytes.Buffer {
-	b := bytes.NewBufferString("")
-	return &b
-}
