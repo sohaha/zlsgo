@@ -28,7 +28,7 @@ type (
 	// Context context
 	Context struct {
 		startTime     time.Time
-		render        render
+		render        Renderer
 		Writer        http.ResponseWriter
 		injector      zdi.Injector
 		stopHandle    *zutil.Bool

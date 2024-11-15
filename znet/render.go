@@ -18,7 +18,7 @@ import (
 )
 
 type (
-	render interface {
+	Renderer interface {
 		Content(c *Context) (content []byte)
 	}
 	renderByte struct {
@@ -71,7 +71,7 @@ var (
 	ContentTypeJSON = "application/json; charset=utf-8"
 )
 
-func (c *Context) renderProcessing(code int32, r render) {
+func (c *Context) renderProcessing(code int32, r Renderer) {
 	// if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
 	// 	return
 	// }

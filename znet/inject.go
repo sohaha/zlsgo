@@ -40,6 +40,8 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 			c.render = &renderString{Format: vv}
 		case error:
 			err = vv
+		case Renderer:
+			c.render = vv
 		case []byte:
 			c.render = &renderByte{Data: vv}
 		case ApiData:

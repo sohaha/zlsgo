@@ -139,6 +139,37 @@ func TestInjectMiddleware(t *testing.T) {
 	tt.Equal("middleware", w.Body.String())
 }
 
+type customRenderer struct {
+	Text string
+	Err  error
+}
+
+func (c *customRenderer) Content(ctx *Context) (content []byte) {
+	if c.Err != nil {
+		ctx.SetStatus(500)
+		return []byte(c.Err.Error())
+	}
+	ctx.SetStatus(200)
+	return []byte(c.Text)
+}
+
+func TestCustomRenderer(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := newServer()
+
+	w := newRequest(r, "GET", "/TestCustomRenderer", "/TestCustomRenderer", func(c *Context) *customRenderer {
+		return &customRenderer{Text: "test custom renderer"}
+	})
+	tt.Equal(200, w.Code)
+	tt.Equal("test custom renderer", w.Body.String())
+
+	w = newRequest(r, "GET", "/TestCustomRendererError", "/TestCustomRendererError", func(c *Context) *customRenderer {
+		return &customRenderer{Err: errors.New("test custom renderer error")}
+	})
+	tt.Equal(500, w.Code)
+	tt.Equal("test custom renderer error", w.Body.String())
+}
+
 func BenchmarkInjectNo(b *testing.B) {
 	r := newServer()
 	path := "/BenchmarkInjectNo"
