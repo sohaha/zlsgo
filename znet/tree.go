@@ -17,6 +17,7 @@ type (
 		value      interface{}
 		handle     handlerFn
 		children   map[string]*Node
+		engine     *Engine
 		key        string
 		path       string
 		middleware []handlerFn
@@ -57,7 +58,7 @@ func NewTree() *Tree {
 	}
 }
 
-func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) (currentNode *Node) {
+func (t *Tree) Add(e *Engine, path string, handle handlerFn, middleware ...handlerFn) (currentNode *Node) {
 	currentNode = t.root
 	wareLen := len(middleware)
 	if path != currentNode.key {
@@ -93,6 +94,7 @@ func (t *Tree) Add(path string, handle handlerFn, middleware ...handlerFn) (curr
 	currentNode.handle = handle
 	currentNode.isPattern = true
 	currentNode.path = path
+	currentNode.engine = e
 	if routeName := t.parameters.routeName; routeName != "" {
 		t.routes[routeName] = currentNode
 	}

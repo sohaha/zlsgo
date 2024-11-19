@@ -258,6 +258,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 	}
 	engine = &Engine{
 		router:              route,
+		views:               e.views,
 		webMode:             e.webMode,
 		webModeName:         e.webModeName,
 		MaxMultipartMemory:  e.MaxMultipartMemory,
@@ -403,7 +404,7 @@ func (e *Engine) addHandle(method string, path string, handle handlerFn, beforeh
 		middleware = append(beforehandle, middleware...)
 	}
 
-	tree.Add(path, handle, middleware...)
+	tree.Add(e, path, handle, middleware...)
 	tree.parameters.routeName = ""
 	return path, len(middleware) + 1, true
 }
@@ -414,8 +415,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c := e.acquireContext()
-	c.clone(w, req)
+	c := e.acquireContext(w, req)
 	defer func() {
 		c.write()
 		e.releaseContext(c)
@@ -465,16 +465,20 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 		return true
 	}
 
-	handler, middleware, ok := Utils.TreeFind(t, requestURL)
+	engine, handler, middleware, ok := Utils.TreeFind(t, requestURL)
 	if !ok && !anyTrees {
 		t, ok = e.router.trees[anyMethod]
 		if ok {
-			handler, middleware, ok = Utils.TreeFind(t, requestURL)
+			engine, handler, middleware, ok = Utils.TreeFind(t, requestURL)
 		}
 	}
 
 	if !ok {
 		return true
+	}
+
+	if engine != nil {
+		rw.Engine = engine
 	}
 
 	if applyMiddleware {

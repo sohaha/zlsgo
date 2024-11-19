@@ -140,8 +140,8 @@ func TestInjectMiddleware(t *testing.T) {
 }
 
 type customRenderer struct {
-	Text string
 	Err  error
+	Text string
 }
 
 func (c *customRenderer) Content(ctx *Context) (content []byte) {

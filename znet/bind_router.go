@@ -71,8 +71,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			if err != nil || infoLen != 3 {
 				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)
 				if len(indexs) == 0 {
-					if e.IsDebug() && m.Name != "Init" {
-						e.Log.Warnf("matching rule error: %s%s\n", m.Name, m.Func.String())
+					if g.IsDebug() && m.Name != "Init" {
+						g.Log.Warnf("matching rule error: %s%s\n", m.Name, m.Func.String())
 					}
 					return nil
 				}
@@ -89,10 +89,10 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 			fn := value.Interface()
 
 			handleName := strings.Join([]string{typeOf.PkgPath(), typeOf.Name(), m.Name}, ".")
-			if e.BindStructCase != nil {
-				path = e.BindStructCase(path)
-			} else if e.BindStructDelimiter != "" {
-				path = zstring.CamelCaseToSnakeCase(path, e.BindStructDelimiter)
+			if g.BindStructCase != nil {
+				path = g.BindStructCase(path)
+			} else if g.BindStructDelimiter != "" {
+				path = zstring.CamelCaseToSnakeCase(path, g.BindStructDelimiter)
 			}
 			if path == "" {
 				path = "/"
@@ -103,8 +103,8 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				} else {
 					path += "/:" + key
 				}
-			} else if path != "/" && e.BindStructSuffix != "" {
-				path = path + e.BindStructSuffix
+			} else if path != "/" && g.BindStructSuffix != "" {
+				path = path + g.BindStructSuffix
 			}
 			if path == "/" {
 				path = ""
@@ -120,12 +120,12 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 
 			p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn), nil, nil)
 
-			if ok && e.IsDebug() {
+			if ok && g.IsDebug() {
 				f := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l)
-				if e.webMode == testCode {
+				if g.webMode == testCode {
 					f = "%s %-40s"
 				}
-				e.Log.Debug(routeLog(e.Log, f, method, p))
+				g.Log.Debug(routeLog(g.Log, f, method, p))
 			}
 			return nil
 		})

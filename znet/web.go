@@ -247,7 +247,7 @@ func (e *Engine) SetCustomMethodField(field string) {
 func CloseHotRestartFileMd5() {
 }
 
-// Deprecated: please use SetTemplate(znet.NewHTML())
+// Deprecated: please use SetTemplate()
 // SetTemplateFuncMap Set Template Func
 func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap) {
 	if e.views == nil {
@@ -266,7 +266,7 @@ func (e *Engine) Injector() zdi.TypeMapper {
 	return e.injector
 }
 
-// Deprecated: please use SetTemplate(znet.NewHTML())
+// Deprecated: please use SetTemplate()
 // SetHTMLTemplate Set HTML Template
 func (e *Engine) SetHTMLTemplate(t *template.Template) {
 	val := &tpl{
@@ -434,7 +434,6 @@ func (e *Engine) StartUp() []*serverMap {
 			} else if err != http.ErrServerClosed {
 				e.Log.Info(err)
 			}
-
 		}(cfg, e)
 	}
 

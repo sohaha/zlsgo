@@ -194,13 +194,13 @@ func getHostname(addr string, isTls bool) string {
 	return hostname + resolveHostname(addr)
 }
 
-func (u utils) TreeFind(t *Tree, path string) (handlerFn, []handlerFn, bool) {
+func (u utils) TreeFind(t *Tree, path string) (*Engine, handlerFn, []handlerFn, bool) {
 	nodes := t.Find(path, false)
 	for i := range nodes {
 		node := nodes[i]
 		if node.handle != nil {
 			if node.path == path {
-				return node.handle, node.middleware, true
+				return node.engine, node.handle, node.middleware, true
 			}
 		}
 	}
@@ -214,20 +214,20 @@ func (u utils) TreeFind(t *Tree, path string) (handlerFn, []handlerFn, bool) {
 			p = res[1]
 		}
 		nodes := t.Find(p, true)
-		for _, node := range nodes {
-			if handler := node.handle; handler != nil && node.path != path {
-				if matchParamsMap, ok := u.URLMatchAndParse(path, node.path); ok {
-					return func(c *Context) error {
+		for i := range nodes {
+			if handler := nodes[i].handle; handler != nil && nodes[i].path != path {
+				if matchParamsMap, ok := u.URLMatchAndParse(path, nodes[i].path); ok {
+					return nodes[i].engine, func(c *Context) error {
 						req := c.Request
 						ctx := context.WithValue(req.Context(), u.ContextKey, matchParamsMap)
 						c.Request = req.WithContext(ctx)
-						return node.Handle()(c)
-					}, node.middleware, true
+						return nodes[i].Handle()(c)
+					}, nodes[i].middleware, true
 				}
 			}
 		}
 	}
-	return nil, nil, false
+	return nil, nil, nil, false
 }
 
 func (_ utils) CompletionPath(p, prefix string) string {
@@ -332,7 +332,9 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 	}
 }
 
-func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
+func (e *Engine) acquireContext(w http.ResponseWriter, r *http.Request) *Context {
+	c := e.pool.Get().(*Context)
+	c.Engine = e
 	c.Request = r
 	c.Writer = w
 	c.injector = zdi.New(c.Engine.injector)
@@ -341,10 +343,7 @@ func (c *Context) clone(w http.ResponseWriter, r *http.Request) {
 	c.renderError = defErrorHandler()
 	c.stopHandle.Store(false)
 	c.done.Store(false)
-}
-
-func (e *Engine) acquireContext() *Context {
-	return e.pool.Get().(*Context)
+	return c
 }
 
 func (e *Engine) releaseContext(c *Context) {
@@ -360,6 +359,7 @@ func (e *Engine) releaseContext(c *Context) {
 	c.cacheForm = nil
 	c.injector = nil
 	c.rawData = nil
+	c.Engine = nil
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain
 	c.mu.Unlock()
