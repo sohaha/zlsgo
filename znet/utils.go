@@ -205,7 +205,7 @@ func (u utils) TreeFind(t *Tree, path string) (*Engine, handlerFn, []handlerFn, 
 		}
 	}
 
-	if len(nodes) == 0 {
+	if len(nodes) == 0 || strings.HasSuffix(path, "/") {
 		res := strings.Split(path, "/")
 		p := ""
 		if len(res) == 1 {

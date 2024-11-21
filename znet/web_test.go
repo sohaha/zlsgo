@@ -159,6 +159,22 @@ func TestWeb(t *testing.T) {
 	})
 	tt.Equal(200, w.Code)
 	tt.Equal(expected, w.Body.String())
+
+	r.GET("/web-get/*", func(c *Context) string {
+		return "web-get:" + c.GetParam("*")
+	})
+
+	w = request(r, "GET", "/web-get/", nil)
+	tt.Equal(200, w.Code)
+	tt.Equal("web-get:", w.Body.String())
+
+	w = request(r, "GET", "/web-get/1", nil)
+	tt.Equal(200, w.Code)
+	tt.Equal("web-get:1", w.Body.String())
+
+	w = request(r, "GET", "/web-get/a", nil)
+	tt.Equal(200, w.Code)
+	tt.Equal("web-get:a", w.Body.String())
 }
 
 func TestMoreMethod(t *testing.T) {
