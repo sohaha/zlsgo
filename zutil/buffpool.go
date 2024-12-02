@@ -25,7 +25,7 @@ func NewBufferPool(left, right uint) *BufferPool {
 	for i := begin; i <= end; i *= 2 {
 		capacity := i
 		p.shards[i] = &sync.Pool{
-			New: func() any { return bytes.NewBuffer(make([]byte, 0, capacity)) },
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, capacity)) },
 		}
 	}
 	return p
