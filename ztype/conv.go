@@ -415,7 +415,7 @@ func (d *Conver) toMapFromStruct(name string, dataVal reflect.Value, val reflect
 			return fmt.Errorf("cannot assign type '%s' to map value field of type '%s'", vTyp, valMap.Type().Elem())
 		}
 
-		if vTyp.Kind() == reflect.Pointer && !v.IsZero() {
+		if vTyp.Kind() == reflect.Ptr && !v.IsZero() {
 			vTyp = v.Elem().Type()
 		}
 
