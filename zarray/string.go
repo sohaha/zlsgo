@@ -11,28 +11,36 @@ import (
 )
 
 // Slice converts a string to a slice.
-// If n is not empty, the string will be split into n parts.
-func Slice[T comparable](s string, n ...int) []T {
+// If value is not empty, the string will be split into value parts.
+func Slice[T comparable](s, sep string, n ...int) []T {
 	if s == "" {
 		return []T{}
 	}
 
 	var ss []string
 	if len(n) > 0 {
-		ss = strings.SplitN(s, ",", n[0])
+		ss = strings.SplitN(s, sep, n[0])
 	} else {
-		ss = strings.Split(s, ",")
+		ss = strings.Split(s, sep)
 	}
 	res := make([]T, len(ss))
+	ni := make([]uint32, 0, len(ss))
 	for i := range ss {
-		ztype.To(zstring.TrimSpace(ss[i]), &res[i])
+		if v := zstring.TrimSpace(ss[i]); v != "" {
+			ztype.To(v, &res[i])
+		} else {
+			ni = append(ni, uint32(i))
+		}
 	}
 
+	for i := range ni {
+		res = append(res[:ni[i]], res[ni[i]+1:]...)
+	}
 	return res
 }
 
 // Join slice to string.
-// If n is not empty, the string will be split into n parts.
+// If value is not empty, the string will be split into value parts.
 func Join[T comparable](s []T, sep string) string {
 	if len(s) == 0 {
 		return ""
