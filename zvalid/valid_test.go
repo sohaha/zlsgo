@@ -29,10 +29,10 @@ func TestBatch(tt *testing.T) {
 	})
 
 	t.Run("sex min 20", func(t *zlsgo.TestUtil) {
-		err := Batch(BatchVar(&data.Sex, New().MinInt(20)))
+		err := Batch(BatchVar(&data.Sex, New().SetAlias("年龄").MinInt(20)))
 		t.Log(data, err)
 		t.EqualTrue(err != nil)
-		t.Equal("不能小于20", err.Error())
+		t.Equal("年龄不能小于20", err.Error())
 		t.Equal("yes name", data.Name)
 		t.Equal(uint8(18), data.Sex)
 	})
