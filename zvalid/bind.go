@@ -61,7 +61,7 @@ func Batch(elements ...*ValidEle) error {
 			return nil
 		}
 		if !e.source.setRawValue {
-			e.source = e.source.VerifiAny(e.target)
+			e.source = e.source.VerifiAny(e.target, e.source.name)
 		}
 		err := Var(e.target, e.source)
 		if err != nil {
