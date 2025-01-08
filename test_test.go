@@ -14,6 +14,8 @@ func TestNewTest(t *testing.T) {
 	tt.EqualTrue(true)
 	tt.EqualNil(nil)
 	tt.NoError(nil, true)
+	tt.IsNil(nil, true)
+	tt.NotNil(true, true)
 	tt.Log("ok")
 	tt.T().Log("ok")
 	tt.Run("Logf", func(tt *zlsgo.TestUtil) {

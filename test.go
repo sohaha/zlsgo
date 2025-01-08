@@ -142,3 +142,13 @@ func (u *TestUtil) Run(name string, f func(tt *TestUtil)) {
 func (u *TestUtil) T() *testing.T {
 	return u.t.(*testing.T)
 }
+
+// IsNil IsNil
+func (u *TestUtil) IsNil(actual interface{}, exit ...bool) bool {
+	return u.Equal(nil, actual, exit...)
+}
+
+// NotNil NotNil
+func (u *TestUtil) NotNil(actual interface{}, exit ...bool) bool {
+	return u.Equal(true, actual != nil, exit...)
+}
