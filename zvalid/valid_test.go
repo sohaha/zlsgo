@@ -8,6 +8,42 @@ import (
 	"github.com/sohaha/zlsgo"
 )
 
+func TestBatch(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+
+	data := struct {
+		Name string
+		Sex  uint8
+		Say  string
+	}{Name: "yes name", Sex: 18, Say: "helloWorld"}
+
+	t.Run("success", func(t *zlsgo.TestUtil) {
+		err := Batch(
+			BatchVar(&data.Name, Text("yes name")),
+			BatchVar(&data.Sex, New().MinInt(10)),
+		)
+		t.Log(data, err)
+		t.EqualNil(err, true)
+		t.Equal("yes name", data.Name)
+		t.Equal(uint8(18), data.Sex)
+	})
+
+	t.Run("sex min 20", func(t *zlsgo.TestUtil) {
+		err := Batch(BatchVar(&data.Sex, New().MinInt(20)))
+		t.Log(data, err)
+		t.EqualTrue(err != nil)
+		t.Equal("不能小于20", err.Error())
+		t.Equal("yes name", data.Name)
+		t.Equal(uint8(18), data.Sex)
+	})
+
+	t.Run("say change", func(t *zlsgo.TestUtil) {
+		err := Batch(BatchVar(&data.Say, New().CamelCaseToSnakeCase()))
+		t.Log(data, err)
+		t.Equal("hello_world", data.Say)
+	})
+}
+
 func TestValidRule(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	v := Text("a1Cb.1").Required().HasLetter().HasLower().HasUpper().HasNumber().HasSymbol().HasString("b").HasPrefix("a").HasSuffix("1").Password().StrongPassword()
@@ -63,7 +99,6 @@ func TestValidNew(tt *testing.T) {
 	tt.Log("test4 queue", test4.queue.Len())
 	t.Equal(nil, err)
 	tt.Log(str, err)
-
 }
 
 func TestInt(t *testing.T) {

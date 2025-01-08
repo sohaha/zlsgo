@@ -73,6 +73,9 @@ func TestIP2(tt *testing.T) {
 	ipv6Long, _ := NetIPv6ToLong(ip6)
 	ip6Raw, _ := LongToNetIPv6(ipv6Long)
 	t.EqualExit(ip6Str, ip6Raw.String())
+
+	t.Log(NetIPToLong(net.ParseIP("127.0.0.1")))
+	t.Log(NetIPToLong(net.ParseIP("::1")))
 }
 
 func TestInNetwork(tt *testing.T) {

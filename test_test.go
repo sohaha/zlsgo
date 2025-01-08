@@ -13,7 +13,7 @@ func TestNewTest(t *testing.T) {
 	tt.EqualExit(1, 1)
 	tt.EqualTrue(true)
 	tt.EqualNil(nil)
-	tt.NoError(nil)
+	tt.NoError(nil, true)
 	tt.Log("ok")
 	tt.T().Log("ok")
 	tt.Run("Logf", func(tt *zlsgo.TestUtil) {

@@ -64,24 +64,28 @@ func (u *TestUtil) GetCallerInfo() string {
 }
 
 // Equal Equal
-func (u *TestUtil) Equal(expected, actual interface{}) bool {
+func (u *TestUtil) Equal(expected, actual interface{}, exit ...bool) bool {
 	if !reflect.DeepEqual(expected, actual) {
 		u.t.Helper()
 		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
-		u.t.Fail()
+		if len(exit) > 0 && exit[0] {
+			u.t.FailNow()
+		} else {
+			u.t.Fail()
+		}
 		return false
 	}
 	return true
 }
 
 // EqualTrue EqualTrue
-func (u *TestUtil) EqualTrue(actual interface{}) {
-	u.Equal(true, actual)
+func (u *TestUtil) EqualTrue(actual interface{}, exit ...bool) {
+	u.Equal(true, actual, exit...)
 }
 
 // EqualNil EqualNil
-func (u *TestUtil) EqualNil(actual interface{}) {
-	u.Equal(nil, actual)
+func (u *TestUtil) EqualNil(actual interface{}, exit ...bool) {
+	u.Equal(nil, actual, exit...)
 }
 
 // NoError NoError
@@ -93,7 +97,7 @@ func (u *TestUtil) NoError(err error, exit ...bool) bool {
 	fmt.Printf("    %s Error: %s\n", u.PrintMyName(), err)
 
 	if len(exit) > 0 && exit[0] {
-		u.t.Fatal()
+		u.t.FailNow()
 	} else {
 		u.t.Fail()
 	}
@@ -102,10 +106,7 @@ func (u *TestUtil) NoError(err error, exit ...bool) bool {
 
 // EqualExit EqualExit
 func (u *TestUtil) EqualExit(expected, actual interface{}) {
-	if !reflect.DeepEqual(expected, actual) {
-		fmt.Printf("        %s 期待:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
-		u.t.Fatal()
-	}
+	u.Equal(expected, actual, true)
 }
 
 // Log log

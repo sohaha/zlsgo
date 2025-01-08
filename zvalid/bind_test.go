@@ -47,7 +47,6 @@ func TestVar(t *testing.T) {
 	)
 	tt.EqualNil(err)
 	tt.Equal("yes name", data.Name)
-
 }
 
 func TestVarDefault(t *testing.T) {
