@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztype"
 	"github.com/sohaha/zlsgo/zutil"
 	"github.com/sohaha/zlsgo/zutil/daemon"
@@ -166,10 +168,6 @@ func CheckErr(err error, exit ...bool) {
 	}
 }
 
-func IsDoubleClickStartUp() bool {
-	return zutil.IsDoubleClickStartUp()
-}
-
 func isDetach(a string) bool {
 	for _, v := range []string{"D", "detach"} {
 		if strings.TrimLeft(a, "-") == v {
@@ -181,4 +179,21 @@ func isDetach(a string) bool {
 
 func IsSudo() bool {
 	return daemon.IsSudo()
+}
+
+func IsDoubleClickStartUp() bool {
+	return zutil.IsDoubleClickStartUp()
+}
+
+// LockInstance limit single instance
+func LockInstance() (clean func(), ok bool) {
+	ePath := zfile.ExecutablePath()
+	lockName := zfile.TmpPath() + "/" + zstring.Md5(ePath) + ".SingleInstance.lock"
+	lock := zfile.NewFileLock(lockName)
+	if err := lock.Lock(); err != nil {
+		return nil, false
+	}
+	return func() {
+		lock.Clean()
+	}, true
 }

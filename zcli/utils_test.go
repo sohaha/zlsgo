@@ -102,3 +102,13 @@ func TestDetach(t *testing.T) {
 func TestIsSudo(t *testing.T) {
 	t.Log(IsSudo())
 }
+
+func TestLockInstance(t *testing.T) {
+	clean, ok := LockInstance()
+	if ok {
+		t.Log("lock ok")
+		clean()
+	} else {
+		t.Log("lock failed")
+	}
+}
