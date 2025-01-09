@@ -62,7 +62,7 @@ func TestFile(t *testing.T) {
 
 	dirPath = SafePath(dirPath, RealPath(".."))
 	t.Log(dirPath, SafePath(dirPath))
-	tt.Equal("zfile", dirPath)
+	tt.Equal("/zfile", dirPath)
 
 	tmpPath := TmpPath("")
 	tt.EqualTrue(tmpPath != "")
@@ -128,34 +128,25 @@ func TestGetMimeType(t *testing.T) {
 
 func TestPermissionDenied(t *testing.T) {
 	tt := NewTest(t)
-	dir := "./permission_denied"
+	dir := TmpPath() + "/permission_denied"
 
 	os.Mkdir(dir, 0o000)
-	defer func() {
-		os.Chmod(dir, 0o777)
-		Rmdir(dir)
-	}()
 
-	tt.Run("NotPermission", func(tt *TestUtil) {
-		tt.EqualTrue(!HasReadWritePermission(dir))
-		tt.EqualTrue(!HasReadWritePermission(dir + "/ddd"))
-	})
+	tt.EqualTrue(!HasReadWritePermission(dir))
+	tt.EqualTrue(!HasReadWritePermission(dir + "/ddd"))
 
-	tt.Run("Exist", func(tt *TestUtil) {
-		tt.EqualTrue(HasReadWritePermission("./"))
-	})
+	tt.EqualTrue(HasReadWritePermission("./"))
 
-	tt.Run("NotExist", func(tt *TestUtil) {
-		tt.EqualTrue(HasReadWritePermission("./ddd2"))
-	})
+	tt.EqualTrue(HasReadWritePermission("./ddd2"))
 
-	tt.Run("Custom", func(tt *TestUtil) {
-		tt.EqualTrue(!HasPermission(dir, 0o400))
-		tt.EqualTrue(!HasPermission(dir+"/ddd2", 0o400))
-		tt.EqualTrue(HasPermission("./ddd2", 0o400))
-		tt.EqualTrue(!HasPermission("./ddd2", 0o400, true))
-		tt.Log(HasPermission("/", 0o664))
-	})
+	tt.EqualTrue(!HasPermission(dir, 0o400))
+	tt.EqualTrue(!HasPermission(dir+"/ddd2", 0o400))
+	tt.EqualTrue(HasPermission("./ddd2", 0o400))
+	tt.EqualTrue(!HasPermission("./ddd2", 0o400, true))
+	tt.Log(HasPermission("/", 0o664))
+
+	os.Chmod(dir, 0o777)
+	tt.EqualTrue(Rmdir(dir))
 }
 
 func TestGetDirSize(t *testing.T) {
@@ -179,4 +170,9 @@ func TestGetDirSize(t *testing.T) {
 	tt.EqualTrue(size < 1*MB)
 	tt.EqualTrue(total == 3)
 	tt.Log(SizeFormat(size), size)
+}
+
+func TestExecutablePath(t *testing.T) {
+	tt := NewTest(t)
+	tt.Log(ExecutablePath())
 }

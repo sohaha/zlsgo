@@ -204,18 +204,28 @@ func CopyFile(source string, dest string) (err error) {
 	return
 }
 
-// ProgramPath program directory path
-func ProgramPath(addSlash ...bool) (path string) {
+// ExecutablePath executable path
+func ExecutablePath() string {
 	ePath, err := os.Executable()
 	if err != nil {
+		ePath = os.Args[0]
+	}
+	realPath, err := filepath.EvalSymlinks(ePath)
+	if err != nil {
+		return ePath
+	}
+	return realPath
+}
+
+// ProgramPath program directory path
+func ProgramPath(addSlash ...bool) (path string) {
+	ePath := ExecutablePath()
+	if ePath == "" {
 		ePath = ProjectPath
 	} else {
 		ePath = filepath.Dir(ePath)
 	}
-	realPath, err := filepath.EvalSymlinks(ePath)
-	if err == nil {
-		ePath = realPath
-	}
+
 	path = RealPath(ePath, addSlash...)
 
 	return
@@ -321,7 +331,6 @@ func StatDir(path string, options ...DirStatOptions) (size, total uint64, err er
 		}
 		return nil
 	})
-
 	if err != nil {
 		return totalSize, totalFiles, err
 	}
