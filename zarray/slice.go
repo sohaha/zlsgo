@@ -30,6 +30,30 @@ func Rand[T any](collection []T) T {
 	return collection[i]
 }
 
+// RandPickN returns a random slice of n elements from the collection.
+func RandPickN[T any](collection []T, n int) []T {
+	l := len(collection)
+	if l == 0 || n <= 0 {
+		return []T{}
+	}
+
+	if n > l {
+		n = l
+	}
+
+	temp := make([]T, l)
+	copy(temp, collection)
+	result := make([]T, n)
+
+	for i := 0; i < n; i++ {
+		j := zstring.RandInt(i, l-1)
+		temp[i], temp[j] = temp[j], temp[i]
+		result[i] = temp[i]
+	}
+
+	return result
+}
+
 // Map manipulates a slice and transforms it to a slice of another type.
 func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint) []R {
 	colLen := len(collection)

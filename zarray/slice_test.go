@@ -130,3 +130,10 @@ func TestFind(t *testing.T) {
 	tt.EqualTrue(!ok)
 	tt.Equal("", v["name"])
 }
+
+func TestRandPickN(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Equal(0, len(zarray.RandPickN[int](nil, 3)))
+	tt.Equal(3, len(zarray.RandPickN(l, 3)))
+	tt.Equal(len(l), len(zarray.RandPickN(l, 10)))
+}
