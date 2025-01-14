@@ -219,3 +219,25 @@ func Shift[T comparable](list *[]T) (v T) {
 	*list = (*list)[1:]
 	return
 }
+
+// Chunk split slice into n parts
+func Chunk[T any](slice []T, size int) [][]T {
+	if size <= 0 {
+		return [][]T{}
+	}
+
+	l := len(slice)
+	if l == 0 {
+		return [][]T{}
+	}
+
+	n := (l + size - 1) / size
+	chunks := make([][]T, n)
+
+	for i := 0; i < n-1; i++ {
+		chunks[i] = slice[i*size : (i+1)*size]
+	}
+
+	chunks[n-1] = slice[(n-1)*size:]
+	return chunks
+}

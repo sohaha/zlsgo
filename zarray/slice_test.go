@@ -137,3 +137,13 @@ func TestRandPickN(t *testing.T) {
 	tt.Equal(3, len(zarray.RandPickN(l, 3)))
 	tt.Equal(len(l), len(zarray.RandPickN(l, 10)))
 }
+
+func TestChunk(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Equal([][]int{{0, 1, 2, 3, 4, 5}}, zarray.Chunk(l, 6))
+	tt.Equal([][]int{{0, 1, 2}, {3, 4, 5}}, zarray.Chunk(l, 3))
+	tt.Equal([][]int{{0, 1, 2, 3, 4}, {5}}, zarray.Chunk(l, 5))
+	tt.Equal([][]int{{0, 1, 2, 3, 4, 5}}, zarray.Chunk(l, 8))
+	tt.Equal([][]int{}, zarray.Chunk(l, 0))
+	tt.Equal([][]int{}, zarray.Chunk[int](nil, 8))
+}
