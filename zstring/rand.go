@@ -74,6 +74,9 @@ func WeightedRand(choices map[interface{}]uint32) (interface{}, error) {
 }
 
 func NewWeightedRand(choices map[interface{}]uint32) (*Weighteder, error) {
+	if len(choices) == 0 {
+		return nil, errors.New("choices is empty")
+	}
 	cs := make([]choice, 0, len(choices))
 	for k, v := range choices {
 		cs = append(cs, choice{Item: k, Weight: v})
@@ -115,6 +118,9 @@ func (w *Weighteder) Pick() interface{} {
 func (w *Weighteder) weightedSearch() int {
 	x := RandUint32Max(w.max) + 1
 	i, j := 0, len(w.totals)
+	if i == j-1 {
+		return 0
+	}
 	for i < j {
 		h := int(uint(i+j) >> 1)
 		if w.totals[h] < x {

@@ -41,6 +41,10 @@ func TestWeightedRand(T *testing.T) {
 	})
 	t.Log(err)
 	t.EqualTrue(err != nil)
+
+	v, err := WeightedRand(map[interface{}]uint32{"1": 0})
+	t.Log(v, err)
+	t.EqualTrue(err == nil)
 }
 
 func BenchmarkRandStr(b *testing.B) {
