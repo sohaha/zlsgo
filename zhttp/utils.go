@@ -130,7 +130,7 @@ func arr2Attr(args []map[string]string) map[string][]string {
 }
 
 func getAttrValue(attributes []html.Attribute) map[string]string {
-	var values = make(map[string]string)
+	values := make(map[string]string)
 	for i := 0; i < len(attributes); i++ {
 		_, exists := values[attributes[i].Key]
 		if !exists {
@@ -208,21 +208,38 @@ func forChild(node *html.Node, fn func(n *html.Node) bool) {
 }
 
 func matchEl(n *html.Node, el string, args map[string][]string) *html.Node {
-	if n.Type == html.ElementNode && matchElName(n, el) {
-		if len(args) > 0 {
-			for i := 0; i < len(n.Attr); i++ {
-				attr := n.Attr[i]
-				for name, val := range args {
-					if findAttrValue(attr, name, val) {
-						return n
-					}
-				}
+	if n.Type != html.ElementNode || !matchElName(n, el) {
+		return nil
+	}
+
+	if len(args) == 0 {
+		return n
+	}
+
+	attrMap := make(map[string]string, len(n.Attr))
+	for _, attr := range n.Attr {
+		attrMap[attr.Key] = attr.Val
+	}
+
+	for name, vals := range args {
+		attrVal, exists := attrMap[name]
+		if !exists {
+			return nil
+		}
+
+		matched := false
+		for _, val := range vals {
+			if strings.Contains(attrVal, val) {
+				matched = true
+				break
 			}
-		} else {
-			return n
+		}
+		if !matched {
+			return nil
 		}
 	}
-	return nil
+
+	return n
 }
 
 func findChild(node *html.Node, el string, args []map[string]string, multiple bool) (elArr []*html.Node) {
