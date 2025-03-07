@@ -3,6 +3,7 @@ package znet
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -447,8 +448,13 @@ func (e *Engine) StartUp() []*serverMap {
 	return srvs
 }
 
-func Shutdown() {
+func Shutdown() error {
+	if isRunContext.Load() {
+		return errors.New("server was started with custom context, cannot use Shutdown")
+	}
+
 	shutdown(true)
+	return nil
 }
 
 func shutdown(sigkill bool) {
@@ -478,6 +484,7 @@ func shutdown(sigkill bool) {
 	}
 
 	wg.Wait()
+
 	if shutdownDone != nil {
 		shutdownDone()
 	}
@@ -493,7 +500,12 @@ func Run(cb ...func(name, addr string)) {
 	RunContext(context.Background(), cb...)
 }
 
+var isRunContext = zutil.NewBool(false)
+
 func RunContext(ctx context.Context, cb ...func(name, addr string)) {
+	isRunContext.Store(true)
+	defer isRunContext.Store(false)
+
 	for n, e := range zservers {
 		ss := e.StartUp()
 		wg.Add(len(ss))
