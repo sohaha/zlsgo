@@ -131,7 +131,7 @@ const (
 	TestMode = "test"
 	// QuietMode quiet
 	QuietMode         = "quiet"
-	defaultServerName = "Z"
+	defaultServerName = ""
 	defaultBindTag    = "json"
 	quietCode         = -1
 	prodCode          = 0
@@ -163,12 +163,18 @@ func init() {
 
 // New returns a newly initialized Engine object that implements the Engine
 func New(serverName ...string) *Engine {
-	name := defaultServerName
+	var name string
 	if len(serverName) > 0 {
 		name = serverName[0]
 	}
 
-	log := zlog.New("[" + name + "] ")
+	var log *zlog.Logger
+	if name != "" {
+		log = zlog.New("[" + name + "] ")
+	} else {
+		log = zlog.New("[Z] ")
+	}
+
 	log.ResetFlags(zlog.BitTime | zlog.BitLevel)
 	log.SetLogLevel(zlog.LogInfo)
 
@@ -196,7 +202,7 @@ func New(serverName ...string) *Engine {
 	r.pool.New = func() interface{} {
 		return r.NewContext(nil, nil)
 	}
-	if _, ok := zservers[name]; ok {
+	if _, ok := zservers[name]; ok && name != "" {
 		r.Log.Fatal("serverName: [", name, "] it already exists")
 	}
 	zservers[name] = r
