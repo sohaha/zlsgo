@@ -490,7 +490,7 @@ func shutdown(sigkill bool) {
 	}
 
 	wg.Wait()
-
+srvs = srvs[:0:0]
 	if shutdownDone != nil {
 		shutdownDone()
 	}
