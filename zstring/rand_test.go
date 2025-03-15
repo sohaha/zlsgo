@@ -47,6 +47,58 @@ func TestWeightedRand(T *testing.T) {
 	t.EqualTrue(err == nil)
 }
 
+func TestNewNanoID(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	t.Log(NewNanoID(10))
+	t.Log(NewNanoID(10))
+	t.Log(NewNanoID(10, "1234"))
+	t.Log(NewNanoID(10, "1234"))
+}
+
+func BenchmarkNanoID(b *testing.B) {
+	b.Run("Nano", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(21)
+		}
+	})
+
+	b.Run("Rand", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			Rand(21)
+		}
+	})
+
+	b.Run("NanoID-10", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(10)
+		}
+	})
+
+	b.Run("NanoID-21", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(21)
+		}
+	})
+
+	b.Run("NanoID-50", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(50)
+		}
+	})
+
+	b.Run("NanoID-ASCII", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(21, "0123456789abcdefghijklmnopqrstuvwxyz")
+		}
+	})
+
+	b.Run("NanoID-NonASCII", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			NewNanoID(21, "0123456789абвгдеёжзийклмнопрстуфхцчшщъыьэюя")
+		}
+	})
+}
+
 func BenchmarkRandStr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Rand(1)

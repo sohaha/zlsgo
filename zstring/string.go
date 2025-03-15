@@ -26,8 +26,9 @@ const (
 	PadLeft
 	// PadSides Two-sided padding characters,If the two sides are not equal, the right side takes precedence.
 	PadSides
-	letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+
+var letterBytes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // Pad String padding
 func Pad(raw string, length int, padStr string, padType PadType) string {
