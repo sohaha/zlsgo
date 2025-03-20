@@ -59,6 +59,8 @@ func ExecCommandHandle(ctx context.Context, command []string,
 		return 1, errors.New("no such command")
 	}
 
+	chcp()
+
 	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
 	if Env == nil {
 		cmd.Env = os.Environ()
@@ -71,7 +73,7 @@ func ExecCommandHandle(ctx context.Context, command []string,
 		fmt.Println("[Command]:", strings.Join(command, " "))
 	}
 
-	err = bef(cmd)
+	err = bef(sysProcAttr(cmd))
 	if err != nil {
 		return -1, err
 	}

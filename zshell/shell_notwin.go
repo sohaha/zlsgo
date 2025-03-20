@@ -8,10 +8,17 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/sohaha/zlsgo/zutil"
 )
+
+var chcp = zutil.Once(func() struct{} {
+	return struct{}{}
+})
 
 func RunNewProcess(file string, args []string) (pid int, err error) {
 	execSpec := &syscall.ProcAttr{
@@ -33,4 +40,8 @@ func RunBash(ctx context.Context, command string) (code int, outStr, errStr stri
 		"-c",
 		command,
 	}, nil, nil, nil)
+}
+
+func sysProcAttr(cmd *exec.Cmd) *exec.Cmd {
+	return cmd
 }
