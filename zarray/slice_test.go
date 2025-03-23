@@ -147,3 +147,17 @@ func TestChunk(t *testing.T) {
 	tt.Equal([][]int{}, zarray.Chunk(l, 0))
 	tt.Equal([][]int{}, zarray.Chunk[int](nil, 8))
 }
+
+func TestRandShift(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	ll := zarray.RandShift(l)
+	for i := 0; i < 8; i++ {
+		v, err := ll()
+		if i > 5 {
+			tt.NotNil(err)
+		} else {
+			tt.NoError(err)
+		}
+		tt.Log(v, err)
+	}
+}

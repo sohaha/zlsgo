@@ -4,6 +4,7 @@
 package zarray
 
 import (
+	"errors"
 	"math/rand"
 
 	"github.com/sohaha/zlsgo/zstring"
@@ -78,7 +79,12 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint
 		}
 	}
 
-	for i := 0; i < int(parallel[0]); i++ {
+	workers := int(parallel[0])
+	if workers > colLen {
+		workers = colLen
+	}
+
+	for i := 0; i < workers; i++ {
 		wg.Go(task)
 	}
 
@@ -133,8 +139,8 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 
 // Contains returns true if an eent is present in a collection.
 func Contains[T comparable](collection []T, v T) bool {
-	for _, item := range collection {
-		if item == v {
+	for i := range collection {
+		if collection[i] == v {
 			return true
 		}
 	}
@@ -156,6 +162,11 @@ func Find[T any](collection []T, predicate func(index int, item T) bool) (res T,
 
 // Unique returns a duplicate-free version of an array.
 func Unique[T comparable](collection []T) []T {
+	l := len(collection)
+	if l <= 1 {
+		return CopySlice(collection)
+	}
+
 	repeat := make(map[T]struct{}, len(collection))
 
 	return Filter(collection, func(_ int, item T) bool {
@@ -169,9 +180,15 @@ func Unique[T comparable](collection []T) []T {
 
 // Diff returns the difference between two slices.
 func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
-	l, r := []T{}, []T{}
+	if len(list1) == 0 {
+		return []T{}, CopySlice(list2)
+	}
+	if len(list2) == 0 {
+		return CopySlice(list1), []T{}
+	}
 
-	rl, rr := map[T]struct{}{}, map[T]struct{}{}
+	rl := make(map[T]struct{}, len(list1))
+	rr := make(map[T]struct{}, len(list2))
 
 	for _, e := range list1 {
 		rl[e] = struct{}{}
@@ -180,6 +197,9 @@ func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	for _, e := range list2 {
 		rr[e] = struct{}{}
 	}
+
+	l := make([]T, 0, len(list1))
+	r := make([]T, 0, len(list2))
 
 	for _, e := range list1 {
 		if _, ok := rr[e]; !ok {
@@ -240,4 +260,28 @@ func Chunk[T any](slice []T, size int) [][]T {
 
 	chunks[n-1] = slice[(n-1)*size:]
 	return chunks
+}
+
+// RandShift returns a function that returns a random element from the list and removes it.
+func RandShift[T comparable](list []T) func() (T, error) {
+	if len(list) == 0 {
+		return func() (T, error) {
+			var zero T
+			return zero, errors.New("no available items to select randomly")
+		}
+	}
+
+	indices := rand.Perm(len(list))
+	currentIndex := 0
+
+	return func() (T, error) {
+		if currentIndex >= len(indices) {
+			var zero T
+			return zero, errors.New("no available items to select randomly")
+		}
+
+		item := list[indices[currentIndex]]
+		currentIndex++
+		return item, nil
+	}
 }
