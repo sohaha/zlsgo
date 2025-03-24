@@ -455,7 +455,7 @@ func (e *Engine) StartUp() []*serverMap {
 }
 
 func Shutdown() error {
-	if isRunContext.Load() {
+	if !isRunContext.Load() {
 		return errors.New("server was started with custom context, cannot use Shutdown")
 	}
 
@@ -490,7 +490,7 @@ func shutdown(sigkill bool) {
 	}
 
 	wg.Wait()
-srvs = srvs[:0:0]
+	srvs = srvs[:0:0]
 	if shutdownDone != nil {
 		shutdownDone()
 	}
