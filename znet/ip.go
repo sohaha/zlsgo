@@ -238,8 +238,7 @@ func InNetwork(ip, network string) bool {
 
 // Port GetPort Check if the port is available, if not, then automatically get an available
 func Port(port int, change bool) (newPort int, err error) {
-	host := ":" + strconv.Itoa(port)
-	listener, err := net.Listen("tcp", host)
+	listener, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	if err != nil {
 		if !change && port != 0 {
 			return 0, err

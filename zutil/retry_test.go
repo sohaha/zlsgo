@@ -32,6 +32,7 @@ func TestRetry(tt *testing.T) {
 		i := 0
 		now := time.Now()
 		err := DoRetry(5, func() error {
+			t.Log(i, time.Since(now).Seconds())
 			if i < 3 {
 				i++
 				return errors.New("error")
@@ -42,8 +43,8 @@ func TestRetry(tt *testing.T) {
 			rc.Interval = time.Second / 5
 		})
 		t.NoError(err)
-		t.EqualTrue(time.Since(now).Seconds() < 6)
-		t.EqualTrue(time.Since(now).Seconds() > 2)
+		t.EqualTrue(time.Since(now).Seconds() < 3)
+		t.EqualTrue(time.Since(now).Seconds() > 1.5)
 		t.Equal(3, i)
 	})
 
@@ -60,11 +61,10 @@ func TestRetry(tt *testing.T) {
 		t.EqualTrue(time.Since(now).Seconds() > 1)
 		t.Equal(6, i)
 	})
-
 }
 
 func Test_backOffDelay(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		t.Log(BackOffDelay((i), time.Minute))
+		t.Log(BackOffDelay(i, time.Second, time.Minute))
 	}
 }
