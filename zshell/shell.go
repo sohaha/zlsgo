@@ -66,7 +66,6 @@ func ExecCommandHandle(ctx context.Context, command []string,
 		cmd.Env = os.Environ()
 	} else {
 		cmd.Env = Env
-		Env = nil
 	}
 
 	if Debug {

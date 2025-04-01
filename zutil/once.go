@@ -4,6 +4,7 @@
 package zutil
 
 import (
+	"errors"
 	"sync"
 	"time"
 )
@@ -29,5 +30,22 @@ func Once[T any](fn func() T) func() T {
 		})
 
 		return ivar
+	}
+}
+
+// Guard ensures mutually exclusive execution
+func Guard[T any](fn func() T) func() (T, error) {
+	status := NewBool(false)
+	return func() (resp T, err error) {
+		if !status.CAS(false, true) {
+			return resp, errors.New("already running")
+		}
+		defer status.Store(false)
+
+		err = TryCatch(func() error {
+			resp = fn()
+			return nil
+		})
+		return resp, err
 	}
 }
