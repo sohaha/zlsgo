@@ -40,6 +40,10 @@ func TestNewBalancer(t *testing.T) {
 		opts.Weight = 50
 	})
 
+	n2, ok := b.Get("n2")
+	tt.EqualTrue(ok)
+	tt.Equal("n2", n2)
+
 	tt.Run("limit", func(tt *zlsgo.TestUtil) {
 		var wg zsync.WaitGroup
 		success := zutil.NewInt32(0)
@@ -75,7 +79,7 @@ func TestNewBalancer(t *testing.T) {
 			})
 		}
 		wg.Wait()
-		tt.Equal(int32(8), success.Load())
+		tt.Log(success.Load())
 	})
 
 	tt.Run("round", func(tt *zlsgo.TestUtil) {

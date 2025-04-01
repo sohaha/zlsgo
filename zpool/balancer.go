@@ -63,11 +63,17 @@ func NewBalancer[T any]() *Balancer[T] {
 }
 
 // Get returns the node with the given key
-func (b *Balancer[T]) Get(key string) *balancerNode[T] {
+func (b *Balancer[T]) Get(key string) (T, bool) {
 	r := b.mu.RLock()
 	defer b.mu.RUnlock(r)
 
-	return b.nodes[key]
+	n, ok := b.nodes[key]
+	if !ok {
+		var d T
+		return d, false
+	}
+
+	return n.node, ok
 }
 
 // Add adds a new node to the balancer
