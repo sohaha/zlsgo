@@ -11,6 +11,7 @@ import (
 
 func TestOs(T *testing.T) {
 	t := zlsgo.NewTest(T)
+
 	osName := runtime.GOOS
 	t.Log(osName)
 	isWin := zutil.IsWin()
@@ -19,6 +20,9 @@ func TestOs(T *testing.T) {
 	t.Log("isLinux", isLinux)
 	isMac := zutil.IsMac()
 	t.Log("isMac", isMac)
+
+	is32bit := zutil.Is32BitArch()
+	t.Log(is32bit)
 }
 
 func TestEnv(T *testing.T) {

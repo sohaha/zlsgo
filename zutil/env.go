@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -30,6 +31,11 @@ func IsMac() bool {
 // IsLinux system
 func IsLinux() bool {
 	return GetOs() == "linux"
+}
+
+// Is32BitArch is 32-bit system
+func Is32BitArch() bool {
+	return strconv.IntSize == 32
 }
 
 // Getenv get ENV value by key name
