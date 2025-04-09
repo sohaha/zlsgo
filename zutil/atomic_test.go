@@ -4,8 +4,11 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
+	"unsafe"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -171,4 +174,51 @@ func TestUint32(t *testing.T) {
 	tt.Equal(uint32(200), count.Load())
 	count.CAS(200, 300)
 	tt.Equal(uint32(300), count.Load())
+}
+
+func TestUintptr(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	v := &TestSt{
+		Name: "test",
+		I:    0,
+	}
+
+	f := zutil.NewPointer(unsafe.Pointer(v))
+
+	tt.Equal(v, (*TestSt)(f.Load()))
+
+	ii := zutil.NewInt64(0)
+	var wg sync.WaitGroup
+	for i := 0; i < 1010; i++ {
+		wg.Add(1)
+		go func() {
+			ii.Add(1)
+			a := (*TestSt)(f.Load())
+			wg.Done()
+			tt.Equal(v.Name, a.Name)
+		}()
+	}
+
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			time.Sleep(time.Microsecond)
+			ii.Add(1)
+			a := &TestSt{
+				Name: "test",
+				I:    zstring.RandInt(0, 100),
+			}
+			f.Store(unsafe.Pointer(a))
+
+			tt.EqualTrue(unsafe.Pointer(a) != unsafe.Pointer(v))
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+	tt.Log(ii.Load())
+	tt.Log(f.String())
+
+	tt.EqualTrue(!f.CAS(unsafe.Pointer(v), unsafe.Pointer(&TestSt{})))
 }

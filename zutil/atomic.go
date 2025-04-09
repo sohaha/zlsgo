@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync/atomic"
+	"unsafe"
 )
 
 type (
@@ -30,6 +31,10 @@ type (
 	Uintptr struct {
 		_ Nocmp
 		v uintptr
+	}
+	Pointer struct {
+		_ Nocmp
+		v unsafe.Pointer
 	}
 )
 
@@ -247,6 +252,29 @@ func (ptr *Uintptr) CAS(old, new uintptr) bool {
 }
 
 func (ptr *Uintptr) String() string {
+	v := ptr.Load()
+	return fmt.Sprintf("%+v", v)
+}
+
+func NewPointer(p unsafe.Pointer) *Pointer {
+	return &Pointer{
+		v: p,
+	}
+}
+
+func (ptr *Pointer) Load() unsafe.Pointer {
+	return atomic.LoadPointer(&ptr.v)
+}
+
+func (ptr *Pointer) Store(p unsafe.Pointer) {
+	atomic.StorePointer(&ptr.v, p)
+}
+
+func (ptr *Pointer) CAS(old, new unsafe.Pointer) bool {
+	return atomic.CompareAndSwapPointer(&ptr.v, old, new)
+}
+
+func (ptr *Pointer) String() string {
 	v := ptr.Load()
 	return fmt.Sprintf("%+v", v)
 }
