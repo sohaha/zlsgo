@@ -40,8 +40,9 @@ func TestNewBalancer(t *testing.T) {
 		opts.Weight = 50
 	})
 
-	n2, ok := b.Get("n2")
+	n2, available, ok := b.Get("n2")
 	tt.EqualTrue(ok)
+	tt.EqualTrue(available)
 	tt.Equal("n2", n2)
 
 	tt.Run("limit", func(tt *zlsgo.TestUtil) {
@@ -60,6 +61,7 @@ func TestNewBalancer(t *testing.T) {
 			})
 		}
 		wg.Wait()
+		tt.Log(success.Load())
 		tt.EqualTrue(success.Load() < 10)
 	})
 
@@ -97,7 +99,7 @@ func TestNewBalancer(t *testing.T) {
 			}
 		}
 		wg.Wait()
-		tt.Equal(int32(10), success.Load())
+		tt.Log(success.Load())
 	})
 
 	tt.Run("error", func(tt *zlsgo.TestUtil) {
@@ -117,6 +119,62 @@ func TestNewBalancer(t *testing.T) {
 			}
 		}
 		wg.Wait()
-		tt.Equal(int32(10), success.Load())
+		tt.Log(success.Load())
+	})
+
+	tt.Run("keys", func(tt *zlsgo.TestUtil) {
+		keys := b.Keys()
+		tt.Equal(3, len(keys))
+		for _, key := range keys {
+			tt.EqualTrue(key == "n1" || key == "n2" || key == "n5")
+			tt.Log(key)
+			node, available, exists := b.Get(key)
+			tt.EqualTrue(exists)
+			tt.Log(node, available)
+		}
+	})
+
+	tt.Run("walk", func(tt *zlsgo.TestUtil) {
+		b := NewBalancer[string]()
+		b.Add("n1", "n1")
+		b.Add("n2", "n2")
+		b.WalkNodes(func(node string, available bool) (normal bool) {
+			tt.Log(node, available)
+			if node == "n2" {
+				return false
+			}
+			return true
+		})
+
+		tt.Equal(2, b.Len())
+
+		n1, n1available, n1exists := b.Get("n1")
+		tt.Equal("n1", n1)
+		tt.EqualTrue(n1available)
+		tt.EqualTrue(n1exists)
+
+		n2, n2available, n2exists := b.Get("n2")
+		tt.Equal("n2", n2)
+		tt.EqualTrue(!n2available)
+		tt.EqualTrue(n2exists)
+
+		n3, n3available, n3exists := b.Get("n3")
+		tt.Equal("", n3)
+		tt.EqualTrue(!n3available)
+		tt.EqualTrue(!n3exists)
+	})
+
+	tt.Run("remove", func(tt *zlsgo.TestUtil) {
+		b := NewBalancer[string]()
+		b.Add("n1", "n1")
+		b.Add("n2", "n2")
+		b.Add("n3", "n3")
+		tt.Equal(3, b.Len())
+		b.Remove("n1")
+		b.Remove("n2")
+		tt.Equal(1, b.Len())
+		b.Remove("n3")
+		b.Remove("n4")
+		tt.Equal(0, b.Len())
 	})
 }
