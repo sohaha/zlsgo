@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/zerror"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zsync"
@@ -147,12 +148,15 @@ func (b *Balancer[T]) Remove(key string) {
 }
 
 // getAvailableNodes returns all available nodes
-func (b *Balancer[T]) getAvailableNodes() []*balancerNode[T] {
+func (b *Balancer[T]) getAvailableNodes(keys ...string) []*balancerNode[T] {
 	r := b.mu.RLock()
 	nodes := make([]*balancerNode[T], 0, len(b.nodes))
 	now := time.Now().UnixMilli()
 
 	for _, key := range b.nodeKeys {
+		if len(keys) > 0 && !zarray.Contains(keys, key) {
+			continue
+		}
 		node := b.nodes[key]
 		failedAt := node.failedAt.Load()
 
@@ -267,6 +271,10 @@ func fastRand(n int) int {
 
 // Run runs the given function on the selected node
 func (b *Balancer[T]) Run(fn func(node T) (normal bool, err error), strategy ...BalancerStrategy) error {
+	return b.RunByKeys(nil, fn, strategy...)
+}
+
+func (b *Balancer[T]) RunByKeys(keys []string, fn func(node T) (normal bool, err error), strategy ...BalancerStrategy) error {
 	if fn == nil {
 		return ErrEmptyCallback
 	}
@@ -283,7 +291,7 @@ func (b *Balancer[T]) Run(fn func(node T) (normal bool, err error), strategy ...
 		s = strategy[0]
 	}
 
-	nodes := b.getAvailableNodes()
+	nodes := b.getAvailableNodes(keys...)
 	if len(nodes) == 0 {
 		return ErrNoAvailableNodes
 	}
@@ -299,7 +307,7 @@ func (b *Balancer[T]) Run(fn func(node T) (normal bool, err error), strategy ...
 		}
 
 		if node.max > 0 && node.total.Load() > node.max {
-			nodes = b.getAvailableNodes()
+			nodes = b.getAvailableNodes(keys...)
 			return ErrNoAvailableNodes
 		}
 
@@ -315,7 +323,7 @@ func (b *Balancer[T]) Run(fn func(node T) (normal bool, err error), strategy ...
 
 		node.total.Add(-1)
 		if err != nil {
-			nodes = b.getAvailableNodes()
+			nodes = b.getAvailableNodes(keys...)
 			return err
 		}
 

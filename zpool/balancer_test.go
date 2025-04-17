@@ -102,6 +102,24 @@ func TestNewBalancer(t *testing.T) {
 		tt.Log(success.Load())
 	})
 
+	tt.Run("byKeys", func(tt *zlsgo.TestUtil) {
+		var wg zsync.WaitGroup
+		success := zutil.NewInt32(0)
+		for i := 0; i < 10; i++ {
+			wg.Go(func() {
+				err := b.RunByKeys([]string{"n1", "n2"}, func(node string) (bool, error) {
+					tt.Log(node)
+					return true, nil
+				}, StrategyRoundRobin)
+				if err == nil {
+					success.Add(1)
+				}
+			})
+		}
+		wg.Wait()
+		tt.Log(success.Load())
+	})
+
 	tt.Run("error", func(tt *zlsgo.TestUtil) {
 		var wg zsync.WaitGroup
 		success := zutil.NewInt32(0)
