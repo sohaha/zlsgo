@@ -65,6 +65,26 @@ func TestNewBalancer(t *testing.T) {
 		tt.EqualTrue(success.Load() < 10)
 	})
 
+	tt.Run("weight", func(tt *zlsgo.TestUtil) {
+		var wg zsync.WaitGroup
+		success := zutil.NewInt32(0)
+		for i := 0; i < 10; i++ {
+			wg.Go(func() {
+				err := b.Run(func(node string) (bool, error) {
+					tt.Log(node)
+					time.Sleep(time.Second / 10)
+					return true, nil
+				}, StrategyWeighted)
+				if err == nil {
+					success.Add(1)
+				}
+			})
+		}
+		wg.Wait()
+		tt.Log(success.Load())
+		tt.EqualTrue(success.Load() < 10)
+	})
+
 	tt.Run("least", func(tt *zlsgo.TestUtil) {
 		var wg zsync.WaitGroup
 		success := zutil.NewInt32(0)
@@ -194,5 +214,23 @@ func TestNewBalancer(t *testing.T) {
 		b.Remove("n3")
 		b.Remove("n4")
 		tt.Equal(0, b.Len())
+	})
+
+	tt.Run("mark", func(tt *zlsgo.TestUtil) {
+		b := NewBalancer[string]()
+		b.Add("n1", "n1")
+		b.Add("n2", "n2")
+		b.Add("n3", "n3")
+		tt.Equal(3, b.Len())
+		b.Mark("n1", false)
+		b.WalkNodes(func(node string, available bool) (normal bool) {
+			tt.Log(node, available)
+			if node == "n1" {
+				tt.Equal(false, available)
+				return true
+			}
+			tt.Equal(true, available)
+			return true
+		})
 	})
 }

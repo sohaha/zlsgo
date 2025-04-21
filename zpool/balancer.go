@@ -26,6 +26,8 @@ const (
 	StrategyLeastConn
 	// StrategyRoundRobin represents round-robin selection strategy
 	StrategyRoundRobin
+	// StrategyWeighted represents weighted selection strategy
+	StrategyWeighted
 )
 
 var (
@@ -147,6 +149,22 @@ func (b *Balancer[T]) Remove(key string) {
 	b.mu.Unlock()
 }
 
+// Mark marks a node as available or not
+func (b *Balancer[T]) Mark(key string, available bool) {
+	b.mu.Lock()
+	if _, exists := b.nodes[key]; !exists {
+		b.mu.Unlock()
+		return
+	}
+
+	if available {
+		b.nodes[key].failedAt.Store(0)
+	} else {
+		b.nodes[key].failedAt.Store(time.Now().UnixMilli())
+	}
+	b.mu.Unlock()
+}
+
 // getAvailableNodes returns all available nodes
 func (b *Balancer[T]) getAvailableNodes(keys ...string) []*balancerNode[T] {
 	r := b.mu.RLock()
@@ -196,6 +214,20 @@ func (b *Balancer[T]) selectNode(nodes []*balancerNode[T], strategy BalancerStra
 			return node, nil
 		}
 		switch strategy {
+		case StrategyWeighted:
+			maxWeight := uint64(0)
+			for _, node := range availableNodes[:currentCount] {
+				if node.weight > maxWeight {
+					maxWeight = node.weight
+				}
+			}
+			for i, node := range availableNodes[:currentCount] {
+				if node.weight == maxWeight {
+					selectedIdx = i
+					selectedNode = node
+					break
+				}
+			}
 		case StrategyRandom:
 			if allSameWeight := allNodesHaveSameWeight(availableNodes[:currentCount]); allSameWeight {
 				selectedIdx = fastRand(currentCount)
