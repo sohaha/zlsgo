@@ -98,13 +98,21 @@ func applyCors(c *znet.Context, conf *Config) bool {
 		}
 	}
 
-	c.SetHeader("Access-Control-Allow-Methods", conf.methods)
-	c.SetHeader("Access-Control-Allow-Credentials", conf.credentials)
-	c.SetHeader("Access-Control-Allow-Headers", conf.headers)
-	if conf.exposeHeaders != "" {
-		c.SetHeader("Access-Control-Expose-Headers", conf.exposeHeaders)
+	headers := map[string]string{
+		"Access-Control-Allow-Methods":     conf.methods,
+		"Access-Control-Allow-Credentials": conf.credentials,
+		"Access-Control-Allow-Headers":     conf.headers,
+		"Access-Control-Allow-Origin":      origin,
 	}
-	c.SetHeader("Access-Control-Allow-Origin", origin)
+	if conf.exposeHeaders != "" {
+		headers["Access-Control-Expose-Headers"] = conf.exposeHeaders
+	}
+
+	for k, v := range headers {
+		c.SetHeader(k, "")
+		c.SetHeader(k, v)
+	}
+
 	if conf.CustomHandler != nil {
 		conf.CustomHandler(conf, c)
 	}

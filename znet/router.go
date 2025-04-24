@@ -450,7 +450,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if e.FindHandle(c, req, p, true) {
-		e.handleNotFound(c)
+		e.handleNotFound(c, true)
 	}
 }
 
@@ -497,8 +497,11 @@ func (e *Engine) Use(middleware ...Handler) {
 	}
 }
 
-func (e *Engine) handleNotFound(c *Context) {
-	middleware := e.router.middleware
+func (e *Engine) handleNotFound(c *Context, applyMiddleware bool) {
+	var middleware []handlerFn
+	if applyMiddleware {
+		middleware = e.router.middleware
+	}
 	c.prevData.Code.Store(http.StatusNotFound)
 
 	if e.router.notFound != nil {
@@ -512,8 +515,12 @@ func (e *Engine) handleNotFound(c *Context) {
 	}, middleware)
 }
 
-func (e *Engine) HandleNotFound(c *Context) {
-	e.handleNotFound(c)
+func (e *Engine) HandleNotFound(c *Context, applyMiddleware ...bool) {
+	var apply bool
+	if len(applyMiddleware) > 0 {
+		apply = applyMiddleware[0]
+	}
+	e.handleNotFound(c, apply)
 	c.stopHandle.Store(true)
 }
 
