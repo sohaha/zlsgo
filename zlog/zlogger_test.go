@@ -22,7 +22,7 @@ func (w *Report) Write(p []byte) (n int, err error) {
 
 func TestCustomWriter(t *testing.T) {
 	w := &Report{
-		Writer: os.Stderr,
+		Writer: os.Stdout,
 	}
 
 	l1 := zlog.NewZLog(w, "[Custom1] ", zlog.BitLevel, zlog.LogDump, true, 3)

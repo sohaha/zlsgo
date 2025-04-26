@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	log    = NewZLog(os.Stderr, "", BitDefault, LogDump, true, 4)
+	log    = NewZLog(os.Stdout, "", BitDefault, LogDump, true, 4)
 	osExit = func(code int) {
 		if zutil.IsDoubleClickStartUp() {
 			_, _ = fmt.Scanln()

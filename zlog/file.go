@@ -48,7 +48,6 @@ func openFile(filepa string, archive bool) (file *zfile.MemoryFile, fileName, fi
 								_ = os.Remove(path)
 							}
 							return nil
-
 						})
 					}()
 				}
@@ -107,6 +106,6 @@ func (log *Logger) CloseFile() {
 	if log.file != nil {
 		_ = log.file.Close()
 		log.file = nil
-		log.out = os.Stderr
+		log.out = os.Stdout
 	}
 }

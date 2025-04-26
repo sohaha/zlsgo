@@ -113,7 +113,7 @@ func New(moduleName ...string) *Logger {
 	if len(moduleName) > 0 {
 		name = moduleName[0]
 	}
-	return NewZLog(os.Stderr, name, BitDefault, LogDump, true, 3)
+	return NewZLog(os.Stdout, name, BitDefault, LogDump, true, 3)
 }
 
 // NewZLog Create log
