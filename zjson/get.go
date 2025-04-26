@@ -69,7 +69,7 @@ func (r *Res) Bytes() []byte {
 	return zstring.String2Bytes(r.String())
 }
 
-func (r *Res) String() string {
+func (r *Res) String(def ...string) string {
 	switch r.typ {
 	case False:
 		return "false"
@@ -94,11 +94,14 @@ func (r *Res) String() string {
 	case True:
 		return "true"
 	default:
+		if len(def) > 0 {
+			return def[0]
+		}
 		return ""
 	}
 }
 
-func (r *Res) Bool() bool {
+func (r *Res) Bool(def ...bool) bool {
 	switch r.typ {
 	case True:
 		return true
@@ -108,11 +111,14 @@ func (r *Res) Bool() bool {
 	case Number:
 		return r.num != 0
 	default:
+		if len(def) > 0 {
+			return def[0]
+		}
 		return false
 	}
 }
 
-func (r *Res) Int() int {
+func (r *Res) Int(def ...int) int {
 	switch r.typ {
 	case True:
 		return 1
@@ -131,13 +137,51 @@ func (r *Res) Int() int {
 		}
 		return int(r.num)
 	default:
+		if len(def) > 0 {
+			return def[0]
+		}
 		return 0
 	}
 }
 
-func (r *Res) Uint() uint {
+func (r *Res) Int8(def ...int8) int8 {
+	var i int
+	if len(def) > 0 {
+		i = int(def[0])
+	}
+	return ztype.ToInt8(r.Int(i))
+}
+
+func (r *Res) Int16(def ...int16) int16 {
+	var i int
+	if len(def) > 0 {
+		i = int(def[0])
+	}
+	return ztype.ToInt16(r.Int(i))
+}
+
+func (r *Res) Int32(def ...int32) int32 {
+	var i int
+	if len(def) > 0 {
+		i = int(def[0])
+	}
+	return ztype.ToInt32(r.Int(i))
+}
+
+func (r *Res) Int64(def ...int64) int64 {
+	var i int
+	if len(def) > 0 {
+		i = int(def[0])
+	}
+	return ztype.ToInt64(r.Int(i))
+}
+
+func (r *Res) Uint(def ...uint) uint {
 	switch r.typ {
 	default:
+		if len(def) > 0 {
+			return def[0]
+		}
 		return 0
 	case True:
 		return 1
@@ -157,9 +201,44 @@ func (r *Res) Uint() uint {
 	}
 }
 
-func (r *Res) Float() float64 {
+func (r *Res) Uint8(def ...uint8) uint8 {
+	var i uint
+	if len(def) > 0 {
+		i = uint(def[0])
+	}
+	return ztype.ToUint8(r.Uint(i))
+}
+
+func (r *Res) Uint16(def ...uint16) uint16 {
+	var i uint
+	if len(def) > 0 {
+		i = uint(def[0])
+	}
+	return ztype.ToUint16(r.Uint(i))
+}
+
+func (r *Res) Uint32(def ...uint32) uint32 {
+	var i uint
+	if len(def) > 0 {
+		i = uint(def[0])
+	}
+	return ztype.ToUint32(r.Uint(i))
+}
+
+func (r *Res) Uint64(def ...uint64) uint64 {
+	var i uint
+	if len(def) > 0 {
+		i = uint(def[0])
+	}
+	return ztype.ToUint64(r.Uint(i))
+}
+
+func (r *Res) Float64(def ...float64) float64 {
 	switch r.typ {
 	default:
+		if len(def) > 0 {
+			return def[0]
+		}
 		return 0
 	case True:
 		return 1
@@ -169,6 +248,18 @@ func (r *Res) Float() float64 {
 	case Number:
 		return r.num
 	}
+}
+
+func (r *Res) Float(def ...float64) float64 {
+	return r.Float64(def...)
+}
+
+func (r *Res) Float32(def ...float32) float32 {
+	var i float64
+	if len(def) > 0 {
+		i = float64(def[0])
+	}
+	return ztype.ToFloat32(r.Float64(i))
 }
 
 func (r *Res) Unmarshal(v interface{}) error {

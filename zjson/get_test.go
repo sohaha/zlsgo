@@ -84,6 +84,11 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(0, Get(demo, "bool").Int())
 	tt.Log(Get(demo, "bool").typ.String())
 	tt.EqualExit(1, Get(demo, "boolTrue").Int())
+	tt.EqualExit(int8(1), Get(demo, "boolTrue").Int8())
+	tt.EqualExit(int16(1), Get(demo, "boolTrue").Int16())
+	tt.EqualExit(int32(1), Get(demo, "boolTrue").Int32())
+	tt.EqualExit(int64(1), Get(demo, "boolTrue").Int64())
+
 	tt.EqualExit(0, Get(demo, "time").Int())
 	_ = Get(demo, "time").typ.String()
 	_ = Get(demo, "timeNull").typ.String()
@@ -93,6 +98,10 @@ func TestGet(t *testing.T) {
 	tt.EqualExit(uint(666), Get(demo, "other.1").Uint())
 	tt.EqualExit(uint(0), Get(demo, "time").Uint())
 	tt.EqualExit(uint(1), Get(demo, "f").Uint())
+	tt.EqualExit(uint8(1), Get(demo, "f").Uint8())
+	tt.EqualExit(uint16(1), Get(demo, "f").Uint16())
+	tt.EqualExit(uint32(1), Get(demo, "f").Uint32())
+	tt.EqualExit(uint64(1), Get(demo, "f").Uint64())
 	tt.EqualExit(uint(0), Get(demo, "user").Uint())
 	tt.EqualExit(uint(1), Get(demo, "boolTrue").Uint())
 
@@ -232,7 +241,6 @@ func TestForEach(t *testing.T) {
 		tt.Equal(63.12, value.Get("fen").Float())
 		return true
 	})
-
 }
 
 func TestUnmarshal(t *testing.T) {
@@ -269,7 +277,6 @@ func TestUnmarshal2(t *testing.T) {
 	tt.NoError(err)
 	tt.Logf("%+v", m3)
 	tt.Equal(2, m3["u4"])
-
 }
 
 func TestEditJson(t *testing.T) {
@@ -317,6 +324,46 @@ func TestType(t *testing.T) {
 	tt.EqualExit(ztype.Map{}, Get(`{}`, "a").Map())
 	tt.EqualExit(ztype.Maps{}, Get(`{}`, "a").Maps())
 	tt.EqualExit([]*Res{}, Get(`{}`, "a").Array())
+}
+
+func TestDefault(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	notExists := Get(demo, "notExists")
+	tt.EqualExit(false, notExists.Exists())
+	tt.EqualExit("default", notExists.String("default"))
+	tt.EqualExit("", notExists.String())
+
+	tt.EqualExit(false, notExists.Bool())
+	tt.EqualExit(true, notExists.Bool(true))
+
+	tt.EqualExit(0, notExists.Int())
+	tt.EqualExit(1, notExists.Int(1))
+	tt.EqualExit(int8(0), notExists.Int8())
+	tt.EqualExit(int8(1), notExists.Int8(1))
+	tt.EqualExit(int16(0), notExists.Int16())
+	tt.EqualExit(int16(1), notExists.Int16(1))
+	tt.EqualExit(int32(0), notExists.Int32())
+	tt.EqualExit(int32(1), notExists.Int32(1))
+	tt.EqualExit(int64(0), notExists.Int64())
+	tt.EqualExit(int64(1), notExists.Int64(1))
+
+	tt.EqualExit(float64(0), notExists.Float())
+	tt.EqualExit(float64(1), notExists.Float(1.0))
+	tt.EqualExit(float64(0), notExists.Float64())
+	tt.EqualExit(float64(1), notExists.Float64(1.0))
+	tt.EqualExit(float32(0), notExists.Float32())
+	tt.EqualExit(float32(1), notExists.Float32(1.0))
+
+	tt.EqualExit(uint(0), notExists.Uint())
+	tt.EqualExit(uint(1), notExists.Uint(1))
+	tt.EqualExit(uint8(0), notExists.Uint8())
+	tt.EqualExit(uint8(1), notExists.Uint8(1))
+	tt.EqualExit(uint16(0), notExists.Uint16())
+	tt.EqualExit(uint16(1), notExists.Uint16(1))
+	tt.EqualExit(uint32(0), notExists.Uint32())
+	tt.EqualExit(uint32(1), notExists.Uint32(1))
+	tt.EqualExit(uint64(0), notExists.Uint64())
+	tt.EqualExit(uint64(1), notExists.Uint64(1))
 }
 
 func BenchmarkGet(b *testing.B) {
