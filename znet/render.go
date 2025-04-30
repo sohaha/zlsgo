@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
@@ -53,6 +55,9 @@ type (
 		Msg  string      `json:"msg,omitempty"`
 		Code int32       `json:"code" example:"200"`
 	}
+	render struct {
+		data io.Writer
+	}
 	// Data map string
 	Data     map[string]interface{}
 	PrevData struct {
@@ -69,6 +74,12 @@ var (
 	ContentTypeHTML = "text/html; charset=utf-8"
 	// ContentTypeJSON json
 	ContentTypeJSON = "application/json; charset=utf-8"
+	emptyBytes      = []byte{}
+	bufferPool      = sync.Pool{
+		New: func() interface{} {
+			return &bytes.Buffer{}
+		},
+	}
 )
 
 func (c *Context) renderProcessing(code int32, r Renderer) {
@@ -181,7 +192,21 @@ func (c *Context) String(code int32, format string, values ...interface{}) {
 	c.renderProcessing(code, &renderString{Format: format, Data: values})
 }
 
-// Deprecated: You can directly modify the return value of PrevContent()
+func (r *render) Content(c *Context) (content []byte) {
+	if r.data == nil {
+		return emptyBytes
+	}
+
+	buf, ok := r.data.(*bytes.Buffer)
+	if !ok {
+		return emptyBytes
+	}
+
+	bufferPool.Put(buf)
+
+	return buf.Bytes()
+}
+
 func (c *Context) SetContent(data *PrevData) {
 	c.mu.Lock()
 	c.prevData = data
@@ -210,8 +235,10 @@ func (c *Context) JSON(code int32, values interface{}) {
 
 // ApiJSON ApiJSON
 func (c *Context) ApiJSON(code int32, msg string, data interface{}) {
-	c.renderProcessing(http.StatusOK, &renderJSON{Data: ApiData{Code: code, Data: data,
-		Msg: msg}})
+	c.renderProcessing(http.StatusOK, &renderJSON{Data: ApiData{
+		Code: code, Data: data,
+		Msg: msg,
+	}})
 }
 
 // HTML export html
@@ -219,6 +246,22 @@ func (c *Context) HTML(code int32, html string) {
 	c.renderProcessing(code, &renderHTML{
 		Data: html,
 	})
+}
+
+// GetWriter get render writer
+func (c *Context) GetWriter(code int32) io.Writer {
+	if !c.hasContentType() {
+		c.SetContentType(ContentTypeHTML)
+	}
+
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+
+	c.renderProcessing(code, &render{
+		data: buf,
+	})
+
+	return buf
 }
 
 // Template export tpl
@@ -233,6 +276,7 @@ func (c *Context) Template(code int32, name string, data interface{}, funcMap ..
 		FuncMap:   fn,
 	})
 }
+
 func (c *Context) Templates(code int32, templates []string, data interface{}, funcMap ...map[string]interface{}) {
 	var fn template.FuncMap
 	if len(funcMap) > 0 {

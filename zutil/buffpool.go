@@ -8,9 +8,9 @@ import (
 var BuffSize = uint(32)
 
 type BufferPool struct {
+	shards map[int]*sync.Pool
 	begin  int
 	end    int
-	shards map[int]*sync.Pool
 }
 
 var bufPools = NewBufferPool(BuffSize, (1<<20)*100)

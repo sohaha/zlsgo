@@ -277,9 +277,9 @@ func HasReadWritePermission(path string) bool {
 }
 
 type fileInfo struct {
+	modTime time.Time
 	path    string
 	size    uint64
-	modTime time.Time
 }
 
 type fileInfos []fileInfo

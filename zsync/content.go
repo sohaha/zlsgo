@@ -27,10 +27,10 @@ type Context interface {
 }
 
 type mergeContext struct {
-	ctxs      []context.Context
-	doneCh    chan struct{}
-	doneIndex int
 	err       error
+	doneCh    chan struct{}
+	ctxs      []context.Context
+	doneIndex int
 }
 
 func (mc *mergeContext) Deadline() (time.Time, bool) {

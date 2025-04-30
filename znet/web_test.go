@@ -536,6 +536,17 @@ func TestHTML(tt *testing.T) {
 	t.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
 }
 
+func TestWriter(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	r := newServer()
+	w := newRequest(r, "GET", "/TestWriter", "/TestWriter", func(c *Context) {
+		w := c.GetWriter(202)
+		_, _ = w.Write([]byte(`<html>123</html>`))
+	})
+	t.Equal(202, w.Code)
+	t.EqualExit(`<html>123</html>`, w.Body.String())
+}
+
 func TestMore(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()

@@ -13,8 +13,8 @@ func TestBatch(tt *testing.T) {
 
 	data := struct {
 		Name string
-		Sex  uint8
 		Say  string
+		Sex  uint8
 	}{Name: "yes name", Sex: 18, Say: "helloWorld"}
 
 	t.Run("success", func(t *zlsgo.TestUtil) {

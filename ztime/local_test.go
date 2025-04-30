@@ -10,9 +10,9 @@ import (
 )
 
 type demo struct {
-	Name          string
 	BirthdayLocal ztime.LocalTime
 	Birthday      time.Time
+	Name          string
 }
 
 func TestLocalTime(t *testing.T) {

@@ -12,8 +12,8 @@ var (
 )
 
 type FileLock struct {
-	path string
 	file *os.File
+	path string
 	mu   sync.Mutex
 }
 

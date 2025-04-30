@@ -199,15 +199,15 @@ func TestConv(t *testing.T) {
 	otime, _ := ztime.Parse("2021-11-25 00:00:00")
 	name := "test"
 	a := struct {
-		Tags    []string
+		Day     ztime.LocalTime
 		Options map[string]string
 		Name    *string
-		Name2   string
 		Name3   *string
-		Nick    string
 		Date    *_time `json:"d"`
-		Day     ztime.LocalTime
 		Day2    *time.Time
+		Name2   string
+		Nick    string
+		Tags    []string
 	}{
 		Name: &name,
 		Nick: name,

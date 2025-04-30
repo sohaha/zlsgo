@@ -40,18 +40,18 @@ var (
 
 type Balancer[T any] struct {
 	nodes       map[string]*balancerNode[T]
-	nodeKeys    []string
 	mu          *zsync.RBMutex
+	nodeKeys    []string
 	lastNodeIdx uint64
 }
 
 type balancerNode[T any] struct {
 	node     T
 	total    *zutil.Int64
-	max      int64
-	weight   uint64
 	failedAt *zutil.Int64
 	cooldown *zutil.Int64
+	max      int64
+	weight   uint64
 }
 
 type BalancerNodeOptions struct {
