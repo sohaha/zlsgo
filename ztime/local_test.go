@@ -32,7 +32,7 @@ func TestLocalTime(t *testing.T) {
 	tt.NoError(err)
 	tt.Log(string(nj))
 
-	data := demo{"anna", lt, now}
+	data := demo{Name: "anna", BirthdayLocal: lt, Birthday: now}
 	dj, err := json.Marshal(data)
 	tt.NoError(err)
 	tt.Log(string(dj))
