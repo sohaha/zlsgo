@@ -536,6 +536,19 @@ func TestHTML(tt *testing.T) {
 	t.EqualExit(`<html>ZlsGo</html>`, w.Body.String())
 }
 
+func TestApiJSON(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	r := newServer()
+	w := newRequest(r, "GET", "/TestApiJSON", "/TestApiJSON", func(c *Context) {
+		c.ApiJSON(200, "ok", "api json")
+	})
+	t.Equal(200, w.Code)
+	j := zjson.ParseBytes(w.Body.Bytes())
+	t.EqualExit(200, j.Get("code").Int())
+	t.EqualExit("ok", j.Get("msg").String())
+	t.EqualExit("api json", j.Get("data").String())
+}
+
 func TestWriter(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
@@ -545,6 +558,12 @@ func TestWriter(tt *testing.T) {
 	})
 	t.Equal(202, w.Code)
 	t.EqualExit(`<html>123</html>`, w.Body.String())
+
+	w = newRequest(r, "GET", "/TestWriter_empty", "/TestWriter_empty", func(c *Context) {
+		c.GetWriter(202)
+	})
+	t.Equal(202, w.Code)
+	t.EqualExit(``, w.Body.String())
 }
 
 func TestMore(tt *testing.T) {
