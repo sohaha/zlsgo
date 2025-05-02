@@ -234,3 +234,12 @@ func TrimSpace(s string) string {
 	}
 	return s
 }
+
+// IsSpace is space character
+func IsSpace(r rune) bool {
+	switch r {
+	case '\t', '\v', '\f', '\r', '\n', ' ', 0x85, 0xA0:
+		return true
+	}
+	return false
+}

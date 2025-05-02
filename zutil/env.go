@@ -73,12 +73,12 @@ func filenamesOrDefault(filenames []string) []string {
 }
 
 func locateKeyName(src []byte) (key string, cutset []byte, err error) {
-	src = bytes.TrimLeftFunc(src, isSpace)
+	src = bytes.TrimLeftFunc(src, zstring.IsSpace)
 	offset := 0
 loop:
 	for i, char := range src {
 		rchar := rune(char)
-		if isSpace(rchar) {
+		if zstring.IsSpace(rchar) {
 			continue
 		}
 
@@ -102,16 +102,8 @@ loop:
 	}
 
 	key = strings.TrimRightFunc(key, unicode.IsSpace)
-	cutset = bytes.TrimLeftFunc(src[offset:], isSpace)
+	cutset = bytes.TrimLeftFunc(src[offset:], zstring.IsSpace)
 	return key, cutset, nil
-}
-
-func isSpace(r rune) bool {
-	switch r {
-	case '\t', '\v', '\f', '\r', ' ', 0x85, 0xA0:
-		return true
-	}
-	return false
 }
 
 func loadFile(filename string) error {
