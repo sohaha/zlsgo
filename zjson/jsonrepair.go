@@ -222,7 +222,7 @@ func newJSONParser(in string, opts *RepairOptions) *jsonParser {
 	}
 }
 
-func (p *jsonParser) parseJSON() any {
+func (p *jsonParser) parseJSON() interface{} {
 	if len(p.container) == 0 {
 		return ""
 	}
@@ -278,7 +278,7 @@ func (p *jsonParser) setError(message string) {
 	}
 }
 
-func (p *jsonParser) parseObject() map[string]any {
+func (p *jsonParser) parseObject() map[string]interface{} {
 	estimatedSize := 8
 	if p.index < len(p.container) {
 		end := strings.IndexByte(p.container[p.index:], '}')
@@ -289,7 +289,7 @@ func (p *jsonParser) parseObject() map[string]any {
 		}
 	}
 
-	rst := make(map[string]any, estimatedSize)
+	rst := make(map[string]interface{}, estimatedSize)
 
 	var c byte
 	var b bool
@@ -375,7 +375,7 @@ func (p *jsonParser) parseObject() map[string]any {
 	return rst
 }
 
-func (p *jsonParser) parseArray() []any {
+func (p *jsonParser) parseArray() []interface{} {
 	estimatedSize := 8
 	if p.index < len(p.container) {
 		end := strings.IndexByte(p.container[p.index:], ']')
@@ -386,7 +386,7 @@ func (p *jsonParser) parseArray() []any {
 		}
 	}
 
-	rst := make([]any, 0, estimatedSize)
+	rst := make([]interface{}, 0, estimatedSize)
 
 	var c byte
 	var b bool
@@ -438,7 +438,7 @@ func (p *jsonParser) parseArray() []any {
 	return rst
 }
 
-func (p *jsonParser) parseString() any {
+func (p *jsonParser) parseString() interface{} {
 	var missingQuotes, doubledQuotes bool
 	var lStringDelimiter, rStringDelimiter byte = '"', '"'
 
@@ -621,7 +621,7 @@ func (p *jsonParser) parseString() any {
 	return zstring.Bytes2String(rst)
 }
 
-func (p *jsonParser) parseNumber() any {
+func (p *jsonParser) parseNumber() interface{} {
 	var rst []byte
 
 	bufSize := 16
@@ -682,7 +682,7 @@ func (p *jsonParser) parseNumber() any {
 	return r
 }
 
-func (p *jsonParser) parseBooleanOrNull() any {
+func (p *jsonParser) parseBooleanOrNull() interface{} {
 	startingIndex := p.index
 
 	var c byte
