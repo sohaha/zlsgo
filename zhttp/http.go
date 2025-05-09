@@ -23,6 +23,7 @@ import (
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zsync"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -59,6 +60,7 @@ type (
 		flag          int
 		debug         bool
 		disableChunke bool
+		mutex         *zsync.RBMutex
 	}
 
 	bodyJson struct {
@@ -101,10 +103,7 @@ type (
 	}
 )
 
-var (
-	std = New()
-	// regNewline = regexp.MustCompile(`[\n\r]`)
-)
+var std = New()
 
 var (
 	ErrNoTransport     = errors.New("no transport")
@@ -116,7 +115,7 @@ var (
 // New create a new *Engine
 func New() *Engine {
 	//noinspection ALL
-	return &Engine{flag: BitStdFlags, debug: Debug.Load()}
+	return &Engine{flag: BitStdFlags, debug: Debug.Load(), mutex: zsync.NewRBMutex(), client: newClient()}
 }
 
 func (p *param) getValues() url.Values {
@@ -137,6 +136,7 @@ func (p *param) Copy(pp param) {
 		}
 	}
 }
+
 func (p *param) Adds(m map[string]interface{}) {
 	if len(m) == 0 {
 		return

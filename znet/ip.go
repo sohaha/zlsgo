@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sohaha/zlsgo/zcache"
 )
 
 var (
@@ -20,6 +22,9 @@ var (
 var (
 	localNetworks     []*net.IPNet
 	localNetworksOnce sync.Once
+	proxiesCache      = zcache.NewFast(func(o *zcache.Options) {
+		o.LRU2Cap = 25
+	})
 )
 
 func getLocalNetworks() []*net.IPNet {
@@ -72,9 +77,17 @@ func getRemoteIP(r *http.Request) []string {
 	trusted := ip == ""
 	if !trusted {
 		if len(TrustedProxies) > 0 {
+			netIP := net.ParseIP(ip)
 			for i := range TrustedProxies {
-				proxy := TrustedProxies[i]
-				if InNetwork(ip, proxy) {
+				network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
+					n, err := netCIDR(TrustedProxies[i])
+					if err != nil {
+						return nil, false
+					}
+					return n, true
+				})
+
+				if ok && network.(*net.IPNet).Contains(netIP) {
 					trusted = true
 					break
 				}
@@ -228,11 +241,11 @@ func netCIDR(network string) (*net.IPNet, error) {
 
 // InNetwork InNetwork
 func InNetwork(ip, network string) bool {
+	netIP := net.ParseIP(ip)
 	n, err := netCIDR(network)
 	if err != nil {
 		return false
 	}
-	netIP := net.ParseIP(ip)
 	return n.Contains(netIP)
 }
 

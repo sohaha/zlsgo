@@ -38,13 +38,14 @@ func newClient() *http.Client {
 }
 
 func (e *Engine) Client() *http.Client {
-	if e.client == nil {
-		e.client = newClient()
-	}
+	r := e.mutex.RLock()
+	defer e.mutex.RUnlock(r)
 	return e.client
 }
 
 func (e *Engine) SetClient(client *http.Client) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 	e.client = client
 }
 
