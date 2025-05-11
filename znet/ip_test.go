@@ -159,8 +159,7 @@ func TestIsLocalAddrIP(t *testing.T) {
 
 	request, _ := http.NewRequest("POST", "/", nil)
 	request.Header.Set("X-Forwarded-For", "  20.20.20.20, 30.30.30.30,10.10.10.10")
-	remoteIP := "10.10.10.10"
-	t.Log(getTrustedIP(request, remoteIP))
+	t.Log(getTrustedIP(request))
 	t.Log(RemoteIP(request))
 }
 
@@ -169,30 +168,66 @@ func TestGetRemoteIP(t *testing.T) {
 
 	request1, _ := http.NewRequest("GET", "/", nil)
 	request1.RemoteAddr = ""
-	ips1 := getRemoteIP(request1, RemoteIP(request1))
+	ips1 := getRemoteIP(request1)
 	tt.Equal(0, len(ips1))
 
 	request2, _ := http.NewRequest("GET", "/", nil)
 	request2.RemoteAddr = "192.168.1.1:1234"
-	ips2 := getRemoteIP(request2, RemoteIP(request2))
-	tt.Equal(1, len(ips2))
-	tt.Equal("192.168.1.1", ips2[0])
+	ips2 := getRemoteIP(request2)
+	tt.Equal(0, len(ips2))
 
 	request3, _ := http.NewRequest("GET", "/", nil)
 	request3.RemoteAddr = "10.0.0.1:1234"
-	request3.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 150.172.238.178")
-	ips3 := getRemoteIP(request3, RemoteIP(request3))
-	tt.Equal(4, len(ips3))
-	tt.Equal("203.0.113.195", ips3[0])
-	tt.Equal("10.0.0.1", ips3[3])
+	request3.Header.Set("X-Forwarded-For", "1.0.113.195, 70.41.3.18, 172.70.207.125")
+	request3.Header.Set("X-Real-IP", "8.8.8.8")
+	ips3 := getRemoteIP(request3)
+	tt.Equal(2, len(ips3))
+	tt.Equal("70.41.3.18", ips3[0])
+	tt.Equal("8.8.8.8", ips3[1])
 
 	request4, _ := http.NewRequest("GET", "/", nil)
 	request4.RemoteAddr = "10.0.0.1:1234"
-	request4.Header.Set("X-Forwarded-For", "203.0.113.195")
+	request4.Header.Set("X-Forwarded-For", "172.70.207.15, 172.70.207.125")
 	request4.Header.Set("X-Real-IP", "8.8.8.8")
-	ips4 := getRemoteIP(request4, RemoteIP(request4))
-	tt.Equal(3, len(ips4))
-	tt.Equal("203.0.113.195", ips4[0])
-	tt.Equal("8.8.8.8", ips4[1])
-	tt.Equal("10.0.0.1", ips4[2])
+	ips4 := getRemoteIP(request4)
+	tt.Equal(1, len(ips4))
+	tt.Equal("8.8.8.8", ips4[0])
+}
+
+func TestGetClientIP(tt *testing.T) {
+	t := zlsgo.NewTest(tt)
+	r := newServer()
+	r.GET("/GetClientIP", func(c *Context) string {
+		return c.GetClientIP()
+	})
+
+	t.Run("cf", func(tt *zlsgo.TestUtil) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req.RemoteAddr = "192.168.1.2:1234"
+		req.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 172.70.207.125")
+		req.Header.Set("X-Real-IP", "1.2.3.4")
+		r.ServeHTTP(w, req)
+		t.Equal("70.41.3.18", w.Body.String(), true)
+	})
+
+	t.Run("not", func(tt *zlsgo.TestUtil) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req.RemoteAddr = "192.168.1.2:1234"
+		req.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 72.70.207.125")
+		req.Header.Set("X-Real-IP", "1.2.3.4")
+		r.ServeHTTP(w, req)
+		t.Equal("72.70.207.125", w.Body.String(), true)
+	})
+
+	t.Run("one", func(tt *zlsgo.TestUtil) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req.RemoteAddr = "192.168.1.2:1234"
+		req.Header.Set("X-Forwarded-For", "172.70.207.125")
+		req.Header.Set("X-Real-IP", "1.2.3.4")
+		r.ServeHTTP(w, req)
+		t.Equal("1.2.3.4", w.Body.String(), true)
+	})
 }

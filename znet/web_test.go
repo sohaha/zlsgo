@@ -19,8 +19,8 @@ import (
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/znet/realip"
 	"github.com/sohaha/zlsgo/zstring"
-	// "go.uber.org/goleak"
 )
 
 type GG struct {
@@ -124,6 +124,7 @@ func newRequest(r *Engine, method string, urlAndBody interface{}, path string, h
 }
 
 func TestMain(m *testing.M) {
+	TrustedProxies = realip.GetCloudflare(0)
 	m.Run()
 	Shutdown()
 }

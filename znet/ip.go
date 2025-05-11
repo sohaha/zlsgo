@@ -58,60 +58,61 @@ func IsLocalIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast()
 }
 
-func getTrustedIP(r *http.Request, remoteIP string) string {
-	ip := remoteIP
+// getTrustedIP Get trusted IP
+func getTrustedIP(r *http.Request) []string {
+	resultIPs := make([]string, 0)
+
 	for i := range RemoteIPHeaders {
 		key := RemoteIPHeaders[i]
 		val := r.Header.Get(key)
-		ips := parseHeadersIP(val)
-		for i := range ips {
-			Log.Debug(i, ips[i])
+		headerIPs := parseHeadersIP(val)
+		if len(headerIPs) == 0 {
+			continue
+		}
+
+		for j := len(headerIPs) - 1; j >= 0; j-- {
+			ip := headerIPs[j]
+			if !isProxyTrusted(ip) {
+				resultIPs = append(resultIPs, ip)
+				break
+			}
 		}
 	}
-	return ip
+
+	return resultIPs
 }
 
-func getRemoteIP(r *http.Request, ip string) []string {
-	ips := make([]string, 0)
-
-	if ip != "" {
-		trusted := false
-		if len(TrustedProxies) > 0 {
-			netIP := net.ParseIP(ip)
-			if netIP != nil {
-				for i := range TrustedProxies {
-					network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
-						n, err := netCIDR(TrustedProxies[i])
-						if err != nil {
-							return nil, false
-						}
-						return n, true
-					})
-
-					if ok && network.(*net.IPNet).Contains(netIP) {
-						trusted = true
-						break
-					}
-				}
-			}
-		} else {
-			trusted = true
-		}
-
-		if trusted {
-			for i := range RemoteIPHeaders {
-				key := RemoteIPHeaders[i]
-				val := r.Header.Get(key)
-				headerIPs := parseHeadersIP(val)
-				if len(headerIPs) > 0 {
-					ips = append(ips, headerIPs...)
-				}
-			}
-		}
-
-		ips = append(ips, ip)
+// isProxyTrusted Check if the given IP is a trusted proxy
+func isProxyTrusted(ip string) bool {
+	if len(TrustedProxies) == 0 {
+		return false
 	}
 
+	netIP := net.ParseIP(ip)
+	if netIP == nil {
+		return false
+	}
+
+	for i := range TrustedProxies {
+		network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
+			n, err := netCIDR(TrustedProxies[i])
+			if err != nil {
+				return nil, false
+			}
+			return n, true
+		})
+
+		if ok && network.(*net.IPNet).Contains(netIP) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// getRemoteIP Get remote IP list
+func getRemoteIP(r *http.Request) []string {
+	ips := getTrustedIP(r)
 	validIPs := make([]string, 0, len(ips))
 	for _, ip := range ips {
 		if ip != "" {
@@ -137,26 +138,34 @@ func parseHeadersIP(val string) []string {
 	return validIPs
 }
 
-// ClientIP ClientIP
+// ClientIP Return client IP
 func ClientIP(r *http.Request) (ip string) {
-	ip = r.Header.Get(RemoteIPHeaders[1])
-	ips := getRemoteIP(r, ip)
+	ips := getRemoteIP(r)
+	remoteIP := RemoteIP(r)
+	if remoteIP != "" {
+		ips = append(ips, remoteIP)
+	}
 	if len(ips) > 0 && ips[0] != "" {
 		return ips[0]
 	}
-	return
+
+	return ""
 }
 
-// ClientPublicIP ClientPublicIP
+// ClientPublicIP Return client public IP
 func ClientPublicIP(r *http.Request) string {
-	var ip string
-	ips := getRemoteIP(r, RemoteIP(r))
-	for i := range ips {
-		ip = ips[i]
+	ips := getRemoteIP(r)
+	remoteIP := RemoteIP(r)
+	if remoteIP != "" {
+		ips = append(ips, remoteIP)
+	}
+
+	for _, ip := range ips {
 		if ip != "" && !IsLocalAddrIP(ip) {
 			return ip
 		}
 	}
+
 	return ""
 }
 
