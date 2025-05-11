@@ -16,7 +16,7 @@ import (
 var (
 	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP"}
 	TrustedProxies  = []string{"0.0.0.0/0"}
-	LocalNetworks   = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16"}
+	LocalNetworks   = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
 )
 
 var (
@@ -71,40 +71,55 @@ func getTrustedIP(r *http.Request, remoteIP string) string {
 	return ip
 }
 
-func getRemoteIP(r *http.Request) []string {
+func getRemoteIP(r *http.Request, ip string) []string {
 	ips := make([]string, 0)
-	ip := RemoteIP(r)
-	trusted := ip == ""
-	if !trusted {
+
+	if ip != "" {
+		trusted := false
 		if len(TrustedProxies) > 0 {
 			netIP := net.ParseIP(ip)
-			for i := range TrustedProxies {
-				network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
-					n, err := netCIDR(TrustedProxies[i])
-					if err != nil {
-						return nil, false
-					}
-					return n, true
-				})
+			if netIP != nil {
+				for i := range TrustedProxies {
+					network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
+						n, err := netCIDR(TrustedProxies[i])
+						if err != nil {
+							return nil, false
+						}
+						return n, true
+					})
 
-				if ok && network.(*net.IPNet).Contains(netIP) {
-					trusted = true
-					break
+					if ok && network.(*net.IPNet).Contains(netIP) {
+						trusted = true
+						break
+					}
 				}
 			}
 		} else {
 			trusted = true
 		}
+
+		if trusted {
+			for i := range RemoteIPHeaders {
+				key := RemoteIPHeaders[i]
+				val := r.Header.Get(key)
+				headerIPs := parseHeadersIP(val)
+				if len(headerIPs) > 0 {
+					ips = append(ips, headerIPs...)
+				}
+			}
+		}
+
+		ips = append(ips, ip)
 	}
 
-	if trusted {
-		for i := range RemoteIPHeaders {
-			key := RemoteIPHeaders[i]
-			val := r.Header.Get(key)
-			ips = append(ips, parseHeadersIP(val)...)
+	validIPs := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		if ip != "" {
+			validIPs = append(validIPs, ip)
 		}
 	}
-	return append(ips, ip)
+
+	return validIPs
 }
 
 func parseHeadersIP(val string) []string {
@@ -112,17 +127,20 @@ func parseHeadersIP(val string) []string {
 		return []string{}
 	}
 	str := strings.Split(val, ",")
-	l := len(str)
-	ips := make([]string, l)
-	for i := l - 1; i >= 0; i-- {
-		ips[l-1-i] = strings.TrimSpace(str[i])
+	validIPs := make([]string, 0, len(str))
+	for _, s := range str {
+		ip := strings.TrimSpace(s)
+		if ip != "" && IsValidIP(ip) {
+			validIPs = append(validIPs, ip)
+		}
 	}
-	return ips
+	return validIPs
 }
 
 // ClientIP ClientIP
 func ClientIP(r *http.Request) (ip string) {
-	ips := getRemoteIP(r)
+	ip = r.Header.Get(RemoteIPHeaders[1])
+	ips := getRemoteIP(r, ip)
 	if len(ips) > 0 && ips[0] != "" {
 		return ips[0]
 	}
@@ -132,7 +150,7 @@ func ClientIP(r *http.Request) (ip string) {
 // ClientPublicIP ClientPublicIP
 func ClientPublicIP(r *http.Request) string {
 	var ip string
-	ips := getRemoteIP(r)
+	ips := getRemoteIP(r, RemoteIP(r))
 	for i := range ips {
 		ip = ips[i]
 		if ip != "" && !IsLocalAddrIP(ip) {
@@ -210,27 +228,32 @@ func LongToNetIPv6(i *big.Int) (ip net.IP, err error) {
 	return
 }
 
-// IsIP IsIP
-func IsIP(ip string) bool {
+// IsValidIP checks if the given string is a valid IP address (both IPv4 and IPv6)
+func IsValidIP(ip string) bool {
+	if ip == "" {
+		return false
+	}
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	}
 	return net.ParseIP(ip) != nil
 }
 
 // GetIPv GetIPv
 func GetIPv(s string) int {
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '.':
-			return 4
-		case ':':
-			return 6
-		}
+	if !IsValidIP(s) {
+		return 0
 	}
-	return 0
+	ip := net.ParseIP(s)
+	if ip.To4() != nil {
+		return 4
+	}
+	return 6
 }
 
 func netCIDR(network string) (*net.IPNet, error) {
 	_, n, err := net.ParseCIDR(network)
-	if err != nil && IsIP(network) {
+	if err != nil {
 		_, n, err = net.ParseCIDR(network + "/24")
 	}
 	if err != nil {
@@ -240,13 +263,15 @@ func netCIDR(network string) (*net.IPNet, error) {
 }
 
 // InNetwork InNetwork
-func InNetwork(ip, network string) bool {
-	netIP := net.ParseIP(ip)
-	n, err := netCIDR(network)
+func InNetwork(ip, networkCIDR string) bool {
+	if !IsValidIP(ip) {
+		return false
+	}
+	network, err := netCIDR(networkCIDR)
 	if err != nil {
 		return false
 	}
-	return n.Contains(netIP)
+	return network.Contains(net.ParseIP(ip))
 }
 
 // Port GetPort Check if the port is available, if not, then automatically get an available

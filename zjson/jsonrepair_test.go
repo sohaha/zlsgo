@@ -15,9 +15,9 @@ import (
 func TestRepair(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	tests := []struct {
+		expected interface{}
 		name     string
 		input    string
-		expected interface{}
 		wantErr  bool
 	}{
 		{
@@ -692,10 +692,10 @@ func TestRepairWithReferenceTestCases(t *testing.T) {
 func TestRepairWithOptions(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	tests := []struct {
+		expected interface{}
+		options  *zjson.RepairOptions
 		name     string
 		input    string
-		options  *zjson.RepairOptions
-		expected interface{}
 		wantErr  bool
 	}{
 		{

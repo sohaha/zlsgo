@@ -42,14 +42,6 @@ func WithRunContext(handler func()) (time.Duration, uint64) {
 	return time.Since(start), mem.Alloc - curMem
 }
 
-// IfVal Simulate ternary calculations, pay attention to handling no variables or indexing problems
-func IfVal(condition bool, trueVal, falseVal interface{}) interface{} {
-	if condition {
-		return trueVal
-	}
-	return falseVal
-}
-
 // TryCatch exception capture
 func TryCatch(fn func() error) (err error) {
 	defer func() {

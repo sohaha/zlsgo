@@ -11,8 +11,8 @@ import (
 )
 
 type JSONSyntaxError struct {
-	Position int
 	Message  string
+	Position int
 }
 
 func (e *JSONSyntaxError) Error() string {
@@ -202,11 +202,11 @@ func removeComments(src string) string {
 }
 
 type jsonParser struct {
-	container string
-	index     int
-	marker    []string
-	options   *RepairOptions
 	err       error
+	options   *RepairOptions
+	container string
+	marker    []string
+	index     int
 }
 
 func newJSONParser(in string, opts *RepairOptions) *jsonParser {

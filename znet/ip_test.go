@@ -45,11 +45,11 @@ func TestLocalAddrIP(tt *testing.T) {
 	t.Log(IsLocalAddrIP("11.11.11.11"))
 }
 
-func TestIsIP(tt *testing.T) {
+func TestIsValidIP(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
-	t.EqualTrue(IsIP("127.0.0.1"))
-	t.EqualTrue(IsIP("172.31.255.255"))
-	t.EqualTrue(!IsIP("172.31.255.a"))
+	t.EqualTrue(IsValidIP("127.0.0.1"))
+	t.EqualTrue(IsValidIP("172.31.255.255"))
+	t.EqualTrue(!IsValidIP("172.31.255.a"))
 }
 
 func TestGetIPV(tt *testing.T) {
@@ -103,7 +103,7 @@ func TestGetPort(tt *testing.T) {
 	port, err = Port(p, true)
 	t.EqualNil(err)
 
-	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	t.EqualNil(err)
 	defer l.Close()
 
@@ -133,9 +133,9 @@ func Test_parseHeadersIP(t *testing.T) {
 	}{
 		{"", []string{}},
 		{"11.11.11.11,1.1.1.1, 2.2.2.2", []string{
-			"2.2.2.2",
-			"1.1.1.1",
 			"11.11.11.11",
+			"1.1.1.1",
+			"2.2.2.2",
 		}},
 	}
 	for _, v := range tests {
@@ -162,4 +162,37 @@ func TestIsLocalAddrIP(t *testing.T) {
 	remoteIP := "10.10.10.10"
 	t.Log(getTrustedIP(request, remoteIP))
 	t.Log(RemoteIP(request))
+}
+
+func TestGetRemoteIP(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	request1, _ := http.NewRequest("GET", "/", nil)
+	request1.RemoteAddr = ""
+	ips1 := getRemoteIP(request1, RemoteIP(request1))
+	tt.Equal(0, len(ips1))
+
+	request2, _ := http.NewRequest("GET", "/", nil)
+	request2.RemoteAddr = "192.168.1.1:1234"
+	ips2 := getRemoteIP(request2, RemoteIP(request2))
+	tt.Equal(1, len(ips2))
+	tt.Equal("192.168.1.1", ips2[0])
+
+	request3, _ := http.NewRequest("GET", "/", nil)
+	request3.RemoteAddr = "10.0.0.1:1234"
+	request3.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 150.172.238.178")
+	ips3 := getRemoteIP(request3, RemoteIP(request3))
+	tt.Equal(4, len(ips3))
+	tt.Equal("203.0.113.195", ips3[0])
+	tt.Equal("10.0.0.1", ips3[3])
+
+	request4, _ := http.NewRequest("GET", "/", nil)
+	request4.RemoteAddr = "10.0.0.1:1234"
+	request4.Header.Set("X-Forwarded-For", "203.0.113.195")
+	request4.Header.Set("X-Real-IP", "8.8.8.8")
+	ips4 := getRemoteIP(request4, RemoteIP(request4))
+	tt.Equal(3, len(ips4))
+	tt.Equal("203.0.113.195", ips4[0])
+	tt.Equal("8.8.8.8", ips4[1])
+	tt.Equal("10.0.0.1", ips4[2])
 }

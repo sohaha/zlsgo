@@ -57,10 +57,10 @@ type (
 		jsonEncOpts   *jsonEncOpts
 		xmlEncOpts    *xmlEncOpts
 		getUserAgent  func() string
+		mutex         *zsync.RBMutex
 		flag          int
 		debug         bool
 		disableChunke bool
-		mutex         *zsync.RBMutex
 	}
 
 	bodyJson struct {

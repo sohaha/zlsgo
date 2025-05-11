@@ -65,6 +65,9 @@ func (c *Context) GetClientIP() (IP string) {
 	if IP == "" {
 		IP = ClientIP(c.Request)
 	}
+	if IP == "" {
+		IP = RemoteIP(c.Request)
+	}
 	return
 }
 
