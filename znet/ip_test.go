@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/sohaha/zlsgo"
+	"github.com/sohaha/zlsgo/zarray"
 	"github.com/sohaha/zlsgo/ztype"
 )
 
@@ -155,7 +156,9 @@ func Test_parseHeadersIP(t *testing.T) {
 		}},
 	}
 	for _, v := range tests {
-		tt.EqualExit(v.want, parseHeadersIP(v.args))
+		tt.EqualExit(v.want, zarray.Map(parseHeadersIP(v.args), func(_ int, v net.IP) string {
+			return v.String()
+		}))
 	}
 }
 
