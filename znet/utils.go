@@ -360,6 +360,7 @@ func (e *Engine) releaseContext(c *Context) {
 	c.injector = nil
 	c.rawData = nil
 	c.Engine = nil
+	c.ip = ""
 	c.prevData.Content = c.prevData.Content[0:0]
 	c.prevData.Type = ContentTypePlain
 	c.mu.Unlock()
