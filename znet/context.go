@@ -60,15 +60,25 @@ func (c *Context) IsAjax() bool {
 }
 
 // GetClientIP Client IP
-func (c *Context) GetClientIP() (IP string) {
-	IP = ClientPublicIP(c.Request)
-	if IP == "" {
-		IP = ClientIP(c.Request)
+func (c *Context) GetClientIP() string {
+	r := c.mu.RLock()
+	ip := c.ip
+	c.mu.RUnlock(r)
+	if ip == "" {
+		c.mu.Lock()
+		ips := getRemoteIP(c.Request)
+		ip = clientPublicIP(c.Request, ips)
+		if ip == "" {
+			ip = clientIP(c.Request, ips)
+		}
+		if ip == "" {
+			ip = RemoteIP(c.Request)
+		}
+		c.ip = ip
+		c.mu.Unlock()
 	}
-	if IP == "" {
-		IP = RemoteIP(c.Request)
-	}
-	return
+
+	return ip
 }
 
 // GetHeader Get Header
@@ -145,9 +155,9 @@ func (c *Context) Next() bool {
 		if c.stopHandle.Load() {
 			return false
 		}
-		c.mu.RLock()
+		r := c.mu.RLock()
 		n := len(c.middleware) > 0
-		c.mu.RUnlock()
+		c.mu.RUnlock(r)
 		if !n {
 			return true
 		}
@@ -233,12 +243,12 @@ func (c *Context) WithValue(key string, value interface{}) *Context {
 
 // Value get context sharing data
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
-	c.mu.RLock()
+	r := c.mu.RLock()
 	value, ok = c.customizeData[key]
 	if !ok && (len(def) > 0) {
 		value = def[0]
 	}
-	c.mu.RUnlock()
+	c.mu.RUnlock(r)
 	return
 }
 

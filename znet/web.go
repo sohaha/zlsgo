@@ -17,6 +17,7 @@ import (
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
+	"github.com/sohaha/zlsgo/zsync"
 	"github.com/sohaha/zlsgo/zutil"
 	"github.com/sohaha/zlsgo/zutil/daemon"
 
@@ -48,7 +49,8 @@ type (
 		cacheQuery  url.Values
 		rawData     []byte
 		middleware  []handlerFn
-		mu          sync.RWMutex
+		mu          zsync.RBMutex
+		ip          string
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {

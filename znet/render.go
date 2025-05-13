@@ -327,8 +327,8 @@ func (c *Context) SetContentType(contentType string) *Context {
 }
 
 func (c *Context) hasContentType() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	r := c.mu.RLock()
+	defer c.mu.RUnlock(r)
 	if _, ok := c.header["Content-Type"]; ok {
 		return true
 	}

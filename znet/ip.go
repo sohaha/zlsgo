@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP"}
+	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP", "Cf-Connecting-Ip"}
 	TrustedProxies  = []string{"0.0.0.0/0"}
 	LocalNetworks   = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
 )
@@ -119,7 +119,6 @@ func getRemoteIP(r *http.Request) []string {
 			validIPs = append(validIPs, ip)
 		}
 	}
-
 	return validIPs
 }
 
@@ -140,7 +139,10 @@ func parseHeadersIP(val string) []string {
 
 // ClientIP Return client IP
 func ClientIP(r *http.Request) (ip string) {
-	ips := getRemoteIP(r)
+	return clientIP(r, getRemoteIP(r))
+}
+
+func clientIP(r *http.Request, ips []string) (ip string) {
 	remoteIP := RemoteIP(r)
 	if remoteIP != "" {
 		ips = append(ips, remoteIP)
@@ -155,6 +157,11 @@ func ClientIP(r *http.Request) (ip string) {
 // ClientPublicIP Return client public IP
 func ClientPublicIP(r *http.Request) string {
 	ips := getRemoteIP(r)
+
+	return clientPublicIP(r, ips)
+}
+
+func clientPublicIP(r *http.Request, ips []string) string {
 	remoteIP := RemoteIP(r)
 	if remoteIP != "" {
 		ips = append(ips, remoteIP)
