@@ -33,24 +33,23 @@ type (
 		render        Renderer
 		Writer        http.ResponseWriter
 		injector      zdi.Injector
-		stopHandle    *zutil.Bool
-		prevData      *PrevData
+		cacheForm     url.Values
+		Log           *zlog.Logger
 		customizeData map[string]interface{}
 		header        map[string][]string
 		Request       *http.Request
 		cacheJSON     *zjson.Res
-		cacheForm     url.Values
+		stopHandle    *zutil.Bool
 		done          *zutil.Bool
 		Engine        *Engine
-		Log           *zlog.Logger
-		// Deprecated: Please maintain your own cache
-		Cache       *zcache.Table
-		renderError ErrHandlerFunc
-		cacheQuery  url.Values
-		rawData     []byte
-		middleware  []handlerFn
-		mu          zsync.RBMutex
-		ip          string
+		prevData      *PrevData
+		Cache         *zcache.Table
+		renderError   ErrHandlerFunc
+		cacheQuery    url.Values
+		ip            string
+		rawData       []byte
+		middleware    []handlerFn
+		mu            zsync.RBMutex
 	}
 	// Engine is a simple HTTP route multiplexer that parses a request path
 	Engine struct {

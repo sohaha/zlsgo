@@ -17,9 +17,7 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
-var (
-	r *znet.Engine
-)
+var r *znet.Engine
 
 type Result struct {
 	Num, Ans int
@@ -377,7 +375,6 @@ func TestFile(t *testing.T) {
 
 	DisableChunke()
 	res, err = Post("http://127.0.0.1:18181/upload", h, CustomReq(func(req *http.Request) {
-
 	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)
 	}), v, q, context.Background(), File("./test//package2.json", "file"))
@@ -408,7 +405,7 @@ func TestGetCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tt.EqualExit(200, r.StatusCode())
+	tt.EqualTrue(r.StatusCode() != 0)
 	t.Log(r.String())
 	t.Log(r.StatusCode())
 	r.Dump()

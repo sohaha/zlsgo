@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/sohaha/zlsgo/zcache"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 var (
@@ -59,8 +60,8 @@ func IsLocalIP(ip net.IP) bool {
 }
 
 // getTrustedIP Get trusted IP
-func getTrustedIP(r *http.Request) []string {
-	resultIPs := make([]string, 0)
+func getTrustedIP(r *http.Request) []net.IP {
+	resultIPs := make([]net.IP, 0)
 
 	for i := range RemoteIPHeaders {
 		key := RemoteIPHeaders[i]
@@ -83,13 +84,8 @@ func getTrustedIP(r *http.Request) []string {
 }
 
 // isProxyTrusted Check if the given IP is a trusted proxy
-func isProxyTrusted(ip string) bool {
+func isProxyTrusted(netIP net.IP) bool {
 	if len(TrustedProxies) == 0 {
-		return false
-	}
-
-	netIP := net.ParseIP(ip)
-	if netIP == nil {
 		return false
 	}
 
@@ -114,7 +110,8 @@ func isProxyTrusted(ip string) bool {
 func getRemoteIP(r *http.Request) []string {
 	ips := getTrustedIP(r)
 	validIPs := make([]string, 0, len(ips))
-	for _, ip := range ips {
+	for i := range ips {
+		ip := ips[i].String()
 		if ip != "" {
 			validIPs = append(validIPs, ip)
 		}
@@ -122,16 +119,19 @@ func getRemoteIP(r *http.Request) []string {
 	return validIPs
 }
 
-func parseHeadersIP(val string) []string {
+func parseHeadersIP(val string) []net.IP {
 	if val == "" {
-		return []string{}
+		return []net.IP{}
 	}
 	str := strings.Split(val, ",")
-	validIPs := make([]string, 0, len(str))
+	validIPs := make([]net.IP, 0, len(str))
 	for _, s := range str {
-		ip := strings.TrimSpace(s)
-		if ip != "" && IsValidIP(ip) {
-			validIPs = append(validIPs, ip)
+		ip := zstring.TrimSpace(s)
+		if ip == "" {
+			continue
+		}
+		if n, ok := IsValidIP(ip); ok {
+			validIPs = append(validIPs, n)
 		}
 	}
 	return validIPs
@@ -245,22 +245,28 @@ func LongToNetIPv6(i *big.Int) (ip net.IP, err error) {
 }
 
 // IsValidIP checks if the given string is a valid IP address (both IPv4 and IPv6)
-func IsValidIP(ip string) bool {
+func IsValidIP(ip string) (net.IP, bool) {
 	if ip == "" {
-		return false
+		return nil, false
 	}
+
 	if host, _, err := net.SplitHostPort(ip); err == nil {
 		ip = host
 	}
-	return net.ParseIP(ip) != nil
+	n := net.ParseIP(ip)
+	if n == nil {
+		return nil, false
+	}
+	return n, true
 }
 
 // GetIPv GetIPv
 func GetIPv(s string) int {
-	if !IsValidIP(s) {
+	ip, ok := IsValidIP(s)
+	if !ok {
 		return 0
 	}
-	ip := net.ParseIP(s)
+
 	if ip.To4() != nil {
 		return 4
 	}
@@ -280,14 +286,15 @@ func netCIDR(network string) (*net.IPNet, error) {
 
 // InNetwork InNetwork
 func InNetwork(ip, networkCIDR string) bool {
-	if !IsValidIP(ip) {
+	n, ok := IsValidIP(ip)
+	if !ok {
 		return false
 	}
 	network, err := netCIDR(networkCIDR)
 	if err != nil {
 		return false
 	}
-	return network.Contains(net.ParseIP(ip))
+	return network.Contains(n)
 }
 
 // Port GetPort Check if the port is available, if not, then automatically get an available

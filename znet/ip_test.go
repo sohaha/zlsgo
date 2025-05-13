@@ -47,9 +47,25 @@ func TestLocalAddrIP(tt *testing.T) {
 
 func TestIsValidIP(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
-	t.EqualTrue(IsValidIP("127.0.0.1"))
-	t.EqualTrue(IsValidIP("172.31.255.255"))
-	t.EqualTrue(!IsValidIP("172.31.255.a"))
+
+	n, ok := IsValidIP("127.0.0.1")
+	t.EqualTrue(ok)
+	t.Log(n.String())
+
+	n, ok = IsValidIP("127.0.0.1:1234")
+	t.EqualTrue(ok)
+	t.Log(n.String())
+
+	n, ok = IsValidIP("172.31.255.255")
+	t.EqualTrue(ok)
+	t.Log(n.String())
+
+	n, ok = IsValidIP("172.31.255.255:6789")
+	t.EqualTrue(ok)
+	t.Log(n.String())
+
+	_, ok = IsValidIP("172.31.255.a")
+	t.EqualTrue(!ok)
 }
 
 func TestGetIPV(tt *testing.T) {
@@ -197,13 +213,13 @@ func TestGetRemoteIP(t *testing.T) {
 func TestGetClientIP(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	r := newServer()
-	r.GET("/GetClientIP", func(c *Context) string {
-		return c.GetClientIP()
-	})
 
 	t.Run("cf", func(tt *zlsgo.TestUtil) {
+		r.GET("/GetClientIP_cf", func(c *Context) string {
+			return c.GetClientIP()
+		})
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req, _ := http.NewRequest("GET", "/GetClientIP_cf", nil)
 		req.RemoteAddr = "192.168.1.2:1234"
 		req.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 172.70.207.125")
 		req.Header.Set("X-Real-IP", "1.2.3.4")
@@ -212,8 +228,11 @@ func TestGetClientIP(tt *testing.T) {
 	})
 
 	t.Run("not", func(tt *zlsgo.TestUtil) {
+		r.GET("/GetClientIP_not", func(c *Context) string {
+			return c.GetClientIP()
+		})
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req, _ := http.NewRequest("GET", "/GetClientIP_not", nil)
 		req.RemoteAddr = "192.168.1.2:1234"
 		req.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 72.70.207.125")
 		req.Header.Set("X-Real-IP", "1.2.3.4")
@@ -222,8 +241,11 @@ func TestGetClientIP(tt *testing.T) {
 	})
 
 	t.Run("one", func(tt *zlsgo.TestUtil) {
+		r.GET("/GetClientIP_one", func(c *Context) string {
+			return c.GetClientIP()
+		})
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/GetClientIP", nil)
+		req, _ := http.NewRequest("GET", "/GetClientIP_one", nil)
 		req.RemoteAddr = "192.168.1.2:1234"
 		req.Header.Set("X-Forwarded-For", "172.70.207.125")
 		req.Header.Set("X-Real-IP", "1.2.3.4")
