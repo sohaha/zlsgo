@@ -80,7 +80,7 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint
 	}
 
 	workers := int(parallel[0])
-	if workers > colLen {
+	if workers > colLen || workers == 0 {
 		workers = colLen
 	}
 
