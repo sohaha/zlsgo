@@ -1,4 +1,3 @@
-// Package cron emulate linux crontab
 package cron
 
 import (
@@ -9,23 +8,33 @@ import (
 )
 
 type (
-	// Job cron job
+	// Job represents a scheduled task
+	// Contains the cron expression, next execution time, and the function to execute
 	Job struct {
-		expr     *Expression
-		NextTime time.Time
-		run      func()
+		expr     *Expression // Parsed cron expression
+		NextTime time.Time   // Next time the job will run
+		run      func()      // Function to execute
 	}
+
+	// JobTable manages multiple scheduled tasks
+	// Provides functionality to add, run, and stop tasks
 	JobTable struct {
-		table sync.Map
-		sync.RWMutex
-		stop bool
+		table        sync.Map // Thread-safe map for storing tasks
+		sync.RWMutex          // Read-write mutex to protect the stop field
+		stop         bool     // Flag indicating whether the job table has been stopped
 	}
 )
 
+// New creates and returns a new JobTable instance
+// Used for managing scheduled tasks
 func New() *JobTable {
 	return &JobTable{}
 }
 
+// Add adds a new scheduled task to the job table
+// cronLine parameter is a standard cron expression, e.g., "0 * * * * *" means run every minute
+// fn parameter is the function to execute
+// Returns a function to remove the task and a possible error
 func (c *JobTable) Add(cronLine string, fn func()) (remove func(), err error) {
 	var expr *Expression
 	expr, err = Parse(cronLine)
@@ -45,6 +54,7 @@ func (c *JobTable) Add(cronLine string, fn func()) (remove func(), err error) {
 	return
 }
 
+// ForceRun immediately checks and executes all due tasks.
 func (c *JobTable) ForceRun() (nextTime time.Duration) {
 	now := time.Now()
 	nextTime = 1 * time.Second
@@ -67,6 +77,7 @@ func (c *JobTable) ForceRun() (nextTime time.Duration) {
 	return nextTime
 }
 
+// Run starts the task scheduler, beginning to execute tasks according to their schedule.
 func (c *JobTable) Run(block ...bool) {
 	run := func() {
 		t := time.NewTimer(time.Second)
@@ -90,6 +101,7 @@ func (c *JobTable) Run(block ...bool) {
 	go run()
 }
 
+// Stop stops the task scheduler.
 func (c *JobTable) Stop() {
 	c.Lock()
 	c.stop = true

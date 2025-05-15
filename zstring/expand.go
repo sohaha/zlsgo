@@ -1,5 +1,7 @@
 package zstring
 
+// Expand replaces ${var} or $var in the string based on the mapping function.
+// It's similar to shell variable expansion, supporting both ${var} and $var syntax.
 func Expand(s string, process func(key string) string) string {
 	var buf []byte
 	i := 0
@@ -27,6 +29,8 @@ func Expand(s string, process func(key string) string) string {
 	return Bytes2String(buf) + s[i:]
 }
 
+// getShellName extracts a shell variable name from a string starting with a variable reference.
+// It returns the variable name and the number of bytes consumed from the input string.
 func getShellName(s string) (string, int) {
 	switch {
 	case s[0] == '{':
@@ -51,6 +55,8 @@ func getShellName(s string) (string, int) {
 	return s[:i], i
 }
 
+// isShellSpecialVar checks if a character is a special shell variable character.
+// Special variables include *, #, $, @, !, ?, -, and digits 0-9.
 func isShellSpecialVar(c uint8) bool {
 	switch c {
 	case '*', '#', '$', '@', '!', '?', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
@@ -59,6 +65,8 @@ func isShellSpecialVar(c uint8) bool {
 	return false
 }
 
+// isAlphaNum checks if a character is alphanumeric or underscore.
+// These characters are valid in variable names.
 func isAlphaNum(c uint8) bool {
 	return c == '_' || '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
 }

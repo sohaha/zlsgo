@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 )
 
-// CopyDir copies the source directory to the dest directory.
+// CopyDir recursively copies the source directory to the destination directory.
+// It preserves file permissions and can filter files using the optional filterFn function.
+// If the filter function returns false for a file, that file will not be copied.
 func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFilePath string) bool) (err error) {
 	info, err := os.Stat(source)
 	if err != nil {
@@ -49,13 +51,16 @@ func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFileP
 	return nil
 }
 
-// ReadFile ReadFile
+// ReadFile reads the entire contents of a file into memory.
+// It returns the file contents as a byte slice and any error encountered.
 func ReadFile(path string) ([]byte, error) {
 	path = RealPath(path)
 	return ioutil.ReadFile(path)
 }
 
-// ReadLineFile ReadLineFile
+// ReadLineFile reads a file line by line and calls the provided handle function for each line.
+// The handle function receives the line number and the line content as parameters.
+// If the handle function returns an error, reading stops and that error is returned.
 func ReadLineFile(path string, handle func(line int, data []byte) error) (err error) {
 	var f *os.File
 	f, err = os.Open(RealPath(path))
@@ -79,7 +84,9 @@ func ReadLineFile(path string, handle func(line int, data []byte) error) (err er
 	return
 }
 
-// WriteFile WriteFile
+// WriteFile writes data to a file, creating the file if it doesn't exist.
+// If isAppend is true, data is appended to the file; otherwise, the file is overwritten.
+// It creates any necessary parent directories automatically.
 func WriteFile(path string, b []byte, isAppend ...bool) (err error) {
 	var file *os.File
 	path = RealPath(path)
@@ -101,7 +108,9 @@ func WriteFile(path string, b []byte, isAppend ...bool) (err error) {
 	return err
 }
 
-// PutOffset open the specified file and write data from the specified location
+// PutOffset writes data to a file at the specified offset position.
+// If the file doesn't exist, it will be created.
+// This is useful for modifying specific portions of a file without rewriting the entire content.
 func PutOffset(path string, b []byte, offset int64) (err error) {
 	var file *os.File
 	path = RealPath(path)
@@ -118,7 +127,9 @@ func PutOffset(path string, b []byte, offset int64) (err error) {
 	return err
 }
 
-// PutAppend open the specified file and write data at the end of the file
+// PutAppend appends data to the end of a file.
+// If the file doesn't exist, it will be created along with any necessary parent directories.
+// This is a convenience wrapper around WriteFile with append mode.
 func PutAppend(path string, b []byte) (err error) {
 	var file *os.File
 	path = RealPath(path)

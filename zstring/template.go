@@ -6,15 +6,19 @@ import (
 	"io"
 )
 
+// Template implements a simple template engine that replaces tags in a template string.
+// It supports custom start and end tag delimiters and efficient processing.
 type Template struct {
-	template string
-	startTag []byte
-	endTag   []byte
+	template string // The original template string
+	startTag []byte // Byte representation of the opening tag delimiter
+	endTag   []byte // Byte representation of the closing tag delimiter
 
-	texts [][]byte
-	tags  []string
+	texts [][]byte // Slices of text between tags
+	tags  []string // The tag names extracted from the template
 }
 
+// NewTemplate creates a new template with the specified template string and tag delimiters.
+// It parses the template and returns an error if the template format is invalid.
 func NewTemplate(template, startTag, endTag string) (*Template, error) {
 	t := Template{
 		startTag: String2Bytes(startTag),
@@ -26,6 +30,8 @@ func NewTemplate(template, startTag, endTag string) (*Template, error) {
 	return &t, err
 }
 
+// ResetTemplate changes the template string and re-parses it.
+// Returns an error if the template format is invalid (e.g., missing end tags).
 func (t *Template) ResetTemplate(template string) error {
 	t.template = template
 	t.tags = t.tags[:0]
@@ -66,6 +72,9 @@ func (t *Template) ResetTemplate(template string) error {
 	return nil
 }
 
+// Process executes the template, writing the result to the provided writer.
+// For each tag encountered, it calls the provided function with the tag name.
+// Returns the number of bytes written and any error encountered.
 func (t *Template) Process(w io.Writer, fn func(w io.Writer, tag string) (int, error)) (int64, error) {
 	var nn int64
 	n := len(t.texts) - 1

@@ -13,6 +13,7 @@ import (
 	"github.com/sohaha/zlsgo/zfile"
 )
 
+// anyMethod is a special method name that matches all HTTP methods.
 const anyMethod = "ANY"
 
 var (
@@ -43,6 +44,8 @@ var (
 	methodsKeys = make([]string, 0, len(methods))
 )
 
+// init initializes the methodsKeys slice with all supported HTTP methods.
+// This is used for method validation and iteration over supported methods.
 func init() {
 	for k := range methods {
 		methodsKeys = append(methodsKeys, k)
@@ -54,6 +57,8 @@ type (
 	contextKeyType struct{}
 )
 
+// temporarilyTurnOffTheLog temporarily disables logging and returns a function
+// that restores the previous log level when called.
 func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	mode := e.webMode
 	e.webMode = prodCode
@@ -65,6 +70,8 @@ func temporarilyTurnOffTheLog(e *Engine, msg string) func() {
 	}
 }
 
+// toHTTPError converts file system errors to appropriate HTTP responses.
+// It handles common errors like file not found and permission denied.
 func (c *Context) toHTTPError(err error) {
 	if errors.Is(err, fs.ErrNotExist) {
 		c.String(http.StatusNotFound, "404 page not found")
@@ -77,6 +84,8 @@ func (c *Context) toHTTPError(err error) {
 	c.String(http.StatusInternalServerError, "500 Internal Server Error")
 }
 
+// StaticFS serves files from the given file system at the specified path.
+// It registers GET, HEAD, and OPTIONS handlers for the specified path and its subdirectories.
 func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler ...Handler) {
 	var urlPattern string
 
@@ -121,10 +130,14 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 	log()
 }
 
+// Static serves files from the given root directory at the specified path.
+// This is a convenience wrapper around StaticFS with http.Dir.
 func (e *Engine) Static(relativePath, root string, moreHandler ...Handler) {
 	e.StaticFS(relativePath, http.Dir(root), moreHandler...)
 }
 
+// StaticFile serves a single file at the specified path.
+// It registers GET, HEAD, and OPTIONS handlers for the specified path.
 func (e *Engine) StaticFile(relativePath, filepath string, moreHandler ...Handler) {
 	handler := func(c *Context) {
 		c.File(filepath)
@@ -141,105 +154,139 @@ func (e *Engine) StaticFile(relativePath, filepath string, moreHandler ...Handle
 	log()
 }
 
+// Any registers a handler for all HTTP methods on the given path.
+// This is a shortcut for registering the same handler under all methods.
 func (e *Engine) Any(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(anyMethod, path, action, moreHandler...)
 }
 
+// Customize registers a handler for a custom HTTP method on the given path.
+// The method string is converted to uppercase before registration.
 func (e *Engine) Customize(method, path string, action Handler, moreHandler ...Handler) *Engine {
 	method = strings.ToUpper(method)
 	return e.Handle(method, path, action, moreHandler...)
 }
 
+// GET registers a handler for HTTP GET requests on the given path.
 func (e *Engine) GET(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodGet, path, action, moreHandler...)
 }
 
+// POST registers a handler for HTTP POST requests on the given path.
 func (e *Engine) POST(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodPost, path, action, moreHandler...)
 }
 
+// DELETE registers a handler for HTTP DELETE requests on the given path.
 func (e *Engine) DELETE(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodDelete, path, action, moreHandler...)
 }
 
+// PUT registers a handler for HTTP PUT requests on the given path.
 func (e *Engine) PUT(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodPut, path, action, moreHandler...)
 }
 
+// PATCH registers a handler for HTTP PATCH requests on the given path.
 func (e *Engine) PATCH(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodPatch, path, action, moreHandler...)
 }
 
+// HEAD registers a handler for HTTP HEAD requests on the given path.
 func (e *Engine) HEAD(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodHead, path, action, moreHandler...)
 }
 
+// OPTIONS registers a handler for HTTP OPTIONS requests on the given path.
 func (e *Engine) OPTIONS(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodOptions, path, action, moreHandler...)
 }
 
+// CONNECT registers a handler for HTTP CONNECT requests on the given path.
 func (e *Engine) CONNECT(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodConnect, path, action, moreHandler...)
 }
 
+// TRACE registers a handler for HTTP TRACE requests on the given path.
 func (e *Engine) TRACE(path string, action Handler, moreHandler ...Handler) *Engine {
 	return e.Handle(http.MethodTrace, path, action, moreHandler...)
 }
 
+// GETAndName registers a named handler for HTTP GET requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) GETAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.GET(path, action)
 }
 
+// POSTAndName registers a named handler for HTTP POST requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) POSTAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.POST(path, action)
 }
 
+// DELETEAndName registers a named handler for HTTP DELETE requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) DELETEAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.DELETE(path, action)
 }
 
+// PUTAndName registers a named handler for HTTP PUT requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) PUTAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.PUT(path, action)
 }
 
+// PATCHAndName registers a named handler for HTTP PATCH requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) PATCHAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.PATCH(path, action)
 }
 
+// HEADAndName registers a named handler for HTTP HEAD requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) HEADAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.HEAD(path, action)
 }
 
+// OPTIONSAndName registers a named handler for HTTP OPTIONS requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) OPTIONSAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.OPTIONS(path, action)
 }
 
+// CONNECTAndName registers a named handler for HTTP CONNECT requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) CONNECTAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.CONNECT(path, action)
 }
 
+// TRACEAndName registers a named handler for HTTP TRACE requests on the given path.
+// The route name can be used later with GenerateURL to generate URLs for this route.
 func (e *Engine) TRACEAndName(path string, action Handler, routeName string) *Engine {
 	e.router.parameters.routeName = routeName
 	defer func() { e.router.parameters.routeName = "" }()
 	return e.TRACE(path, action)
 }
 
+// Group creates a new router group with the given prefix.
+// All routes registered within the group will have the prefix prepended.
+// This is useful for organizing routes by feature or area of responsibility.
 func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *Engine) {
 	if prefix == "" {
 		return e
@@ -281,6 +328,9 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 	return
 }
 
+// GenerateURL generates a URL for a named route with the given parameters.
+// This is useful for creating links to other routes in your application.
+// It returns an error if the route name doesn't exist or if required parameters are missing.
 func (e *Engine) GenerateURL(method string, routeName string, params map[string]string) (string, error) {
 	tree, ok := e.router.trees[method]
 	if !ok {
@@ -336,10 +386,14 @@ func (e *Engine) GenerateURL(method string, routeName string, params map[string]
 	return strings.Join(segments, "/"), nil
 }
 
+// PreHandler sets a handler that runs before any route handler.
+// This is useful for global preprocessing of all requests.
 func (e *Engine) PreHandler(preHandler Handler) {
 	e.preHandler = preHandler
 }
 
+// NotFoundHandler sets a custom handler for 404 Not Found responses.
+// This handler is called when no route matches the request URL.
 func (e *Engine) NotFoundHandler(handler Handler) {
 	e.router.notFound = Utils.ParseHandlerFunc(handler)
 }
@@ -350,12 +404,14 @@ func (e *Engine) PanicHandler(handler ErrHandlerFunc) {
 	e.Use(Recovery(handler))
 }
 
-// GetTrees Load Trees
+// GetTrees returns the internal routing trees for all HTTP methods.
+// This is primarily used for debugging and testing purposes.
 func (e *Engine) GetTrees() map[string]*Tree {
 	return e.router.trees
 }
 
-// Handle registers new request handlerFn
+// Handle registers a new handler for the specified HTTP method and path.
+// This is the core routing function that all other HTTP method functions use internally.
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
 	handler, firsthandle := handlerFuncs(moreHandler)
 	p, l, ok := e.addHandle(method, path, Utils.ParseHandlerFunc(action), firsthandle, handler)
@@ -367,6 +423,8 @@ func (e *Engine) Handle(method string, path string, action Handler, moreHandler 
 	return e
 }
 
+// addHandle is the internal implementation of route registration.
+// It adds a handler to the routing tree and returns the processed path, handler count, and a success flag.
 func (e *Engine) addHandle(method string, path string, handle handlerFn, beforehandle []handlerFn, moreHandler []handlerFn) (string, int, bool) {
 	if _, ok := methods[method]; !ok {
 		e.Log.Fatal(method + " is invalid method")
@@ -409,6 +467,8 @@ func (e *Engine) addHandle(method string, path string, handle handlerFn, beforeh
 	return path, len(middleware) + 1, true
 }
 
+// ServeHTTP implements the http.Handler interface.
+// This is the main entry point for handling HTTP requests in the framework.
 func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p := req.URL.Path
 	if !e.ShowFavicon && p == "/favicon.ico" {
@@ -454,6 +514,8 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// FindHandle searches for a handler matching the request URL and executes it if found.
+// It returns true if a handler was found and executed, false otherwise.
 func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, applyMiddleware bool) (not bool) {
 	var anyTrees bool
 	t, ok := e.router.trees[req.Method]
@@ -489,6 +551,8 @@ func (e *Engine) FindHandle(rw *Context, req *http.Request, requestURL string, a
 	return false
 }
 
+// Use adds global middleware to the engine.
+// These middleware functions will be executed for every request before route-specific middleware.
 func (e *Engine) Use(middleware ...Handler) {
 	if len(middleware) > 0 {
 		middleware, firstMiddleware := handlerFuncs(middleware)
@@ -497,6 +561,8 @@ func (e *Engine) Use(middleware ...Handler) {
 	}
 }
 
+// handleNotFound processes a 404 Not Found response.
+// If applyMiddleware is true, it applies global middleware before calling the not found handler.
 func (e *Engine) handleNotFound(c *Context, applyMiddleware bool) {
 	var middleware []handlerFn
 	if applyMiddleware {
@@ -515,6 +581,8 @@ func (e *Engine) handleNotFound(c *Context, applyMiddleware bool) {
 	}, middleware)
 }
 
+// HandleNotFound is a public wrapper around handleNotFound.
+// It allows external code to trigger a not found response for a context.
 func (e *Engine) HandleNotFound(c *Context, applyMiddleware ...bool) {
 	var apply bool
 	if len(applyMiddleware) > 0 {
@@ -524,12 +592,15 @@ func (e *Engine) HandleNotFound(c *Context, applyMiddleware ...bool) {
 	c.stopHandle.Store(true)
 }
 
+// handleAction executes a handler function with its middleware chain.
+// It processes middleware in order, then calls the main handler if no middleware aborts the chain.
 func handleAction(c *Context, handler handlerFn, middleware []handlerFn) {
 	c.middleware = append(middleware, handler)
 	c.Next()
 }
 
-// Match checks if the request matches the route pattern
+// Match checks if the request URL matches the route pattern.
+// This is used internally for routing but can also be used to test if a URL would match a pattern.
 func (e *Engine) Match(requestURL string, path string) bool {
 	_, ok := Utils.URLMatchAndParse(requestURL, path)
 	return ok

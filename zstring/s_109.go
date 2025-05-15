@@ -7,7 +7,8 @@ import (
 	"bytes"
 )
 
-// Buffer Buffer
+// Buffer creates a new empty bytes.Buffer.
+// This implementation is for Go versions prior to 1.10.
 func Buffer(size ...int) *bytes.Buffer {
 	b := bytes.NewBufferString("")
 	return &b

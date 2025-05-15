@@ -1,4 +1,4 @@
-// Package zvalid data verification
+// Package zvalid data verification.
 package zvalid
 
 import (
@@ -27,10 +27,8 @@ type (
 	queueT func(v *Engine) *Engine
 )
 
-var (
-	// ErrNoValidationValueSet no verification value set
-	ErrNoValidationValueSet = errors.New("未设置验证值")
-)
+// ErrNoValidationValueSet no verification value set
+var ErrNoValidationValueSet = errors.New("未设置验证值")
 
 // New  valid
 func New() Engine {

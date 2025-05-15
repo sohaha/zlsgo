@@ -13,11 +13,15 @@ import (
 
 var runCmd = []string{os.Args[0]}
 
+// parse processes command line arguments and identifies subcommands.
+// If outHelp is true, help information will be displayed when appropriate.
 func parse(outHelp bool) {
 	parseCommand(outHelp)
 	parseSubcommand(flag.Args())
 }
 
+// parseRequiredFlags checks if all required flags have been provided.
+// It returns an error if any required flags are missing.
 func parseRequiredFlags(fs *flag.FlagSet, requiredFlags []string) (err error) {
 	requiredFlagsLen := len(requiredFlags)
 	if requiredFlagsLen > 0 {
@@ -45,7 +49,8 @@ func parseRequiredFlags(fs *flag.FlagSet, requiredFlags []string) (err error) {
 
 var parseDone sync.Once
 
-// Parse Parse command line arguments
+// Parse processes command line arguments, handling short flag aliases and special flags like version and detach.
+// It returns true if any flags were provided in the arguments.
 func Parse(arg ...[]string) (hasflag bool) {
 	parseDone.Do(func() {
 		if Version != "" {
@@ -110,6 +115,8 @@ func Parse(arg ...[]string) (hasflag bool) {
 	return
 }
 
+// parseCommand processes the main command line arguments and validates required flags.
+// If outHelp is true and there are errors or no arguments, help information will be displayed.
 func parseCommand(outHelp bool) {
 	Parse()
 	if len(cmds) < 1 {
@@ -133,6 +140,8 @@ func parseCommand(outHelp bool) {
 	}
 }
 
+// parseSubcommand identifies and processes a subcommand from the provided arguments.
+// It sets up the subcommand's flag set, validates required flags, and prepares for execution.
 func parseSubcommand(Args []string) {
 	var name = ""
 	if len(Args) > 0 {

@@ -1,4 +1,4 @@
-// Package zutil daily development helper functions
+// Package zutil provides utility functions and types for daily development tasks.
 package zutil
 
 import (
@@ -10,17 +10,24 @@ import (
 )
 
 type (
-	// Stack uintptr array
+	// Stack represents a call stack as an array of program counters.
+	// It provides methods for formatting and analyzing the call stack.
 	Stack []uintptr
-	// Nocmp is an uncomparable struct
-	Nocmp     [0]func()
+
+	// Nocmp is an uncomparable struct that can be embedded in other structs
+	// to make them uncomparable (cannot be compared with == or !=).
+	Nocmp [0]func()
+
+	// namedArgs is an internal type used to associate a name with an argument value.
 	namedArgs struct {
 		arg  interface{}
 		name string
 	}
 )
 
-// Named creates a named argument
+// Named creates a named argument by associating a name with a value.
+// This is useful for functions that accept variadic arguments and need to
+// distinguish between different argument types or purposes.
 func Named(name string, arg interface{}) interface{} {
 	return namedArgs{
 		name: name,
@@ -29,10 +36,12 @@ func Named(name string, arg interface{}) interface{} {
 }
 
 const (
-	maxStackDepth = 1 << 5
+	// maxStackDepth is the maximum depth of call stack frames to capture.
+	maxStackDepth = 1 << 5 // 32 frames
 )
 
-// WithRunContext function execution time and memory
+// WithRunContext measures the execution time and memory allocation of a function.
+// It returns the duration of execution and the number of bytes allocated during execution.
 func WithRunContext(handler func()) (time.Duration, uint64) {
 	start, mem := time.Now(), runtime.MemStats{}
 	runtime.ReadMemStats(&mem)
@@ -42,7 +51,9 @@ func WithRunContext(handler func()) (time.Duration, uint64) {
 	return time.Since(start), mem.Alloc - curMem
 }
 
-// TryCatch exception capture
+// TryCatch executes a function and captures any panic that occurs, converting it to an error.
+// If the function returns an error normally, that error is returned.
+// If a panic occurs, it is converted to an error and returned.
 func TryCatch(fn func() error) (err error) {
 	defer func() {
 		if recoverErr := recover(); recoverErr != nil {
@@ -57,8 +68,10 @@ func TryCatch(fn func() error) (err error) {
 	return
 }
 
-// Deprecated: please use zerror.TryCatch
-// Try exception capture
+// Try executes a function and captures any panic that occurs, passing it to the catch function.
+// If a finally function is provided, it is always executed after the main function,
+// regardless of whether a panic occurred.
+// Deprecated: please use zerror.TryCatch instead.
 func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	if len(finally) > 0 {
 		defer func() {
@@ -77,8 +90,9 @@ func Try(fn func(), catch func(e interface{}), finally ...func()) {
 	fn()
 }
 
-// Deprecated: please use zerror.Panic
-// CheckErr Check Err
+// CheckErr checks if an error is not nil and panics if it is.
+// If exit is true, it prints the error and exits the program instead of panicking.
+// Deprecated: please use zerror.Panic instead.
 func CheckErr(err error, exit ...bool) {
 	if err != nil {
 		if len(exit) > 0 && exit[0] {
@@ -90,6 +104,9 @@ func CheckErr(err error, exit ...bool) {
 	}
 }
 
+// Callers returns a stack trace as a Stack.
+// The optional skip parameter indicates how many stack frames to skip before
+// starting to collect the stack trace.
 func Callers(skip ...int) Stack {
 	var (
 		pcs [maxStackDepth]uintptr
@@ -101,6 +118,10 @@ func Callers(skip ...int) Stack {
 	return pcs[:runtime.Callers(n, pcs[:])]
 }
 
+// Format iterates through the stack frames and calls the provided function for each frame.
+// The function receives the runtime.Func object, file name, and line number for each frame.
+// If the function returns false, iteration stops.
+// Note: Frames from the zlsgo library itself are automatically skipped.
 func (s Stack) Format(f func(fn *runtime.Func, file string, line int) bool) {
 	if s == nil {
 		return

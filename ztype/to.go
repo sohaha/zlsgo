@@ -1,4 +1,3 @@
-// Package ztype provides Variable Type Related Operations
 package ztype
 
 import (
@@ -16,17 +15,22 @@ import (
 	"github.com/sohaha/zlsgo/ztime"
 )
 
+// appString is an interface for types that can be converted to a string
+// via their String() method.
 type appString interface {
 	String() string
 }
 
-// ToByte To []byte
+// ToBytes converts any value to a byte slice.
+// It first converts the value to a string using ToString and then converts the string to bytes.
 func ToBytes(i interface{}) []byte {
 	s := ToString(i)
 	return zstring.String2Bytes(s)
 }
 
-// ToString To String
+// ToString converts any value to a string representation.
+// It handles basic types directly and uses JSON marshaling for complex types.
+// Returns an empty string if the input is nil.
 func ToString(i interface{}) string {
 	if i == nil {
 		return ""
@@ -70,13 +74,17 @@ func ToString(i interface{}) string {
 	}
 }
 
+// toJsonString converts a value to its JSON string representation.
+// It removes surrounding quotes from the JSON output.
 func toJsonString(value interface{}) string {
 	jsonContent, _ := json.Marshal(value)
 	jsonContent = bytes.Trim(jsonContent, `"`)
 	return zstring.Bytes2String(jsonContent)
 }
 
-// ToBool To Bool
+// ToBool converts any value to a boolean.
+// Returns true for non-zero numbers, non-empty strings that aren't "false",
+// and boolean true values. Returns false for everything else.
 func ToBool(i interface{}) bool {
 	if v, ok := i.(bool); ok {
 		return v
@@ -87,7 +95,8 @@ func ToBool(i interface{}) bool {
 	return false
 }
 
-// ToInt To int
+// ToInt converts any value to an int.
+// It uses ToInt64 internally and then converts the result to int.
 func ToInt(i interface{}) int {
 	if v, ok := i.(int); ok {
 		return v
@@ -95,7 +104,8 @@ func ToInt(i interface{}) int {
 	return int(ToInt64(i))
 }
 
-// ToInt8 To int8
+// ToInt8 converts any value to an int8.
+// It uses ToInt64 internally and then converts the result to int8.
 func ToInt8(i interface{}) int8 {
 	if v, ok := i.(int8); ok {
 		return v
@@ -103,7 +113,8 @@ func ToInt8(i interface{}) int8 {
 	return int8(ToInt64(i))
 }
 
-// ToInt16 To int16
+// ToInt16 converts any value to an int16.
+// It uses ToInt64 internally and then converts the result to int16.
 func ToInt16(i interface{}) int16 {
 	if v, ok := i.(int16); ok {
 		return v
@@ -111,7 +122,8 @@ func ToInt16(i interface{}) int16 {
 	return int16(ToInt64(i))
 }
 
-// ToInt32 To int32
+// ToInt32 converts any value to an int32.
+// It uses ToInt64 internally and then converts the result to int32.
 func ToInt32(i interface{}) int32 {
 	if v, ok := i.(int32); ok {
 		return v
@@ -119,7 +131,10 @@ func ToInt32(i interface{}) int32 {
 	return int32(ToInt64(i))
 }
 
-// ToInt64 To int64
+// ToInt64 converts any value to an int64.
+// It handles numeric types directly and attempts to parse strings as integers.
+// Supports decimal, hexadecimal (0x prefix), and octal (0 prefix) string formats.
+// Returns 0 if the input is nil or cannot be converted.
 func ToInt64(i interface{}) int64 {
 	if i == nil {
 		return 0
@@ -174,7 +189,8 @@ func ToInt64(i interface{}) int64 {
 	}
 }
 
-// ToUint To uint
+// ToUint converts any value to a uint.
+// It uses ToUint64 internally and then converts the result to uint.
 func ToUint(i interface{}) uint {
 	if v, ok := i.(uint); ok {
 		return v
@@ -182,7 +198,8 @@ func ToUint(i interface{}) uint {
 	return uint(ToUint64(i))
 }
 
-// ToUint8 To uint8
+// ToUint8 converts any value to a uint8.
+// It uses ToUint64 internally and then converts the result to uint8.
 func ToUint8(i interface{}) uint8 {
 	if v, ok := i.(uint8); ok {
 		return v
@@ -190,7 +207,8 @@ func ToUint8(i interface{}) uint8 {
 	return uint8(ToUint64(i))
 }
 
-// ToUint16 To uint16
+// ToUint16 converts any value to a uint16.
+// It uses ToUint64 internally and then converts the result to uint16.
 func ToUint16(i interface{}) uint16 {
 	if v, ok := i.(uint16); ok {
 		return v
@@ -198,7 +216,8 @@ func ToUint16(i interface{}) uint16 {
 	return uint16(ToUint64(i))
 }
 
-// ToUint32 To uint32
+// ToUint32 converts any value to a uint32.
+// It uses ToUint64 internally and then converts the result to uint32.
 func ToUint32(i interface{}) uint32 {
 	if v, ok := i.(uint32); ok {
 		return v
@@ -206,7 +225,10 @@ func ToUint32(i interface{}) uint32 {
 	return uint32(ToUint64(i))
 }
 
-// ToUint64 To uint64
+// ToUint64 converts any value to a uint64.
+// It handles numeric types directly and attempts to parse strings as unsigned integers.
+// Supports decimal, hexadecimal (0x prefix), and octal (0 prefix) string formats.
+// Returns 0 if the input is nil or cannot be converted.
 func ToUint64(i interface{}) uint64 {
 	if i == nil {
 		return 0
@@ -260,7 +282,8 @@ func ToUint64(i interface{}) uint64 {
 	}
 }
 
-// ToFloat32 To float32
+// ToFloat32 converts any value to a float32.
+// It uses ToFloat64 internally and then converts the result to float32.
 func ToFloat32(i interface{}) float32 {
 	if i == nil {
 		return 0
@@ -272,7 +295,9 @@ func ToFloat32(i interface{}) float32 {
 	return float32(v)
 }
 
-// ToFloat64 To float64
+// ToFloat64 converts any value to a float64.
+// It handles numeric types directly and attempts to parse strings as floating-point numbers.
+// Returns 0.0 if the input is nil or cannot be converted.
 func ToFloat64(i interface{}) float64 {
 	if i == nil {
 		return 0
@@ -284,7 +309,10 @@ func ToFloat64(i interface{}) float64 {
 	return v
 }
 
-// ToTime To time.Time
+// ToTime converts a value to a time.Time object.
+// If the input is already a time.Time, it is returned directly.
+// For string inputs, it attempts to parse using the provided format or a set of common formats.
+// Returns the zero time and an error if the conversion fails.
 func ToTime(i interface{}, format ...string) (time.Time, error) {
 	switch val := i.(type) {
 	case time.Time:
@@ -307,7 +335,10 @@ func ToTime(i interface{}, format ...string) (time.Time, error) {
 	}
 }
 
-// ToStruct map or struct to struct
+// ToStruct converts a map or struct to another struct type.
+// It uses reflection to match field names and performs appropriate type conversions.
+// The outVal parameter must be a pointer to a struct.
+// Returns an error if the conversion fails.
 func ToStruct(v interface{}, outVal interface{}) error {
 	val := zreflect.ValueOf(outVal)
 	if reflect.Indirect(val).Kind() != reflect.Struct {

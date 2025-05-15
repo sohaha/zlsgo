@@ -11,9 +11,8 @@ import (
 )
 
 func TestNew(tt *testing.T) {
-	// g := &sync.WaitGroup{}
-	// g.Add(2)
 	t := zlsgo.NewTest(tt)
+
 	now := time.Now()
 	tt.Log(ztime.FormatTime(now))
 
@@ -32,6 +31,7 @@ func TestNew(tt *testing.T) {
 	next, err = ParseNextTime("* * * * * * 999")
 	t.Equal(true, err != nil)
 	t.Log(err)
+	t.Log(next)
 
 	next, err = ParseNextTime("12 * * * * * *")
 	t.Equal(nil, err)

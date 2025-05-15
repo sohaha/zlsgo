@@ -11,7 +11,8 @@ import (
 	"github.com/sohaha/zlsgo/zdi"
 )
 
-// Host Get the current Host
+// Host returns the current host with scheme (http/https).
+// If full is true, it includes the request URL path.
 func (c *Context) Host(full ...bool) string {
 	scheme := c.Request.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
@@ -27,7 +28,8 @@ func (c *Context) Host(full ...bool) string {
 	return scheme + "://" + host
 }
 
-// CompletionLink Complete the link and add the current domain name if it is not linked
+// CompletionLink ensures a URL is absolute by prepending the current host
+// if the provided link is relative.
 func (c *Context) CompletionLink(link string) string {
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		return link
@@ -40,7 +42,8 @@ func (c *Context) CompletionLink(link string) string {
 	return finalLink
 }
 
-// IsWebsocket Is Websocket
+// IsWebsocket determines if the current request is a WebSocket upgrade request
+// by checking the Connection and Upgrade headers.
 func (c *Context) IsWebsocket() bool {
 	if strings.Contains(strings.ToLower(c.GetHeader("Connection")), "upgrade") &&
 		strings.ToLower(c.GetHeader("Upgrade")) == "websocket" {
@@ -49,17 +52,21 @@ func (c *Context) IsWebsocket() bool {
 	return false
 }
 
-// IsSSE Is SSE
+// IsSSE determines if the current request is expecting Server-Sent Events
+// by checking if the Accept header is 'text/event-stream'.
 func (c *Context) IsSSE() bool {
 	return strings.ToLower(c.GetHeader("Accept")) == "text/event-stream"
 }
 
-// IsAjax IsAjax
+// IsAjax determines if the current request is an AJAX request
+// by checking for the X-Requested-With header with value XMLHttpRequest.
 func (c *Context) IsAjax() bool {
 	return c.GetHeader("X-Requested-With") == "XMLHttpRequest"
 }
 
-// GetClientIP Client IP
+// GetClientIP returns the client's IP address by checking various headers
+// and connection information. It attempts to determine the most accurate
+// client IP, even when behind proxies.
 func (c *Context) GetClientIP() string {
 	r := c.mu.RLock()
 	ip := c.ip
@@ -81,12 +88,13 @@ func (c *Context) GetClientIP() string {
 	return ip
 }
 
-// GetHeader Get Header
+// GetHeader returns the value of the specified request header.
 func (c *Context) GetHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
-// SetHeader Set Header
+// SetHeader sets a response header with the given key and value.
+// If value is empty, the header will be removed.
 func (c *Context) SetHeader(key, value string) {
 	key = textproto.CanonicalMIMEHeaderKey(key)
 	c.mu.Lock()
@@ -98,6 +106,8 @@ func (c *Context) SetHeader(key, value string) {
 	c.mu.Unlock()
 }
 
+// write finalizes the response by writing headers and body data to the response writer.
+// It handles content negotiation, status codes, and ensures headers are properly set.
 func (c *Context) write() {
 	if !c.done.CAS(false, true) {
 		return
@@ -149,7 +159,8 @@ func (c *Context) write() {
 	}
 }
 
-// Next middleware, if current middleware has been stopped, it will return false
+// Next executes all remaining middleware in the chain.
+// Returns false if the middleware chain has been stopped with Abort().
 func (c *Context) Next() bool {
 	for {
 		if c.stopHandle.Load() {
@@ -165,6 +176,8 @@ func (c *Context) Next() bool {
 	}
 }
 
+// next is an internal method that executes the next middleware in the chain.
+// It's called by Next() and handles the middleware execution flow.
 func (c *Context) next() {
 	if c.stopHandle.Load() {
 		return
@@ -180,7 +193,8 @@ func (c *Context) next() {
 	}
 }
 
-// SetCookie Set Cookie
+// SetCookie sets an HTTP cookie with the given name and value.
+// Optional maxAge parameter specifies the cookie's max age in seconds (0 = session cookie).
 func (c *Context) SetCookie(name, value string, maxAge ...int) {
 	a := 0
 	if len(maxAge) > 0 {
@@ -196,7 +210,8 @@ func (c *Context) SetCookie(name, value string, maxAge ...int) {
 	c.Writer.Header().Add("Set-Cookie", cookie.String())
 }
 
-// GetCookie Get Cookie
+// GetCookie returns the value of the cookie with the given name.
+// Returns an empty string if the cookie doesn't exist.
 func (c *Context) GetCookie(name string) string {
 	cookie, err := c.Request.Cookie(name)
 	if err != nil {
@@ -206,17 +221,21 @@ func (c *Context) GetCookie(name string) string {
 	return v
 }
 
-// GetReferer request referer
+// GetReferer returns the Referer header of the request, which contains
+// the URL of the page that linked to the current page.
 func (c *Context) GetReferer() string {
 	return c.Request.Header.Get("Referer")
 }
 
-// GetUserAgent http request UserAgent
+// GetUserAgent returns the User-Agent header of the request, which identifies
+// the client software originating the request.
 func (c *Context) GetUserAgent() string {
 	return c.Request.Header.Get("User-Agent")
 }
 
-// ContentType returns the Content-Type header of the request
+// ContentType returns or sets the Content-Type header.
+// If contentText is provided, it sets the Content-Type header.
+// Otherwise, it returns the current Content-Type of the request.
 func (c *Context) ContentType(contentText ...string) string {
 	var content string
 	if len(contentText) > 0 {
@@ -233,7 +252,8 @@ func (c *Context) ContentType(contentText ...string) string {
 	return content
 }
 
-// WithValue context sharing data
+// WithValue stores a key-value pair in the context for sharing data
+// between middleware and handlers. Returns the context for chaining.
 func (c *Context) WithValue(key string, value interface{}) *Context {
 	c.mu.Lock()
 	c.customizeData[key] = value
@@ -241,7 +261,9 @@ func (c *Context) WithValue(key string, value interface{}) *Context {
 	return c
 }
 
-// Value get context sharing data
+// Value retrieves data stored in the context by key.
+// It returns the value and a boolean indicating if the key exists.
+// If the key doesn't exist and default values are provided, the first default is returned.
 func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok bool) {
 	r := c.mu.RLock()
 	value, ok = c.customizeData[key]
@@ -252,16 +274,22 @@ func (c *Context) Value(key string, def ...interface{}) (value interface{}, ok b
 	return
 }
 
-// Value get context sharing data
+// MustValue retrieves data stored in the context by key, with simplified return.
+// If the key doesn't exist and default values are provided, the first default is returned.
+// Unlike Value(), this method only returns the value without the existence flag.
 func (c *Context) MustValue(key string, def ...interface{}) (value interface{}) {
 	value, _ = c.Value(key, def...)
 	return
 }
 
+// Injector returns the dependency injection container for this context.
+// This allows handlers to access shared services and dependencies.
 func (c *Context) Injector() zdi.Injector {
 	return c.injector
 }
 
+// FileAttachment serves a file as an attachment with the specified filename.
+// This will prompt the browser to download the file rather than display it.
 func (c *Context) FileAttachment(filepath, filename string) {
 	if isASCII(filename) {
 		c.Writer.Header().Set("Content-Disposition", `attachment; filename="`+strings.Replace(filename, "\"", "\\\"", -1)+`"`)
@@ -271,7 +299,8 @@ func (c *Context) FileAttachment(filepath, filename string) {
 	http.ServeFile(c.Writer, c.Request, filepath)
 }
 
-// https://stackoverflow.com/questions/53069040/checking-a-string-contains-only-ascii-characters
+// isASCII checks if a string contains only ASCII characters.
+// Source: https://stackoverflow.com/questions/53069040/checking-a-string-contains-only-ascii-characters
 func isASCII(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if s[i] > unicode.MaxASCII {

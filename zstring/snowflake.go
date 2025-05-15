@@ -6,22 +6,27 @@ import (
 	"time"
 )
 
-// The algorithm is inspired by Twitter's famous snowflake
-// its link is: https://github.com/twitter/snowflake/releases/tag/snowflake-2010
-// timestamp(ms)42  | worker id(10) | sequence(12)
+// The Snowflake algorithm is inspired by Twitter's famous snowflake implementation.
+// Reference: https://github.com/twitter/snowflake/releases/tag/snowflake-2010
+// ID format: timestamp(ms)42 bits | worker id(10 bits) | sequence(12 bits)
 
 const (
+	// sEpoch is the Snowflake epoch timestamp (milliseconds since UNIX epoch)
 	sEpoch = 1474802888000
-	// sWorkerIDBits Num of WorkerId Bits
-	sWorkerIDBits   = 10
-	sWorkerIDShift  = 12
+	// sWorkerIDBits is the number of bits allocated for worker ID
+	sWorkerIDBits = 10
+	// sWorkerIDShift is the bit shift for worker ID in the ID
+	sWorkerIDShift = 12
+	// sTimeStampShift is the bit shift for timestamp in the ID
 	sTimeStampShift = 22
-	// sequenceMask equal as getSequenceMask()
+	// sequenceMask is the mask for sequence number (12 bits)
 	sequenceMask = 0xfff
-	sMaxWorker   = 0x3ff
+	// sMaxWorker is the maximum worker ID value
+	sMaxWorker = 0x3ff
 )
 
-// IDWorker Struct
+// IDWorker represents a Snowflake ID generator instance.
+// Each worker generates unique IDs based on its worker ID.
 type IDWorker struct {
 	workerID      int64
 	lastTimeStamp int64
@@ -30,7 +35,8 @@ type IDWorker struct {
 	sync.RWMutex
 }
 
-// NewIDWorker Generate NewIDWorker with Given workerid
+// NewIDWorker creates a new Snowflake ID generator with the given worker ID.
+// Returns an error if the worker ID is invalid (outside the allowed range).
 func NewIDWorker(workerid int64) (iw *IDWorker, err error) {
 	iw = new(IDWorker)
 
@@ -45,14 +51,18 @@ func NewIDWorker(workerid int64) (iw *IDWorker, err error) {
 	return iw, nil
 }
 
+// getMaxWorkerID calculates the maximum worker ID based on the allocated bits.
 func getMaxWorkerID() int64 {
 	return -1 ^ -1<<sWorkerIDBits
 }
 
+// timeGen returns the current timestamp in milliseconds.
 func (iw *IDWorker) timeGen() int64 {
 	return time.Now().UnixNano() / 1000 / 1000
 }
 
+// timeReGen ensures the timestamp is greater than the last timestamp.
+// It spins until a newer timestamp is obtained.
 func (iw *IDWorker) timeReGen(last int64) int64 {
 	ts := iw.timeGen()
 	for {
@@ -65,7 +75,8 @@ func (iw *IDWorker) timeReGen(last int64) int64 {
 	return ts
 }
 
-// ID Generate next id
+// ID generates the next unique ID.
+// Returns the generated ID and any error that occurred during generation.
 func (iw *IDWorker) ID() (ts int64, err error) {
 	iw.Lock()
 	defer iw.Unlock()
@@ -88,7 +99,8 @@ func (iw *IDWorker) ID() (ts int64, err error) {
 	return ts, nil
 }
 
-// ParseID reverse uid to timestamp, workid, seq
+// ParseID extracts the components from a Snowflake ID.
+// Returns the timestamp as a time.Time, raw timestamp value, worker ID, and sequence number.
 func ParseID(id int64) (t time.Time, ts int64, workerId int64, seq int64) {
 	seq = id & sequenceMask
 	workerId = (id >> sWorkerIDShift) & sMaxWorker

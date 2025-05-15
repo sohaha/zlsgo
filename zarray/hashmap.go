@@ -34,10 +34,12 @@ const (
 )
 
 type (
+	// hashable defines the types that can be used as keys in the hashmap
 	hashable interface {
 		constraints.Integer | constraints.Float | constraints.Complex | ~string | uintptr | unsafe.Pointer
 	}
 
+	// metadata contains internal data structures for the hashmap implementation
 	metadata[K hashable, V any] struct {
 		count     *zutil.Uintptr
 		data      unsafe.Pointer
@@ -45,7 +47,8 @@ type (
 		keyshifts uintptr
 	}
 
-	// Maper implements the concurrent hashmap
+	// Maper implements a concurrent hashmap with type-safe generic key-value pairs
+	// It provides thread-safe operations for storing, retrieving, and manipulating data
 	Maper[K hashable, V any] struct {
 		gsf         singleflight.Group
 		listHead    *element[K, V]
@@ -56,12 +59,15 @@ type (
 		defaultSize uintptr
 	}
 
+	// deletionRequest represents a key scheduled for deletion from the hashmap
 	deletionRequest[K hashable] struct {
 		key     K
 		keyHash uintptr
 	}
 )
 
+// NewHashMap creates a new concurrent hashmap with the specified initial size.
+// If no size is provided, a default size is used.
 func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 	m := &Maper[K, V]{
 		listHead:    newListHead[K, V](),
@@ -80,7 +86,8 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 	return m
 }
 
-// Delete a map data structure.
+// Delete removes one or more key-value pairs from the map.
+// If multiple keys are provided, they are processed in an optimized batch operation.
 func (m *Maper[K, V]) Delete(keys ...K) {
 	size := len(keys)
 	switch {
@@ -137,19 +144,21 @@ func (m *Maper[K, V]) Delete(keys ...K) {
 	}
 }
 
-// Has a parameter "key" of type K and returns a boolean value "ok".
+// Has checks if a key exists in the map.
+// Returns true if the key exists, false otherwise.
 func (m *Maper[K, V]) Has(key K) (ok bool) {
 	_, ok = m.get(m.hasher(key), key)
 	return
 }
 
-// Get `Maper` struct is used to retrieve the value associated with a given key
-// from the hashmap. It takes a key as input and returns the corresponding value and a boolean
-// indicating whether the key exists in the hashmap.
+// Get retrieves the value associated with the specified key.
+// Returns the value and a boolean indicating whether the key was found in the map.
 func (m *Maper[K, V]) Get(key K) (value V, ok bool) {
 	return m.get(m.hasher(key), key)
 }
 
+// GetAndDelete retrieves the value associated with the specified key and removes it from the map.
+// Returns the value and a boolean indicating whether the key was found and removed.
 func (m *Maper[K, V]) GetAndDelete(key K) (value V, ok bool) {
 	var (
 		h        = m.hasher(key)
@@ -183,11 +192,10 @@ func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
 	return
 }
 
-// ProvideGet `Maper` struct is used to retrieve the value associated with a
-// given key from the hashmap. If the key exists in the hashmap, the function returns the value and
-// sets the `loaded` flag to true. If the key does not exist, the function calls the `provide` function
-// to compute the value and sets the `computed` flag to true. The computed value is then added to the
-// hashmap and returned.
+// ProvideGet retrieves a value from the map, computing and storing it if not present.
+// If the key exists, returns the value with loaded=true.
+// If the key doesn't exist, calls the provide function to compute a value,
+// stores it in the map if the provider returns true, and returns with computed=true.
 func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loaded, computed bool) {
 	var (
 		h        = m.hasher(key)
@@ -222,6 +230,8 @@ func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loa
 	return
 }
 
+// GetOrSet retrieves the existing value for a key if present, otherwise stores and returns the given value.
+// Returns the actual value stored and a boolean indicating whether the value was loaded (true) or stored (false).
 func (m *Maper[K, V]) GetOrSet(key K, value V) (actual V, loaded bool) {
 	actual, loaded, _ = m.ProvideGet(key, func() (V, bool) {
 		return value, true
@@ -229,6 +239,7 @@ func (m *Maper[K, V]) GetOrSet(key K, value V) (actual V, loaded bool) {
 	return
 }
 
+// Set adds or updates a key-value pair in the map.
 func (m *Maper[K, V]) Set(key K, value V) {
 	m.set(m.hasher(key), key, value)
 }
@@ -264,9 +275,8 @@ func (m *Maper[K, V]) set(h uintptr, key K, value V) {
 	}
 }
 
-// Swap `Maper` struct is used to atomically swap the value associated with a
-// given key in the hashmap. It takes a key and a new value as input parameters and returns the old
-// value that was swapped out and a boolean indicating whether the swap was successful.
+// Swap atomically replaces the value for a key and returns the previous value.
+// Returns the old value and a boolean indicating whether the swap was successful.
 func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
 	var (
 		h        = m.hasher(key)
@@ -285,8 +295,8 @@ func (m *Maper[K, V]) Swap(key K, newValue V) (oldValue V, swapped bool) {
 	return
 }
 
-// CAS `Maper` struct is used to perform a Compare-and-Swap operation on a
-// key-value pair in the hashmap.
+// CAS (Compare-And-Swap) atomically replaces the value for a key if it matches the old value.
+// Returns true if the swap was performed, false otherwise.
 func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
 	var (
 		h        = m.hasher(key)
@@ -305,29 +315,33 @@ func (m *Maper[K, V]) CAS(key K, oldValue, newValue V) bool {
 	return false
 }
 
-// ForEach `Maper` struct iterates over each key-value pair in the hashmap and
-// applies a lambda function to each pair. The lambda function takes a key and value as input
-// parameters and returns a boolean value. If the lambda function returns `true`, the iteration
-// continues to the next key-value pair. If the lambda function returns `false`, the iteration stops.
+// ForEach iterates over all key-value pairs in the map and applies the provided function to each.
+// The iteration continues as long as the lambda function returns true, and stops when it returns false.
 func (m *Maper[K, V]) ForEach(lambda func(K, V) bool) {
 	for item := m.listHead.next(); item != nil && lambda(item.key, *item.value.Load()); item = item.next() {
 	}
 }
 
+// Grow increases the size of the map to accommodate more elements efficiently.
+// This operation is performed concurrently with other map operations.
 func (m *Maper[K, V]) Grow(newSize uintptr) {
 	if m.resizing.CAS(notResizing, resizingInProgress) {
 		m.grow(newSize)
 	}
 }
 
+// SetHasher sets a custom hash function for the map's keys.
+// This should be called before any other operations on the map.
 func (m *Maper[K, V]) SetHasher(hasher func(K) uintptr) {
 	m.hasher = hasher
 }
 
+// Len returns the number of key-value pairs in the map.
 func (m *Maper[K, V]) Len() uintptr {
 	return m.numItems.Load()
 }
 
+// Clear removes all key-value pairs from the map, resetting it to an empty state.
 func (m *Maper[K, V]) Clear() {
 	index := make([]*element[K, V], m.defaultSize)
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&index))
@@ -342,7 +356,8 @@ func (m *Maper[K, V]) Clear() {
 	m.numItems.Store(0)
 }
 
-// Keys returns the keys of the map.
+// Keys returns a slice containing all keys currently in the map.
+// The order of keys in the returned slice is not guaranteed.
 func (m *Maper[K, V]) Keys() (keys []K) {
 	keys = make([]K, m.Len())
 	var (
@@ -357,7 +372,8 @@ func (m *Maper[K, V]) Keys() (keys []K) {
 	return
 }
 
-// MarshalJSON convert the `Maper` object into a JSON-encoded byte slice.
+// MarshalJSON implements the json.Marshaler interface to convert the map into a JSON-encoded byte slice.
+// This allows the map to be serialized to JSON format.
 func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
 	gomap := make(map[K]V)
 	for i := m.listHead.next(); i != nil; i = i.next() {
@@ -366,7 +382,8 @@ func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(gomap)
 }
 
-// UnmarshalJSON used to deserialize a JSON-encoded byte slice into a `Maper` object.
+// UnmarshalJSON implements the json.Unmarshaler interface to deserialize a JSON-encoded byte slice
+// into the map. This allows the map to be reconstructed from JSON format.
 func (m *Maper[K, V]) UnmarshalJSON(i []byte) error {
 	gomap := make(map[K]V)
 	err := json.Unmarshal(i, &gomap)
@@ -379,20 +396,22 @@ func (m *Maper[K, V]) UnmarshalJSON(i []byte) error {
 	return nil
 }
 
-// Fillrate calculates the fill rate of the hashmap.
-// It returns the percentage of slots in the hashmap that are currently occupied by elements.
+// Fillrate calculates and returns the current fill rate of the map as a percentage.
+// This indicates how full the underlying data structure is relative to its capacity.
 func (m *Maper[K, V]) Fillrate() uintptr {
 	data := m.metadata.Load()
 
 	return (data.count.Load() * 100) / uintptr(len(data.index))
 }
 
+// allocate initializes the map's internal data structures with the specified size.
 func (m *Maper[K, V]) allocate(newSize uintptr) {
 	if m.resizing.CAS(notResizing, resizingInProgress) {
 		m.grow(newSize)
 	}
 }
 
+// fillIndexItems populates the index with all current elements in the map.
 func (m *Maper[K, V]) fillIndexItems(mapData *metadata[K, V]) {
 	var (
 		first     = m.listHead.next()
@@ -410,6 +429,8 @@ func (m *Maper[K, V]) fillIndexItems(mapData *metadata[K, V]) {
 	}
 }
 
+// removeItemFromIndex removes an element from the map's index.
+// This is called when an element is deleted from the map.
 func (m *Maper[K, V]) removeItemFromIndex(item *element[K, V]) {
 	for {
 		data := m.metadata.Load()
@@ -432,6 +453,8 @@ func (m *Maper[K, V]) removeItemFromIndex(item *element[K, V]) {
 	}
 }
 
+// grow resizes the map's internal data structures to the specified size.
+// This is called when the map needs to be expanded to accommodate more elements.
 func (m *Maper[K, V]) grow(newSize uintptr) {
 	for {
 		currentStore := m.metadata.Load()
@@ -462,6 +485,7 @@ func (m *Maper[K, V]) grow(newSize uintptr) {
 	}
 }
 
+// indexElement finds the element in the index that corresponds to the given hash key.
 func (md *metadata[K, V]) indexElement(hashedKey uintptr) *element[K, V] {
 	index := hashedKey >> md.keyshifts
 	ptr := (*unsafe.Pointer)(unsafe.Pointer(uintptr(md.data) + index*intSizeBytes))
@@ -474,6 +498,7 @@ func (md *metadata[K, V]) indexElement(hashedKey uintptr) *element[K, V] {
 	return item
 }
 
+// addItemToIndex adds an element to the map's index and returns its position.
 func (md *metadata[K, V]) addItemToIndex(item *element[K, V]) uintptr {
 	index := item.keyHash >> md.keyshifts
 	ptr := (*unsafe.Pointer)(unsafe.Pointer(uintptr(md.data) + index*intSizeBytes))
@@ -494,10 +519,12 @@ func (md *metadata[K, V]) addItemToIndex(item *element[K, V]) uintptr {
 	}
 }
 
+// resizeNeeded determines if the map needs to be resized based on its current fill rate.
 func resizeNeeded(length, count uintptr) bool {
 	return (count*100)/length > maxFillRate
 }
 
+// roundUpPower2 rounds up a number to the next power of 2.
 func roundUpPower2(i uintptr) uintptr {
 	i--
 	i |= i >> 1
@@ -510,6 +537,7 @@ func roundUpPower2(i uintptr) uintptr {
 	return i
 }
 
+// log2 calculates the base-2 logarithm of a number.
 func log2(i uintptr) (n uintptr) {
 	for p := uintptr(1); p < i; p, n = p<<1, n+1 {
 	}

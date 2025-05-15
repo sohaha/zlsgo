@@ -784,6 +784,8 @@ type arrayPathResult struct {
 	arrch  bool
 }
 
+// parseArrayPath parses a path that points to an array element or query.
+// It extracts array index, query conditions, and pipe operations from the path.
 func parseArrayPath(path string) (r arrayPathResult) {
 	for i := 0; i < len(path); i++ {
 		if path[i] == '|' {
@@ -1231,6 +1233,8 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 	return i, false
 }
 
+// queryMatches checks if a JSON value matches the query conditions in the array path.
+// It supports various comparison operators like '=', '!=', '>', '<', etc.
 func queryMatches(rp *arrayPathResult, value *Res) bool {
 	rpv := rp.query.value
 	if len(rpv) > 2 && rpv[0] == '"' && rpv[len(rpv)-1] == '"' {
@@ -1304,6 +1308,8 @@ func queryMatches(rp *arrayPathResult, value *Res) bool {
 	return false
 }
 
+// parseArray parses a JSON array at the given position and processes it according to the path.
+// It handles array indexing, array queries, and piped operations on array elements.
 func parseArray(c *parseContext, i int, path string) (int, bool) {
 	var pmatch, vesc, ok, hit bool
 	var val string
@@ -1325,6 +1331,8 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 		c.piped = true
 	}
 
+	// procQuery processes a query against a JSON value and determines if it matches.
+	// It also handles collecting all matches for "all" queries.
 	procQuery := func(qval *Res) bool {
 		if rp.query.all && len(multires) == 0 {
 			multires = append(multires, '[')
@@ -1397,14 +1405,15 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					return i, false
 				}
 				if rp.query.on {
-					var qval *Res
+					qval := &Res{
+						raw: val,
+						typ: String,
+					}
 					if vesc {
 						qval.str = unescape(val[1 : len(val)-1])
 					} else {
 						qval.str = val[1 : len(val)-1]
 					}
-					qval.raw = val
-					qval.typ = String
 					if procQuery(qval) {
 						return i, true
 					}
@@ -1493,13 +1502,16 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				vc := c.json[i]
 				i, val = parseLiteral(c.json, i)
 				if rp.query.on {
-					var qval *Res
-					qval.raw = val
+					qval := &Res{
+						raw: val,
+					}
 					switch vc {
 					case 't':
 						qval.typ = True
 					case 'f':
 						qval.typ = False
+					case 'n':
+						qval.typ = Null
 					}
 					if procQuery(qval) {
 						return i, true
@@ -1574,6 +1586,8 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 	return i, false
 }
 
+// splitPossiblePipe splits a path string at a pipe character ('|').
+// Returns the left part, right part, and a boolean indicating if a pipe was found.
 func splitPossiblePipe(path string) (left, right string, ok bool) {
 	var possible bool
 	for i := 0; i < len(path); i++ {
@@ -2416,6 +2430,8 @@ func ValidBytes(json []byte) bool {
 	return ok
 }
 
+// parseUint parses a string into an unsigned integer.
+// Returns the parsed value and a boolean indicating success.
 func parseUint(s string) (n uint, ok bool) {
 	var i int
 	if i == len(s) {
@@ -2431,6 +2447,8 @@ func parseUint(s string) (n uint, ok bool) {
 	return n, true
 }
 
+// parseInt parses a string into a signed integer.
+// Returns the parsed value and a boolean indicating success.
 func parseInt(s string) (n int, ok bool) {
 	var i int
 	var sign bool
@@ -2513,10 +2531,13 @@ var (
 	}
 )
 
+// AddModifier registers a new modifier function with the given name.
+// Modifiers can be used in paths to transform JSON values.
 func AddModifier(name string, fn func(json, arg string) string) {
 	modifiers[name] = fn
 }
 
+// ModifierExists checks if a modifier with the given name exists.
 func ModifierExists(name string) bool {
 	_, ok := modifiers[name]
 	return ok
@@ -2586,56 +2607,4 @@ func modifierReverse(json, _ string) string {
 		return zstring.Bytes2String(out)
 	}
 	return json
-}
-
-func switchJson(json string, i int, isParse bool) (string, int) {
-	depth := 1
-	s := i
-	i++
-	for ; i < len(json); i++ {
-		if json[i] >= '"' && json[i] <= '}' {
-			switch json[i] {
-			case '"':
-				i++
-				s2 := i
-				for ; i < len(json); i++ {
-					if json[i] > '\\' {
-						continue
-					}
-					if json[i] == '"' {
-						if json[i-1] == '\\' {
-							n := 0
-							for j := i - 2; j > s2-1; j-- {
-								if json[j] != '\\' {
-									break
-								}
-								n++
-							}
-							if n%2 == 0 {
-								continue
-							}
-						}
-						break
-					}
-				}
-			case '{', '[':
-				depth++
-			case '}', ']':
-				depth--
-				if depth == 0 {
-					if isParse {
-						i++
-						return json[s:i], i
-					} else {
-						return json[:i+1], i
-					}
-				}
-			}
-		}
-	}
-	if isParse {
-		return json[s:], i
-	} else {
-		return json, i
-	}
 }

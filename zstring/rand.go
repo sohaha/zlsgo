@@ -12,13 +12,16 @@ import (
 	"unsafe"
 )
 
-// RandUint32Max returns pseudorandom uint32 in the range [0..max)
+// RandUint32Max returns a pseudorandom uint32 value in the range [0..max).
+// It uses a fast algorithm to generate uniformly distributed random numbers
+// within the specified range.
 func RandUint32Max(max uint32) uint32 {
 	x := RandUint32()
 	return uint32((uint64(x) * uint64(max)) >> 32)
 }
 
-// RandInt random numbers in the specified range
+// RandInt generates a random integer within the specified inclusive range [min..max].
+// If max is less than min, max will be set equal to min.
 func RandInt(min int, max int) int {
 	if max < min {
 		max = min
@@ -26,7 +29,9 @@ func RandInt(min int, max int) int {
 	return min + int(RandUint32Max(uint32(max+1-min)))
 }
 
-// Rand random string of specified length, the second parameter limit can only appear the specified character
+// Rand generates a random string of the specified length.
+// By default, it uses alphanumeric characters (0-9, a-z, A-Z).
+// An optional template string can be provided to limit the characters used.
 func Rand(n int, tpl ...string) string {
 	var s []rune
 	b := make([]byte, n)
@@ -43,7 +48,9 @@ func Rand(n int, tpl ...string) string {
 	return Bytes2String(b)
 }
 
-// UniqueID unique id minimum 6 digits
+// UniqueID generates a cryptographically secure unique ID with at least the specified length.
+// The ID is generated using crypto/rand for better security and uniqueness.
+// If crypto/rand fails, it falls back to a less secure but still unique method.
 func UniqueID(n int) string {
 	if n < 6 {
 		n = 6
@@ -56,17 +63,29 @@ func UniqueID(n int) string {
 }
 
 type (
+	// Weighteder implements weighted random selection from a set of choices.
+	// Each choice has an associated weight that determines its probability of being selected.
 	Weighteder struct {
+		// choices contains the items that can be selected
 		choices []interface{}
-		totals  []uint32
-		max     uint32
+		// totals contains the cumulative weights used for binary search
+		totals []uint32
+		// max is the sum of all weights
+		max uint32
 	}
+
+	// choice represents an item with its associated weight for internal use
 	choice struct {
-		Item   interface{}
+		// Item is the value that can be selected
+		Item interface{}
+		// Weight determines the relative probability of this item being selected
 		Weight uint32
 	}
 )
 
+// WeightedRand performs a single weighted random selection from the provided choices.
+// Each key in the map is an item that can be selected, and its value is the weight
+// that determines its probability of being selected.
 func WeightedRand(choices map[interface{}]uint32) (interface{}, error) {
 	w, err := NewWeightedRand(choices)
 	if err != nil {
@@ -75,6 +94,8 @@ func WeightedRand(choices map[interface{}]uint32) (interface{}, error) {
 	return w.Pick(), nil
 }
 
+// NewWeightedRand creates a new Weighteder for efficient repeated weighted random selections.
+// It initializes the internal data structures needed for fast weighted selection.
 func NewWeightedRand(choices map[interface{}]uint32) (*Weighteder, error) {
 	if len(choices) == 0 {
 		return nil, errors.New("choices is empty")
@@ -113,10 +134,15 @@ func NewWeightedRand(choices map[interface{}]uint32) (*Weighteder, error) {
 	return w, nil
 }
 
+// Pick selects and returns a random item from the Weighteder based on the weights.
+// Items with higher weights are more likely to be selected.
 func (w *Weighteder) Pick() interface{} {
 	return w.choices[w.weightedSearch()]
 }
 
+// weightedSearch performs a binary search on the cumulative weights
+// to find the index of the selected item based on a random value.
+// This is an internal method used by Pick().
 func (w *Weighteder) weightedSearch() int {
 	x := RandUint32Max(w.max) + 1
 	i, j := 0, len(w.totals)
@@ -134,13 +160,19 @@ func (w *Weighteder) weightedSearch() int {
 	return i
 }
 
+// idWorkers is a global ID generator instance used by the UUID function.
+// It's initialized with worker ID 0.
 var idWorkers, _ = NewIDWorker(0)
 
+// UUID generates a unique 64-bit ID using the Snowflake algorithm.
+// This provides time-sorted unique IDs suitable for distributed systems.
 func UUID() int64 {
 	id, _ := idWorkers.ID()
 	return id
 }
 
+// getMask calculates a bitmask for efficient random character selection.
+// It finds the smallest mask that can cover the entire alphabet size.
 func getMask(alphabetSize int) byte {
 	for i := 1; i <= 8; i++ {
 		mask := byte((2 << uint(i)) - 1)
@@ -151,6 +183,9 @@ func getMask(alphabetSize int) byte {
 	return 0
 }
 
+// NewNanoID generates a secure unique string ID of the specified size.
+// It's similar to UUID but more compact and customizable.
+// By default, it uses alphanumeric characters, but a custom alphabet can be provided.
 func NewNanoID(size int, alphabet ...string) (string, error) {
 	var chars []rune
 	if len(alphabet) == 0 {

@@ -10,7 +10,8 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// FastCache concurrent LRU cache structure
+// FastCache implements a high-performance concurrent LRU (Least Recently Used) cache
+// with support for expiration, callbacks, and multiple buckets for reduced lock contention.
 type FastCache struct {
 	gsf        singleflight.Group
 	callback   handler
@@ -20,15 +21,22 @@ type FastCache struct {
 	mask       int32
 }
 
+// Options defines configuration parameters for creating a new FastCache instance
 type Options struct {
+	// Callback is called when items are accessed or modified in the cache
 	Callback   func(ActionKind, string, uintptr)
+	// Expiration is the default expiration time for cache items
 	Expiration time.Duration
+	// Bucket is the number of shards to divide the cache into for better concurrency
 	Bucket     uint16
+	// Cap is the maximum capacity of the primary LRU cache per bucket
 	Cap        uint16
+	// LRU2Cap is the capacity of the secondary LRU cache per bucket (for multi-level LRU)
 	LRU2Cap    uint16
 }
 
-// NewFast Fast LRU cache
+// NewFast creates a new FastCache instance with the specified options.
+// If no options are provided, default values are used.
 func NewFast(opt ...func(o *Options)) *FastCache {
 	o := Options{
 		Cap:    1 << 10,
@@ -69,6 +77,8 @@ func NewFast(opt ...func(o *Options)) *FastCache {
 	return c
 }
 
+// set is an internal method that adds or updates an item in the cache.
+// It supports storing either an interface{} value or a byte slice.
 func (l *FastCache) set(k string, v *interface{}, b []byte, expiration ...time.Duration) {
 	if l.callback != nil {
 		if v != nil {
@@ -94,17 +104,20 @@ func (l *FastCache) set(k string, v *interface{}, b []byte, expiration ...time.D
 	l.locks[idx].Unlock()
 }
 
-// Set an item into cache
+// Set adds or updates an item in the cache with the specified key, value, and optional expiration.
+// If no expiration is provided, the default expiration time is used (if configured).
 func (l *FastCache) Set(key string, val interface{}, expiration ...time.Duration) {
 	l.set(key, &val, nil, expiration...)
 }
 
-// SetBytes an item into cache
+// SetBytes adds or updates a byte slice in the cache with the specified key.
+// The default expiration time is used (if configured).
 func (l *FastCache) SetBytes(key string, b []byte) {
 	l.set(key, nil, b)
 }
 
-// Get value of key from cache with result
+// Get retrieves an item from the cache by its key.
+// Returns the item's value and a boolean indicating whether the item was found.
 func (l *FastCache) Get(key string) (interface{}, bool) {
 	if i, b, ok := l.get(key); ok {
 		if i != nil {
@@ -115,7 +128,8 @@ func (l *FastCache) Get(key string) (interface{}, bool) {
 	return nil, false
 }
 
-// GetAny value of key from cache with result, support dynamic type
+// GetAny retrieves an item from the cache and wraps it in a ztype.Type for flexible type conversion.
+// Returns the wrapped value and a boolean indicating whether the item was found.
 func (l *FastCache) GetAny(key string) (ztype.Type, bool) {
 	if v, ok := l.Get(key); ok {
 		return ztype.New(v), true
@@ -123,7 +137,8 @@ func (l *FastCache) GetAny(key string) (ztype.Type, bool) {
 	return ztype.Type{}, false
 }
 
-// GetBytes value of key from cache with result
+// GetBytes retrieves a byte slice from the cache by its key.
+// Returns the byte slice and a boolean indicating whether the item was found and is a byte slice.
 func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 	if i, b, ok := l.get(key); ok {
 		if b != nil {
@@ -135,7 +150,9 @@ func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 	return nil, false
 }
 
-// ProvideGet get value of key from cache with result and provide default value
+// ProvideGet retrieves an item from the cache, or computes and stores it if not present.
+// If the item doesn't exist, the provide function is called to generate the value.
+// Returns the item's value and a boolean indicating whether the item was found or created.
 func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool), expiration ...time.Duration) (interface{}, bool) {
 	if i, _, ok := l.get(key); ok && i != nil {
 		return *i, true
@@ -157,6 +174,8 @@ func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool), e
 	return v, true
 }
 
+// getValue is an internal method that retrieves a node from a specific cache level.
+// It also handles expiration checking and marking expired items as deleted.
 func (l *FastCache) getValue(key string, idx, level int32) (*node, int) {
 	n, s := l.insts[idx][level].get(key)
 	if s > 0 {
@@ -168,6 +187,8 @@ func (l *FastCache) getValue(key string, idx, level int32) (*node, int) {
 	return nil, 0
 }
 
+// get is an internal method that retrieves an item from the cache.
+// It handles the multi-level LRU logic and callback invocation.
 func (l *FastCache) get(key string) (i *interface{}, b []byte, loaded bool) {
 	idx := hasher(key) & l.mask
 	l.locks[idx].Lock()
@@ -202,7 +223,8 @@ func (l *FastCache) get(key string) (i *interface{}, b []byte, loaded bool) {
 	return i, b, true
 }
 
-// Delete item by key from cache
+// Delete removes an item with the specified key from the cache.
+// If the item doesn't exist, this operation is a no-op.
 func (l *FastCache) Delete(key string) {
 	idx := hasher(key) & l.mask
 	l.locks[idx].Lock()
@@ -228,7 +250,8 @@ func (l *FastCache) Delete(key string) {
 	l.locks[idx].Unlock()
 }
 
-// ForEach walk through all items in cache
+// ForEach iterates through all items in the cache and applies the provided function to each key-value pair.
+// The iteration continues as long as the function returns true, and stops when it returns false.
 func (l *FastCache) ForEach(walker func(key string, iface interface{}) bool) {
 	for i := range l.insts {
 		l.locks[i].Lock()

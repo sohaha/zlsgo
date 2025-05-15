@@ -12,22 +12,24 @@ import (
 // copyright https://github.com/gorhill/cronexpr
 
 type (
+	// Expression represents a parsed cron expression
+	// Contains the parsing results of each field in the expression, used to calculate the next execution time
 	Expression struct {
-		daysOfWeek             map[int]bool
-		lastWeekDaysOfWeek     map[int]bool
-		specificWeekDaysOfWeek map[int]bool
-		daysOfMonth            map[int]bool
-		workdaysOfMonth        map[int]bool
-		monthList              []int
-		actualDaysOfMonthList  []int
-		secondList             []int
-		hourList               []int
-		minuteList             []int
-		yearList               []int
-		lastWorkdayOfMonth     bool
-		daysOfMonthRestricted  bool
-		lastDayOfMonth         bool
-		daysOfWeekRestricted   bool
+		daysOfWeek             map[int]bool // Set of days of the week
+		lastWeekDaysOfWeek     map[int]bool // Set of last specific weekday of the month
+		specificWeekDaysOfWeek map[int]bool // Set of specific weekdays
+		daysOfMonth            map[int]bool // Set of days of the month
+		workdaysOfMonth        map[int]bool // Set of workdays of the month
+		monthList              []int        // List of months
+		actualDaysOfMonthList  []int        // List of actual days of the month
+		secondList             []int        // List of seconds
+		hourList               []int        // List of hours
+		minuteList             []int        // List of minutes
+		yearList               []int        // List of years
+		lastWorkdayOfMonth     bool         // Whether it's the last workday of the month
+		daysOfMonthRestricted  bool         // Whether days of month are restricted
+		lastDayOfMonth         bool         // Whether it's the last day of the month
+		daysOfWeekRestricted   bool         // Whether days of week are restricted
 	}
 	cronDirective struct {
 		kind  int
@@ -236,6 +238,7 @@ func (expr *Expression) minuteFieldHandler(s string) error {
 	expr.minuteList, err = genericFieldHandler(s, minuteDescriptor)
 	return err
 }
+
 func (expr *Expression) hourFieldHandler(s string) error {
 	var err error
 	expr.hourList, err = genericFieldHandler(s, hourDescriptor)
@@ -247,6 +250,7 @@ func (expr *Expression) monthFieldHandler(s string) error {
 	expr.monthList, err = genericFieldHandler(s, monthDescriptor)
 	return err
 }
+
 func (expr *Expression) yearFieldHandler(s string) error {
 	var err error
 	expr.yearList, err = genericFieldHandler(s, yearDescriptor)
@@ -361,8 +365,6 @@ func (expr *Expression) domFieldHandler(s string) error {
 	return nil
 }
 
-/******************************************************************************/
-
 func populateOne(values map[int]bool, v int) {
 	values[v] = true
 }
@@ -383,6 +385,7 @@ func toList(set map[int]bool) []int {
 	sort.Ints(list)
 	return list
 }
+
 func genericFieldParse(s string, desc fieldDescriptor) ([]*cronDirective, error) {
 	// At least one entry must be present
 	indices := entryFinder.FindAllStringIndex(s, -1)
@@ -484,6 +487,7 @@ func makeLayoutRegexp(layout, value string) *regexp.Regexp {
 	return re
 }
 
+// ParseNextTime parses a cron expression and calculates the next execution time.
 func ParseNextTime(cronLine string) (nextTime time.Time, err error) {
 	expr, err := Parse(cronLine)
 	if err == nil {
@@ -493,6 +497,7 @@ func ParseNextTime(cronLine string) (nextTime time.Time, err error) {
 	return
 }
 
+// Parse parses a cron expression string, returning an Expression object.
 func Parse(cronLine string) (*Expression, error) {
 	cron := cronNormalizer.Replace(cronLine)
 
@@ -506,8 +511,8 @@ func Parse(cronLine string) (*Expression, error) {
 		fieldCount = 7
 	}
 
-	var expr = Expression{}
-	var field = 0
+	expr := Expression{}
+	field := 0
 	var err error
 
 	// second field (optional)
@@ -569,7 +574,7 @@ func Parse(cronLine string) (*Expression, error) {
 	return &expr, nil
 }
 
-// Next returns the closest time instant immediately following `fromTime` which matches the cron expression `expr`
+// Next returns the next time point after the given time that matches the cron expression.
 func (expr *Expression) Next(fromTime time.Time) time.Time {
 	// Special case
 	if fromTime.IsZero() {
@@ -640,7 +645,7 @@ func (expr *Expression) Next(fromTime time.Time) time.Time {
 	return expr.nextSecond(fromTime)
 }
 
-// NextN returns a slice of `n` closest time instants immediately following `fromTime` which match the cron expression `expr`
+// NextN returns n time points after the given time that match the cron expression.
 func (expr *Expression) NextN(fromTime time.Time, n uint) []time.Time {
 	nextTimes := make([]time.Time, 0, n)
 	if n > 0 {

@@ -8,17 +8,24 @@ import (
 )
 
 type (
-	Map             map[string]string
+	// Map is a simple string-to-string map type for JSON operations.
+	Map map[string]string
+
+	// StFormatOptions defines formatting options for JSON output.
 	StFormatOptions struct {
-		Prefix   string
-		Indent   string
-		Width    int
-		SortKeys bool
+		Prefix   string // Text to prepend to each line
+		Indent   string // Indentation text
+		Width    int    // Maximum width of output
+		SortKeys bool   // Whether to sort object keys
 	}
+
+	// pair represents a key-value pair position in JSON.
 	pair struct {
-		ks, kd int
-		vs, vd int
+		ks, kd int // Key start and end positions
+		vs, vd int // Value start and end positions
 	}
+
+	// byKey implements sort.Interface for sorting JSON object keys.
 	byKey struct {
 		json   []byte
 		pairs  []pair
@@ -27,15 +34,20 @@ type (
 )
 
 var (
+	// DefOptions defines the default formatting options for JSON output.
 	DefOptions = &StFormatOptions{Width: 80, Prefix: "", Indent: "  ", SortKeys: false}
-	Matches    = []Map{
+
+	// Matches defines patterns for comments to be discarded during JSON processing.
+	Matches = []Map{
 		{"start": "//", "end": "\n"},
 		{"start": "/*", "end": "*/"},
 	}
 )
 
+// Format pretty-prints JSON data with default formatting options.
 func Format(json []byte) []byte { return FormatOptions(json, nil) }
 
+// FormatOptions pretty-prints JSON data with custom formatting options.
 func FormatOptions(json []byte, opts *StFormatOptions) []byte {
 	if opts == nil {
 		opts = DefOptions
@@ -53,6 +65,7 @@ func FormatOptions(json []byte, opts *StFormatOptions) []byte {
 	return buf
 }
 
+// Ugly removes all whitespace and formatting from JSON data, producing a compact representation.
 func Ugly(json []byte) []byte {
 	jsonStr, err := Discard(zstring.Bytes2String(json))
 	if err == nil {
@@ -62,6 +75,7 @@ func Ugly(json []byte) []byte {
 	return ugly(buf, json)
 }
 
+// ugly is an internal function that removes whitespace from JSON data.
 func ugly(dst, src []byte) []byte {
 	dst = dst[:0]
 	for i := 0; i < len(src); i++ {
@@ -88,6 +102,7 @@ func ugly(dst, src []byte) []byte {
 	return dst
 }
 
+// appendAny appends any JSON value to the buffer based on its type.
 func appendAny(buf, json []byte, i int, pretty bool, width int, prefix, indent string, sortkeys bool, tabs, nl, max int) ([]byte, int, int, bool) {
 	for ; i < len(json); i++ {
 		if json[i] <= ' ' {
@@ -117,21 +132,25 @@ func appendAny(buf, json []byte, i int, pretty bool, width int, prefix, indent s
 	return buf, i, nl, true
 }
 
+// Len implements sort.Interface for byKey.
 func (arr *byKey) Len() int {
 	return len(arr.pairs)
 }
 
+// Less implements sort.Interface for byKey.
 func (arr *byKey) Less(i, j int) bool {
 	key1 := arr.json[arr.pairs[i].ks+1 : arr.pairs[i].kd-1]
 	key2 := arr.json[arr.pairs[j].ks+1 : arr.pairs[j].kd-1]
 	return zstring.Bytes2String(key1) < zstring.Bytes2String(key2)
 }
 
+// Swap implements sort.Interface for byKey.
 func (arr *byKey) Swap(i, j int) {
 	arr.pairs[i], arr.pairs[j] = arr.pairs[j], arr.pairs[i]
 	arr.sorted = true
 }
 
+// appendObject appends a JSON object or array to the buffer.
 func appendObject(buf, json []byte, i int, open, close byte, pretty bool, width int, prefix, indent string, sortkeys bool, tabs, nl, max int) ([]byte, int, int, bool) {
 	var ok bool
 	if width > 0 {
@@ -223,6 +242,7 @@ func appendObject(buf, json []byte, i int, open, close byte, pretty bool, width 
 	return buf, i, nl, open != '{'
 }
 
+// sortPairs sorts the key-value pairs of a JSON object.
 func sortPairs(json, buf []byte, pairs []pair) []byte {
 	if len(pairs) == 0 {
 		return buf
@@ -245,6 +265,7 @@ func sortPairs(json, buf []byte, pairs []pair) []byte {
 	return append(buf[:vstart], nbuf...)
 }
 
+// appendString appends a JSON string to the buffer.
 func appendString(buf, json []byte, i, nl int) ([]byte, int, int, bool) {
 	s := i
 	i++
@@ -268,6 +289,7 @@ func appendString(buf, json []byte, i, nl int) ([]byte, int, int, bool) {
 	return append(buf, json[s:i]...), i, nl, true
 }
 
+// appendNumber appends a JSON number to the buffer.
 func appendNumber(buf, json []byte, i, nl int) ([]byte, int, int, bool) {
 	s := i
 	i++
@@ -279,6 +301,7 @@ func appendNumber(buf, json []byte, i, nl int) ([]byte, int, int, bool) {
 	return append(buf, json[s:i]...), i, nl, true
 }
 
+// appendTabs appends indentation tabs to the buffer.
 func appendTabs(buf []byte, prefix, indent string, tabs int) []byte {
 	if len(prefix) != 0 {
 		buf = append(buf, prefix...)
@@ -295,6 +318,7 @@ func appendTabs(buf []byte, prefix, indent string, tabs int) []byte {
 	return buf
 }
 
+// Discard removes comments from JSON data.
 func Discard(json string) (string, error) {
 	var (
 		buffer    bytes.Buffer
@@ -343,6 +367,7 @@ func Discard(json string) (string, error) {
 	return buffer.String(), nil
 }
 
+// filter filters out control characters from JSON.
 func filter(v rune) rune {
 	switch v {
 	case ' ':
@@ -354,6 +379,7 @@ func filter(v rune) rune {
 	return 0
 }
 
+// match checks if a sequence of runes matches a pattern.
 func match(runes *[]rune, i int, dst string) int {
 	dstLen := len([]rune(dst))
 	if len(*runes)-i >= dstLen && string((*runes)[i:i+dstLen]) == dst {

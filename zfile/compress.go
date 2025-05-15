@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-// GzCompress use gzip to compress to tar.gz
+// GzCompress compresses a directory or file into a tar.gz archive.
+// It preserves the directory structure relative to the source path.
 func GzCompress(currentPath, dest string) (err error) {
 	dest = RealPath(dest)
 	var d *os.File
@@ -18,13 +19,14 @@ func GzCompress(currentPath, dest string) (err error) {
 	if err != nil {
 		return
 	}
+
 	defer d.Close()
 	gw := gzip.NewWriter(d)
 	defer gw.Close()
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 	currentPath = RealPath(currentPath, true)
-	err = walkFile(currentPath, dest, err, func(path string, info *os.FileInfo) error {
+	err = walkFile(currentPath, dest, func(path string, info *os.FileInfo) error {
 		header, err := tar.FileInfoHeader(*info, "")
 		if err != nil {
 			return err
@@ -46,7 +48,9 @@ func GzCompress(currentPath, dest string) (err error) {
 	return
 }
 
-func walkFile(currentPath string, dest string, err error, writer func(path string, info *os.FileInfo) error) error {
+// walkFile is an internal helper function that traverses a directory structure
+// and applies the provided writer function to each file encountered.
+func walkFile(currentPath string, dest string, writer func(path string, info *os.FileInfo) error) error {
 	return filepath.Walk(currentPath,
 		func(path string, info os.FileInfo, err error) error {
 			path = RealPath(path)
@@ -61,7 +65,8 @@ func walkFile(currentPath string, dest string, err error, writer func(path strin
 		})
 }
 
-// GzDeCompress unzip tar.gz
+// GzDeCompress extracts a tar.gz archive to the specified destination directory.
+// It preserves the original directory structure and file permissions.
 func GzDeCompress(tarFile, dest string) error {
 	dest = RealPath(dest, true)
 	tarFile = RealPath(tarFile)
@@ -104,7 +109,8 @@ func GzDeCompress(tarFile, dest string) error {
 	return nil
 }
 
-// ZipCompress zip
+// ZipCompress compresses a directory or file into a zip archive.
+// It preserves the directory structure relative to the source path.
 func ZipCompress(currentPath, dest string) (err error) {
 	dest = RealPath(dest)
 	var d *os.File
@@ -112,11 +118,14 @@ func ZipCompress(currentPath, dest string) (err error) {
 	if err != nil {
 		return
 	}
+
 	defer d.Close()
+
 	tw := zip.NewWriter(d)
 	defer tw.Close()
+
 	currentPath = RealPath(currentPath, true)
-	err = walkFile(currentPath, dest, err, func(path string, info *os.FileInfo) error {
+	err = walkFile(currentPath, dest, func(path string, info *os.FileInfo) error {
 		header, err := zip.FileInfoHeader(*info)
 		if err != nil {
 			return err
@@ -138,6 +147,8 @@ func ZipCompress(currentPath, dest string) (err error) {
 	return err
 }
 
+// ZipDeCompress extracts a zip archive to the specified destination directory.
+// It preserves the original directory structure and file permissions.
 func ZipDeCompress(zipFile, dest string) error {
 	dest = RealPath(dest, true)
 	zipFile = RealPath(zipFile)
@@ -171,13 +182,17 @@ func ZipDeCompress(zipFile, dest string) error {
 	return nil
 }
 
+// createDir creates a directory with the specified permissions.
+// If the permission is 0, it defaults to 0755.
 func createDir(dir string, perm os.FileMode) error {
 	if perm == 0 {
-		perm = 0755
+		perm = 0o755
 	}
 	return os.MkdirAll(dir, perm)
 }
 
+// createFile creates a new file and ensures its parent directory exists.
+// If the parent directory doesn't exist, it will be created with default permissions.
 func createFile(name string) (*os.File, error) {
 	dir := string([]rune(name)[0:strings.LastIndex(name, "/")])
 	if !DirExist(dir) {

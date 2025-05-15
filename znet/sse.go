@@ -12,6 +12,8 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+// SSE represents a Server-Sent Events connection.
+// It handles the event stream between the server and client.
 type SSE struct {
 	ctx       context.Context
 	events    chan *sseEvent
@@ -24,25 +26,32 @@ type SSE struct {
 	Comment   []byte
 }
 
+// sseEvent represents a single Server-Sent Event with its components.
 type sseEvent struct {
-	ID      string
-	Event   string
-	Comment string
-	Data    []byte
+	ID      string // Event identifier
+	Event   string // Event type
+	Comment string // Event comment
+	Data    []byte // Event data payload
 }
 
+// LastEventID returns the ID of the last event sent over this SSE connection.
 func (s *SSE) LastEventID() string {
 	return s.lastID
 }
 
+// Done returns a channel that's closed when the SSE connection is terminated.
+// This can be used to detect when the client disconnects.
 func (s *SSE) Done() <-chan struct{} {
 	return s.ctx.Done()
 }
 
+// Stop terminates the SSE connection.
+// This will close the event stream and release associated resources.
 func (s *SSE) Stop() {
 	s.ctxCancel()
 }
 
+// sendComment sends a ping comment to keep the connection alive.
 func (s *SSE) sendComment() {
 	s.events <- &sseEvent{
 		Comment: "ping",
@@ -136,6 +145,8 @@ sseFor:
 	}
 }
 
+// SendByte sends raw byte data as an SSE event.
+// It allows specifying an event ID and optional event type.
 func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 	if s.ctx.Err() != nil {
 		return errors.New("client has been closed")
@@ -155,11 +166,14 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 	return nil
 }
 
+// SSEOption defines configuration options for an SSE connection.
 type SSEOption struct {
-	RetryTime      int
-	HeartbeatsTime int
+	RetryTime      int // Client reconnection time in milliseconds
+	HeartbeatsTime int // Heartbeat interval in seconds
 }
 
+// NewSSE creates a new Server-Sent Events connection from an HTTP context.
+// It configures the connection based on the provided options and starts the event loop.
 func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	id := c.GetHeader("Last-Event-ID")
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -198,6 +212,9 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	return s
 }
 
+// Stream sends a streaming response to the client.
+// The provided step function is called repeatedly until it returns false.
+// Each call to step should write data to the provided writer.
 func (c *Context) Stream(step func(w io.Writer) bool) bool {
 	w := c.Writer
 	flusher, _ := w.(http.Flusher)

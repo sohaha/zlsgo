@@ -11,6 +11,9 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
+// handlerFuncs separates regular handlers from first handlers.
+// First handlers are executed before regular middleware in the request pipeline.
+// This function returns two slices: regular middleware handlers and first middleware handlers.
 func handlerFuncs(h []Handler) (middleware []handlerFn, firstMiddleware []handlerFn) {
 	middleware = make([]handlerFn, 0, len(h))
 	firstMiddleware = make([]handlerFn, 0, len(h))
@@ -25,6 +28,9 @@ func handlerFuncs(h []Handler) (middleware []handlerFn, firstMiddleware []handle
 	return
 }
 
+// invokeHandler processes the return values from handler functions and updates the context accordingly.
+// It handles various return types including status codes, strings, errors, renderers, and custom types.
+// This function is used internally by the dependency injection system.
 func invokeHandler(c *Context, v []reflect.Value) (err error) {
 	for i := range v {
 		value := v[i]
@@ -55,6 +61,9 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 	return
 }
 
+// ParseHandlerFunc converts various handler function signatures to the internal handlerFn type.
+// It supports multiple function signatures including standard handlers, dependency-injected handlers,
+// and functions returning various combinations of values and errors.
 func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 	if h == nil {
 		return func(c *Context) error {

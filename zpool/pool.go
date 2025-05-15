@@ -1,3 +1,5 @@
+// Package zpool provides a thread-safe work pool implementation.
+// It allows for concurrent execution of tasks with configurable limits.
 package zpool
 
 import (

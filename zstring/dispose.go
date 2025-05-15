@@ -1,26 +1,33 @@
 package zstring
 
+// Default character used to mask filtered words
 const defFilterMask = '*'
 
 type (
+	// scope represents a substring range with start and stop indices
 	scope struct {
 		start int
 		stop  int
 	}
+	// node is a trie node used for efficient string matching
 	node struct {
 		children map[rune]*node
-		end      bool
+		end      bool // indicates if this node is the end of a word
 	}
+	// filterNode extends node with text filtering capabilities
 	filterNode struct {
 		node
-		mask rune
+		mask rune // character used to replace filtered content
 	}
+	// replacer implements string replacement using a trie structure
 	replacer struct {
-		mapping map[string]string
+		mapping map[string]string // maps original strings to their replacements
 		node
 	}
 )
 
+// NewFilter creates a new text filter that can identify and mask sensitive words.
+// It accepts a list of words to filter and an optional mask character (defaults to '*').
 func NewFilter(words []string, mask ...rune) *filterNode {
 	n := &filterNode{
 		mask: defFilterMask,
@@ -35,6 +42,7 @@ func NewFilter(words []string, mask ...rune) *filterNode {
 	return n
 }
 
+// add inserts a word into the trie structure.
 func (n *node) add(word string) {
 	chars := []rune(word)
 	if len(chars) == 0 {
@@ -61,6 +69,7 @@ func (n *node) add(word string) {
 	nd.end = true
 }
 
+// Find searches for all filtered words within the given string and returns them.
 func (n *filterNode) Find(str string) []string {
 	chars := []rune(str)
 	if len(chars) == 0 {
@@ -71,6 +80,8 @@ func (n *filterNode) Find(str string) []string {
 	return n.collectKeywords(chars, scopes)
 }
 
+// Filter replaces all occurrences of filtered words with the mask character.
+// It returns the filtered string, a list of found keywords, and a boolean indicating if any keywords were found.
 func (n *filterNode) Filter(str string) (res string, keywords []string, found bool) {
 	chars := []rune(str)
 	if len(chars) == 0 {
@@ -88,12 +99,14 @@ func (n *filterNode) Filter(str string) (res string, keywords []string, found bo
 	return string(chars), keywords, len(keywords) > 0
 }
 
+// replaceWithAsterisk replaces characters in the given range with the mask character.
 func (n *filterNode) replaceWithAsterisk(chars []rune, start, stop int) {
 	for i := start; i < stop; i++ {
 		chars[i] = n.mask
 	}
 }
 
+// collectKeywords extracts unique keywords from the identified scopes in the text.
 func (n *filterNode) collectKeywords(chars []rune, scopes []scope) []string {
 	set := make(map[string]struct{})
 	for _, v := range scopes {
@@ -110,6 +123,8 @@ func (n *filterNode) collectKeywords(chars []rune, scopes []scope) []string {
 	return keywords
 }
 
+// findKeywordScopes identifies all occurrences of filtered words in the text
+// and returns their position ranges.
 func (n *filterNode) findKeywordScopes(chars []rune) []scope {
 	var scopes []scope
 	size := len(chars)
@@ -152,8 +167,10 @@ func (n *filterNode) findKeywordScopes(chars []rune) []scope {
 	return scopes
 }
 
+// NewReplacer creates a new string replacer that efficiently replaces multiple strings at once.
+// It uses a trie structure for fast matching.
 func NewReplacer(mapping map[string]string) *replacer {
-	var rep = &replacer{
+	rep := &replacer{
 		mapping: mapping,
 	}
 	for k := range mapping {
@@ -163,11 +180,13 @@ func NewReplacer(mapping map[string]string) *replacer {
 	return rep
 }
 
+// Replace performs all configured string replacements on the input text.
+// It efficiently identifies and replaces all occurrences of the mapped strings.
 func (r *replacer) Replace(text string) string {
-	var builder = Buffer()
-	var chars = []rune(text)
-	var size = len(chars)
-	var start = -1
+	builder := Buffer()
+	chars := []rune(text)
+	size := len(chars)
+	start := -1
 
 	for i := 0; i < size; i++ {
 		child, ok := r.children[chars[i]]
@@ -179,12 +198,12 @@ func (r *replacer) Replace(text string) string {
 		if start < 0 {
 			start = i
 		}
-		var end = -1
+		end := -1
 		if child.end {
 			end = i + 1
 		}
 
-		var j = i + 1
+		j := i + 1
 		for ; j < size; j++ {
 			cchild, ok := child.children[chars[j]]
 			if !ok {

@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// regexMapStruct holds a compiled regular expression with its last access time
+// and a mutex for concurrent access control.
 type regexMapStruct struct {
 	Value *regexp.Regexp
 	Time  int64
@@ -13,11 +15,13 @@ type regexMapStruct struct {
 }
 
 var (
-	l                 sync.RWMutex
-	regexCache             = map[string]*regexMapStruct{}
-	regexCacheTimeout uint = 1800
+	l                 sync.RWMutex                                // Global mutex for regexCache access
+	regexCache                     = map[string]*regexMapStruct{} // Cache of compiled regular expressions
+	regexCacheTimeout uint         = 1800                         // Cache timeout in seconds (30 minutes)
 )
 
+// init starts a background goroutine that periodically cleans up
+// expired regular expression cache entries every 10 minutes.
 func init() {
 	go func() {
 		ticker := time.NewTicker(600 * time.Second)
@@ -27,7 +31,8 @@ func init() {
 	}()
 }
 
-// RegexMatch check for match
+// RegexMatch checks if a string matches a regular expression pattern.
+// Returns true if the pattern matches the string, false otherwise.
 func RegexMatch(pattern string, str string) bool {
 	if r, err := getRegexpCompile(pattern); err == nil {
 		return r.Match(String2Bytes(str))
@@ -35,7 +40,8 @@ func RegexMatch(pattern string, str string) bool {
 	return false
 }
 
-// RegexExtract extract matching text
+// RegexExtract extracts the first matching substring and any capture groups
+// defined in the regular expression pattern.
 func RegexExtract(pattern string, str string) ([]string, error) {
 	r, err := getRegexpCompile(pattern)
 	if err == nil {
@@ -44,7 +50,8 @@ func RegexExtract(pattern string, str string) ([]string, error) {
 	return nil, err
 }
 
-// RegexExtractAll extract matching all text
+// RegexExtractAll extracts all matching substrings and their capture groups.
+// An optional count parameter limits the number of matches returned.
 func RegexExtractAll(pattern string, str string, count ...int) ([][]string, error) {
 	r, err := getRegexpCompile(pattern)
 	if err == nil {
@@ -57,7 +64,8 @@ func RegexExtractAll(pattern string, str string, count ...int) ([][]string, erro
 	return nil, err
 }
 
-// RegexFind return matching position
+// RegexFind returns the positions (start and end indices) of all matches.
+// The count parameter limits the number of matches returned.
 func RegexFind(pattern string, str string, count int) [][]int {
 	if r, err := getRegexpCompile(pattern); err == nil {
 		return r.FindAllIndex(String2Bytes(str), count)
@@ -65,7 +73,8 @@ func RegexFind(pattern string, str string, count int) [][]int {
 	return [][]int{}
 }
 
-// RegexReplace replacing matches of the Regexp
+// RegexReplace replaces all matches of the pattern with the replacement string.
+// Returns the modified string and any error that occurred.
 func RegexReplace(pattern string, str, repl string) (string, error) {
 	r, err := getRegexpCompile(pattern)
 	if err == nil {
@@ -74,7 +83,8 @@ func RegexReplace(pattern string, str, repl string) (string, error) {
 	return str, err
 }
 
-// RegexReplaceFunc replacing matches of the Regexp
+// RegexReplaceFunc replaces all matches of the pattern using a replacement function.
+// The function receives each match and returns the replacement string.
 func RegexReplaceFunc(pattern string, str string, repl func(string) string) (string, error) {
 	r, err := getRegexpCompile(pattern)
 	if err == nil {
@@ -83,7 +93,8 @@ func RegexReplaceFunc(pattern string, str string, repl func(string) string) (str
 	return str, err
 }
 
-// RegexSplit split the string
+// RegexSplit splits the string at each occurrence of the pattern.
+// Returns the resulting string slices and any error that occurred.
 func RegexSplit(pattern string, str string) ([]string, error) {
 	r, err := getRegexpCompile(pattern)
 	var result []string
@@ -93,6 +104,8 @@ func RegexSplit(pattern string, str string) ([]string, error) {
 	return result, err
 }
 
+// clearRegexpCompile removes expired entries from the regular expression cache.
+// An entry is considered expired if it hasn't been accessed within the timeout period.
 func clearRegexpCompile() {
 	newRegexCache := map[string]*regexMapStruct{}
 	l.Lock()
@@ -109,6 +122,8 @@ func clearRegexpCompile() {
 	regexCache = newRegexCache
 }
 
+// getRegexpCompile retrieves a compiled regular expression from the cache or compiles it if not found.
+// The compiled expression is cached for future use to improve performance.
 func getRegexpCompile(pattern string) (r *regexp.Regexp, err error) {
 	l.RLock()
 	var data *regexMapStruct

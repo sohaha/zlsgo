@@ -1,4 +1,5 @@
-// Package zfile file and path operations in daily development
+// Package zfile provides file and path operations for common development tasks.
+// It includes utilities for file manipulation, path resolution, and directory management.
 package zfile
 
 import (
@@ -27,8 +28,11 @@ func init() {
 	}
 }
 
-// PathExist PathExist
-// 1 exists and is a directory path, 2 exists and is a file path, 0 does not exist
+// PathExist checks if a path exists and determines if it's a directory or file.
+// Returns:
+//   - 1: path exists and is a directory
+//   - 2: path exists and is a file
+//   - 0: path does not exist
 func PathExist(path string) (int, error) {
 	path = RealPath(path)
 	f, err := os.Stat(path)
@@ -43,24 +47,28 @@ func PathExist(path string) (int, error) {
 	return 0, err
 }
 
-// DirExist Is it an existing directory
+// DirExist checks if the specified path exists and is a directory.
+// Returns true if the path exists and is a directory, false otherwise.
 func DirExist(path string) bool {
 	state, _ := PathExist(path)
 	return state == 1
 }
 
-// FileExist Is it an existing file?
+// FileExist checks if the specified path exists and is a file.
+// Returns true if the path exists and is a file, false otherwise.
 func FileExist(path string) bool {
 	state, _ := PathExist(path)
 	return state == 2
 }
 
-// FileSize file size
+// FileSize returns the formatted size of a file (e.g., "1.5 MB").
+// If the file doesn't exist, it returns an empty string.
 func FileSize(file string) (size string) {
 	return SizeFormat(FileSizeUint(file))
 }
 
-// FileSizeUint file size to uint64
+// FileSizeUint returns the size of a file in bytes as a uint64.
+// If the file doesn't exist, it returns 0.
 func FileSizeUint(file string) (size uint64) {
 	file = RealPath(file)
 	fileInfo, err := os.Stat(file)
@@ -70,7 +78,8 @@ func FileSizeUint(file string) (size uint64) {
 	return uint64(fileInfo.Size())
 }
 
-// SizeFormat Format file size
+// SizeFormat converts a size in bytes (uint64) to a human-readable string
+// with appropriate units (B, KB, MB, GB, etc.).
 func SizeFormat(s uint64) string {
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	humanateBytes := func(s uint64, base float64, sizes []string) string {
@@ -93,12 +102,16 @@ func logSize(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
 }
 
-// RootPath Project Launch Path
+// RootPath returns the absolute path of the current working directory.
+// This is typically the directory from which the program was launched.
 func RootPath() string {
 	path, _ := filepath.Abs(".")
 	return RealPath(path)
 }
 
+// TmpPath returns a path to a temporary directory.
+// If a pattern is provided, it creates a temporary directory with that pattern.
+// Otherwise, it returns the system's temporary directory.
 func TmpPath(pattern ...string) string {
 	p := ""
 	if len(pattern) > 0 {
@@ -115,7 +128,9 @@ func TmpPath(pattern ...string) string {
 	return RealPath(path)
 }
 
-// SafePath get an safe absolute path
+// SafePath returns a path that is guaranteed to be within the specified base directory.
+// If no base directory is provided, it uses the project path as the base.
+// This helps prevent directory traversal vulnerabilities.
 func SafePath(path string, pathRange ...string) string {
 	base := ""
 	if len(pathRange) == 0 {
@@ -126,7 +141,9 @@ func SafePath(path string, pathRange ...string) string {
 	return strings.TrimPrefix(RealPath(path, false), base)
 }
 
-// RealPath get an absolute path
+// RealPath converts a relative path to an absolute path.
+// If addSlash is true, it ensures the path ends with a slash.
+// The function normalizes path separators to forward slashes.
 func RealPath(path string, addSlash ...bool) (realPath string) {
 	if len(path) > 2 && path[1] == ':' {
 		realPath = path
@@ -143,8 +160,10 @@ func RealPath(path string, addSlash ...bool) (realPath string) {
 	return
 }
 
-// RealPathMkdir get an absolute path, create it if it doesn't exist
-// If you want to ensure that the directory can be created successfully, please use HasReadWritePermission to check the permission first
+// RealPathMkdir converts a path to an absolute path and creates the directory if it doesn't exist.
+// If addSlash is true, it ensures the path ends with a slash.
+// Note: To ensure the directory can be created successfully, use HasReadWritePermission
+// to check permissions before calling this function.
 func RealPathMkdir(path string, addSlash ...bool) string {
 	realPath := RealPath(path, addSlash...)
 	if DirExist(realPath) {
@@ -155,14 +174,17 @@ func RealPathMkdir(path string, addSlash ...bool) string {
 	return realPath
 }
 
-// IsSubPath Is the subPath under the path
+// IsSubPath checks if subPath is contained within path.
+// Both paths are converted to absolute paths before comparison.
 func IsSubPath(subPath, path string) bool {
 	subPath = RealPath(subPath)
 	path = RealPath(path)
 	return strings.HasPrefix(subPath, path)
 }
 
-// Rmdir support to keep the current directory
+// Rmdir removes a directory and all its contents recursively.
+// If notIncludeSelf is true, it recreates the directory after deletion,
+// effectively removing all contents while keeping the directory itself.
 func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 	realPath := RealPath(path)
 	err := os.RemoveAll(realPath)
@@ -175,13 +197,15 @@ func Rmdir(path string, notIncludeSelf ...bool) (ok bool) {
 	return
 }
 
-// Remove removes the named file or (empty) directory
+// Remove deletes the specified file or empty directory.
+// It returns an error if the path doesn't exist or if a non-empty directory is specified.
 func Remove(path string) error {
 	realPath := RealPath(path)
 	return os.Remove(realPath)
 }
 
-// CopyFile copies the source file to the dest file.
+// CopyFile copies a file from source to destination, preserving file mode.
+// It creates the destination file if it doesn't exist and overwrites it if it does.
 func CopyFile(source string, dest string) (err error) {
 	sourcefile, err := os.Open(source)
 	if err != nil {
@@ -204,7 +228,8 @@ func CopyFile(source string, dest string) (err error) {
 	return
 }
 
-// ExecutablePath executable path
+// ExecutablePath returns the absolute path of the current executable file.
+// If it cannot determine the executable path, it falls back to using os.Args[0].
 func ExecutablePath() string {
 	ePath, err := os.Executable()
 	if err != nil {
@@ -217,7 +242,9 @@ func ExecutablePath() string {
 	return realPath
 }
 
-// ProgramPath program directory path
+// ProgramPath returns the directory containing the current executable.
+// If addSlash is true, it ensures the path ends with a slash.
+// If the executable path cannot be determined, it falls back to ProjectPath.
 func ProgramPath(addSlash ...bool) (path string) {
 	ePath := ExecutablePath()
 	if ePath == "" {
@@ -231,6 +258,8 @@ func ProgramPath(addSlash ...bool) (path string) {
 	return
 }
 
+// pathAddSlash adds a trailing slash to the path if addSlash is true and
+// the path doesn't already end with a slash.
 func pathAddSlash(path string, addSlash ...bool) string {
 	if len(addSlash) > 0 && addSlash[0] && !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -238,7 +267,9 @@ func pathAddSlash(path string, addSlash ...bool) string {
 	return path
 }
 
-// GetMimeType get file mime type
+// GetMimeType determines the MIME type of a file based on its content and/or filename.
+// If content is provided, it uses content-based detection first.
+// If that fails or returns a generic type, it falls back to extension-based detection.
 func GetMimeType(filename string, content []byte) (ctype string) {
 	if len(content) > 0 {
 		ctype = http.DetectContentType(content)
@@ -253,7 +284,9 @@ func GetMimeType(filename string, content []byte) (ctype string) {
 	return ctype
 }
 
-// HasPermission check file or directory permission
+// HasPermission checks if the specified path has the requested permission mode.
+// If the path doesn't exist and noUp is false, it checks the parent directory.
+// Returns true if the path has the requested permissions, false otherwise.
 func HasPermission(path string, perm os.FileMode, noUp ...bool) bool {
 	path = RealPath(path)
 	info, err := os.Stat(path)
@@ -271,29 +304,44 @@ func HasPermission(path string, perm os.FileMode, noUp ...bool) bool {
 	return info.Mode()&perm == perm
 }
 
-// HasReadWritePermission check file or directory read and write permission
+// HasReadWritePermission checks if the specified path has read and write permissions (0600).
+// Returns true if the path has read and write permissions, false otherwise.
 func HasReadWritePermission(path string) bool {
 	return HasPermission(path, fs.FileMode(0o600))
 }
 
+// fileInfo is an internal structure used to store file metadata for sorting and cleanup operations.
 type fileInfo struct {
+	// modTime is the last modification time of the file
 	modTime time.Time
+	// path is the absolute path to the file
 	path    string
+	// size is the file size in bytes
 	size    uint64
 }
 
+// fileInfos is a slice of fileInfo structures that implements sort.Interface
+// to allow sorting files by modification time.
 type fileInfos []fileInfo
 
 func (f fileInfos) Len() int           { return len(f) }
 func (f fileInfos) Less(i, j int) bool { return f[i].modTime.Before(f[j].modTime) }
 func (f fileInfos) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 
+// DirStatOptions provides configuration options for the StatDir function.
 type DirStatOptions struct {
-	MaxSize  uint64 // max size
-	MaxTotal uint64 // max total files
+	// MaxSize is the maximum allowed total size in bytes for the directory.
+	// Files will be deleted (oldest first) if the total size exceeds this value.
+	MaxSize  uint64
+	// MaxTotal is the maximum allowed number of files in the directory.
+	// Files will be deleted (oldest first) if the total count exceeds this value.
+	MaxTotal uint64
 }
 
-// StatDir get directory size and total files
+// StatDir calculates the total size and number of files in a directory.
+// If options are provided with MaxSize or MaxTotal values, it will delete the oldest
+// files to keep the directory within the specified limits.
+// Returns the final size in bytes, number of files, and any error encountered.
 func StatDir(path string, options ...DirStatOptions) (size, total uint64, err error) {
 	var (
 		totalSize   uint64

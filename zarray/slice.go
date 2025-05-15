@@ -12,14 +12,15 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
-// CopySlice copy a slice.
+// CopySlice creates and returns a new slice containing all elements from the input slice.
 func CopySlice[T any](l []T) []T {
 	nl := make([]T, len(l))
 	copy(nl, l)
 	return nl
 }
 
-// Rand A random eents.
+// Rand returns a random element from the provided slice.
+// If the slice is empty, returns the zero value of type T.
 func Rand[T any](collection []T) T {
 	l := len(collection)
 	if l == 0 {
@@ -31,7 +32,9 @@ func Rand[T any](collection []T) T {
 	return collection[i]
 }
 
-// RandPickN returns a random slice of n elements from the collection.
+// RandPickN returns a new slice containing n randomly selected elements from the input collection.
+// If n is greater than the collection length, returns all elements in random order.
+// If n is less than or equal to 0 or the collection is empty, returns an empty slice.
 func RandPickN[T any](collection []T, n int) []T {
 	l := len(collection)
 	if l == 0 || n <= 0 {
@@ -55,7 +58,9 @@ func RandPickN[T any](collection []T, n int) []T {
 	return result
 }
 
-// Map manipulates a slice and transforms it to a slice of another type.
+// Map applies the iteratee function to each element in the collection and returns a new slice
+// containing the transformed values. If parallel is provided, the operation is performed
+// concurrently using the specified number of workers.
 func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint) []R {
 	colLen := len(collection)
 	res := make([]R, colLen)
@@ -93,14 +98,16 @@ func Map[T any, R any](collection []T, iteratee func(int, T) R, parallel ...uint
 	return res
 }
 
-// ParallelMap Parallel manipulates a slice and transforms it to a slice of another type.
-// If the calculation does not involve time-consuming operations, we recommend using a Map.
-// Deprecated: please use Map
+// ParallelMap applies the iteratee function to each element in the collection concurrently
+// and returns a new slice containing the transformed values.
+// If the calculation does not involve time-consuming operations, using Map is recommended.
+// Deprecated: please use Map with a parallel parameter instead
 func ParallelMap[T any, R any](collection []T, iteratee func(int, T) R, workers uint) []R {
 	return Map(collection, iteratee, workers)
 }
 
-// Shuffle creates a slice of shuffled values.
+// Shuffle creates and returns a new slice containing all elements from the input slice
+// in a random order. The original slice remains unchanged.
 func Shuffle[T any](collection []T) []T {
 	n := CopySlice(collection)
 	rand.Shuffle(len(n), func(i, j int) {
@@ -110,7 +117,8 @@ func Shuffle[T any](collection []T) []T {
 	return n
 }
 
-// Reverse creates a slice of reversed values.
+// Reverse creates and returns a new slice containing all elements from the input slice
+// in reverse order. The original slice remains unchanged.
 func Reverse[T any](collection []T) []T {
 	n := CopySlice(collection)
 	l := len(n)
@@ -121,7 +129,8 @@ func Reverse[T any](collection []T) []T {
 	return n
 }
 
-// Filter iterates over eents of collection.
+// Filter creates a new slice containing all elements from the input slice that satisfy
+// the predicate function. The original slice remains unchanged.
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	slice = CopySlice(slice)
 
@@ -137,7 +146,8 @@ func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
 	return slice[:j:j]
 }
 
-// Contains returns true if an eent is present in a collection.
+// Contains checks if a value exists in the collection.
+// Returns true if the value is found, false otherwise.
 func Contains[T comparable](collection []T, v T) bool {
 	for i := range collection {
 		if collection[i] == v {
@@ -148,7 +158,8 @@ func Contains[T comparable](collection []T, v T) bool {
 	return false
 }
 
-// Find search an eent in a slice based on a predicate. It returns eent and true if eent was found.
+// Find searches for an element in the slice that satisfies the predicate function.
+// Returns the found element and true if successful, or the zero value and false if not found.
 func Find[T any](collection []T, predicate func(index int, item T) bool) (res T, ok bool) {
 	for i := range collection {
 		item := collection[i]
@@ -160,7 +171,8 @@ func Find[T any](collection []T, predicate func(index int, item T) bool) (res T,
 	return
 }
 
-// Unique returns a duplicate-free version of an array.
+// Unique creates and returns a new slice containing only the unique elements
+// from the input slice, preserving the original order of first occurrence.
 func Unique[T comparable](collection []T) []T {
 	l := len(collection)
 	if l <= 1 {
@@ -178,7 +190,8 @@ func Unique[T comparable](collection []T) []T {
 	})
 }
 
-// Diff returns the difference between two slices.
+// Diff compares two slices and returns two new slices containing the elements that
+// are unique to each input slice (not present in the other slice).
 func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	if len(list1) == 0 {
 		return []T{}, CopySlice(list2)
@@ -216,7 +229,9 @@ func Diff[T comparable](list1 []T, list2 []T) ([]T, []T) {
 	return l, r
 }
 
-// Pop returns an eent and removes it from the slice.
+// Pop removes and returns the last element from the slice.
+// If the slice is empty, returns the zero value of type T.
+// This function modifies the original slice.
 func Pop[T comparable](list *[]T) (v T) {
 	l := len(*list)
 	if l == 0 {
@@ -228,7 +243,9 @@ func Pop[T comparable](list *[]T) (v T) {
 	return
 }
 
-// Shift returns an eent and removes it from the slice.
+// Shift removes and returns the first element from the slice.
+// If the slice is empty, returns the zero value of type T.
+// This function modifies the original slice.
 func Shift[T comparable](list *[]T) (v T) {
 	l := len(*list)
 	if l == 0 {
@@ -240,7 +257,9 @@ func Shift[T comparable](list *[]T) (v T) {
 	return
 }
 
-// Chunk split slice into n parts
+// Chunk splits the slice into multiple sub-slices of the specified size.
+// The last chunk may contain fewer elements if the slice length is not divisible by size.
+// If size is less than or equal to 0 or the slice is empty, returns an empty slice of slices.
 func Chunk[T any](slice []T, size int) [][]T {
 	if size <= 0 {
 		return [][]T{}
@@ -262,7 +281,9 @@ func Chunk[T any](slice []T, size int) [][]T {
 	return chunks
 }
 
-// RandShift returns a function that returns a random element from the list and removes it.
+// RandShift returns a closure function that, when called, returns a random element from the list.
+// Each element is returned exactly once in random order. When all elements have been returned,
+// subsequent calls will return an error. The original list is not modified.
 func RandShift[T comparable](list []T) func() (T, error) {
 	if len(list) == 0 {
 		return func() (T, error) {

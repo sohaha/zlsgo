@@ -15,19 +15,33 @@ import (
 )
 
 var (
+	// RemoteIPHeaders defines the HTTP headers to check for client IP addresses
+	// when the request comes through a proxy or load balancer.
 	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP", "Cf-Connecting-Ip"}
-	TrustedProxies  = []string{"0.0.0.0/0"}
-	LocalNetworks   = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
+
+	// TrustedProxies defines the IP ranges that are considered trusted proxies.
+	// By default, all IPs are trusted (0.0.0.0/0).
+	TrustedProxies = []string{"0.0.0.0/0"}
+
+	// LocalNetworks defines the IP ranges that are considered local/private networks.
+	LocalNetworks = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
 )
 
 var (
-	localNetworks     []*net.IPNet
+	// localNetworks stores the parsed local network CIDR blocks
+	localNetworks []*net.IPNet
+
+	// localNetworksOnce ensures the local networks are parsed only once
 	localNetworksOnce sync.Once
-	proxiesCache      = zcache.NewFast(func(o *zcache.Options) {
+
+	// proxiesCache caches the results of proxy trust checks to improve performance
+	proxiesCache = zcache.NewFast(func(o *zcache.Options) {
 		o.LRU2Cap = 25
 	})
 )
 
+// getLocalNetworks returns the parsed local network CIDR blocks.
+// It initializes the networks on first call using the LocalNetworks configuration.
 func getLocalNetworks() []*net.IPNet {
 	localNetworksOnce.Do(func() {
 		localNetworks = make([]*net.IPNet, 0, len(LocalNetworks))
@@ -41,12 +55,14 @@ func getLocalNetworks() []*net.IPNet {
 	return localNetworks
 }
 
-// IsLocalAddrIP IsLocalAddrIP
+// IsLocalAddrIP checks if the given IP address string belongs to a local network.
+// Returns true if the IP is in one of the defined local networks.
 func IsLocalAddrIP(ip string) bool {
 	return IsLocalIP(net.ParseIP(ip))
 }
 
-// IsLocalIP IsLocalIP
+// IsLocalIP checks if the given net.IP belongs to a local network.
+// Returns true if the IP is in one of the defined local networks.
 func IsLocalIP(ip net.IP) bool {
 	for _, network := range getLocalNetworks() {
 		if network.Contains(ip) {
@@ -119,6 +135,8 @@ func getRemoteIP(r *http.Request) []string {
 	return validIPs
 }
 
+// parseHeadersIP parses a comma-separated list of IP addresses from a header value.
+// It returns a slice of valid net.IP objects, filtering out invalid entries.
 func parseHeadersIP(val string) []net.IP {
 	if val == "" {
 		return []net.IP{}
@@ -142,6 +160,8 @@ func ClientIP(r *http.Request) (ip string) {
 	return clientIP(r, getRemoteIP(r))
 }
 
+// clientIP is an internal helper that determines the client IP from the request
+// and a list of possible IP addresses. It handles both direct connections and proxy scenarios.
 func clientIP(r *http.Request, ips []string) (ip string) {
 	remoteIP := RemoteIP(r)
 	if remoteIP != "" {
@@ -161,6 +181,8 @@ func ClientPublicIP(r *http.Request) string {
 	return clientPublicIP(r, ips)
 }
 
+// clientPublicIP is an internal helper that determines the client's public IP
+// from the request and a list of possible IP addresses, filtering out private/local IPs.
 func clientPublicIP(r *http.Request, ips []string) string {
 	remoteIP := RemoteIP(r)
 	if remoteIP != "" {
@@ -273,6 +295,8 @@ func GetIPv(s string) int {
 	return 6
 }
 
+// netCIDR parses a CIDR notation string into an IPNet.
+// It's an internal helper used for IP network operations.
 func netCIDR(network string) (*net.IPNet, error) {
 	_, n, err := net.ParseCIDR(network)
 	if err != nil {

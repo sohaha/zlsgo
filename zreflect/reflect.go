@@ -19,7 +19,14 @@ type (
 	}
 )
 
-// GetUnexportedField Get unexported field, hazardous operation, please use with caution
+// GetUnexportedField retrieves the value of an unexported field from a struct.
+// This is a hazardous operation that bypasses Go's type safety and should be used with extreme caution.
+//
+// v is the reflect.Value of the struct containing the unexported field.
+// field is the name of the unexported field to access.
+//
+// It returns the value of the unexported field, or an error if the field
+// doesn't exist or cannot be accessed.
 func GetUnexportedField(v reflect.Value, field string) (interface{}, error) {
 	f, b, err := getField(v, field)
 	if err != nil {
@@ -33,7 +40,14 @@ func GetUnexportedField(v reflect.Value, field string) (interface{}, error) {
 	return reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem().Interface(), nil
 }
 
-// SetUnexportedField Set unexported field, hazardous operation, please use with caution
+// SetUnexportedField sets the value of an unexported field in a struct.
+// This is a hazardous operation that bypasses Go's type safety and should be used with extreme caution.
+//
+// v is the reflect.Value of the struct containing the unexported field.
+// field is the name of the unexported field to modify.
+// value is the new value to set for the field.
+//
+// It returns an error if the field doesn't exist, cannot be modified, or if the value type doesn't match.
 func SetUnexportedField(v reflect.Value, field string, value interface{}) error {
 	f, b, err := getField(v, field)
 	if err != nil {
@@ -61,6 +75,9 @@ func SetUnexportedField(v reflect.Value, field string, value interface{}) error 
 	return nil
 }
 
+// getField is an internal helper function that retrieves a field from a struct by name.
+// It returns the field's reflect.Value, a boolean indicating if the field is exported,
+// and an error if the field doesn't exist or cannot be accessed.
 func getField(v reflect.Value, field string) (reflect.Value, bool, error) {
 	ve := reflect.Indirect(v)
 	if ve.Kind() != reflect.Struct {

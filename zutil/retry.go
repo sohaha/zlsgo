@@ -6,20 +6,27 @@ import (
 	"time"
 )
 
+// RetryConf holds configuration options for the retry mechanism.
+// It controls the number of retries, intervals between attempts, timeout,
+// and backoff strategy.
 type RetryConf struct {
 	// maxRetry is the maximum number of retries
 	maxRetry int
-	// Interval is the interval between retries
+	// Interval is the base interval between retry attempts
 	Interval time.Duration
-	// MaxRetryInterval is the maximum interval between retries
+	// MaxRetryInterval is the maximum interval between retry attempts
+	// when using exponential backoff
 	MaxRetryInterval time.Duration
-	// Timeout is the timeout of the entire retry
+	// Timeout is the maximum total duration for all retry attempts
 	Timeout time.Duration
-	// BackOffDelay is whether to increase the interval between retries
+	// BackOffDelay determines whether to use exponential backoff
+	// for increasing the interval between retries
 	BackOffDelay bool
 }
 
-// DoRetry is a general retry function
+// DoRetry executes a function with retry logic based on the provided configuration.
+// It will retry the function up to 'sum' times or until it succeeds.
+// Additional options can be provided to customize retry behavior.
 func DoRetry(sum int, fn func() error, opt ...func(*RetryConf)) (err error) {
 	o := RetryConf{
 		maxRetry:         sum,
@@ -68,6 +75,9 @@ func DoRetry(sum int, fn func() error, opt ...func(*RetryConf)) (err error) {
 	return
 }
 
+// BackOffDelay calculates the delay duration for exponential backoff retry strategy.
+// It increases the delay exponentially based on the attempt number and adds jitter
+// to prevent synchronized retries in distributed systems.
 func BackOffDelay(attempt int, retryInterval, maxRetryInterval time.Duration) time.Duration {
 	attempt = attempt - 1
 	if attempt < 0 {

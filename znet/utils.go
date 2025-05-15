@@ -18,27 +18,42 @@ import (
 	"github.com/sohaha/zlsgo/zutil"
 )
 
+// utils provides utility functions for the znet package.
+// It contains methods for URL matching, context handling, and other common operations.
 type utils struct {
+	// ContextKey is used to store and retrieve values from request context.
 	ContextKey contextKeyType
 }
 
+// Utils is a global instance of the utils struct that provides
+// utility functions for routing, context handling, and other common operations.
 var Utils = utils{
 	ContextKey: contextKeyType{},
 }
 
+// Pattern constants used for URL matching and parameter extraction
 const (
-	defaultPattern = `[^\/]+`
-	idPattern      = `[\d]+`
-	idKey          = `id`
-	allPattern     = `.*`
-	allKey         = `*`
+	// defaultPattern matches any non-slash character sequence
+	defaultPattern = `[^/]+`
+	// idPattern matches numeric IDs
+	idPattern = `[\d]+`
+	// idKey is the parameter name for ID segments
+	idKey = `id`
+	// allPattern matches any character sequence including slashes
+	allPattern = `.*`
+	// allKey is the parameter name for wildcard segments
+	allKey = `*`
 )
 
+// matchCache caches compiled route patterns to improve performance.
+// It uses an LRU cache with a capacity of 100 entries.
 var matchCache = zcache.NewFast(func(o *zcache.Options) {
 	o.LRU2Cap = 100
 })
 
-// URLMatchAndParse checks if the request matches the route path and returns a map of the parsed
+// URLMatchAndParse checks if the request URL matches the route pattern and returns
+// a map of the parsed path parameters. It uses a cache to improve performance for
+// frequently accessed routes.
 func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map[string]string, ok bool) {
 	var (
 		pattern   string
@@ -79,6 +94,9 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 	return nil, false
 }
 
+// parsePattern converts a path pattern into a regular expression and extracts
+// parameter names. It handles various parameter formats including :param, *wildcard,
+// and {name:pattern} syntax.
 func parsePattern(res []string, prefix string) (string, []string) {
 	var (
 		matchName []string
@@ -171,6 +189,8 @@ func parsePattern(res []string, prefix string) (string, []string) {
 	return pattern, matchName
 }
 
+// getAddr normalizes an address string, ensuring it has a port.
+// If no port is specified or the port is 0, it finds an available port.
 func getAddr(addr string) string {
 	var port int
 	if strings.Contains(addr, ":") {
@@ -186,6 +206,8 @@ func getAddr(addr string) string {
 	return ":" + strconv.Itoa(port)
 }
 
+// getHostname constructs a full URL with the appropriate scheme (http/https)
+// based on whether TLS is enabled, and resolves the hostname from the address.
 func getHostname(addr string, isTls bool) string {
 	hostname := "http://"
 	if isTls {
@@ -194,6 +216,9 @@ func getHostname(addr string, isTls bool) string {
 	return hostname + resolveHostname(addr)
 }
 
+// TreeFind searches for a handler matching the given path in the routing tree.
+// It returns the engine, handler function, middleware stack, and a boolean
+// indicating whether a match was found.
 func (u utils) TreeFind(t *Tree, path string) (*Engine, handlerFn, []handlerFn, bool) {
 	nodes := t.Find(path, false)
 	for i := range nodes {
@@ -230,7 +255,9 @@ func (u utils) TreeFind(t *Tree, path string) (*Engine, handlerFn, []handlerFn, 
 	return nil, nil, nil, false
 }
 
-func (_ utils) CompletionPath(p, prefix string) string {
+// CompletionPath ensures a path has the correct prefix and format.
+// It adds the prefix if needed and ensures the path starts with a slash.
+func (utils) CompletionPath(p, prefix string) string {
 	suffix := strings.HasSuffix(p, "/")
 	p = strings.TrimLeft(p, "/")
 	prefix = strings.TrimRight(prefix, "/")
@@ -245,11 +272,14 @@ func (_ utils) CompletionPath(p, prefix string) string {
 	return path
 }
 
-// func (utils) IsAbort(c *Context) bool {
-// 	return c.stopHandle.Load()
-// }
+// IsAbort checks if request handling has been aborted for the given context.
+// It returns true if the context's stopHandle flag is set.
+func (utils) IsAbort(c *Context) bool {
+	return c.stopHandle.Load()
+}
 
-// AppendHandler append handler to context, Use caution
+// AppendHandler appends handlers to the context's middleware stack.
+// Use with caution as this modifies the middleware chain during request processing.
 func (utils) AppendHandler(c *Context, handlers ...Handler) {
 	hl := len(handlers)
 	if hl == 0 {
@@ -261,6 +291,8 @@ func (utils) AppendHandler(c *Context, handlers ...Handler) {
 	}
 }
 
+// resolveAddr converts an address string and optional TLS configuration
+// into an addrSt structure used for server configuration.
 func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {
 	cfg := addrSt{
 		addr: addrString,
@@ -275,6 +307,8 @@ func resolveAddr(addrString string, tlsConfig ...TlsCfg) addrSt {
 	return cfg
 }
 
+// resolveHostname extracts or constructs a hostname from an address string.
+// It handles various formats including IP addresses and port specifications.
 func resolveHostname(addrString string) string {
 	if strings.Index(addrString, ":") == 0 {
 		return "127.0.0.1" + addrString
@@ -282,6 +316,8 @@ func resolveHostname(addrString string) string {
 	return addrString
 }
 
+// templateParse parses template files and applies the provided function map.
+// It returns the parsed template or an error if parsing fails.
 func templateParse(templateFile []string, funcMap template.FuncMap) (t *template.Template, err error) {
 	if len(templateFile) == 0 {
 		return nil, errors.New("template file cannot be empty")
@@ -305,14 +341,24 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 	return
 }
 
+// tlsRedirectHandler implements http.Handler to redirect HTTP requests to HTTPS.
+// tlsRedirectHandler implements http.Handler to redirect HTTP requests to HTTPS.
+// It uses a 301 Moved Permanently status code for the redirection.
 type tlsRedirectHandler struct {
+	// Domain is the target domain for the HTTPS redirect
 	Domain string
 }
 
-func (t *tlsRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, t.Domain+r.URL.String(), http.StatusMovedPermanently)
+// ServeHTTP implements the http.Handler interface.
+// It redirects HTTP requests to HTTPS using a 301 Moved Permanently status.
+// ServeHTTP implements the http.Handler interface.
+// It redirects HTTP requests to HTTPS using a 301 Moved Permanently status.
+func (h *tlsRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, h.Domain+r.URL.String(), http.StatusMovedPermanently)
 }
 
+// NewContext creates a new Context instance for handling a request.
+// This is used when you need to manually create a context outside the normal request flow.
 func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 	return &Context{
 		Writer:        w,
@@ -332,6 +378,8 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 	}
 }
 
+// acquireContext gets a Context instance from the pool or creates a new one if the pool is empty.
+// This is used internally to efficiently reuse Context objects.
 func (e *Engine) acquireContext(w http.ResponseWriter, r *http.Request) *Context {
 	c := e.pool.Get().(*Context)
 	c.Engine = e
@@ -346,6 +394,8 @@ func (e *Engine) acquireContext(w http.ResponseWriter, r *http.Request) *Context
 	return c
 }
 
+// releaseContext returns a Context to the pool after it's been used.
+// It resets the Context to its zero state before returning it to the pool.
 func (e *Engine) releaseContext(c *Context) {
 	c.prevData.Code.Store(0)
 	c.mu.Lock()
@@ -367,6 +417,8 @@ func (e *Engine) releaseContext(c *Context) {
 	e.pool.Put(c)
 }
 
+// GetAddr returns the address string of the server.
+// This is used to display the server's listening address.
 func (s *serverMap) GetAddr() string {
 	return s.srv.Addr
 }

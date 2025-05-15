@@ -12,14 +12,16 @@ import (
 )
 
 type (
-	// CacheItemPair maps key to access counter
+	// CacheItemPair maps a cache key to its access counter for tracking usage statistics
 	CacheItemPair struct {
 		Key         string
 		AccessCount int64
 	}
-	// CacheItemPairList CacheItemPairList
+	// CacheItemPairList represents a collection of CacheItemPair objects
+	// that can be sorted by access count for analytics and cache management
 	CacheItemPairList []CacheItemPair
-	// Table Table
+	// Table represents a named cache container that manages a collection of cached items
+	// with support for expiration, callbacks, and access tracking
 	Table struct {
 		items           map[string]*Item
 		cleanupTimer    *time.Timer
@@ -33,21 +35,25 @@ type (
 	}
 )
 
-// Count get the number of caches
+// Count returns the total number of items currently stored in the cache table
 func (table *Table) Count() int {
 	table.RLock()
 	defer table.RUnlock()
 	return len(table.items)
 }
 
-// ForEach traversing the cache
+// ForEach iterates through all cache items and applies the provided function to each key-value pair.
+// The iteration continues as long as the function returns true, and stops when it returns false.
+// This method provides access to the cached data values directly.
 func (table *Table) ForEach(trans func(key string, value interface{}) bool) {
 	table.ForEachRaw(func(k string, v *Item) bool {
 		return trans(k, v.Data())
 	})
 }
 
-// ForEachRaw traversing the cache
+// ForEachRaw iterates through all cache items and applies the provided function to each key-item pair.
+// The iteration continues as long as the function returns true, and stops when it returns false.
+// This method provides access to the raw Item objects, including metadata.
 func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
 	count := table.Count()
 	table.RLock()
@@ -64,27 +70,32 @@ func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
 	}
 }
 
-// SetLoadNotCallback SetLoadNotCallback
+// SetLoadNotCallback sets a function to be called when a requested item is not found in the cache.
+// The callback function can generate a new cache item based on the key and additional arguments.
 func (table *Table) SetLoadNotCallback(f func(key string, args ...interface{}) *Item) {
 	table.Lock()
 	defer table.Unlock()
 	table.loadNotCallback = f
 }
 
-// SetAddCallback SetAddCallback
+// SetAddCallback sets a function to be called whenever a new item is added to the cache.
+// This can be used for logging, synchronization with external storage, or other side effects.
 func (table *Table) SetAddCallback(f func(*Item)) {
 	table.Lock()
 	defer table.Unlock()
 	table.addCallback = f
 }
 
-// SetDeleteCallback SetDeleteCallback
+// SetDeleteCallback sets a function to be called before an item is deleted from the cache.
+// If the callback returns false, the deletion is aborted.
 func (table *Table) SetDeleteCallback(f func(key string) bool) {
 	table.Lock()
 	defer table.Unlock()
 	table.deleteCallback = f
 }
 
+// expirationCheck scans all items in the cache and removes expired ones.
+// It also schedules the next cleanup based on the item with the earliest expiration time.
 func (table *Table) expirationCheck() {
 	now := ztime.UnixMicro(ztime.Clock())
 	smallestDuration := time.Duration(0)
@@ -135,6 +146,8 @@ func (table *Table) expirationCheck() {
 	table.Unlock()
 }
 
+// addInternal adds an item to the cache and handles related operations such as
+// invoking callbacks and scheduling expiration checks if needed.
 func (table *Table) addInternal(item *Item) {
 	table.Lock()
 	table.items[item.key] = item
@@ -154,7 +167,9 @@ func (table *Table) addInternal(item *Item) {
 	}
 }
 
-// SetRaw set cache
+// SetRaw adds or updates an item in the cache with the specified key, data, and lifespan.
+// If intervalLifeSpan is true, the item's expiration time will be extended each time it is accessed.
+// Returns the newly created or updated cache item.
 func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 	intervalLifeSpan ...bool) *Item {
 	item := NewCacheItem(key, data, lifeSpan)
@@ -168,12 +183,16 @@ func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 	return item
 }
 
-// Set set cache whether to automatically renew
+// Set adds or updates an item in the cache with the specified key, data, and lifespan in seconds.
+// If interval is true, the item's expiration time will be extended each time it is accessed.
+// Returns the newly created or updated cache item.
 func (table *Table) Set(key string, data interface{}, lifeSpanSecond uint,
 	interval ...bool) *Item {
 	return table.SetRaw(key, data, time.Duration(lifeSpanSecond)*time.Second, interval...)
 }
 
+// deleteInternal removes an item from the cache and invokes any associated delete callbacks.
+// Returns the removed item and any error that occurred during the operation.
 func (table *Table) deleteInternal(key string) (*Item, error) {
 	r, ok := table.items[key]
 	if !ok {
@@ -205,7 +224,8 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 	return r, nil
 }
 
-// Delete Delete cache
+// Delete removes an item with the specified key from the cache.
+// Returns the removed item and any error that occurred during the operation.
 func (table *Table) Delete(key string) (*Item, error) {
 	table.Lock()
 	defer table.Unlock()
@@ -213,7 +233,8 @@ func (table *Table) Delete(key string) (*Item, error) {
 	return table.deleteInternal(key)
 }
 
-// Exists Exists
+// Exists checks if an item with the specified key exists in the cache.
+// Returns true if the item exists, false otherwise.
 func (table *Table) Exists(key string) bool {
 	table.RLock()
 	defer table.RUnlock()
@@ -222,7 +243,9 @@ func (table *Table) Exists(key string) bool {
 	return ok
 }
 
-// Add if the cache does not exist then adding does not take effect
+// Add adds a new item to the cache only if the key does not already exist.
+// Returns true if the item was added, false if the key already exists.
+// If intervalLifeSpan is true, the item's expiration time will be extended each time it is accessed.
 func (table *Table) Add(key string, data interface{}, lifeSpan time.Duration, intervalLifeSpan ...bool) bool {
 	table.Lock()
 	_, ok := table.items[key]
@@ -240,7 +263,10 @@ func (table *Table) Add(key string, data interface{}, lifeSpan time.Duration, in
 	return true
 }
 
-// MustGet get the Raw of the specified key, set if it does not exist
+// MustGet retrieves an item from the cache or creates it if it doesn't exist.
+// If the item doesn't exist, the provided function is called to generate the data,
+// which is then stored in the cache with the specified parameters.
+// Returns the item's data and any error that occurred during the operation.
 func (table *Table) MustGet(key string, do func(set func(data interface{},
 	lifeSpan time.Duration, interval ...bool)) (
 	err error)) (data interface{}, err error) {
@@ -277,7 +303,10 @@ func (table *Table) MustGet(key string, do func(set func(data interface{},
 	return
 }
 
-// GetT GetT
+// GetT retrieves a cache item by its key.
+// If the item exists, its access time is updated if access counting is enabled.
+// If the item doesn't exist and a load callback is set, it attempts to load the item.
+// Returns the item and any error that occurred during the operation.
 func (table *Table) GetT(key string, args ...interface{}) (*Item, error) {
 	table.RLock()
 	r, ok := table.items[key]
@@ -304,7 +333,8 @@ func (table *Table) GetT(key string, args ...interface{}) (*Item, error) {
 	return nil, ErrKeyNotFound
 }
 
-// Get get the Raw of the specified key
+// Get retrieves the data associated with the specified key.
+// Returns the data value and any error that occurred during the operation.
 func (table *Table) Get(key string, args ...interface{}) (value interface{}, err error) {
 	var data *Item
 	data, err = table.GetT(key, args...)
@@ -315,6 +345,8 @@ func (table *Table) Get(key string, args ...interface{}) (value interface{}, err
 	return
 }
 
+// GetString retrieves the data associated with the specified key as a string.
+// Returns the string value and any error that occurred during the operation.
 func (table *Table) GetString(key string, args ...interface{}) (value string, err error) {
 	data, err := table.Get(key, args...)
 	if err != nil {
@@ -324,6 +356,8 @@ func (table *Table) GetString(key string, args ...interface{}) (value string, er
 	return
 }
 
+// GetInt retrieves the data associated with the specified key as an integer.
+// Returns the integer value and any error that occurred during the operation.
 func (table *Table) GetInt(key string, args ...interface{}) (value int, err error) {
 	data, err := table.Get(key, args...)
 	if err != nil {
@@ -334,7 +368,7 @@ func (table *Table) GetInt(key string, args ...interface{}) (value int, err erro
 	return
 }
 
-// Clear Clear
+// Clear removes all items from the cache and stops any cleanup timers.
 func (table *Table) Clear() {
 	table.Lock()
 	table.items = make(map[string]*Item)
@@ -345,11 +379,16 @@ func (table *Table) Clear() {
 	table.Unlock()
 }
 
+// Swap implements sort.Interface for CacheItemPairList
 func (p CacheItemPairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+// Len implements sort.Interface for CacheItemPairList
 func (p CacheItemPairList) Len() int           { return len(p) }
+// Less implements sort.Interface for CacheItemPairList, sorting by access count in descending order
 func (p CacheItemPairList) Less(i, j int) bool { return p[i].AccessCount > p[j].AccessCount }
 
-// MostAccessed MostAccessed
+// MostAccessed returns the most frequently accessed items in the cache.
+// The count parameter specifies the maximum number of items to return.
+// Items are sorted by access count in descending order.
 func (table *Table) MostAccessed(count int64) []*Item {
 	table.RLock()
 	defer table.RUnlock()

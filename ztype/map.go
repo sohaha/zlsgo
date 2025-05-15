@@ -13,12 +13,18 @@ import (
 )
 
 var (
+	// tagName is the primary struct tag name used for field mapping
 	tagName       = "z"
+	// tagNameLesser is the fallback struct tag name used when the primary tag is not present
 	tagNameLesser = "json"
 )
 
+// Map is a string-keyed map of arbitrary values that provides helper methods
+// for convenient access and manipulation of the underlying data.
 type Map map[string]interface{}
 
+// DeepCopy creates a deep copy of the map and all nested maps.
+// This ensures that modifications to the copied map don't affect the original.
 func (m Map) DeepCopy() Map {
 	newMap := make(Map, len(m))
 	for k := range m {
@@ -39,6 +45,9 @@ func (m Map) DeepCopy() Map {
 	return newMap
 }
 
+// Get retrieves a value from the map by its key and wraps it in a Type for safe access.
+// If disabled is true, it will only look for exact key matches and not parse path expressions.
+// Path expressions (like "user.name" or "items[0].id") allow accessing nested values.
 func (m Map) Get(key string, disabled ...bool) Type {
 	typ := Type{}
 	var (
@@ -56,6 +65,8 @@ func (m Map) Get(key string, disabled ...bool) Type {
 	return typ
 }
 
+// Set assigns a value to the specified key in the map.
+// Returns an error if the map is nil.
 func (m Map) Set(key string, value interface{}) error {
 	if m == nil {
 		return errors.New("map is nil")
@@ -66,12 +77,16 @@ func (m Map) Set(key string, value interface{}) error {
 	return nil
 }
 
+// Has checks if the specified key exists in the map.
+// Returns true if the key exists, false otherwise.
 func (m Map) Has(key string) bool {
 	_, ok := m[key]
 
 	return ok
 }
 
+// Delete removes a key-value pair from the map.
+// Returns an error if the key doesn't exist.
 func (m Map) Delete(key string) error {
 	if _, ok := m[key]; ok {
 		delete(m, key)
@@ -81,6 +96,8 @@ func (m Map) Delete(key string) error {
 	return errors.New("key not found")
 }
 
+// ForEach iterates over all key-value pairs in the map and calls the provided function for each pair.
+// If the function returns false, iteration stops.
 func (m Map) ForEach(fn func(k string, v Type) bool) {
 	for s, v := range m {
 		if !fn(s, Type{v}) {
@@ -89,20 +106,28 @@ func (m Map) ForEach(fn func(k string, v Type) bool) {
 	}
 }
 
+// IsEmpty checks if the map contains any elements.
+// Returns true if the map is empty, false otherwise.
 func (m Map) IsEmpty() bool {
 	return len(m) == 0
 }
 
+// Maps is a slice of Map objects, providing helper methods for working with collections of maps.
 type Maps []Map
 
+// IsEmpty checks if the slice contains any maps.
+// Returns true if the slice is empty, false otherwise.
 func (m Maps) IsEmpty() bool {
 	return len(m) == 0
 }
 
+// Len returns the number of maps in the slice.
 func (m Maps) Len() int {
 	return len(m)
 }
 
+// Index returns the map at the specified index.
+// Returns an empty map if the index is out of bounds.
 func (m Maps) Index(i int) Map {
 	if i < 0 || i >= len(m) {
 		return Map{}
@@ -110,6 +135,8 @@ func (m Maps) Index(i int) Map {
 	return m[i]
 }
 
+// Last returns the last map in the slice.
+// Returns an empty map if the slice is empty.
 func (m Maps) Last() Map {
 	l := m.Len()
 	if l == 0 {
@@ -118,10 +145,14 @@ func (m Maps) Last() Map {
 	return m[l-1]
 }
 
+// First returns the first map in the slice.
+// Returns an empty map if the slice is empty.
 func (m Maps) First() Map {
 	return m.Index(0)
 }
 
+// ForEach iterates over all maps in the slice and calls the provided function for each one.
+// If the function returns false, iteration stops.
 func (m Maps) ForEach(fn func(i int, value Map) bool) {
 	for i := range m {
 		v := m[i]
@@ -131,12 +162,15 @@ func (m Maps) ForEach(fn func(i int, value Map) bool) {
 	}
 }
 
-// MapKeyExists Whether the dictionary key exists
+// MapKeyExists checks if a key exists in a map with interface{} keys and values.
+// Returns true if the key exists, false otherwise.
 func MapKeyExists(key interface{}, m map[interface{}]interface{}) bool {
 	_, ok := m[key]
 	return ok
 }
 
+// ToMap converts various types to a Map.
+// Handles Map, map[string]interface{}, and struct types through reflection.
 func ToMap(value interface{}) Map {
 	switch v := value.(type) {
 	case Map:
@@ -148,7 +182,8 @@ func ToMap(value interface{}) Map {
 	}
 }
 
-// ToMaps to Slice Map
+// ToMaps converts various types to a Maps slice.
+// Handles Maps, []map[string]interface{}, and slices of structs through reflection.
 func ToMaps(value interface{}) Maps {
 	switch r := value.(type) {
 	case Maps:
@@ -167,6 +202,8 @@ func ToMaps(value interface{}) Maps {
 	}
 }
 
+// toMapString converts various map types to a map[string]interface{}.
+// This is an internal function used by ToMap to handle different map types.
 func toMapString(value interface{}) map[string]interface{} {
 	if value == nil {
 		return map[string]interface{}{}

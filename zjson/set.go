@@ -9,20 +9,25 @@ import (
 )
 
 type (
+	// Options provides configuration for JSON operations.
 	Options struct {
-		Optimistic     bool
+		// Optimistic enables optimistic path processing.
+		Optimistic bool
+		// ReplaceInPlace modifies the JSON in place without reallocation when possible.
 		ReplaceInPlace bool
 	}
-	dtype      struct{}
+	dtype struct{}
+	// pathResult represents the parsed components of a JSON path.
 	pathResult struct {
-		part  string
-		gpart string
-		path  string
-		force bool
-		more  bool
+		part  string // The current path segment
+		gpart string // The escaped path segment
+		path  string // The remaining path
+		force bool   // Force creation of missing elements
+		more  bool   // Indicates if there are more path segments
 	}
 )
 
+// Stringify converts any Go value to its JSON string representation.
 func Stringify(value interface{}) (json string) {
 	if jsonByte, err := jsong.Marshal(value); err == nil {
 		json = zstring.Bytes2String(jsonByte)
@@ -33,6 +38,7 @@ func Stringify(value interface{}) (json string) {
 	return
 }
 
+// parsePath parses a dot notation path into a pathResult structure.
 func parsePath(path string) (pathResult, error) {
 	var r pathResult
 	if len(path) > 0 && path[0] == ':' {
@@ -94,6 +100,7 @@ func parsePath(path string) (pathResult, error) {
 	return r, nil
 }
 
+// mustMarshalString determines if a string needs to be JSON escaped.
 func mustMarshalString(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if s[i] < ' ' || s[i] > 0x7f || s[i] == '"' || s[i] == '\\' {
@@ -103,6 +110,7 @@ func mustMarshalString(s string) bool {
 	return false
 }
 
+// appendStringify appends a JSON string representation to a byte buffer.
 func appendStringify(buf []byte, s string) []byte {
 	if mustMarshalString(s) {
 		b, _ := jsong.Marshal(s)
@@ -114,8 +122,10 @@ func appendStringify(buf []byte, s string) []byte {
 	return buf
 }
 
+// appendBuild recursively builds a JSON structure based on the provided paths.
 func appendBuild(buf []byte, array bool, paths []pathResult, raw string,
-	stringify bool) []byte {
+	stringify bool,
+) []byte {
 	if !array {
 		buf = appendStringify(buf, paths[0].part)
 		buf = append(buf, ':')
@@ -142,6 +152,7 @@ func appendBuild(buf []byte, array bool, paths []pathResult, raw string,
 	return buf
 }
 
+// atoui converts a path segment to an unsigned integer if possible.
 func atoui(r pathResult) (n int, ok bool) {
 	if r.force {
 		return 0, false
@@ -155,6 +166,7 @@ func atoui(r pathResult) (n int, ok bool) {
 	return n, true
 }
 
+// appendRepeat appends a string to a buffer n times.
 func appendRepeat(buf []byte, s string, n int) []byte {
 	for i := 0; i < n; i++ {
 		buf = append(buf, s...)
@@ -162,6 +174,7 @@ func appendRepeat(buf []byte, s string, n int) []byte {
 	return buf
 }
 
+// deleteTailItem removes the last item from a JSON array or object.
 func deleteTailItem(buf []byte) ([]byte, bool) {
 loop:
 	for i := len(buf) - 1; i >= 0; i-- {
@@ -201,8 +214,10 @@ loop:
 	return buf, false
 }
 
+// appendRawPaths appends or deletes a value at the specified path in the JSON.
 func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
-	stringify, del bool) ([]byte, error) {
+	stringify, del bool,
+) ([]byte, error) {
 	var err error
 	var res *Res
 	var found bool
@@ -350,6 +365,7 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	}
 }
 
+// isOptimisticPath determines if a path can be processed optimistically.
 func isOptimisticPath(path string) bool {
 	for i := 0; i < len(path); i++ {
 		if path[i] < '.' || path[i] > 'z' {
@@ -365,22 +381,27 @@ func isOptimisticPath(path string) bool {
 	return true
 }
 
+// Marshal converts a Go value to a JSON byte slice.
 func Marshal(json interface{}) ([]byte, error) {
 	return jsong.Marshal(json)
 }
 
+// Set sets a value at the specified path in a JSON string.
 func Set(json, path string, value interface{}) (string, error) {
 	return SetOptions(json, path, value, nil)
 }
 
+// SetBytes sets a value at the specified path in a JSON byte slice.
 func SetBytes(json []byte, path string, value interface{}) ([]byte, error) {
 	return SetBytesOptions(json, path, value, nil)
 }
 
+// SetRaw sets a raw JSON value at the specified path in a JSON string.
 func SetRaw(json, path, value string) (string, error) {
 	return SetRawOptions(json, path, value, nil)
 }
 
+// SetRawOptions sets a raw JSON value at the specified path with custom options.
 func SetRawOptions(json, path, value string, opts *Options) (string, error) {
 	var optimistic bool
 	if opts != nil {
@@ -393,14 +414,17 @@ func SetRawOptions(json, path, value string, opts *Options) (string, error) {
 	return zstring.Bytes2String(res), err
 }
 
+// SetRawBytes sets a raw JSON value at the specified path in a JSON byte slice.
 func SetRawBytes(json []byte, path string, value []byte) ([]byte, error) {
 	return SetRawBytesOptions(json, path, value, nil)
 }
 
+// Delete removes a value at the specified path from a JSON string.
 func Delete(json, path string) (string, error) {
 	return Set(json, path, dtype{})
 }
 
+// DeleteBytes removes a value at the specified path from a JSON byte slice.
 func DeleteBytes(json []byte, path string) ([]byte, error) {
 	return SetBytes(json, path, dtype{})
 }

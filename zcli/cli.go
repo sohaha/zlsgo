@@ -1,4 +1,5 @@
-// Package zcli quickly build cli applications
+// Package zcli provides tools for quickly building command-line applications
+// with support for subcommands, flags, help documentation, and interactive prompts.
 package zcli
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/sohaha/zlsgo/ztype"
 )
 
+// init initializes the CLI environment by setting up logging and customizing flag behavior
 func init() {
 	Log = zlog.New()
 	Log.ResetFlags(zlog.BitLevel)
@@ -24,7 +26,8 @@ func init() {
 	}
 }
 
-// Add registers a cmd for the provided subCommand name
+// Add registers a command handler for the provided subcommand name.
+// Returns a command container that can be further configured with flags and options.
 func Add(name, description string, command Cmd) *cmdCont {
 	if name == "" {
 		Log.Error(GetLangText("command_empty"))
@@ -41,11 +44,14 @@ func Add(name, description string, command Cmd) *cmdCont {
 	return cmd
 }
 
-// SetUnknownCommand set unknown command handle
+// SetUnknownCommand sets a handler function to be called when an unknown command is encountered.
+// This allows custom handling of command errors or suggestions for similar commands.
 func SetUnknownCommand(fn func(_ string)) {
 	unknownCommandFn = fn
 }
 
+// usage displays the application's usage information including available commands,
+// global flags, and required parameters.
 func usage() {
 	showHeadr()
 	showFlagsAndRequired := func() {
@@ -74,6 +80,8 @@ func usage() {
 	}
 }
 
+// showFlags displays all flags in the provided flag set with their descriptions,
+// types, and default values in a formatted layout.
 func showFlags(fg *flag.FlagSet) {
 	Log.Printf("\noptional flags:\n")
 	max := 40
@@ -133,7 +141,8 @@ func showFlags(fg *flag.FlagSet) {
 	Log.Println(flagsItems.String())
 }
 
-// Start app
+// Start executes the matched command or the provided run function.
+// It handles help flag display, required flag validation, and background execution mode.
 func Start(runFunc ...runFunc) {
 	if *flagDetach {
 		err := zshell.BgRun(strings.Join(runCmd, " "))
@@ -163,7 +172,9 @@ func Start(runFunc ...runFunc) {
 	}
 }
 
-// Run runnable
+// Run parses command line arguments and starts the application.
+// If a run function is provided, it will be executed when no specific subcommand is matched.
+// Returns true if execution was successful.
 func Run(runFunc ...runFunc) (ok bool) {
 	isRunFunc := len(runFunc) > 0
 	parse(!isRunFunc)
@@ -171,6 +182,9 @@ func Run(runFunc ...runFunc) (ok bool) {
 	return
 }
 
+// Input prompts the user for input with the given prompt text.
+// If required is true, it will continue prompting until non-empty input is provided.
+// Returns the user's input as a string.
 func Input(problem string, required bool) (text string) {
 	if problem != "" {
 		fmt.Print(problem)
@@ -183,6 +197,8 @@ func Input(problem string, required bool) (text string) {
 	return
 }
 
+// Inputln is similar to Input but adds a newline after the prompt text.
+// Returns the user's input as a string.
 func Inputln(problem string, required bool) (text string) {
 	if problem != "" {
 		problem = problem + "\n"
@@ -190,6 +206,8 @@ func Inputln(problem string, required bool) (text string) {
 	return Input(problem, required)
 }
 
+// Current returns the currently matched command and a boolean indicating whether a command was matched.
+// This can be used to check which command is being executed or to access command-specific data.
 func Current() (interface{}, bool) {
 	if matchingCmd == nil {
 		return nil, false

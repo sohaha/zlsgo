@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+// assKeyPadding ensures the encryption key is of valid length (16, 24, or 32 bytes).
+// If the key is too short, it is padded with spaces; if too long, it is truncated.
 func assKeyPadding(key string) []byte {
 	k := String2Bytes(key)
 	l := len(k)
@@ -29,14 +31,16 @@ func assKeyPadding(key string) []byte {
 	}
 }
 
-// PKCS7Padding PKCS7 fill mode
+// PKCS7Padding implements PKCS#7 padding for block cipher encryption.
+// It adds padding bytes to ensure the data length is a multiple of the block size.
 func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
 	pad := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, pad...)
 }
 
-// PKCS7UnPadding Reverse operation of padding to delete the padding string
+// PKCS7UnPadding removes PKCS#7 padding from decrypted data.
+// It returns an error if the padding is invalid.
 func PKCS7UnPadding(origData []byte) ([]byte, error) {
 	length := len(origData)
 	if length == 0 {
@@ -47,9 +51,11 @@ func PKCS7UnPadding(origData []byte) ([]byte, error) {
 	}
 }
 
-// AesEncrypt aes encryption
+// AesEncrypt encrypts data using AES in CBC mode with PKCS#7 padding.
+// If an IV is provided, it is used; otherwise, the key is used as the IV.
 func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
-	err error) {
+	err error,
+) {
 	var k []byte
 	var block cipher.Block
 	if len(iv) > 0 {
@@ -69,7 +75,8 @@ func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
 	return
 }
 
-// AesDecrypt aes decryption
+// AesDecrypt decrypts data that was encrypted with AesEncrypt.
+// If an IV is provided, it is used; otherwise, the key is used as the IV.
 func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, err error) {
 	var (
 		block cipher.Block
@@ -104,7 +111,8 @@ func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, 
 	return
 }
 
-// AesEncryptString Aes Encrypt to String
+// AesEncryptString encrypts a string using AES and returns the result as a base64-encoded string.
+// This is a convenience wrapper around AesEncrypt.
 func AesEncryptString(plainText string, key string, iv ...string) (string, error) {
 	str := ""
 	c, err := AesEncrypt(String2Bytes(plainText), key, iv...)
@@ -114,9 +122,11 @@ func AesEncryptString(plainText string, key string, iv ...string) (string, error
 	return str, nil
 }
 
-// AesDecryptString Aes Decrypt to String
+// AesDecryptString decrypts a base64-encoded string that was encrypted with AesEncryptString.
+// This is a convenience wrapper around AesDecrypt.
 func AesDecryptString(cipherText string, key string, iv ...string) (string,
-	error) {
+	error,
+) {
 	base64Byte, _ := Base64Decode(String2Bytes(cipherText))
 	origData, err := AesDecrypt(base64Byte, key, iv...)
 	if err != nil {
@@ -125,6 +135,8 @@ func AesDecryptString(cipherText string, key string, iv ...string) (string,
 	return Bytes2String(origData), nil
 }
 
+// AesGCMEncrypt encrypts data using AES in GCM mode, which provides both confidentiality and authenticity.
+// It generates a random nonce for each encryption operation.
 func AesGCMEncrypt(plaintext []byte, key string) (ciphertext []byte, err error) {
 	var (
 		block  cipher.Block
@@ -150,6 +162,8 @@ func AesGCMEncrypt(plaintext []byte, key string) (ciphertext []byte, err error) 
 	return
 }
 
+// AesGCMDecrypt decrypts data that was encrypted with AesGCMEncrypt.
+// It extracts the nonce from the beginning of the ciphertext.
 func AesGCMDecrypt(ciphertext []byte, key string) (plaintext []byte, err error) {
 	if len(ciphertext) == 0 {
 		return nil, errors.New("ciphertext is empty")
@@ -178,6 +192,8 @@ func AesGCMDecrypt(ciphertext []byte, key string) (plaintext []byte, err error) 
 	return aesGCM.Open(nil, nonce, text, nil)
 }
 
+// AesGCMEncryptString encrypts a string using AES-GCM and returns the result as a base64-encoded string.
+// This is a convenience wrapper around AesGCMEncrypt.
 func AesGCMEncryptString(plainText string, key string) (string, error) {
 	str := ""
 	c, err := AesGCMEncrypt(String2Bytes(plainText), key)
@@ -187,8 +203,11 @@ func AesGCMEncryptString(plainText string, key string) (string, error) {
 	return str, err
 }
 
+// AesGCMDecryptString decrypts a base64-encoded string that was encrypted with AesGCMEncryptString.
+// This is a convenience wrapper around AesGCMDecrypt.
 func AesGCMDecryptString(cipherText string, key string) (string,
-	error) {
+	error,
+) {
 	base64Byte, _ := Base64Decode(String2Bytes(cipherText))
 	origData, err := AesGCMDecrypt(base64Byte, key)
 	if err != nil {

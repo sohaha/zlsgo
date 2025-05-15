@@ -16,6 +16,8 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+// initQuery initializes and caches the URL query parameters.
+// This is called internally when query parameters are first accessed.
 func (c *Context) initQuery() {
 	if c.cacheQuery != nil {
 		return
@@ -23,6 +25,9 @@ func (c *Context) initQuery() {
 	c.cacheQuery = c.Request.URL.Query()
 }
 
+// initPostForm initializes and caches form data from the request.
+// It handles both regular form data and multipart form data.
+// This is called internally when form data is first accessed.
 func (c *Context) initPostForm() {
 	if c.cacheForm != nil {
 		return
@@ -230,6 +235,8 @@ func (c *Context) GetDataRawBytes() ([]byte, error) {
 	return c.rawData, err
 }
 
+// get is an internal helper function that extracts a map[string]string from a map[string][]string
+// for a specific key. It's used by various query and form parameter methods.
 func (c *Context) get(m map[string][]string, key string) (map[string]string, bool) {
 	d := make(map[string]string)
 	e := false
@@ -306,6 +313,8 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) erro
 	return nil
 }
 
+// ParseMultipartForm parses multipart form data from the request.
+// An optional maxMultipartMemory parameter can be provided to limit memory usage.
 func (c *Context) ParseMultipartForm(maxMultipartMemory ...int64) error {
 	if c.Request.MultipartForm != nil {
 		return nil
@@ -337,6 +346,8 @@ func (c *Context) ParseMultipartForm(maxMultipartMemory ...int64) error {
 	return nil
 }
 
+// multipartReader returns a multipart reader for the current request.
+// If allowMixed is true, it will handle multipart/mixed content types.
 func (c *Context) multipartReader(allowMixed bool) (*multipart.Reader, error) {
 	v := c.Request.Header.Get("Content-Type")
 	if v == "" {

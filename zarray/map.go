@@ -3,7 +3,8 @@
 
 package zarray
 
-// Keys creates an array of the map keys
+// Keys extracts all keys from a map and returns them as a slice.
+// The order of the keys in the resulting slice is not guaranteed.
 func Keys[K comparable, V any](in map[K]V) []K {
 	result := make([]K, 0, len(in))
 
@@ -14,7 +15,8 @@ func Keys[K comparable, V any](in map[K]V) []K {
 	return result
 }
 
-// Values creates an array of the map values
+// Values extracts all values from a map and returns them as a slice.
+// The order of the values in the resulting slice is not guaranteed.
 func Values[K comparable, V any](in map[K]V) []V {
 	result := make([]V, 0, len(in))
 

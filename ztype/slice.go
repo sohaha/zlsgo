@@ -7,16 +7,23 @@ import (
 	"github.com/sohaha/zlsgo/zreflect"
 )
 
+// SliceType is a slice of Type objects that provides helper methods for
+// working with collections of values with automatic type conversion.
 type SliceType []Type
 
+// Len returns the number of elements in the slice.
 func (s SliceType) Len() int {
 	return len(s)
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+// It marshals the underlying values rather than the Type wrappers.
 func (s SliceType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.Value())
 }
 
+// Index returns the element at the specified index.
+// Returns an empty Type if the index is out of bounds.
 func (s SliceType) Index(i int) Type {
 	if i < 0 || i >= len(s) {
 		return Type{}
@@ -24,14 +31,20 @@ func (s SliceType) Index(i int) Type {
 	return s[i]
 }
 
+// Last returns the last element in the slice.
+// Returns an empty Type if the slice is empty.
 func (s SliceType) Last() Type {
 	return s.Index(len(s) - 1)
 }
 
+// First returns the first element in the slice.
+// Returns an empty Type if the slice is empty.
 func (s SliceType) First() Type {
 	return s.Index(0)
 }
 
+// Value returns the underlying values as a slice of interface{}.
+// This unwraps all Type objects to their original values.
 func (s SliceType) Value() []interface{} {
 	ss := make([]interface{}, 0, len(s))
 	for i := range s {
@@ -40,6 +53,8 @@ func (s SliceType) Value() []interface{} {
 	return ss
 }
 
+// String converts all elements in the slice to strings and returns them as a []string.
+// Each element is converted using the Type.String() method.
 func (s SliceType) String() []string {
 	ss := make([]string, 0, len(s))
 	for i := range s {
@@ -48,6 +63,8 @@ func (s SliceType) String() []string {
 	return ss
 }
 
+// Int converts all elements in the slice to integers and returns them as a []int.
+// Each element is converted using the Type.Int() method.
 func (s SliceType) Int() []int {
 	ss := make([]int, 0, len(s))
 	for i := range s {
@@ -56,6 +73,8 @@ func (s SliceType) Int() []int {
 	return ss
 }
 
+// Maps converts all elements in the slice to Map objects and returns them as a Maps slice.
+// Each element is converted using the Type.Map() method.
 func (s SliceType) Maps() Maps {
 	ss := make(Maps, 0, len(s))
 	for i := range s {
@@ -72,12 +91,14 @@ func (s SliceType) Maps() Maps {
 // 	return ss
 // }
 
-// Deprecated: please use ToSlice
+// Slice converts a value to a SliceType.
+// Deprecated: please use ToSlice instead.
 func Slice(value interface{}, noConv ...bool) SliceType {
 	return ToSlice(value, noConv...)
 }
 
-// SliceStrToAny  []string to []interface{}
+// SliceStrToAny converts a slice of strings to a slice of interface{} values.
+// This is useful when you need to pass a string slice to a function that expects interface{} values.
 func SliceStrToAny(slice []string) []interface{} {
 	ss := make([]interface{}, 0, len(slice))
 	for _, val := range slice {
@@ -86,6 +107,9 @@ func SliceStrToAny(slice []string) []interface{} {
 	return ss
 }
 
+// ToSlice converts various types to a SliceType.
+// If noConv is true, it will not attempt to convert non-slice values (like strings) to slices.
+// Handles []interface{}, []string, []int, []int64, and can parse JSON strings into slices.
 func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 	s = SliceType{}
 	if value == nil {

@@ -12,6 +12,8 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 )
 
+// routeLog formats route information for logging purposes.
+// It colorizes HTTP methods and pads strings to ensure consistent log formatting.
 func routeLog(log *zlog.Logger, tf, method, path string) string {
 	mLen := zstring.Len(method)
 	var mtd string
@@ -44,6 +46,8 @@ func routeLog(log *zlog.Logger, tf, method, path string) string {
 	return fmt.Sprintf(tf, method, path)
 }
 
+// templatesDebug logs information about loaded HTML templates when in debug mode.
+// It lists all named templates that have been loaded into the engine.
 func templatesDebug(e *Engine, t *template.Template) {
 	l := 0
 	buf := zstring.Buffer()
@@ -58,6 +62,8 @@ func templatesDebug(e *Engine, t *template.Template) {
 	e.Log.Debugf("Loaded HTML Templates (%d): \n%s", l, buf.String())
 }
 
+// routeAddLog logs information about a newly added route when in debug mode.
+// It includes the HTTP method, path, handler function name, and middleware count.
 func routeAddLog(e *Engine, method string, path string, action Handler, middlewareCount int) {
 	if e.IsDebug() {
 		v := zreflect.ValueOf(action)

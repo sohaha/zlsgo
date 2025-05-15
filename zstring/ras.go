@@ -12,7 +12,8 @@ import (
 	"math/big"
 )
 
-// GenRSAKey RSA public key private key generation
+// GenRSAKey generates a pair of RSA private and public keys.
+// The optional bits parameter specifies the key size (defaults to 1024 bits).
 func GenRSAKey(bits ...int) (prvkey, pubkey []byte, err error) {
 	l := 1024
 	if len(bits) > 0 {
@@ -41,7 +42,8 @@ func GenRSAKey(bits ...int) (prvkey, pubkey []byte, err error) {
 	return
 }
 
-// RSAEncrypt RSA Encrypt
+// RSAEncrypt encrypts data using RSA with a public key.
+// For large data, use the bits parameter to enable chunked encryption.
 func RSAEncrypt(plainText []byte, publicKey string, bits ...int) ([]byte, error) {
 	pub, err := pubKey(String2Bytes(publicKey))
 	if err != nil {
@@ -50,7 +52,8 @@ func RSAEncrypt(plainText []byte, publicKey string, bits ...int) ([]byte, error)
 	return RSAKeyEncrypt(plainText, pub, bits...)
 }
 
-// RSAKeyEncrypt RSA Encrypt
+// RSAKeyEncrypt encrypts data using RSA with a public key object.
+// For large data, use the bits parameter to enable chunked encryption.
 func RSAKeyEncrypt(plainText []byte, publicKey *rsa.PublicKey, bits ...int) ([]byte, error) {
 	if len(bits) > 0 && bits[0] > 100 {
 		buf := splitBytes(plainText, bits[0]/8-11)
@@ -71,7 +74,7 @@ func RSAKeyEncrypt(plainText []byte, publicKey *rsa.PublicKey, bits ...int) ([]b
 	return Base64Encode(cipherText), nil
 }
 
-// RSAEncryptString RSA Encrypt to String
+// RSAEncryptString encrypts a string using RSA and returns the result as a base64-encoded string.
 func RSAEncryptString(plainText string, publicKey string) (string, error) {
 	c, err := RSAEncrypt(String2Bytes(plainText), publicKey)
 	if err != nil {
@@ -80,7 +83,8 @@ func RSAEncryptString(plainText string, publicKey string) (string, error) {
 	return Bytes2String(c), nil
 }
 
-// RSAPriKeyEncrypt RSA PriKey Encrypt
+// RSAPriKeyEncrypt encrypts (signs) data using an RSA private key.
+// This is typically used for digital signatures rather than encryption.
 func RSAPriKeyEncrypt(plainText []byte, privateKey string) ([]byte, error) {
 	prv, err := priKey(String2Bytes(privateKey))
 	if err != nil {
@@ -93,7 +97,8 @@ func RSAPriKeyEncrypt(plainText []byte, privateKey string) ([]byte, error) {
 	return Base64Encode(cipherText), nil
 }
 
-// RSAPriKeyEncryptString RSA PriKey Encrypt to String
+// RSAPriKeyEncryptString encrypts (signs) a string using an RSA private key
+// and returns the result as a base64-encoded string.
 func RSAPriKeyEncryptString(plainText string, privateKey string) (string, error) {
 	c, err := RSAPriKeyEncrypt(String2Bytes(plainText), privateKey)
 	if err != nil {
@@ -102,7 +107,8 @@ func RSAPriKeyEncryptString(plainText string, privateKey string) (string, error)
 	return Bytes2String(c), nil
 }
 
-// RSADecrypt RSA Decrypt
+// RSADecrypt decrypts data using RSA with a private key.
+// For large data encrypted in chunks, use the same bits parameter as during encryption.
 func RSADecrypt(cipherText []byte, privateKey string, bits ...int) ([]byte, error) {
 	prv, err := priKey(String2Bytes(privateKey))
 	if err != nil {
@@ -111,7 +117,8 @@ func RSADecrypt(cipherText []byte, privateKey string, bits ...int) ([]byte, erro
 	return RSAKeyDecrypt(cipherText, prv, bits...)
 }
 
-// RSAKeyDecrypt RSA Decrypt
+// RSAKeyDecrypt decrypts data using RSA with a private key object.
+// For large data encrypted in chunks, use the same bits parameter as during encryption.
 func RSAKeyDecrypt(cipherText []byte, privateKey *rsa.PrivateKey, bits ...int) ([]byte, error) {
 	cipherText, _ = Base64Decode(cipherText)
 	if len(bits) > 0 && bits[0] > 100 {
@@ -129,7 +136,8 @@ func RSAKeyDecrypt(cipherText []byte, privateKey *rsa.PrivateKey, bits ...int) (
 	return rsa.DecryptPKCS1v15(rand.Reader, privateKey, cipherText)
 }
 
-// RSADecryptString RSA Decrypt to String
+// RSADecryptString decrypts a base64-encoded string using RSA with a private key
+// and returns the result as a string.
 func RSADecryptString(cipherText string, privateKey string) (string, error) {
 	p, err := RSADecrypt(String2Bytes(cipherText), privateKey)
 	if err != nil {
@@ -138,7 +146,8 @@ func RSADecryptString(cipherText string, privateKey string) (string, error) {
 	return Bytes2String(p), nil
 }
 
-// RSAPubKeyDecrypt RSA PubKey Decrypt
+// RSAPubKeyDecrypt decrypts (verifies) data that was encrypted with a private key
+// using the corresponding public key. This is typically used for signature verification.
 func RSAPubKeyDecrypt(cipherText []byte, publicKey string) ([]byte, error) {
 	pub, err := pubKey(String2Bytes(publicKey))
 	if err != nil {
@@ -157,9 +166,11 @@ func RSAPubKeyDecrypt(cipherText []byte, publicKey string) ([]byte, error) {
 	return unLeftPad(em), nil
 }
 
-// RSAPubKeyDecryptString RSA PubKey Decrypt to String
+// RSAPubKeyDecryptString decrypts (verifies) a base64-encoded string that was encrypted
+// with a private key using the corresponding public key, and returns the result as a string.
 func RSAPubKeyDecryptString(cipherText string, publicKey string) (string,
-	error) {
+	error,
+) {
 	p, err := RSAPubKeyDecrypt(String2Bytes(cipherText), publicKey)
 	if err != nil {
 		return "", err
@@ -167,6 +178,8 @@ func RSAPubKeyDecryptString(cipherText string, publicKey string) (string,
 	return Bytes2String(p), nil
 }
 
+// pubKey parses a PEM encoded RSA public key.
+// Returns an error if the key is invalid or in an unsupported format.
 func pubKey(publicKey []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode(publicKey)
 	if block == nil {
@@ -180,6 +193,8 @@ func pubKey(publicKey []byte) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
+// priKey parses a PEM encoded RSA private key.
+// Supports both PKCS#1 and PKCS#8 formats.
 func priKey(privateKey []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(privateKey)
 	if block == nil {
@@ -203,6 +218,8 @@ func priKey(privateKey []byte) (*rsa.PrivateKey, error) {
 	}
 }
 
+// leftPad pads a byte slice on the left to the specified size.
+// Used internally for RSA encryption/decryption operations.
 func leftPad(input []byte, size int) (out []byte) {
 	n := len(input)
 	if n > size {
@@ -213,6 +230,8 @@ func leftPad(input []byte, size int) (out []byte) {
 	return
 }
 
+// unLeftPad removes left padding from a byte slice.
+// Used internally for RSA encryption/decryption operations.
 func unLeftPad(input []byte) (out []byte) {
 	n := len(input)
 	t := 2
@@ -231,6 +250,8 @@ func unLeftPad(input []byte) (out []byte) {
 	return
 }
 
+// splitBytes splits a byte slice into chunks of the specified size.
+// Used for handling large data in RSA encryption/decryption operations.
 func splitBytes(buf []byte, lim int) [][]byte {
 	var chunk []byte
 	chunks := make([][]byte, 0, len(buf)/lim+1)
