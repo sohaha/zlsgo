@@ -136,7 +136,6 @@ func TestWeb(t *testing.T) {
 	_, ok := Server("Web-test")
 	tt.EqualExit(true, ok)
 
-	// r.SetMode(ProdMode)
 	w := newRequest(r, "GET", "/", "/", func(c *Context) {
 		t.Log("TestWeb")
 		_, _ = c.GetDataRaw()
@@ -146,7 +145,6 @@ func TestWeb(t *testing.T) {
 	})
 	tt.Equal(200, w.Code)
 	tt.Equal(expected, w.Body.String())
-	// r.GetMiddleware()
 
 	w = newRequest(r, "PUT", "/", "/", func(c *Context) {
 		t.Log("run")
@@ -176,6 +174,8 @@ func TestWeb(t *testing.T) {
 	w = request(r, "GET", "/web-get/a", nil)
 	tt.Equal(200, w.Code)
 	tt.Equal("web-get:a", w.Body.String())
+
+	tt.EqualTrue(!newServer().IsRestarting())
 }
 
 func TestMoreMethod(t *testing.T) {

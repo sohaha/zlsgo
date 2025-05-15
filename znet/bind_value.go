@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/sohaha/zlsgo/zjson"
@@ -26,10 +27,19 @@ func (c *Context) Bind(obj interface{}) (err error) {
 // BindJSON binds JSON request body data to the provided object.
 // It reads the raw request body and unmarshals it into the given object.
 func (c *Context) BindJSON(obj interface{}) error {
-	body, err := c.GetDataRaw()
+	body, err := c.GetDataRawBytes()
 	if err != nil {
 		return err
 	}
+
+	if len(body) == 0 {
+		return errors.New("request body is empty")
+	}
+
+	if !zjson.ValidBytes(body) {
+		return errors.New("invalid JSON format")
+	}
+
 	return zjson.Unmarshal(body, obj)
 }
 

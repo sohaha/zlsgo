@@ -32,7 +32,6 @@ func NewType(v interface{}) Type {
 	default:
 		return (*Value)(unsafe.Pointer(&v)).typ
 	}
-
 }
 
 // Native converts the internal Type representation to the standard reflect.Type.

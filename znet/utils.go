@@ -399,9 +399,15 @@ func (e *Engine) acquireContext(w http.ResponseWriter, r *http.Request) *Context
 func (e *Engine) releaseContext(c *Context) {
 	c.prevData.Code.Store(0)
 	c.mu.Lock()
+
+	for k := range c.customizeData {
+		delete(c.customizeData, k)
+	}
+	for k := range c.header {
+		delete(c.header, k)
+	}
+
 	c.middleware = c.middleware[0:0]
-	c.customizeData = map[string]interface{}{}
-	c.header = map[string][]string{}
 	c.render = nil
 	c.renderError = nil
 	c.cacheJSON = nil

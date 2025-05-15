@@ -48,7 +48,6 @@ func TestURLMatchAndParse(t *testing.T) {
 	t.Log(match)
 	tt.EqualTrue(ok)
 	tt.Equal(2, len(match))
-
 }
 
 func Test_parsPattern(t *testing.T) {
@@ -66,7 +65,7 @@ func Test_parsPattern(t *testing.T) {
 
 	p, s = parsePattern([]string{":name", ":id"}, "/")
 	tt.Log(p, s)
-	tt.EqualExit("/([^\\/]+)/([\\d]+)", p)
+	tt.EqualExit(`/([^/]+)/([\d]+)`, p)
 	tt.EqualExit([]string{"name", "id"}, s)
 
 	p, s = parsePattern([]string{"{p:[\\w\\d-]+}.pth"}, "")

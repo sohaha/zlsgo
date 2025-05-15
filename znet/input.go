@@ -74,9 +74,17 @@ func (c *Context) GetAllQuery() url.Values {
 // GetAllQueryMaps Get All Queryst Maps
 func (c *Context) GetAllQueryMaps() map[string]string {
 	c.initQuery()
-	arr := map[string]string{}
+
+	size := len(c.cacheQuery)
+	if size == 0 {
+		return map[string]string{}
+	}
+
+	arr := make(map[string]string, size)
 	for key, v := range c.cacheQuery {
-		arr[key] = v[0]
+		if len(v) > 0 {
+			arr[key] = v[0]
+		}
 	}
 	return arr
 }
@@ -217,21 +225,27 @@ func (c *Context) GetDataRaw() (string, error) {
 	return zstring.Bytes2String(body), err
 }
 
-// GetDataRawBytes Get Raw Data
+// GetDataRawBytes get raw data
 func (c *Context) GetDataRawBytes() ([]byte, error) {
 	if c.rawData != nil {
 		return c.rawData, nil
 	}
-	var err error
+
 	if c.Request.Body == nil {
-		err = errors.New("request body is nil")
-		return nil, err
+		return nil, errors.New("request body is nil")
 	}
-	var body []byte
-	body, err = ioutil.ReadAll(c.Request.Body)
+
+	maxSize := c.Engine.MaxRequestBodySize
+	if maxSize <= 0 {
+		maxSize = 10 << 20
+	}
+
+	body, err := ioutil.ReadAll(io.LimitReader(c.Request.Body, maxSize))
+
 	if err == nil {
 		c.rawData = body
 	}
+
 	return c.rawData, err
 }
 

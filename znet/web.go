@@ -75,6 +75,7 @@ type (
 		addr                 []addrSt
 		shutdowns            []func()
 		MaxMultipartMemory   int64
+		MaxRequestBodySize   int64
 		webMode              int
 		writeTimeout         time.Duration
 		readTimeout          time.Duration

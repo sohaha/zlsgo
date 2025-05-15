@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ type (
 		expr     *Expression // Parsed cron expression
 		NextTime time.Time   // Next time the job will run
 		run      func()      // Function to execute
+		mu       sync.Mutex  // Mutex to protect NextTime field during concurrent access
 	}
 
 	// JobTable manages multiple scheduled tasks
@@ -36,40 +38,56 @@ func New() *JobTable {
 // fn parameter is the function to execute
 // Returns a function to remove the task and a possible error
 func (c *JobTable) Add(cronLine string, fn func()) (remove func(), err error) {
+	if fn == nil {
+		return nil, fmt.Errorf("task function cannot be nil")
+	}
+
 	var expr *Expression
 	expr, err = Parse(cronLine)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("invalid cron expression '%s': %w", cronLine, err)
 	}
-	task := &Job{
+
+	key := zstring.UUID()
+	c.table.Store(key, &Job{
 		expr:     expr,
 		run:      fn,
 		NextTime: expr.Next(time.Now()),
-	}
-	key := zstring.UUID()
-	c.table.Store(key, task)
+	})
 	remove = func() {
 		c.table.Delete(key)
 	}
-	return
+	return remove, nil
 }
 
 // ForceRun immediately checks and executes all due tasks.
 func (c *JobTable) ForceRun() (nextTime time.Duration) {
 	now := time.Now()
 	nextTime = 1 * time.Second
-	// todo there is a sequence problem
-	// todo later optimization directly obtains the next execution time
+
 	c.table.Range(func(key, value interface{}) bool {
 		cronjob, ok := value.(*Job)
-		if ok {
-			if cronjob.NextTime.Before(now) || cronjob.NextTime.Equal(now) {
-				go cronjob.run()
-				cronjob.NextTime = cronjob.expr.Next(now)
-			}
+		if !ok {
+			return true
 		}
+
+		cronjob.mu.Lock()
+		shouldRun := cronjob.NextTime.Before(now) || cronjob.NextTime.Equal(now)
+		cronjob.mu.Unlock()
+
+		if shouldRun {
+			go cronjob.run()
+
+			cronjob.mu.Lock()
+			cronjob.NextTime = cronjob.expr.Next(now)
+			cronjob.mu.Unlock()
+		}
+
+		cronjob.mu.Lock()
 		next := time.Duration(cronjob.NextTime.UnixNano() - now.UnixNano())
-		if nextTime > next {
+		cronjob.mu.Unlock()
+
+		if next > 0 && nextTime > next {
 			nextTime = next
 		}
 		return true
@@ -80,7 +98,6 @@ func (c *JobTable) ForceRun() (nextTime time.Duration) {
 // Run starts the task scheduler, beginning to execute tasks according to their schedule.
 func (c *JobTable) Run(block ...bool) {
 	run := func() {
-		t := time.NewTimer(time.Second)
 		for {
 			c.RLock()
 			stop := c.stop
@@ -88,9 +105,7 @@ func (c *JobTable) Run(block ...bool) {
 			if stop {
 				break
 			}
-			NextTime := c.ForceRun()
-			t.Reset(NextTime)
-			<-t.C
+			<-time.After(c.ForceRun())
 		}
 	}
 	if len(block) > 0 && block[0] {

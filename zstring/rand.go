@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -26,7 +27,19 @@ func RandInt(min int, max int) int {
 	if max < min {
 		max = min
 	}
-	return min + int(RandUint32Max(uint32(max+1-min)))
+
+	if max == min {
+		return min
+	}
+
+	range64 := int64(max) - int64(min) + 1
+
+	if range64 > int64(^uint32(0)) {
+		random := int64(RandUint32())<<31 | int64(RandUint32())
+		return min + int(random%range64)
+	}
+
+	return min + int(RandUint32Max(uint32(range64)))
 }
 
 // Rand generates a random string of the specified length.
@@ -50,14 +63,24 @@ func Rand(n int, tpl ...string) string {
 
 // UniqueID generates a cryptographically secure unique ID with at least the specified length.
 // The ID is generated using crypto/rand for better security and uniqueness.
-// If crypto/rand fails, it falls back to a less secure but still unique method.
+// If crypto/rand fails, it falls back to a more robust alternative method that
+// combines multiple entropy sources to maintain uniqueness.
 func UniqueID(n int) string {
 	if n < 6 {
 		n = 6
 	}
 	k := make([]byte, n)
 	if _, err := io.ReadFull(rand.Reader, k); err != nil {
-		return Rand(n-2) + strconv.Itoa(time.Now().Nanosecond()/10000000)
+		timestamp := time.Now().UnixNano()
+		procPart := strconv.Itoa(os.Getpid() % 10000)
+		random := Rand(n / 2)
+		timePart := strconv.FormatInt(timestamp, 36)
+
+		result := random + timePart + procPart
+		if len(result) > n {
+			return result[:n]
+		}
+		return result + Rand(n-len(result))
 	}
 	return hex.EncodeToString(k)
 }

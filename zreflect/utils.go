@@ -67,7 +67,15 @@ func Nonzero(v reflect.Value) bool {
 		return v.String() != ""
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if Nonzero(reflect.Indirect(v.Field(i))) {
+			field := v.Field(i)
+
+			if field.Kind() == reflect.Ptr {
+				if field.IsNil() {
+					continue
+				}
+				field = field.Elem()
+			}
+			if Nonzero(field) {
 				return true
 			}
 		}

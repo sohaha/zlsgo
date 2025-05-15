@@ -115,47 +115,43 @@ func (c *Context) write() {
 
 	c.Next()
 
-	data := c.PrevContent()
-	// data.Code.CAS(0, http.StatusInternalServerError)
-
-	for key, value := range c.header {
-		for i := range value {
-			header := value[i]
-			if i == 0 {
-				c.Writer.Header().Set(key, header)
-			} else {
-				c.Writer.Header().Add(key, header)
-			}
-		}
-	}
-
 	if c.Request == nil || c.Request.Context().Err() != nil {
 		return
 	}
 
-	defer func() {
-		if c.Engine.IsDebug() {
-			requestLog(c)
+	data := c.PrevContent()
+
+	header := c.Writer.Header()
+	for key, values := range c.header {
+		if len(values) == 0 {
+			continue
 		}
-	}()
+		header.Set(key, values[0])
+		for i := 1; i < len(values); i++ {
+			header.Add(key, values[i])
+		}
+	}
 
 	code := int(data.Code.Load())
 	if code == 0 {
 		code = http.StatusOK
 		data.Code.Store(int32(code))
 	}
+
 	size := len(data.Content)
 	if size > 0 {
-		c.Writer.Header().Set("Content-Length", strconv.Itoa(size))
+		header.Set("Content-Length", strconv.Itoa(size))
 		c.Writer.WriteHeader(code)
 		_, err := c.Writer.Write(data.Content)
-		if err != nil {
+		if err != nil && c.Log != nil {
 			c.Log.Error(err)
 		}
-		return
-	}
-	if code != 200 {
+	} else if code != 200 {
 		c.Writer.WriteHeader(code)
+	}
+
+	if c.Engine.IsDebug() {
+		requestLog(c)
 	}
 }
 
@@ -179,13 +175,24 @@ func (c *Context) Next() bool {
 // next is an internal method that executes the next middleware in the chain.
 // It's called by Next() and handles the middleware execution flow.
 func (c *Context) next() {
+	// 如果已经终止，直接返回
 	if c.stopHandle.Load() {
 		return
 	}
+
 	c.mu.Lock()
+	// 检查是否还有中间件
+	if len(c.middleware) == 0 {
+		c.mu.Unlock()
+		return
+	}
+
+	// 获取当前中间件并前进队列
 	n := c.middleware[0]
 	c.middleware = c.middleware[1:]
 	c.mu.Unlock()
+
+	// 执行中间件（锁外执行）
 	err := n(c)
 	if err != nil {
 		c.renderError(c, err)

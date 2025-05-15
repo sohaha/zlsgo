@@ -42,11 +42,16 @@ var SkipChild = errors.New("skip struct")
 //
 // It returns any error returned by the callback function, or nil if all iterations complete successfully.
 func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, field reflect.StructField) error) (err error) {
-	var forField func(typ reflect.Type, parent []string) error
+	var forField func(typ reflect.Type, parent []string, visited map[reflect.Type]bool) error
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
-	forField = func(typ reflect.Type, parent []string) error {
+	forField = func(typ reflect.Type, parent []string, visited map[reflect.Type]bool) error {
+		if visited[typ] {
+			return nil
+		}
+		visited[typ] = true
+		
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
 			fieldTag, _ := GetStructTag(field)
@@ -57,7 +62,18 @@ func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, f
 			}
 
 			if err == nil && field.Type.Kind() == reflect.Struct {
-				err = forField(field.Type, append(parent, fieldTag))
+
+				newParent := make([]string, len(parent)+1)
+				copy(newParent, parent)
+				newParent[len(parent)] = fieldTag
+				
+
+				newVisited := make(map[reflect.Type]bool)
+				for k, v := range visited {
+					newVisited[k] = v
+				}
+				
+				err = forField(field.Type, newParent, newVisited)
 			}
 
 			if err != nil {
@@ -67,7 +83,7 @@ func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, f
 		return nil
 	}
 
-	return forField(typ, []string{})
+	return forField(typ, []string{}, make(map[reflect.Type]bool))
 }
 
 // ForEachValue iterates through all fields of a struct value recursively and calls the provided function for each field.
@@ -84,12 +100,18 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 
 	val = reflect.Indirect(val)
 	typ := toRType(NewType(val))
-	var forField func(val reflect.Value, typ reflect.Type, parent []string) error
-	forField = func(val reflect.Value, typ reflect.Type, parent []string) error {
+	var forField func(val reflect.Value, typ reflect.Type, parent []string, visited map[reflect.Type]bool) error
+	forField = func(val reflect.Value, typ reflect.Type, parent []string, visited map[reflect.Type]bool) error {
+		if visited[typ] {
+			return nil
+		}
+		visited[typ] = true
+		
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
 			fieldValue := val.Field(i)
 			fieldTag, _ := GetStructTag(field)
+
 			if field.PkgPath != "" {
 				continue
 			}
@@ -100,7 +122,18 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 			}
 
 			if err == nil && field.Type.Kind() == reflect.Struct {
-				err = forField(fieldValue, field.Type, append(parent, fieldTag))
+
+				newParent := make([]string, len(parent)+1)
+				copy(newParent, parent)
+				newParent[len(parent)] = fieldTag
+				
+
+				newVisited := make(map[reflect.Type]bool)
+				for k, v := range visited {
+					newVisited[k] = v
+				}
+				
+				err = forField(fieldValue, field.Type, newParent, newVisited)
 			}
 
 			if err != nil {
@@ -111,5 +144,5 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 		return nil
 	}
 
-	return forField(val, typ, []string{})
+	return forField(val, typ, []string{}, make(map[reflect.Type]bool))
 }

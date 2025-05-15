@@ -56,17 +56,25 @@ func SetUnexportedField(v reflect.Value, field string, value interface{}) error 
 
 	nv := reflect.ValueOf(value)
 	kind := f.Kind()
+	
+
 	if kind != reflect.Interface && kind != nv.Kind() {
-		return errors.New("value type not match")
+		return errors.New("value type not match: expected " + kind.String() + ", got " + nv.Kind().String())
+	}
+	
+
+	if kind == reflect.Interface && !nv.Type().AssignableTo(f.Type()) {
+		return errors.New("value type " + nv.Type().String() + " cannot be assigned to interface " + f.Type().String())
 	}
 
 	if b {
 		if !f.CanSet() {
-			return errors.New("field can not set")
+			return errors.New("field cannot be set: " + field + " is not settable")
 		}
 		f.Set(nv)
 		return nil
 	}
+
 
 	reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).
 		Elem().
