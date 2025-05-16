@@ -2047,7 +2047,7 @@ func assign(jsval *Res, val reflect.Value, fmap *fieldMaps) {
 			fmap.mu.Lock()
 			sf = make(map[string]int)
 			for i := 0; i < t.NumField(); i++ {
-				tag, _ := zreflect.GetStructTag(t.Field(i), "json")
+				tag, _ := zreflect.GetStructTag(t.Field(i), "z", "json")
 				sf[tag] = i
 			}
 			fmap.m[name] = sf
