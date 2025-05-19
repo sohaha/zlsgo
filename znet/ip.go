@@ -79,6 +79,12 @@ func IsLocalIP(ip net.IP) bool {
 func getTrustedIP(r *http.Request) []net.IP {
 	resultIPs := make([]net.IP, 0)
 
+	size := len(RemoteIPHeaders)
+	if size == 0 {
+		return resultIPs
+	}
+
+	var last net.IP
 	for i := range RemoteIPHeaders {
 		key := RemoteIPHeaders[i]
 		val := r.Header.Get(key)
@@ -89,11 +95,16 @@ func getTrustedIP(r *http.Request) []net.IP {
 
 		for j := len(headerIPs) - 1; j >= 0; j-- {
 			ip := headerIPs[j]
+			last = ip
 			if !isProxyTrusted(ip) {
 				resultIPs = append(resultIPs, ip)
 				break
 			}
 		}
+	}
+
+	if len(resultIPs) == 0 && isProxyTrusted(last) {
+		resultIPs = append(resultIPs, last)
 	}
 
 	return resultIPs
