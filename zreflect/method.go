@@ -1,6 +1,7 @@
 package zreflect
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -18,7 +19,7 @@ func GetAllMethod(s interface{}, fn func(numMethod int, m reflect.Method) error)
 // RunAssignMethod run assign methods of struct
 func RunAssignMethod(st interface{}, filter func(methodName string) bool, args ...interface{}) (err error) {
 	valueOf := ValueOf(st)
-	err = GetAllMethod(st, func(numMethod int, m reflect.Method) error {
+	err = GetAllMethod(st, func(numMethod int, m reflect.Method) (err error) {
 		if !filter(m.Name) {
 			return nil
 		}
@@ -28,17 +29,16 @@ func RunAssignMethod(st interface{}, filter func(methodName string) bool, args .
 			values = append(values, ValueOf(v))
 		}
 
-		err := func() error {
+		(func() {
 			defer func() {
 				if e := recover(); e != nil {
-					err, _ = e.(error)
+					err = fmt.Errorf("method invocation panic: %v", e)
 				}
 			}()
 			valueOf.Method(numMethod).Call(values)
-			return nil
-		}
+		})()
 
-		return err()
+		return err
 	})
 
 	return
