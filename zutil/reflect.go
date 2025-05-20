@@ -80,7 +80,8 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 
 	if values, ok := value.(map[string]string); ok {
 		err = ReflectForNumField(v, func(fieldName, fieldTag string, kind reflect.Kind,
-			field reflect.Value) error {
+			field reflect.Value,
+		) error {
 			if v, ok := values[fieldTag]; ok {
 				return SetValue(kind, field, v)
 			}
@@ -94,7 +95,8 @@ func setStruct(v reflect.Value, value interface{}) (err error) {
 }
 
 func ReflectStructField(v reflect.Type, fn func(
-	numField int, fieldTag string, field reflect.StructField) error, tag ...string) error {
+	numField int, fieldTag string, field reflect.StructField) error, tag ...string,
+) error {
 	var err error
 	tagKey := "z"
 	if len(tag) > 0 {
@@ -125,7 +127,8 @@ func ReflectStructField(v reflect.Type, fn func(
 }
 
 func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
-	kind reflect.Kind, field reflect.Value) error, tag ...string) error {
+	kind reflect.Kind, field reflect.Value) error, tag ...string,
+) error {
 	var err error
 	tagKey := zreflect.Tag
 	if len(tag) > 0 {
@@ -161,13 +164,7 @@ func ReflectForNumField(v reflect.Value, fn func(fieldName, fieldTag string,
 
 // GetAllMethod get all methods of struct
 func GetAllMethod(s interface{}, fn func(numMethod int, m reflect.Method) error) error {
-	typ := zreflect.ValueOf(s)
-	if fn == nil {
-		return nil
-	}
-	return zreflect.ForEachMethod(typ, func(index int, method reflect.Method, value reflect.Value) error {
-		return fn(index, method)
-	})
+	return zreflect.GetAllMethod(s, fn)
 }
 
 // RunAllMethod run all methods of struct
@@ -179,21 +176,5 @@ func RunAllMethod(st interface{}, args ...interface{}) (err error) {
 
 // RunAssignMethod run assign methods of struct
 func RunAssignMethod(st interface{}, filter func(methodName string) bool, args ...interface{}) (err error) {
-	valueOf := zreflect.ValueOf(st)
-	err = GetAllMethod(st, func(numMethod int, m reflect.Method) error {
-		if !filter(m.Name) {
-			return nil
-		}
-		var values []reflect.Value
-		for _, v := range args {
-			values = append(values, zreflect.ValueOf(v))
-		}
-
-		return TryCatch(func() error {
-			valueOf.Method(numMethod).Call(values)
-			return nil
-		})
-	})
-
-	return
+	return zreflect.RunAssignMethod(st, filter, args...)
 }
