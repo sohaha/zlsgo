@@ -91,6 +91,10 @@ func parseGenericTime[T time.Time | string](t T, format ...string) (time.Time, e
 // Sequence generates a sequence of time strings between start and end times based on the given format.
 // It takes start and end time strings, a step duration, and optional format strings.
 func Sequence[T time.Time | string](start, end T, step time.Duration, format ...string) ([]string, error) {
+	if step <= 0 {
+		step = time.Hour * 24
+	}
+
 	startTime, err := parseGenericTime(start, format...)
 	if err != nil {
 		return nil, err
@@ -103,10 +107,6 @@ func Sequence[T time.Time | string](start, end T, step time.Duration, format ...
 
 	if startTime.After(endTime) {
 		return nil, fmt.Errorf("start time cannot be after end time")
-	}
-
-	if step <= 0 {
-		step = time.Hour * 24
 	}
 
 	tpl := TimeTpl

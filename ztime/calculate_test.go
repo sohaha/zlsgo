@@ -53,6 +53,14 @@ func TestFindRange(t *testing.T) {
 		tt.Equal(et.IsZero(), true)
 	})
 
+	tt.Run("invalid time", func(tt *zlsgo.TestUtil) {
+		st, et, err := ztime.FindRange([]string{"xxx"}, "Y-m-d H:i:s")
+		tt.Log(st, et, err)
+		tt.NotNil(err, true)
+		tt.Equal(st.IsZero(), true)
+		tt.Equal(et.IsZero(), true)
+	})
+
 	tt.Run("one", func(tt *zlsgo.TestUtil) {
 		st, et, err := ztime.FindRange([]string{t1}, "Y-m-d H:i:s")
 		tt.Log(st, et, err)
@@ -124,7 +132,12 @@ func TestSequence(t *testing.T) {
 	})
 
 	tt.Run("invalid range", func(tt *zlsgo.TestUtil) {
-		_, err := ztime.Sequence("2023-01-05", "2023-01-01", time.Hour*24, "Y-m-d")
+		_, err := ztime.Sequence("2023-01-05", "2023-01-01", 0, "Y-m-d")
+		tt.NotNil(err)
+	})
+
+	tt.Run("invalid time", func(tt *zlsgo.TestUtil) {
+		_, err := ztime.Sequence("xxx", "2023-01-01", 0, "Y-m-d")
 		tt.NotNil(err)
 	})
 
