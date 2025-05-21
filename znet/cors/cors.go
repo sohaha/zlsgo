@@ -26,7 +26,9 @@ type (
 )
 
 const (
-	DefaultHeaders = "Origin,No-Cache,X-Requested-With,If-Modified-Since,Pragma,Last-Modified,Cache-Control,Expires,Content-Type,Access-Control-Allow-Origin,Authorization"
+	// DefaultHeaders is the default headers for the cors middleware.
+	// Suggested setting: Origin,No-Cache,X-Requested-With,If-Modified-Since,Pragma,Last-Modified,Cache-Control,Expires,Content-Type,Access-Control-Allow-Origin,Authorization
+	DefaultHeaders = "*"
 )
 
 func Default() znet.HandlerFunc {
@@ -98,10 +100,19 @@ func applyCors(c *znet.Context, conf *Config) bool {
 		}
 	}
 
+	allowHeaders := conf.headers
+	if allowHeaders == "*" {
+		h := make([]string, 0, len(c.Request.Header))
+		for k := range c.Request.Header {
+			h = append(h, k)
+		}
+		allowHeaders = strings.Join(h, ", ")
+	}
+
 	headers := map[string]string{
 		"Access-Control-Allow-Methods":     conf.methods,
 		"Access-Control-Allow-Credentials": conf.credentials,
-		"Access-Control-Allow-Headers":     conf.headers,
+		"Access-Control-Allow-Headers":     allowHeaders,
 		"Access-Control-Allow-Origin":      origin,
 	}
 	if conf.exposeHeaders != "" {
