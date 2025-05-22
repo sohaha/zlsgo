@@ -260,7 +260,10 @@ func (c *Context) File(path string) {
 		code = http.StatusNotFound
 	}
 	if fileExist {
-		c.SetHeader("Last-Modified", f.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
+		if !isModified(c, f.ModTime()) {
+			c.Abort(http.StatusNotModified)
+			return
+		}
 	}
 	c.renderProcessing(code, &renderFile{Data: path, FileExist: fileExist})
 }

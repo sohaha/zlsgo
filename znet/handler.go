@@ -13,6 +13,7 @@ import (
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zreflect"
+	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -112,4 +113,15 @@ func allowQuerySemicolons(r *http.Request) {
 		r2.URL.RawQuery = strings.Replace(s, ";", "&", -1)
 		*r = *r2
 	}
+}
+
+func isModified(c *Context, modTime time.Time) bool {
+	lastModified := c.GetHeader("If-Modified-Since")
+	if lastModified == "" {
+		return true
+	}
+
+	t := ztime.In(modTime).Format("Mon, 02 Jan 2006 15:04:05 GMT")
+	c.SetHeader("Last-Modified", t)
+	return lastModified != t
 }

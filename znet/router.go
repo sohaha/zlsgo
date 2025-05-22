@@ -104,6 +104,18 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 		}
 
 		defer f.Close()
+
+		fileInfo, err := f.Stat()
+		if err != nil {
+			c.toHTTPError(err)
+			return
+		}
+
+		if !isModified(c, fileInfo.ModTime()) {
+			c.Abort(http.StatusNotModified)
+			return
+		}
+
 		c.prevData.Content, err = io.ReadAll(f)
 		if err != nil {
 			c.toHTTPError(err)
