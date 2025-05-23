@@ -115,6 +115,9 @@ func allowQuerySemicolons(r *http.Request) {
 	}
 }
 
+// isModified checks if a resource has been modified since the last request based on the If-Modified-Since header.
+// It compares the provided modification time with the If-Modified-Since header value.
+// If the resource is not modified, it sets a 304 Not Modified status code.
 func isModified(c *Context, modTime time.Time) bool {
 	lastModified := c.GetHeader("If-Modified-Since")
 	if lastModified == "" {
@@ -123,5 +126,10 @@ func isModified(c *Context, modTime time.Time) bool {
 
 	t := ztime.In(modTime).Format("Mon, 02 Jan 2006 15:04:05 GMT")
 	c.SetHeader("Last-Modified", t)
-	return lastModified != t
+
+	isModified := lastModified != t
+	if !isModified {
+		c.Abort(http.StatusNotModified)
+	}
+	return isModified
 }

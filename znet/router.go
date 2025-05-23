@@ -112,7 +112,6 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 		}
 
 		if !isModified(c, fileInfo.ModTime()) {
-			c.Abort(http.StatusNotModified)
 			return
 		}
 

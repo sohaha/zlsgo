@@ -278,6 +278,11 @@ func (utils) IsAbort(c *Context) bool {
 	return c.stopHandle.Load()
 }
 
+// IsModified checks if a resource has been modified since the last request based on the If-Modified-Since header.
+func (utils) IsModified(c *Context, modTime time.Time) bool {
+	return isModified(c, modTime)
+}
+
 // AppendHandler appends handlers to the context's middleware stack.
 // Use with caution as this modifies the middleware chain during request processing.
 func (utils) AppendHandler(c *Context, handlers ...Handler) {

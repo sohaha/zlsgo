@@ -261,7 +261,6 @@ func (c *Context) File(path string) {
 	}
 	if fileExist {
 		if !isModified(c, f.ModTime()) {
-			c.Abort(http.StatusNotModified)
 			return
 		}
 	}

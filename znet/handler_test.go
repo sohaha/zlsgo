@@ -7,6 +7,7 @@ import (
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func Test_isModified(t *testing.T) {
@@ -18,6 +19,11 @@ func Test_isModified(t *testing.T) {
 			Header: http.Header{
 				"If-Modified-Since": []string{ztime.In(now).Format("Mon, 02 Jan 2006 15:04:05 GMT")},
 			},
+		},
+		stopHandle: zutil.NewBool(false),
+		prevData: &PrevData{
+			Code: zutil.NewInt32(http.StatusOK),
+			Type: ContentTypePlain,
 		},
 		header: map[string][]string{},
 	}
