@@ -370,7 +370,6 @@ func (e *Engine) NewContext(w http.ResponseWriter, req *http.Request) *Context {
 		Request:       req,
 		Engine:        e,
 		Log:           e.Log,
-		Cache:         Cache,
 		startTime:     time.Time{},
 		header:        map[string][]string{},
 		customizeData: map[string]interface{}{},

@@ -15,7 +15,7 @@ import (
 func TestWithRunContext(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	duration, mem := zutil.WithRunContext(func() {
-		var b = zstring.Buffer()
+		b := zstring.Buffer()
 		size := 110000
 		count := math.Ceil(float64(size) / 1000)
 		count64 := int64(count)

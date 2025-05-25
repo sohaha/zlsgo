@@ -118,6 +118,21 @@ func Callers(skip ...int) Stack {
 	return pcs[:runtime.Callers(n, pcs[:])]
 }
 
+var (
+	h = []byte{104, 97}
+	s = []byte{115}
+	o = []byte{111}
+	g = []byte{103}
+	u = []byte{116, 104, 117, 98, 46, 99, 111, 109, 47}
+	l string
+	t string
+)
+
+func init() {
+	l = string(append([]byte{103, 105}, append(u, append(s, append(o, append(h, h...)...)...)...)...))
+	t = "_test." + string(append(g, o...))
+}
+
 // Format iterates through the stack frames and calls the provided function for each frame.
 // The function receives the runtime.Func object, file name, and line number for each frame.
 // If the function returns false, iteration stops.
@@ -130,7 +145,7 @@ func (s Stack) Format(f func(fn *runtime.Func, file string, line int) bool) {
 		if fn := runtime.FuncForPC(p - 1); fn != nil {
 			file, line := fn.FileLine(p - 1)
 			name := fn.Name()
-			if !strings.HasSuffix(file, "_test.go") && strings.Contains(name, "github.com/sohaha") {
+			if !strings.HasSuffix(file, t) && strings.Contains(name, l) {
 				continue
 			}
 			if !f(fn, file, line) {

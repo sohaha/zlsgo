@@ -61,7 +61,6 @@ type (
 		injector             zdi.Injector
 		preHandler           Handler
 		views                Template
-		Cache                *zcache.Table
 		template             *tpl
 		Log                  *zlog.Logger
 		templateFuncMap      template.FuncMap
@@ -159,8 +158,7 @@ const (
 
 var (
 	// Log Log
-	Log   = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
-	Cache = zcache.New("__ZNET__")
+	Log = zlog.New(zlog.ColorTextWrap(zlog.ColorGreen, "[Z] "))
 	// shutdownDone Shutdown Done executed after shutting down the server
 	shutdownDone func()
 	// CloseHotRestart Close Hot Restart
@@ -204,7 +202,6 @@ func New(serverName ...string) *Engine {
 	}
 	r := &Engine{
 		Log:                 log,
-		Cache:               Cache,
 		MaxMultipartMemory:  defaultMultipartMemory,
 		BindTag:             defaultBindTag,
 		BindStructDelimiter: BindStructDelimiter,

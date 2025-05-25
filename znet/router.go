@@ -322,7 +322,6 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		MaxMultipartMemory:  e.MaxMultipartMemory,
 		customMethodType:    e.customMethodType,
 		Log:                 e.Log,
-		Cache:               e.Cache,
 		BindStructCase:      e.BindStructCase,
 		BindStructDelimiter: e.BindStructDelimiter,
 		BindStructSuffix:    e.BindStructSuffix,
