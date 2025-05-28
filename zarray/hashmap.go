@@ -372,6 +372,22 @@ func (m *Maper[K, V]) Keys() (keys []K) {
 	return
 }
 
+// Values returns a slice containing all values currently in the map.
+// The order of values in the returned slice is not guaranteed.
+func (m *Maper[K, V]) Values() (values []V) {
+	values = make([]V, m.Len())
+	var (
+		idx  = 0
+		item = m.listHead.next()
+	)
+	for item != nil {
+		values[idx] = *item.value.Load()
+		idx++
+		item = item.next()
+	}
+	return
+}
+
 // MarshalJSON implements the json.Marshaler interface to convert the map into a JSON-encoded byte slice.
 // This allows the map to be serialized to JSON format.
 func (m *Maper[K, V]) MarshalJSON() ([]byte, error) {
