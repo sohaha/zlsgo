@@ -26,3 +26,22 @@ func Values[K comparable, V any](in map[K]V) []V {
 
 	return result
 }
+
+// GroupMap groups a slice of Maps into a map based on a key function.
+func GroupMap[K comparable, V any](arr []V, toKey func(V) (K, V)) map[K]V {
+	data := make(map[K]V, len(arr))
+	for i := range arr {
+		key, value := toKey(arr[i])
+		data[key] = value
+	}
+	return data
+}
+
+// FlatMap flattens a map of Maps into a single slice of Maps.
+func FlatMap[K comparable, V any](m map[K]V, fn func(key K, value V) V) []V {
+	data := make([]V, 0, len(m))
+	for k := range m {
+		data = append(data, fn(k, m[k]))
+	}
+	return data
+}

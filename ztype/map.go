@@ -14,7 +14,7 @@ import (
 
 var (
 	// tagName is the primary struct tag name used for field mapping
-	tagName       = "z"
+	tagName = "z"
 	// tagNameLesser is the fallback struct tag name used when the primary tag is not present
 	tagNameLesser = "json"
 )
@@ -38,7 +38,12 @@ func (m Map) DeepCopy() Map {
 		case map[string]interface{}:
 			newMap[k] = Map(v).DeepCopy()
 		default:
-			newMap[k] = v
+			typ := zreflect.TypeOf(v)
+			if typ.Kind() == reflect.Map {
+				newMap[k] = ToMap(v).DeepCopy()
+			} else {
+				newMap[k] = v
+			}
 		}
 	}
 
