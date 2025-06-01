@@ -129,7 +129,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				ok bool
 			)
 
-			p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn), nil, nil)
+			p, l, ok = g.addHandle(method, path, Utils.ParseHandlerFunc(fn, e.customRenderings...), nil, nil)
 
 			if ok && g.IsDebug() {
 				f := fmt.Sprintf("%%s %%-40s -> %s (%d handlers)", handleName, l)

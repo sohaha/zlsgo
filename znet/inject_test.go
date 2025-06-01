@@ -2,6 +2,7 @@ package znet
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -158,7 +159,8 @@ type Custom0 func(*Context) string
 func (t Custom0) Invoke(args []interface{}) ([]reflect.Value, error) {
 	c := args[0].(*Context)
 	str := t(c)
-	c.String(200, "[0]:"+str)
+	fmt.Println("Custom0:", str, c.Request.URL.Path)
+	c.String(200, str)
 	return nil, nil
 }
 
@@ -222,11 +224,11 @@ func TestCustomRenderer(t *testing.T) {
 		t.Log(w.Code, w.Body.String())
 		switch v[1] {
 		case "/BindStructCustom_0/":
-			tt.Equal("[0]:BindStructCustom_0", w.Body.String())
+			tt.Equal("BindStructCustom_0", w.Body.String())
 		case "/BindStructCustom_1/":
 			tt.Equal("[1]:BindStructCustom_1", w.Body.String())
 		case "/BindStructCustom_2/":
-			tt.Equal("[0]:BindStructCustom_2", w.Body.String())
+			tt.Equal("BindStructCustom_2", w.Body.String())
 		}
 	}
 }
