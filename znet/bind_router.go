@@ -13,19 +13,30 @@ import (
 
 var preInvokers = make([]reflect.Type, 0)
 
-// RegisterPreInvoker Register Pre Invoker
-func RegisterPreInvoker(invoker ...zdi.PreInvoker) {
-loop:
+func registerPreInvoker(preInvokers []reflect.Type, invoker ...zdi.PreInvoker) ([]reflect.Type, error) {
 	for i := range invoker {
 		typ := zreflect.TypeOf(invoker[i])
 		for i := range preInvokers {
 			if preInvokers[i] == typ {
-				continue loop
+				return preInvokers, fmt.Errorf("pre invoker %s already registered", typ)
 			}
 		}
 
 		preInvokers = append(preInvokers, typ)
 	}
+	return preInvokers, nil
+}
+
+// RegisterRender Register Render
+func RegisterRender(invoker ...zdi.PreInvoker) (err error) {
+	preInvokers, err = registerPreInvoker(preInvokers, invoker...)
+	return err
+}
+
+// RegisterRender Register Render
+func (e *Engine) RegisterRender(invoker ...zdi.PreInvoker) (err error) {
+	e.customRenderings, err = registerPreInvoker(e.customRenderings, invoker...)
+	return err
 }
 
 // BindStruct Bind Struct

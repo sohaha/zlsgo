@@ -64,10 +64,43 @@ func invokeHandler(c *Context, v []reflect.Value) (err error) {
 // ParseHandlerFunc converts various handler function signatures to the internal handlerFn type.
 // It supports multiple function signatures including standard handlers, dependency-injected handlers,
 // and functions returning various combinations of values and errors.
-func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
+func (utils) ParseHandlerFunc(h Handler, invoker ...reflect.Type) (fn handlerFn) {
 	if h == nil {
 		return func(c *Context) error {
 			return errors.New("handler is nil")
+		}
+	}
+
+	val := zreflect.ValueOf(h)
+
+	var preHandlerFn interface{}
+	for i := range preInvokers {
+		if val.Type().ConvertibleTo(preInvokers[i]) {
+			preHandlerFn = val.Convert(preInvokers[i]).Interface()
+			break
+		}
+	}
+
+	for i := range invoker {
+		if val.Type().ConvertibleTo(zreflect.TypeOf(invoker[i])) {
+			preHandlerFn = val.Convert(zreflect.TypeOf(invoker[i])).Interface()
+			break
+		}
+	}
+
+	if preHandlerFn != nil {
+		return func(c *Context) error {
+			v, err := c.injector.Invoke(preHandlerFn)
+
+			if c.stopHandle.Load() {
+				return nil
+			}
+
+			if err != nil {
+				return err
+			}
+
+			return invokeHandler(c, v)
 		}
 	}
 
@@ -153,34 +186,24 @@ func (utils) ParseHandlerFunc(h Handler) (fn handlerFn) {
 			return err
 		}
 	default:
-		val := zreflect.ValueOf(v)
 
-		var fn interface{}
-		for i := range preInvokers {
-			if val.Type().ConvertibleTo(preInvokers[i]) {
-				fn = val.Convert(preInvokers[i]).Interface()
-				break
-			}
-		}
-
-		if fn == nil {
-			if val.Kind() != reflect.Func {
-				b := ztype.ToBytes(v)
-				isJSON := zjson.ValidBytes(b)
-				return func(c *Context) error {
-					c.Byte(http.StatusOK, b)
-					if isJSON {
-						c.SetContentType(ContentTypeJSON)
-					}
-					return nil
+		if val.Kind() != reflect.Func {
+			b := ztype.ToBytes(v)
+			isJSON := zjson.ValidBytes(b)
+			return func(c *Context) error {
+				c.Byte(http.StatusOK, b)
+				if isJSON {
+					c.SetContentType(ContentTypeJSON)
 				}
-				// panic("znet Handler is not a function: " + val.Kind().String())
+				return nil
 			}
-			fn = v
+			// panic("znet Handler is not a function: " + val.Kind().String())
 		}
+
+		preHandlerFn = v
 
 		return func(c *Context) error {
-			v, err := c.injector.Invoke(fn)
+			v, err := c.injector.Invoke(preHandlerFn)
 
 			if c.stopHandle.Load() {
 				return nil

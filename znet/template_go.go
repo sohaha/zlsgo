@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/sohaha/zlsgo/zfile"
@@ -112,8 +111,6 @@ func (e *htmlEngine) Load() error {
 			return err
 		}
 		name := filepath.ToSlash(rel)
-		name = strings.TrimSuffix(name, e.options.Extension)
-
 		buf, err := zfile.ReadFile(path)
 		if err != nil {
 			return err

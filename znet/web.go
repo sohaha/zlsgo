@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -80,6 +81,7 @@ type (
 		readTimeout          time.Duration
 		ShowFavicon          bool
 		AllowQuerySemicolons bool
+		customRenderings     []reflect.Type
 	}
 	// TlsCfg holds TLS configuration for secure HTTP connections.
 	TlsCfg struct {
@@ -214,6 +216,7 @@ func New(serverName ...string) *Engine {
 		addr:                []addrSt{defaultAddr},
 		templateFuncMap:     template.FuncMap{},
 		injector:            zdi.New(),
+		customRenderings:    make([]reflect.Type, 0),
 		shutdowns:           make([]func(), 0),
 	}
 	r.pool.New = func() interface{} {

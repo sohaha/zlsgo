@@ -21,7 +21,7 @@ type testController struct{}
 
 func (t *testController) Init(e *Engine) {
 	e.Log.Debug("initialization")
-	RegisterPreInvoker((invokerCodeText)(nil), (*CustomInvoker)(nil))
+	_ = RegisterRender((invokerCodeText)(nil), (*CustomInvoker)(nil))
 }
 
 func (t *testController) GETUser(_ *Context) {

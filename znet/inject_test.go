@@ -12,6 +12,7 @@ import (
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
+	"github.com/sohaha/zlsgo/ztype"
 )
 
 var _ zdi.PreInvoker = (*CustomInvoker)(nil)
@@ -63,7 +64,6 @@ func TestInject(t *testing.T) {
 	w = newRequest(r, "GET", "/InjectCustom", "/InjectCustom", CustomInvoker(func(ctx *Context) (b []byte) {
 		return []byte("InjectCustom")
 	}), func() {
-
 	})
 	tt.Equal(404, w.Code)
 	tt.Equal("InjectCustom", w.Body.String())
@@ -153,6 +153,24 @@ func (c *customRenderer) Content(ctx *Context) (content []byte) {
 	return []byte(c.Text)
 }
 
+type Custom0 func(*Context) string
+
+func (t Custom0) Invoke(args []interface{}) ([]reflect.Value, error) {
+	c := args[0].(*Context)
+	str := t(c)
+	c.String(200, "[0]:"+str)
+	return nil, nil
+}
+
+type custom1 func(*Context) string
+
+func (t custom1) Invoke(args []interface{}) ([]reflect.Value, error) {
+	c := args[0].(*Context)
+	str := t(c)
+	c.String(200, "[1]:"+str)
+	return nil, nil
+}
+
 func TestCustomRenderer(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
@@ -168,6 +186,49 @@ func TestCustomRenderer(t *testing.T) {
 	})
 	tt.Equal(500, w.Code)
 	tt.Equal("test custom renderer error", w.Body.String())
+
+	RegisterRender(Custom0(nil))
+	r.GET("/BindStructCustom_0/", func(c *Context) string {
+		return "BindStructCustom_0"
+	})
+
+	r.Group("BindStructCustom_1", func(g *Engine) {
+		g.RegisterRender((custom1)(nil))
+		g.GET("/", func(c *Context) string {
+			return "BindStructCustom_1"
+		})
+	})
+
+	r.Group("BindStructCustom_2", func(g *Engine) {
+		g.GET("/", func(c *Context) string {
+			return "BindStructCustom_2"
+		})
+	})
+	methods := [][]string{
+		{"GET", "/BindStructCustom_0/"},
+		{"GET", "/BindStructCustom_1/"},
+		{"GET", "/BindStructCustom_2/"},
+	}
+	for _, v := range methods {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(v[0], v[1], nil)
+		r.ServeHTTP(w, req)
+		code := 200
+		if len(v) > 2 {
+			code = ztype.ToInt(v[2])
+		}
+		tt.Equal(code, w.Code)
+		t.Log("Test:", v[0], v[1])
+		t.Log(w.Code, w.Body.String())
+		switch v[1] {
+		case "/BindStructCustom_0/":
+			tt.Equal("[0]:BindStructCustom_0", w.Body.String())
+		case "/BindStructCustom_1/":
+			tt.Equal("[1]:BindStructCustom_1", w.Body.String())
+		case "/BindStructCustom_2/":
+			tt.Equal("[0]:BindStructCustom_2", w.Body.String())
+		}
+	}
 }
 
 func BenchmarkInjectNo(b *testing.B) {

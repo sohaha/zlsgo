@@ -328,6 +328,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		templateFuncMap:     e.templateFuncMap,
 		template:            e.template,
 		injector:            e.injector,
+		customRenderings:    e.customRenderings,
 	}
 	engine.pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
@@ -405,7 +406,7 @@ func (e *Engine) PreHandler(preHandler Handler) {
 // NotFoundHandler sets a custom handler for 404 Not Found responses.
 // This handler is called when no route matches the request URL.
 func (e *Engine) NotFoundHandler(handler Handler) {
-	e.router.notFound = Utils.ParseHandlerFunc(handler)
+	e.router.notFound = Utils.ParseHandlerFunc(handler, e.customRenderings...)
 }
 
 // Deprecated: please use znet.Recovery(func(c *Context, err error) {})
@@ -424,7 +425,7 @@ func (e *Engine) GetTrees() map[string]*Tree {
 // This is the core routing function that all other HTTP method functions use internally.
 func (e *Engine) Handle(method string, path string, action Handler, moreHandler ...Handler) *Engine {
 	handler, firsthandle := handlerFuncs(moreHandler)
-	p, l, ok := e.addHandle(method, path, Utils.ParseHandlerFunc(action), firsthandle, handler)
+	p, l, ok := e.addHandle(method, path, Utils.ParseHandlerFunc(action, e.customRenderings...), firsthandle, handler)
 	if !ok {
 		return e
 	}
@@ -507,7 +508,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 		} else {
-			err := Utils.ParseHandlerFunc(e.preHandler)(c)
+			err := Utils.ParseHandlerFunc(e.preHandler, e.customRenderings...)(c)
 			if err != nil {
 				c.renderError(c, err)
 				c.Abort()

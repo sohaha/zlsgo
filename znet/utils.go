@@ -292,7 +292,7 @@ func (utils) AppendHandler(c *Context, handlers ...Handler) {
 	}
 
 	for i := range handlers {
-		c.middleware = append(c.middleware, Utils.ParseHandlerFunc(handlers[i]))
+		c.middleware = append(c.middleware, Utils.ParseHandlerFunc(handlers[i], c.Engine.customRenderings...))
 	}
 }
 
