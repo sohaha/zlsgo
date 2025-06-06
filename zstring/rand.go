@@ -183,17 +183,6 @@ func (w *Weighteder) weightedSearch() int {
 	return i
 }
 
-// idWorkers is a global ID generator instance used by the UUID function.
-// It's initialized with worker ID 0.
-var idWorkers, _ = NewIDWorker(0)
-
-// UUID generates a unique 64-bit ID using the Snowflake algorithm.
-// This provides time-sorted unique IDs suitable for distributed systems.
-func UUID() int64 {
-	id, _ := idWorkers.ID()
-	return id
-}
-
 // getMask calculates a bitmask for efficient random character selection.
 // It finds the smallest mask that can cover the entire alphabet size.
 func getMask(alphabetSize int) byte {
@@ -284,4 +273,31 @@ func NewNanoID(size int, alphabet ...string) (string, error) {
 			}
 		}
 	}
+}
+
+// UUID generates UUID v4
+func UUID() string {
+	var buf [16]byte
+
+	n, err := rand.Read(buf[:])
+	if err != nil || n != 16 {
+		return ""
+	}
+
+	buf[6] = (buf[6] & 0x0f) | 0x40 // UUID version 4
+	buf[8] = (buf[8] & 0x3f) | 0x80 // RFC 4122 variant
+
+	var dst [36]byte
+	const hextable = "0123456789abcdef"
+	for i, j := 0, 0; i < len(buf); {
+		if j == 8 || j == 13 || j == 18 || j == 23 {
+			dst[j] = '-'
+			j++
+		}
+		dst[j] = hextable[buf[i]>>4]
+		dst[j+1] = hextable[buf[i]&0x0f]
+		j += 2
+		i++
+	}
+	return Bytes2String(dst[:])
 }
