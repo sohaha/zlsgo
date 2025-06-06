@@ -19,6 +19,7 @@ func TestNewTest(t *testing.T) {
 	tt.Log("ok")
 	tt.T().Log("ok")
 	tt.Run("Logf", func(tt *zlsgo.TestUtil) {
+		tt.Parallel()
 		tt.Logf("name: %s\n", tt.PrintMyName())
 	})
 }

@@ -165,3 +165,10 @@ func (u *TestUtil) IsNil(actual interface{}, exit ...bool) bool {
 func (u *TestUtil) NotNil(actual interface{}, exit ...bool) bool {
 	return u.Equal(true, actual != nil, exit...)
 }
+
+// Parallel marks the test as a parallel test
+// It should be called before the test starts
+func (u *TestUtil) Parallel() {
+	u.t.Helper()
+	u.t.(*testing.T).Parallel()
+}
