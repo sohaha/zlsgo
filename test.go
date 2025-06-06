@@ -81,10 +81,29 @@ func (u *TestUtil) Equal(expected, actual interface{}, exit ...bool) bool {
 	return true
 }
 
+func (u *TestUtil) NoEqual(expected, actual interface{}, exit ...bool) bool {
+	if reflect.DeepEqual(expected, actual) {
+		u.t.Helper()
+		fmt.Printf("        %s 期待不等于:%v (type %v) - 结果:%v (type %v)\n", u.PrintMyName(), expected, reflect.TypeOf(expected), actual, reflect.TypeOf(actual))
+		if len(exit) > 0 && exit[0] {
+			u.t.FailNow()
+		} else {
+			u.t.Fail()
+		}
+		return false
+	}
+	return true
+}
+
 // EqualTrue asserts that the actual value is true
 // If exit is true and actual is not true, test will immediately fail
 func (u *TestUtil) EqualTrue(actual interface{}, exit ...bool) {
 	u.Equal(true, actual, exit...)
+}
+
+// EqualFalse asserts that the actual value is false
+func (u *TestUtil) EqualFalse(actual interface{}, exit ...bool) {
+	u.Equal(false, actual, exit...)
 }
 
 // EqualNil asserts that the actual value is nil
