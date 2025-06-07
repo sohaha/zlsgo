@@ -120,7 +120,7 @@ func allowQuerySemicolons(r *http.Request) {
 // If the resource is not modified, it sets a 304 Not Modified status code.
 func isModified(c *Context, modTime time.Time) bool {
 	t := ztime.In(modTime).Format("Mon, 02 Jan 2006 15:04:05 GMT")
-	c.SetHeader("Last-Modified", t)
+	c.SetHeader("Last-Modified", t, true)
 
 	lastModified := c.GetHeader("If-Modified-Since")
 	if lastModified == "" {

@@ -366,7 +366,7 @@ func (c *Context) SetStatus(code int32) *Context {
 // SetContentType sets the Content-Type header for the response.
 // It returns the context for method chaining.
 func (c *Context) SetContentType(contentType string) *Context {
-	c.SetHeader("Content-Type", contentType)
+	c.SetHeader("Content-Type", contentType, true)
 	return c
 }
 

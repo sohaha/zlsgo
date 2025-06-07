@@ -95,13 +95,17 @@ func (c *Context) GetHeader(key string) string {
 
 // SetHeader sets a response header with the given key and value.
 // If value is empty, the header will be removed.
-func (c *Context) SetHeader(key, value string) {
+func (c *Context) SetHeader(key, value string, only ...bool) {
 	key = textproto.CanonicalMIMEHeaderKey(key)
 	c.mu.Lock()
 	if value == "" {
 		delete(c.header, key)
 	} else {
-		c.header[key] = append(c.header[key], value)
+		if len(only) > 0 && only[0] {
+			c.header[key] = []string{value}
+		} else {
+			c.header[key] = append(c.header[key], value)
+		}
 	}
 	c.mu.Unlock()
 }

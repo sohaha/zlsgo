@@ -51,7 +51,7 @@ func BasicRealm(accounts Accounts, realm string) znet.Handler {
 	return func(c *znet.Context) {
 		user, found := pairs.searchCredential(c.GetHeader("Authorization"))
 		if !found {
-			c.SetHeader("WWW-Authenticate", realm)
+			c.SetHeader("WWW-Authenticate", realm, true)
 			c.Abort(http.StatusUnauthorized)
 			return
 		}

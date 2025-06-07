@@ -120,8 +120,7 @@ func applyCors(c *znet.Context, conf *Config) bool {
 	}
 
 	for k, v := range headers {
-		c.SetHeader(k, "")
-		c.SetHeader(k, v)
+		c.SetHeader(k, v, true)
 	}
 
 	if conf.CustomHandler != nil {

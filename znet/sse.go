@@ -202,9 +202,9 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		flusher.Flush()
 	}
 
-	s.net.SetHeader("Content-Type", "text/event-stream")
-	s.net.SetHeader("Cache-Control", "no-cache")
-	s.net.SetHeader("Connection", "keep-alive")
+	s.net.SetHeader("Content-Type", "text/event-stream", true)
+	s.net.SetHeader("Cache-Control", "no-cache", true)
+	s.net.SetHeader("Connection", "keep-alive", true)
 	c.prevData.Code.Store(http.StatusNoContent)
 	s.net.Engine.shutdowns = append(s.net.Engine.shutdowns, func() {
 		s.Stop()
