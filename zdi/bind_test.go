@@ -25,17 +25,15 @@ func TestBind(t *testing.T) {
 	tt.Equal(test1, test2)
 	zlog.Dump(override, test2)
 
-	// No
 	var test3 testSt
 	override = di.Resolve(test3)
 	tt.EqualTrue(override != nil)
 	zlog.Dump(override, test3)
 
-	test5 := &testSt{Msg: ztime.Now(), Num: 666}
+	test5 := &testSt{Msg: ztime.Now(), Num: 777}
 	o = di.Map(test5)
 	tt.EqualNil(o)
 
-	// No
 	var test4 *testSt
 	err := di.Resolve(test4)
 	tt.EqualTrue(err != nil)
@@ -59,10 +57,33 @@ func TestApply(t *testing.T) {
 	var v testSt
 	err := di.Apply(&v)
 	tt.EqualNil(err)
-	t.Log(val, v)
+	tt.Logf("%+v %+v\n", val, v)
 
 	var s string
 	err = di.Apply(&s)
 	tt.EqualNil(err)
-	t.Log(s)
+	tt.Logf("%+v\n", s)
+}
+
+func TestResolve(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	di := zdi.New()
+
+	val := &testSt{Msg: "TestResolve", Num: 2}
+	o := di.Map(val)
+	tt.EqualNil(o)
+
+	var v *testSt
+	err := di.Resolve(&v)
+	tt.Logf("%+v %+v\n", val, v)
+	tt.EqualNil(err)
+	tt.Equal(val.Msg, v.Msg)
+	tt.Equal(val.Num, v.Num)
+
+	v = &testSt{}
+	err = di.Resolve(&v)
+	tt.Logf("%+v %+v\n", val, v)
+	tt.EqualNil(err)
+	tt.Equal(val.Msg, v.Msg)
+	tt.Equal(val.Num, v.Num)
 }
