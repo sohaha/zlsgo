@@ -40,12 +40,14 @@ func (v *AtomicValue[T]) Store(x T) {
 }
 
 // Swap stores new into Value and returns the previous value.
+// It returns the zero value for T if the value was not set before.
 func (v *AtomicValue[T]) Swap(x T) (old T) {
 	oldV := v.v.Swap(wrappedValue[T]{x})
 	if oldV != nil {
 		return oldV.(wrappedValue[T]).v
 	}
-	return old
+	var zero T
+	return zero
 }
 
 // CAS executes the compare-and-swap operation for the Value.

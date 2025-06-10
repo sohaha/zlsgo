@@ -59,4 +59,11 @@ func TestNewValue(t *testing.T) {
 		tt.Equal("x2", v.Swap("zzz"), true)
 		tt.Equal("zzz", v.Load(), true)
 	})
+
+	tt.Run("empty", func(tt *zlsgo.TestUtil) {
+		var v AtomicValue[string]
+		old := v.Swap("xxx")
+		tt.Equal("", old)
+		tt.Equal("xxx", v.Load(), true)
+	})
 }

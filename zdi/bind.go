@@ -8,51 +8,53 @@ import (
 	"github.com/sohaha/zlsgo/zreflect"
 )
 
+// Resolve resolves dependencies for the given pointers.
+// It iterates through each pointer, determines its underlying type,
+// and injects the corresponding value from the injector.
+// Returns an error if a dependency cannot be found or if a value cannot be set.
 func (inj *injector) Resolve(v ...Pointer) error {
 	for _, p := range v {
-		r := zreflect.ValueOf(p)
-		rt := r.Type()
-		v := r
-		t := rt
-		for v.Kind() == reflect.Ptr {
-			v = v.Elem()
-			t = rt.Elem()
+		ptrValue := zreflect.ValueOf(p)
+		if ptrValue.Kind() != reflect.Ptr {
+			return errors.New("cannot resolve non-pointer value, argument must be a pointer to the target variable")
 		}
 
-		if !v.IsValid() {
-			var val reflect.Value
-			var ok bool
+		elemToSet := ptrValue.Elem()
 
-			val, ok = inj.Get(t)
+		if !elemToSet.IsValid() {
+			targetTypeForNil := ptrValue.Type().Elem()
+			_, ok := inj.Get(targetTypeForNil)
 			if !ok {
-				return errors.New("can't find injector for " + t.String())
+				return errors.New("can't find injector for " + targetTypeForNil.String())
 			}
-
-			if !v.IsValid() && r.IsValid() {
-				if t.Kind() == reflect.Ptr {
-					r.Elem().Set(val)
-					continue
-				}
-			}
-
-			return errors.New("invalid pointer")
+			return errors.New("cannot set to an uninitialized (nil) pointer: " + targetTypeForNil.String())
 		}
 
-		if !v.CanSet() {
-			return errors.New("cannot set value")
+		if !elemToSet.CanSet() {
+			return errors.New("cannot set underlying value of pointer: " + elemToSet.String())
 		}
 
-		typ := v.Type()
-		val, ok := inj.Get(typ)
+		targetType := elemToSet.Type()
+
+		resolvedVal, ok := inj.Get(targetType)
 		if !ok {
-			return errors.New("can't find injector for " + t.String())
+			return errors.New("can't find injector for " + targetType.String())
 		}
 
-		v.Set(val)
+		if !resolvedVal.Type().AssignableTo(targetType) {
+			return fmt.Errorf("resolved value of type %s is not assignable to target type %s", resolvedVal.Type().String(), targetType.String())
+		}
+
+		elemToSet.Set(resolvedVal)
 	}
 	return nil
 }
 
+// Apply injects dependencies into the fields of a struct or sets a pointer value.
+// If the provided pointer is a struct, it iterates through its fields.
+// For fields tagged with `di`, it resolves and injects the corresponding dependency.
+// If the pointer is not a struct, it attempts to resolve and set the value directly.
+// Returns an error if a dependency cannot be found for a tagged field or if a value cannot be set.
 func (inj *injector) Apply(p Pointer) error {
 	v := zreflect.ValueOf(p)
 	for v.Kind() == reflect.Ptr {
