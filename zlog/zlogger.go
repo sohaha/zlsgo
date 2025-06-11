@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"sync"
 	"text/tabwriter"
-	"time"
 
 	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zreflect"
@@ -217,50 +216,66 @@ func (log *Logger) OpTextWrap(color Op, text string) string {
 	return text
 }
 
-func (log *Logger) formatHeader(buf *bytes.Buffer, t time.Time, file string, line int, level int) {
-	if log.flag&(BitDate|BitTime|BitMicroSeconds|BitLevel) != 0 {
+func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level int) {
+	if log.flag == 0 {
+		return
+	}
 
-		if log.flag&BitDate != 0 {
-			buf.WriteString(ztime.FormatTime(t, "Y/m/d "))
+	t := ztime.Time(log.flag&BitMicroSeconds != 0)
+
+	flags := log.flag
+
+	if flags&BitDate != 0 {
+		formatDateAppend(buf, t)
+	}
+
+	if flags&(BitTime|BitMicroSeconds) != 0 {
+		formatTimeAppend(buf, t)
+
+		if flags&BitMicroSeconds != 0 {
+			buf.WriteByte('.')
+			itoa(buf, t.Nanosecond()/1e3, 6)
 		}
+		buf.WriteByte(' ')
+	}
 
-		if log.flag&(BitTime|BitMicroSeconds) != 0 {
-			buf.WriteString(ztime.FormatTime(t, "H:i:s"))
-			if log.flag&BitMicroSeconds != 0 {
-				buf.WriteByte('.')
-				itoa(buf, t.Nanosecond()/1e3, 6) // "12:12:59.123456
-			}
+	if flags&BitLevel != 0 {
+		levelText := Levels[level]
+		if log.color {
+			buf.WriteString(log.ColorTextWrap(LevelColous[level], levelText))
+			buf.WriteByte(' ')
+		} else {
+			buf.WriteString(levelText)
 			buf.WriteByte(' ')
 		}
+	}
 
-		if log.flag&BitLevel != 0 {
-			buf.WriteString(log.ColorTextWrap(LevelColous[level], Levels[level]+" "))
-		}
-
-		if log.flag&(BitShortFile|BitLongFile) != 0 {
-			if log.flag&BitShortFile != 0 {
-				short := file
-				for i := len(file) - 1; i > 0; i-- {
-					if file[i] == '/' {
-						short = file[i+1:]
-						break
-					}
+	if flags&(BitShortFile|BitLongFile) != 0 {
+		if flags&BitShortFile != 0 {
+			lastSlash := -1
+			for i := len(file) - 1; i >= 0; i-- {
+				if file[i] == '/' {
+					lastSlash = i
+					break
 				}
-				file = short
 			}
-			buf.WriteString(file)
-			buf.WriteByte(':')
-			itoa(buf, line, -1)
-			buf.WriteString(": ")
+
+			if lastSlash >= 0 {
+				file = file[lastSlash+1:]
+			}
 		}
+
+		buf.WriteString(file)
+		buf.WriteByte(':')
+		itoa(buf, line, -1)
+		buf.WriteString(": ")
 	}
 }
 
-// outPut Output log
 func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, prefixText ...string) error {
 	if log.writeBefore != nil && len(s) > 0 {
 		p := s
-		if isWrap {
+		if isWrap && len(p) > 0 && p[len(p)-1] == '\n' {
 			p = p[:len(p)-1]
 		}
 		for i := range log.writeBefore {
@@ -270,27 +285,28 @@ func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, pref
 		}
 	}
 
-	if len(prefixText) > 0 {
-		s = prefixText[0] + s
-	}
-
 	buf := zutil.GetBuff(uint(len(s) + 34))
 	defer zutil.PutBuff(buf)
 
-	now := ztime.Time()
 	if level != LogNot {
 		file, line := log.fileLocation(calldDepth)
-		log.formatHeader(buf, now, file, line, level)
+		log.formatHeader(buf, file, line, level)
 	}
 
 	if log.prefix != "" {
 		buf.WriteString(log.prefix)
 	}
 
+	if len(prefixText) > 0 {
+		buf.WriteString(prefixText[0])
+	}
+
 	buf.WriteString(s)
+
 	if isWrap && len(s) > 0 && s[len(s)-1] != '\n' {
 		buf.WriteByte('\n')
 	}
+
 	_, err := log.out.Write(buf.Bytes())
 	return err
 }
@@ -643,11 +659,39 @@ func (wr logWriter) Reset(l *Logger) {
 	wr.log.level = l.level
 }
 
+// formatArgs 格式化参数，优化内存使用
 func formatArgs(args ...interface{}) []interface{} {
+	// 预分配所需容量，避免动态扩容
 	formatted := make([]interface{}, 0, len(args))
+
+	// 使用临时缓冲区，减少字符串创建
+	buf := zutil.GetBuff(uint(len(args)))
+	defer zutil.PutBuff(buf)
+
 	for _, a := range args {
-		s := ColorTextWrap(ColorCyan, sprint(a))
-		formatted = append(formatted, s)
+		// 直接写入缓冲区
+		buf.Reset()
+
+		// 使用带颜色的格式化
+		if a == nil {
+			buf.WriteString(ColorTextWrap(ColorCyan, "<nil>"))
+		} else {
+			// 避免不必要的转换
+			switch v := a.(type) {
+			case string:
+				buf.WriteString(ColorTextWrap(ColorCyan, v))
+			case []byte:
+				buf.WriteString(ColorTextWrap(ColorCyan, string(v)))
+			case error:
+				buf.WriteString(ColorTextWrap(ColorCyan, v.Error()))
+			default:
+				// 其他类型使用sprint
+				buf.WriteString(ColorTextWrap(ColorCyan, sprint(a)))
+			}
+		}
+
+		// 将缓冲区内容添加到结果中
+		formatted = append(formatted, buf.String())
 	}
 
 	return formatted

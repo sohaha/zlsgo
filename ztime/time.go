@@ -14,7 +14,10 @@ func Now(format ...string) string {
 }
 
 // Time With the time zone of the time
-func Time() time.Time {
+func Time(realTime ...bool) time.Time {
+	if len(realTime) > 0 && realTime[0] {
+		return inlay.In(time.Now())
+	}
 	return inlay.In(UnixMicro(Clock()))
 }
 

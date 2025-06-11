@@ -3,13 +3,12 @@ package zlog
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/printer"
-	"go/token"
 	"io"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/sohaha/zlsgo/zreflect"
@@ -84,13 +83,13 @@ func argName(arg ast.Expr) string {
 }
 
 func argNames(filename string, line int) ([]string, error) {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filename, nil, 0)
+	f, fset, err := parseFileWithCache(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse %q: %v", filename, err)
 	}
 
-	var names []string
+	names := make([]string, 0, 8)
+
 	ast.Inspect(f, func(n ast.Node) bool {
 		call, is := n.(*ast.CallExpr)
 		if !is {
@@ -99,6 +98,13 @@ func argNames(filename string, line int) ([]string, error) {
 		if fset.Position(call.End()).Line != line {
 			return true
 		}
+
+		if cap(names) < len(call.Args) {
+			newNames := make([]string, 0, len(call.Args))
+			newNames = append(newNames, names...)
+			names = newNames
+		}
+
 		for _, arg := range call.Args {
 			names = append(names, argName(arg))
 		}
@@ -108,13 +114,44 @@ func argNames(filename string, line int) ([]string, error) {
 	return names, nil
 }
 
+var stringBuilderPool = sync.Pool{
+	New: func() interface{} {
+		return new(strings.Builder)
+	},
+}
+
+func getStringBuilder() *strings.Builder {
+	sb := stringBuilderPool.Get().(*strings.Builder)
+	sb.Reset()
+	return sb
+}
+
+func putStringBuilder(sb *strings.Builder) {
+	if sb == nil {
+		return
+	}
+	if sb.Cap() > 32*1024 {
+		return
+	}
+	stringBuilderPool.Put(sb)
+}
+
 func exprToString(arg ast.Expr) string {
-	var buf strings.Builder
-	fset := token.NewFileSet()
-	if err := printer.Fprint(&buf, fset, arg); err != nil {
+	sb := getStringBuilder()
+	defer putStringBuilder(sb)
+
+	fset := getFileSet()
+	defer putFileSet(fset)
+
+	if err := printer.Fprint(sb, fset, arg); err != nil {
 		return ""
 	}
-	return strings.Replace(buf.String(), "\t", "    ", -1)
+	result := sb.String()
+	if strings.Contains(result, "\t") {
+		result = strings.Replace(result, "\t", "    ", -1)
+	}
+
+	return result
 }
 
 func (fo formatter) String() string {
@@ -124,9 +161,14 @@ func (fo formatter) String() string {
 func (fo formatter) Format(f fmt.State, c rune) {
 	if fo.force || c == 'v' && f.Flag('#') && f.Flag(' ') {
 		w := tabwriter.NewWriter(f, 4, 4, 1, ' ', 0)
-		p := &zprinter{tw: w, Writer: w, visited: make(map[visit]int)}
+
+		p := getZprinter(w)
+		p.tw = w
+
 		p.printValue(fo.v, true, fo.quote)
 		_ = w.Flush()
+
+		putZprinter(p)
 		return
 	}
 	fo.passThrough(f, c)
