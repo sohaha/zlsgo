@@ -6,6 +6,7 @@ package zarray
 import (
 	"errors"
 	"math/rand"
+	"sort"
 
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zsync"
@@ -305,4 +306,43 @@ func RandShift[T comparable](list []T) func() (T, error) {
 		currentIndex++
 		return item, nil
 	}
+}
+
+// SortWithPriority sorts the slice based on the priority of elements.
+// The elements in the 'first' slice are placed at the beginning of the result,
+// followed by the elements in the 'last' slice, and then the remaining elements.
+func SortWithPriority[T comparable](slice []T, first, last []T) []T {
+	if len(slice) == 0 {
+		return []T{}
+	}
+
+	result := make([]T, len(slice))
+	copy(result, slice)
+
+	ranks := make(map[T]int, len(first)+len(last))
+	for i, h := range first {
+		ranks[h] = i
+	}
+
+	lastRankStart := len(first) + len(slice)
+	for i, f := range last {
+		ranks[f] = lastRankStart + i
+	}
+
+	defaultRank := len(first)
+	sort.SliceStable(result, func(i, j int) bool {
+		rankI, okI := ranks[result[i]]
+		if !okI {
+			rankI = defaultRank
+		}
+
+		rankJ, okJ := ranks[result[j]]
+		if !okJ {
+			rankJ = defaultRank
+		}
+
+		return rankI < rankJ
+	})
+
+	return result
 }

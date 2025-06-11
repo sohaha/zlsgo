@@ -174,3 +174,111 @@ func TestRandShift(t *testing.T) {
 		tt.Log(v, err)
 	}
 }
+
+func TestSortWithPriority(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tt.Run("Base", func(tt *zlsgo.TestUtil) {
+		tt.Equal([]int{5, 10, 4, 6, 7, 8, 9, 2, 3, 1}, zarray.SortWithPriority([]int{1, 4, 2, 3, 5, 6, 7, 8, 9, 10}, []int{5, 10}, []int{2, 3, 1}))
+
+		v := []string{"是", "!", "我", "测试", "的"}
+
+		d := zarray.SortWithPriority(v, []string{"我", "是"}, []string{"的", "!"})
+		tt.Log(d)
+		tt.Equal([]string{"我", "是", "测试", "的", "!"}, d)
+
+		d = zarray.SortWithPriority(v, []string{"我", "是"}, nil)
+		tt.Log(d)
+		tt.Equal([]string{"我", "是", "!", "测试", "的"}, d)
+
+		d = zarray.SortWithPriority(v, nil, []string{"测试", "是"})
+		tt.Log(d)
+		tt.Equal([]string{"!", "我", "的", "测试", "是"}, d)
+	})
+
+	tt.Run("Empty", func(tt *zlsgo.TestUtil) {
+		tt.Equal([]int{}, zarray.SortWithPriority(nil, []int{}, []int{}))
+		tt.Equal([]int{}, zarray.SortWithPriority([]int{}, nil, nil))
+		tt.Equal([]int{2, 6}, zarray.SortWithPriority([]int{2, 6}, nil, nil))
+	})
+
+	tt.Run("DuplicateElements", func(tt *zlsgo.TestUtil) {
+		slice := []int{1, 2, 3, 2, 4, 3, 5}
+		result := zarray.SortWithPriority(slice, []int{3, 1}, []int{5, 2})
+		tt.Equal([]int{3, 3, 1, 4, 5, 2, 2}, result)
+
+		result = zarray.SortWithPriority(slice, []int{3, 1, 3}, []int{5})
+		tt.Equal([]int{1, 3, 3, 2, 2, 4, 5}, result)
+
+		result = zarray.SortWithPriority(slice, []int{1}, []int{2, 5, 2})
+		tt.Equal([]int{1, 3, 4, 3, 5, 2, 2}, result)
+	})
+
+	tt.Run("NonExistentElements", func(tt *zlsgo.TestUtil) {
+		slice := []int{1, 2, 3, 4, 5}
+		result := zarray.SortWithPriority(slice, []int{6, 7, 3}, []int{5})
+		tt.Equal([]int{3, 1, 2, 4, 5}, result)
+
+		result = zarray.SortWithPriority(slice, []int{1}, []int{6, 7, 5})
+		tt.Equal([]int{1, 2, 3, 4, 5}, result)
+
+		result = zarray.SortWithPriority(slice, []int{6, 1}, []int{7, 5})
+		tt.Equal([]int{1, 2, 3, 4, 5}, result)
+	})
+
+	tt.Run("OverlappingElements", func(tt *zlsgo.TestUtil) {
+		slice := []int{1, 2, 3, 4, 5}
+		result := zarray.SortWithPriority(slice, []int{3, 5}, []int{2, 3})
+		tt.Equal([]int{5, 1, 4, 2, 3}, result)
+	})
+
+	tt.Run("LargeSlice", func(tt *zlsgo.TestUtil) {
+		size := 1000
+		slice := make([]int, size)
+		for i := 0; i < size; i++ {
+			slice[i] = size - i
+		}
+
+		first := []int{500, 600, 700}
+		last := []int{100, 200, 300}
+
+		result := zarray.SortWithPriority(slice, first, last)
+
+		tt.Equal(500, result[0])
+		tt.Equal(600, result[1])
+		tt.Equal(700, result[2])
+
+		tt.Equal(100, result[size-3])
+		tt.Equal(200, result[size-2])
+		tt.Equal(300, result[size-1])
+	})
+
+	tt.Run("StructSlice", func(tt *zlsgo.TestUtil) {
+		type Person struct {
+			Name string
+			Age  int
+		}
+
+		people := []Person{
+			{"Alice", 30},
+			{"Bob", 25},
+			{"Charlie", 35},
+			{"David", 28},
+			{"Eve", 22},
+		}
+
+		first := []Person{{"Charlie", 35}, {"Alice", 30}}
+		last := []Person{{"Eve", 22}, {"Bob", 25}}
+
+		result := zarray.SortWithPriority(people, first, last)
+
+		expected := []Person{
+			{"Charlie", 35},
+			{"Alice", 30},
+			{"David", 28},
+			{"Eve", 22},
+			{"Bob", 25},
+		}
+		tt.Equal(expected, result)
+	})
+}
