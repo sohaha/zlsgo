@@ -30,4 +30,8 @@ func TestOptional(t *testing.T) {
 	})
 	tt.Equal("test", o2.Name)
 	tt.Equal(1, o2.I)
+
+	o3 := zutil.Optional(&TestSt{Name: "null"}, nil)
+	tt.Equal("null", o3.Name)
+	tt.Equal(0, o3.I)
 }

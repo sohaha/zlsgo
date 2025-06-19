@@ -9,6 +9,9 @@ package zutil
 // Optional applies configuration functions to a value and returns the modified value.
 func Optional[T interface{}](o T, fn ...func(*T)) T {
 	for _, f := range fn {
+		if f == nil {
+			continue
+		}
 		f(&o)
 	}
 	return o
