@@ -2,6 +2,7 @@ package ztype
 
 import (
 	"bytes"
+
 	// "encoding/json"
 	"encoding/json"
 	"errors"
@@ -291,8 +292,7 @@ func ToFloat32(i interface{}) float32 {
 	if v, ok := i.(float32); ok {
 		return v
 	}
-	v, _ := strconv.ParseFloat(strings.TrimSpace(ToString(i)), 64)
-	return float32(v)
+	return float32(ToFloat64(i))
 }
 
 // ToFloat64 converts any value to a float64.
@@ -305,7 +305,12 @@ func ToFloat64(i interface{}) float64 {
 	if v, ok := i.(float64); ok {
 		return v
 	}
-	v, _ := strconv.ParseFloat(strings.TrimSpace(ToString(i)), 64)
+	s := strings.TrimSpace(ToString(i))
+	if len(s) == 0 {
+		return 0
+	}
+	s = strings.Replace(s, ",", "", -1)
+	v, _ := strconv.ParseFloat(s, 64)
 	return v
 }
 
