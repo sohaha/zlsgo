@@ -38,14 +38,11 @@ func openFile(filepa string, archive bool) (file *zfile.MemoryFile, fileName, fi
 								return nil
 							}
 
-							// The log may have been modified, so the modification time of the file is no longer used here.
-							// if info.ModTime().AddDate(0, 0, LogMaxDurationDate).Before(now) {
-							// 	_ = os.Remove(path)
-							// }
-
-							date, err := ztime.Parse(strings.TrimSuffix(filepath.Base(path), ext), "Y-m-d")
-							if err == nil && date.AddDate(0, 0, LogMaxDurationDate).Before(now) {
-								_ = os.Remove(path)
+							if LogMaxDurationDate > 0 {
+								date, err := ztime.Parse(strings.TrimSuffix(filepath.Base(path), ext), "Y-m-d")
+								if err == nil && date.AddDate(0, 0, LogMaxDurationDate).Before(now) {
+									_ = os.Remove(path)
+								}
 							}
 							return nil
 						})
