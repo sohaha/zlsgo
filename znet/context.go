@@ -9,23 +9,33 @@ import (
 	"unicode"
 
 	"github.com/sohaha/zlsgo/zdi"
+	"github.com/sohaha/zlsgo/zstring"
 )
 
 // Host returns the current host with scheme (http/https).
 // If full is true, it includes the request URL path.
 func (c *Context) Host(full ...bool) string {
+	builder := zstring.Buffer(4)
+
 	scheme := c.Request.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
-		scheme = "https"
 		if c.Request.TLS == nil {
-			scheme = "http"
+			builder.WriteString("http://")
+		} else {
+			builder.WriteString("https://")
 		}
+	} else {
+		builder.WriteString(scheme)
+		builder.WriteString("://")
 	}
-	host := c.Request.Host
+
+	builder.WriteString(c.Request.Host)
+
 	if len(full) > 0 && full[0] {
-		host += c.Request.URL.String()
+		builder.WriteString(c.Request.URL.String())
 	}
-	return scheme + "://" + host
+
+	return builder.String()
 }
 
 // CompletionLink ensures a URL is absolute by prepending the current host
@@ -34,34 +44,48 @@ func (c *Context) CompletionLink(link string) string {
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		return link
 	}
-	finalLink := c.Host()
+
+	builder := zstring.Buffer(3)
+	host := c.Host()
+	builder.WriteString(host)
+
 	if !strings.HasPrefix(link, "/") {
-		finalLink = finalLink + "/"
+		builder.WriteRune('/')
 	}
-	finalLink = finalLink + link
-	return finalLink
+	builder.WriteString(link)
+
+	return builder.String()
 }
 
 // IsWebsocket determines if the current request is a WebSocket upgrade request
 // by checking the Connection and Upgrade headers.
 func (c *Context) IsWebsocket() bool {
-	if strings.Contains(strings.ToLower(c.GetHeader("Connection")), "upgrade") &&
-		strings.ToLower(c.GetHeader("Upgrade")) == "websocket" {
-		return true
+	connection := c.GetHeader("Connection")
+	if !strings.Contains(strings.ToLower(connection), "upgrade") {
+		return false
 	}
-	return false
+	return strings.EqualFold(c.GetHeader("Upgrade"), "websocket")
 }
 
 // IsSSE determines if the current request is expecting Server-Sent Events
-// by checking if the Accept header is 'text/event-stream'.
+// by checking if the Accept header contains 'text/event-stream'.
 func (c *Context) IsSSE() bool {
-	return strings.ToLower(c.GetHeader("Accept")) == "text/event-stream"
+	acceptHeader := c.GetHeader("Accept")
+	if strings.EqualFold(acceptHeader, "text/event-stream") {
+		return true
+	}
+	for _, acceptType := range strings.Split(acceptHeader, ",") {
+		if strings.EqualFold(strings.TrimSpace(acceptType), "text/event-stream") {
+			return true
+		}
+	}
+	return false
 }
 
 // IsAjax determines if the current request is an AJAX request
 // by checking for the X-Requested-With header with value XMLHttpRequest.
 func (c *Context) IsAjax() bool {
-	return c.GetHeader("X-Requested-With") == "XMLHttpRequest"
+	return strings.EqualFold(c.GetHeader("X-Requested-With"), "XMLHttpRequest")
 }
 
 // GetClientIP returns the client's IP address by checking various headers
