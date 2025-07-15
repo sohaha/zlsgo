@@ -204,14 +204,14 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 
 					spl := bytes.SplitN(line, delim, 2)
 					if len(spl) < 2 {
-						currEvent.Undefined = line
+						currEvent.Undefined = bytes.TrimSpace(line)
 						return nil
 					}
 
 					if len(spl[0]) == 0 {
 						isPing = bytes.Equal(ping, bytes.TrimSpace(spl[1]))
 						if !isPing {
-							currEvent.Undefined = spl[1]
+							currEvent.Undefined = bytes.TrimSpace(spl[1])
 						}
 						return nil
 					}

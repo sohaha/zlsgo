@@ -503,8 +503,10 @@ func (m *multipartHelper) upload(req *http.Request, upload func(io.Writer, io.Re
 			i++
 			up.FieldName = "file" + strconv.Itoa(i)
 		}
+
 		fileWriter, err := bodyWriter.CreateFormFile(up.FieldName, up.FileName)
 		if err != nil {
+			_ = up.File.Close()
 			continue
 		}
 
@@ -517,22 +519,24 @@ func (m *multipartHelper) upload(req *http.Request, upload func(io.Writer, io.Re
 				_, _ = io.Copy(fileWriter, up.File)
 			}
 		}
-
 		_ = up.File.Close()
 	}
 }
 
 func (m *multipartHelper) Upload(req *http.Request) {
 	bodyBuf := zutil.GetBuff(1048576)
+	defer zutil.PutBuff(bodyBuf)
+
 	bodyWriter := multipart.NewWriter(bodyBuf)
 
 	m.upload(req, nil, bodyWriter)
 	_ = bodyWriter.Close()
 
 	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
-	b := bytes.NewReader(bodyBuf.Bytes())
 
-	zutil.PutBuff(bodyBuf)
+	bodyBytes := make([]byte, bodyBuf.Len())
+	copy(bodyBytes, bodyBuf.Bytes())
+	b := bytes.NewReader(bodyBytes)
 
 	req.Body = ioutil.NopCloser(b)
 	req.ContentLength = int64(b.Len())
@@ -542,6 +546,11 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 	pr, pw := io.Pipe()
 	bodyWriter := multipart.NewWriter(pw)
 	go func() {
+		defer func() {
+			_ = bodyWriter.Close()
+			_ = pw.Close()
+		}()
+
 		var upload func(io.Writer, io.Reader) error
 
 		if m.uploadProgress != nil {
@@ -585,8 +594,6 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 			}
 		}
 		m.upload(req, upload, bodyWriter)
-		_ = bodyWriter.Close()
-		_ = pw.Close()
 	}()
 	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
 	req.Body = ioutil.NopCloser(pr)

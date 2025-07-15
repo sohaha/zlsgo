@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -97,21 +98,33 @@ func (r *Res) ToBytes() ([]byte, error) {
 	if r.responseBody != nil {
 		return r.responseBody, nil
 	}
-	defer r.resp.Body.Close()
+
+	defer func() {
+		if r.resp.Body != nil {
+			_ = r.resp.Body.Close()
+		}
+	}()
+
 	respBody, err := ioutil.ReadAll(r.resp.Body)
-	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
 	if err != nil {
 		r.err = err
 		return nil, err
 	}
+
+	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
 
 	r.responseBody = forceUTF8(r, respBody)
 	return r.responseBody, nil
 }
 
 func forceUTF8(r *Res, respBody []byte) []byte {
+	if r == nil || r.resp == nil {
+		return respBody
+	}
+
 	ctype := r.resp.Header.Get("Content-Type")
 	c, n, _ := charset.DetermineEncoding(respBody, ctype)
+
 	if n != "utf-8" && n != "windows-1252" {
 		b, err := c.NewDecoder().Bytes(respBody)
 		if err == nil {
@@ -128,13 +141,20 @@ func (r *Res) Body() (body io.ReadCloser) {
 	if r.responseBody != nil {
 		return ioutil.NopCloser(bytes.NewReader(r.responseBody))
 	}
-	defer r.resp.Body.Close()
+
+	defer func() {
+		if r.resp != nil && r.resp.Body != nil {
+			_ = r.resp.Body.Close()
+		}
+	}()
+
 	respBody, err := ioutil.ReadAll(r.resp.Body)
-	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
 	if err != nil {
 		r.err = err
 		return nil
 	}
+
+	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
 
 	r.responseBody = forceUTF8(r, respBody)
 	return ioutil.NopCloser(bytes.NewReader(r.responseBody))
@@ -190,6 +210,7 @@ func (r *Res) ToFile(name string) error {
 	nameSplitLen := len(nameSplit)
 	if nameSplitLen > 1 {
 		dir := strings.Join(nameSplit[0:nameSplitLen-1], "/")
+		fmt.Println("ttt", dir)
 		name = zfile.RealPathMkdir(dir) + "/" + nameSplit[nameSplitLen-1]
 	}
 

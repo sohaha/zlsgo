@@ -35,7 +35,7 @@ func HTMLParse(HTML []byte) (doc QueryHTML, err error) {
 }
 
 func (r *QueryHTML) getNode() *html.Node {
-	if r.node == nil {
+	if r == nil || r.node == nil {
 		r.node = &html.Node{}
 	}
 	return r.node
@@ -146,6 +146,10 @@ func (r QueryHTML) SelectBrother(el string, args ...map[string]string) QueryHTML
 
 func (r QueryHTML) SelectParent(el string, args ...map[string]string) QueryHTML {
 	n := r.getNode()
+	if n == nil {
+		return QueryHTML{node: &html.Node{}}
+	}
+
 	attr := arr2Attr(args)
 	for {
 		n = n.Parent
