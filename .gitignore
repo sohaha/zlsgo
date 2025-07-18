@@ -19,4 +19,5 @@ gotest
 
 coverage.txt
 test.json
-zzz-watch.yaml
+*.yaml
+.*/
