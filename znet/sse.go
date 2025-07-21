@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 // SSE represents a Server-Sent Events connection.
@@ -78,7 +79,10 @@ func (s *SSE) Push() {
 
 	defer ticker.Stop()
 
-	b := zstring.Buffer(7)
+	// Use memory manager's pooled buffer for better performance
+	b := zutil.GetBuff(512)
+	defer zutil.PutBuff(b)
+
 sseFor:
 	for {
 		select {
@@ -135,12 +139,11 @@ sseFor:
 
 			b.WriteString("\n")
 
-			data := zstring.String2Bytes(b.String())
+			data := b.Bytes()
 			_, _ = w.Write(data)
 			s.flush()
 
 			b.Reset()
-			b.Grow(7)
 		}
 	}
 }

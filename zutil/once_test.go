@@ -12,21 +12,62 @@ import (
 
 func TestOnce(t *testing.T) {
 	tt := zlsgo.NewTest(t)
-	v := 1
+	v := zutil.NewInt32(1)
 	r := zutil.Once(func() interface{} {
-		v = v + 1
-		return v
+		v.Add(1)
+		return v.Load()
 	})
-	var wg sync.WaitGroup
+
+	var wg zsync.WaitGroup
 	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			value := (r()).(int)
-			tt.Equal(2, value)
-		}()
+		wg.Go(func() {
+			value := (r()).(int32)
+			tt.Equal(int32(2), value)
+		})
 	}
 	wg.Wait()
+}
+
+func TestOnceWithError(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	v := zutil.NewInt32(1)
+	r := zutil.OnceWithError(func() (interface{}, error) {
+		v.Add(1)
+		return v.Load(), nil
+	})
+
+	var wg zsync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Go(func() {
+			value, err := r()
+			tt.NoError(err)
+			tt.NotNil(value)
+		})
+	}
+	wg.Wait()
+
+	i := 0
+	r2 := zutil.OnceWithError(func() (interface{}, error) {
+		i++
+		if i <= 100 {
+			panic("error test")
+		}
+		return i, nil
+	})
+
+	for i := 0; i < 100; i++ {
+		wg.Go(func() {
+			value, err := r2()
+			tt.NotNil(err)
+			if !tt.IsNil(value) {
+				tt.Log(value, err)
+			}
+		})
+	}
+	wg.Wait()
+
+	value, err := r2()
+	tt.Log(value, err)
 }
 
 func TestOnceNested(t *testing.T) {

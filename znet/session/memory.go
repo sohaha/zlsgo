@@ -12,12 +12,24 @@ import (
 )
 
 // Memory implements the Session interface using an in-memory map.
-// It provides thread-safe access to session data with read-write mutex protection.
 type Memory struct {
 	id        string
-	data      ztype.Map
+	data      sync.Map
 	expiresAt time.Time
 	mu        sync.RWMutex
+}
+
+// reset clears the session data and prepares it for reuse from the pool.
+func (s *Memory) reset() {
+	s.mu.Lock()
+	s.id = ""
+	s.expiresAt = time.Time{}
+	s.mu.Unlock()
+
+	s.data.Range(func(key, value interface{}) bool {
+		s.data.Delete(key)
+		return true
+	})
 }
 
 var _ Session = (*Memory)(nil)
@@ -28,24 +40,20 @@ func (s *Memory) ID() string {
 
 // Get retrieves a value from the session by key.
 func (s *Memory) Get(key string) ztype.Type {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.data.Get(key)
+	if value, ok := s.data.Load(key); ok {
+		return ztype.New(value)
+	}
+	return ztype.New(nil)
 }
 
 // Set stores a value in the session with the specified key.
 func (s *Memory) Set(key string, value interface{}) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.data[key] = value
+	s.data.Store(key, value)
 }
 
 // Delete removes a value from the session by key.
 func (s *Memory) Delete(key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.data, key)
-
+	s.data.Delete(key)
 	return nil
 }
 
@@ -61,12 +69,14 @@ func (s *Memory) ExpiresAt() time.Time {
 	return s.expiresAt
 }
 
-// Destroy removes all data from the session and resets its state..
+// Destroy removes all data from the session and resets its state.
 // This method is thread-safe.
 func (s *Memory) Destroy() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.data = make(map[string]interface{})
+	// Clear all data from sync.Map
+	s.data.Range(func(key, value interface{}) bool {
+		s.data.Delete(key)
+		return true
+	})
 	return nil
 }
 
@@ -74,31 +84,34 @@ func (s *Memory) Destroy() error {
 // It provides a simple, non-persistent session storage solution
 // suitable for development, testing, or single-instance applications.
 type MemoryStore struct {
-	sessions map[string]*Memory
-	mu       sync.RWMutex
+	sessions    sync.Map  // Lock-free concurrent map for session storage
+	sessionPool sync.Pool // Pool for session object reuse
 }
 
 var _ Store = (*MemoryStore)(nil)
 
 // NewMemoryStore creates and initializes a new in-memory session store.
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
-		sessions: make(map[string]*Memory),
+	store := &MemoryStore{}
+
+	// Initialize session pool with factory function
+	store.sessionPool.New = func() interface{} {
+		return &Memory{}
 	}
+
+	return store
 }
 
 // Get retrieves a session by its ID from the memory store.
 func (store *MemoryStore) Get(sessionID string) (Session, error) {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
-
-	session, exists := store.sessions[sessionID]
+	value, exists := store.sessions.Load(sessionID)
 	if !exists {
 		return nil, errors.New("session not found")
 	}
 
+	session := value.(*Memory)
 	if !session.expiresAt.IsZero() && time.Now().After(session.expiresAt) {
-		go session.Delete(sessionID)
+		go store.Delete(sessionID)
 		return nil, errors.New("session expired")
 	}
 
@@ -107,15 +120,16 @@ func (store *MemoryStore) Get(sessionID string) (Session, error) {
 
 // New creates a new session with the specified ID and expiration time.
 func (store *MemoryStore) New(sessionID string, expiresAt time.Time) (Session, error) {
-	session := &Memory{
-		id:        sessionID,
-		data:      make(map[string]interface{}),
-		expiresAt: expiresAt,
-	}
+	// Get session from pool to reduce allocations
+	session := store.sessionPool.Get().(*Memory)
 
-	store.mu.Lock()
-	store.sessions[sessionID] = session
-	store.mu.Unlock()
+	// Initialize session with provided data
+	session.mu.Lock()
+	session.id = sessionID
+	session.expiresAt = expiresAt
+	session.mu.Unlock()
+
+	store.sessions.Store(sessionID, session)
 
 	return session, nil
 }
@@ -127,22 +141,46 @@ func (store *MemoryStore) Save(session Session) error {
 
 // Delete removes a session from the memory store by its ID.
 func (store *MemoryStore) Delete(sessionID string) error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	delete(store.sessions, sessionID)
+	value, exists := store.sessions.LoadAndDelete(sessionID)
+
+	// Return session to pool for reuse if it existed
+	if exists {
+		session := value.(*Memory)
+		session.reset()
+		store.sessionPool.Put(session)
+	}
+
 	return nil
 }
 
 // Collect removes all expired sessions from the memory store.
 func (store *MemoryStore) Collect() error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	var expiredSessions []*Memory
+	var expiredIDs []string
 
 	now := ztime.Time()
-	for id, session := range store.sessions {
+
+	// Find expired sessions
+	store.sessions.Range(func(key, value interface{}) bool {
+		sessionID := key.(string)
+		session := value.(*Memory)
+
 		if !session.expiresAt.IsZero() && now.After(session.expiresAt) {
-			delete(store.sessions, id)
+			expiredSessions = append(expiredSessions, session)
+			expiredIDs = append(expiredIDs, sessionID)
 		}
+		return true
+	})
+
+	// Remove expired sessions from store
+	for _, id := range expiredIDs {
+		store.sessions.Delete(id)
+	}
+
+	// Return expired sessions to pool for reuse
+	for _, session := range expiredSessions {
+		session.reset()
+		store.sessionPool.Put(session)
 	}
 
 	return nil
@@ -150,13 +188,15 @@ func (store *MemoryStore) Collect() error {
 
 // Renew extends the expiration time of an existing session.
 func (store *MemoryStore) Renew(sessionID string, expiresAt time.Time) error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	if session, exists := store.sessions[sessionID]; exists {
-		session.expiresAt = expiresAt
-		return nil
+	value, exists := store.sessions.Load(sessionID)
+	if !exists {
+		return errors.New("session not found")
 	}
 
-	return errors.New("session not found")
+	session := value.(*Memory)
+	session.mu.Lock()
+	session.expiresAt = expiresAt
+	session.mu.Unlock()
+
+	return nil
 }
