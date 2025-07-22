@@ -279,6 +279,9 @@ func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
 func (c *Context) FormFiles(name string) (files []*multipart.FileHeader, err error) {
 	var multipartForm *multipart.Form
 	multipartForm, err = c.MultipartForm()
+	if err != nil {
+		return
+	}
 
 	if multipartForm == nil || multipartForm.File == nil {
 		err = errors.New("file is empty")
