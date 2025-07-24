@@ -3,6 +3,8 @@
 
 package zarray
 
+import "errors"
+
 // Keys extracts all keys from a map and returns them as a slice.
 // The order of the keys in the resulting slice is not guaranteed.
 func Keys[K comparable, V any](in map[K]V) []K {
@@ -27,14 +29,21 @@ func Values[K comparable, V any](in map[K]V) []V {
 	return result
 }
 
-// GroupMap groups a slice of Maps into a map based on a key function.
-func GroupMap[K comparable, V any](arr []V, toKey func(V) (K, V)) map[K]V {
+// IndexMap indexes a slice of Maps into a map based on a key function.
+func IndexMap[K comparable, V any](arr []V, toKey func(V) (K, V)) (map[K]V, error) {
+	if len(arr) == 0 {
+		return make(map[K]V), nil
+	}
+
 	data := make(map[K]V, len(arr))
-	for i := range arr {
-		key, value := toKey(arr[i])
+	for _, item := range arr {
+		key, value := toKey(item)
+		if _, exists := data[key]; exists {
+			return nil, errors.New("key is not unique")
+		}
 		data[key] = value
 	}
-	return data
+	return data, nil
 }
 
 // FlatMap flattens a map of Maps into a single slice of Maps.

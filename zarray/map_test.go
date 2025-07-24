@@ -31,7 +31,7 @@ func TestGroupMap(t *testing.T) {
 			{"id": 2, "name": "test2"},
 		}
 
-		data := GroupMap(value, func(v ztype.Map) (string, ztype.Map) {
+		data, _ := IndexMap(value, func(v ztype.Map) (string, ztype.Map) {
 			id := v.Get("id").String()
 			v.Delete("id")
 			return "id_" + id, v
@@ -50,7 +50,7 @@ func TestGroupMap(t *testing.T) {
 		}
 
 		tt.Log(data1, value[0])
-		data := GroupMap(value, func(v ztype.Map) (string, ztype.Map) {
+		data, _ := IndexMap(value, func(v ztype.Map) (string, ztype.Map) {
 			id := v.Get("id").String()
 			v.Delete("id")
 			return "id_" + id, v
@@ -74,7 +74,7 @@ func TestGroupMap(t *testing.T) {
 		}
 
 		tt.Log(data1, value[0])
-		data := GroupMap(value, func(v ztype.Map) (string, ztype.Map) {
+		data, _ := IndexMap(value, func(v ztype.Map) (string, ztype.Map) {
 			data := v.DeepCopy()
 			id := data.Get("id").String()
 			data.Delete("id")
@@ -89,6 +89,18 @@ func TestGroupMap(t *testing.T) {
 		tt.Equal(2, len(data))
 		tt.Equal("test", data["id_1"].Get("data").Get("name").String())
 		tt.Equal("test2", data["id_2"].Get("data").Get("name").String())
+	})
+
+	tt.Run("error", func(tt *zlsgo.TestUtil) {
+		value := ztype.Maps{
+			{"id": 1, "name": "test"},
+			{"id": 2, "name": "test2"},
+		}
+
+		_, err := IndexMap(value, func(v ztype.Map) (string, ztype.Map) {
+			return "id", v
+		})
+		tt.NotNil(err)
 	})
 }
 
