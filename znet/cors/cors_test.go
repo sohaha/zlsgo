@@ -30,7 +30,7 @@ func TestNewAllowHeaders(t *testing.T) {
 	req.Header.Add("AllowTest", "https://qq.com")
 	req.Header.Add("Origin", "https://qq.com")
 	r.ServeHTTP(w, req)
-	// NewAllowHeaders默认允许所有来源，所以应该是204
+	// NewAllowHeaders allows all origins by default, so it should be 204
 	tt.Equal(http.StatusNoContent, w.Code)
 	tt.Equal(0, w.Body.Len())
 
@@ -39,7 +39,7 @@ func TestNewAllowHeaders(t *testing.T) {
 	req.Header.Add("AllowTest", "https://qq.com")
 	req.Header.Add("Origin", "https://qq.com")
 	r.ServeHTTP(w, req)
-	// 同样应该是200
+	// Should also be 200
 	tt.Equal(http.StatusOK, w.Code)
 	tt.Equal(10, w.Body.Len())
 }
@@ -52,7 +52,7 @@ func TestDefault(t *testing.T) {
 
 	r.Any("/cors", func(c *znet.Context) {
 		c.String(200, zstring.Rand(10, "abc"))
-	}, cors.New(&cors.Config{Domains: []string{"https://qq.com"}})) // 明确配置允许的域名
+	}, cors.New(&cors.Config{Domains: []string{"https://qq.com"}})) // Explicitly configure allowed domains
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/cors", nil)
 	req.Header.Add("Origin", "https://qq.com")
@@ -98,7 +98,7 @@ func TestDefault(t *testing.T) {
 
 }
 
-// 测试新的AllowAll函数
+// Test new AllowAll function
 func TestAllowAll(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -120,7 +120,7 @@ func TestAllowAll(t *testing.T) {
 	tt.EqualTrue(w.Header().Get("Access-Control-Allow-Headers") != "")
 }
 
-// 测试AllowAllOrigins函数
+// Test AllowAllOrigins function
 func TestAllowAllOrigins(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -140,7 +140,7 @@ func TestAllowAllOrigins(t *testing.T) {
 	tt.Equal("https://malicious.com", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
-// 测试安全的默认配置
+// Test secure default configuration
 func TestSecureDefault(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -156,11 +156,11 @@ func TestSecureDefault(t *testing.T) {
 	
 	r.ServeHTTP(w, req)
 	
-	// 默认配置应该拒绝未配置的域名
+	// Default configuration should reject unconfigured domains
 	tt.Equal(403, w.Code)
 }
 
-// 测试Origin验证
+// Test Origin validation
 func TestOriginValidation(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -172,7 +172,7 @@ func TestOriginValidation(t *testing.T) {
 		c.String(200, "ok")
 	})
 	
-	// 测试无效的Origin格式
+	// Test invalid Origin format
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Origin", "invalid-origin")
@@ -180,7 +180,7 @@ func TestOriginValidation(t *testing.T) {
 	r.ServeHTTP(w, req)
 	tt.Equal(400, w.Code) // Bad Request for invalid origin
 	
-	// 测试过长的Origin
+	// Test overly long Origin
 	longOrigin := "https://" + strings.Repeat("a", 2048) + ".com"
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test", nil)
@@ -190,11 +190,11 @@ func TestOriginValidation(t *testing.T) {
 	tt.Equal(400, w.Code)
 }
 
-// 测试配置验证
+// Test configuration validation
 func TestConfigValidation(t *testing.T) {
 	tt := zls.NewTest(t)
 	
-	// 测试无效的域名格式
+	// Test invalid domain format
 	defer func() {
 		if r := recover(); r != nil {
 			tt.Log("Expected panic for invalid domain format:", r)
@@ -205,6 +205,6 @@ func TestConfigValidation(t *testing.T) {
 		Domains: []string{"invalid-domain"},
 	})
 	
-	// 如果没有panic，测试失败
+	// If no panic, test fails
 	t.Error("Expected panic for invalid domain format")
 }

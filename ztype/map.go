@@ -3,12 +3,10 @@ package ztype
 import (
 	"errors"
 	"reflect"
-	"strings"
 	"time"
 	"unsafe"
 
 	"github.com/sohaha/zlsgo/zreflect"
-	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 )
 
@@ -26,7 +24,7 @@ type Map map[string]interface{}
 // DeepCopy creates a deep copy of the map and all nested maps.
 // This ensures that modifications to the copied map don't affect the original.
 func (m Map) DeepCopy() Map {
-	newMap := make(Map, len(m))
+	newMap := make(map[string]interface{})
 	for k := range m {
 		switch v := m[k].(type) {
 		case Map:
@@ -99,6 +97,29 @@ func (m Map) Delete(key string) error {
 	}
 
 	return errors.New("key not found")
+}
+
+// Valid checks if the specified keys exist in the map.
+// Returns true if all keys exist, false otherwise.
+func (m Map) Valid(keys ...string) bool {
+	if m == nil {
+		return false
+	}
+	for _, key := range keys {
+		if _, ok := m[key]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// Keys returns a slice containing all keys currently in the map.
+func (m Map) Keys() []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // ForEach iterates over all key-value pairs in the map and calls the provided function for each pair.
@@ -197,13 +218,14 @@ func ToMaps(value interface{}) Maps {
 		return *(*Maps)(unsafe.Pointer(&r))
 	default:
 		ref := reflect.Indirect(zreflect.ValueOf(value))
-		m := make(Maps, 0)
 		l := ref.Len()
 		v := ref.Slice(0, l)
+
+		result := make(Maps, 0, l)
 		for i := 0; i < l; i++ {
-			m = append(m, toMapString(v.Index(i).Interface()))
+			result = append(result, toMapString(v.Index(i).Interface()))
 		}
-		return m
+		return result
 	}
 }
 
@@ -211,12 +233,13 @@ func ToMaps(value interface{}) Maps {
 // This is an internal function used by ToMap to handle different map types.
 func toMapString(value interface{}) map[string]interface{} {
 	if value == nil {
-		return map[string]interface{}{}
+		return make(map[string]interface{})
 	}
 	if r, ok := value.(map[string]interface{}); ok {
 		return r
 	}
-	m := map[string]interface{}{}
+
+	m := make(map[string]interface{})
 	switch val := value.(type) {
 	case map[interface{}]interface{}:
 		for k, v := range val {
@@ -286,55 +309,47 @@ func toMapStringReflect(m *map[string]interface{}, val interface{}) {
 			(*m)[ToString(k.Interface())] = rv.MapIndex(k).Interface()
 		}
 	case reflect.Struct:
-		rt := rv.Type()
+		fields := getStructInfo(rv.Type())
 	ol:
-		for i := 0; i < rv.NumField(); i++ {
-			field := rt.Field(i)
-			fieldName := field.Name
-			if !zstring.IsUcfirst(fieldName) {
-				continue
-			}
+		for _, fieldInfo := range fields {
+			v := rv.Field(fieldInfo.Index)
 
-			name, opt := zreflect.GetStructTag(field, tagName, tagNameLesser)
-			if name == "" {
-				continue
-			}
-			array := strings.Split(opt, ",")
-			v := rv.Field(i)
-			for i := range array {
-				switch strings.TrimSpace(array[i]) {
-				case "omitempty":
-					if IsEmpty(v.Interface()) {
-						continue ol
-					}
+			if fieldInfo.hasOption("omitempty") {
+				if IsEmpty(v.Interface()) {
+					continue ol
 				}
 			}
+
 			fv := reflect.Indirect(v)
-			if fv.IsValid() && isTime(fv.Type().String()) {
-				switch v := fv.Interface().(type) {
+
+			if fv.IsValid() && fieldInfo.IsTime {
+				switch val := fv.Interface().(type) {
 				case time.Time:
-					(*m)[name] = ztime.FormatTime(v)
+					(*m)[fieldInfo.Name] = ztime.FormatTime(val)
 				case ztime.LocalTime:
-					(*m)[name] = v.String()
+					(*m)[fieldInfo.Name] = val.String()
 				}
 				continue
 			}
 
 			switch fv.Kind() {
 			case reflect.Struct:
-				(*m)[name] = toMapString(v.Interface())
+				(*m)[fieldInfo.Name] = toMapString(v.Interface())
 				continue
 			case reflect.Slice:
-				if field.Type.Elem().Kind() == reflect.Struct {
-					mc := make([]map[string]interface{}, v.Len())
+				if fieldInfo.Type.Elem().Kind() == reflect.Struct {
+					mc := getMapSlice()
 					for i := 0; i < v.Len(); i++ {
-						mc[i] = toMapString(v.Index(i).Interface())
+						mc = append(mc, toMapString(v.Index(i).Interface()))
 					}
-					(*m)[name] = mc
+					result := make([]map[string]interface{}, len(mc))
+					copy(result, mc)
+					putMapSlice(mc)
+					(*m)[fieldInfo.Name] = result
 					continue
 				}
 			}
-			(*m)[name] = v.Interface()
+			(*m)[fieldInfo.Name] = v.Interface()
 		}
 	default:
 		(*m)["0"] = val

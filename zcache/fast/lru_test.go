@@ -1,4 +1,4 @@
-package zcache_test
+package fast_test
 
 import (
 	"testing"
@@ -134,7 +134,8 @@ func TestLRUCache(t *testing.T) {
 		time.Sleep(time.Second * 1)
 
 		v, ok = l.Get("key1")
-		tt.EqualTrue(!ok)
+		tt.Log(v, ok)
+		tt.EqualTrue(!ok, true)
 		tt.Equal(nil, v)
 
 		v, ok = l.Get("key3")

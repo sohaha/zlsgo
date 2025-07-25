@@ -10,11 +10,16 @@ import (
 )
 
 func TestMap(t *testing.T) {
-	T := zlsgo.NewTest(t)
+	tt := zlsgo.NewTest(t)
 	m := make(map[interface{}]interface{})
 	m["T"] = "test"
 	tMapKeyExists := MapKeyExists("T", m)
-	T.Equal(true, tMapKeyExists)
+	tt.Equal(true, tMapKeyExists)
+
+	mm := ToMap(m)
+	tt.Log(mm.Keys())
+	tt.EqualTrue(!mm.Valid("val"))
+	tt.EqualTrue(mm.Valid("T"))
 }
 
 func TestMapCopy(t *testing.T) {

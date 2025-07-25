@@ -659,24 +659,24 @@ func (wr logWriter) Reset(l *Logger) {
 	wr.log.level = l.level
 }
 
-// formatArgs 格式化参数，优化内存使用
+// formatArgs formats arguments and optimizes memory usage
 func formatArgs(args ...interface{}) []interface{} {
-	// 预分配所需容量，避免动态扩容
+	// Pre-allocate required capacity to avoid dynamic expansion
 	formatted := make([]interface{}, 0, len(args))
 
-	// 使用临时缓冲区，减少字符串创建
+	// Use temporary buffer to reduce string creation
 	buf := zutil.GetBuff(uint(len(args)))
 	defer zutil.PutBuff(buf)
 
 	for _, a := range args {
-		// 直接写入缓冲区
+		// Write directly to buffer
 		buf.Reset()
 
-		// 使用带颜色的格式化
+		// Use colored formatting
 		if a == nil {
 			buf.WriteString(ColorTextWrap(ColorCyan, "<nil>"))
 		} else {
-			// 避免不必要的转换
+			// Avoid unnecessary conversions
 			switch v := a.(type) {
 			case string:
 				buf.WriteString(ColorTextWrap(ColorCyan, v))
@@ -685,12 +685,12 @@ func formatArgs(args ...interface{}) []interface{} {
 			case error:
 				buf.WriteString(ColorTextWrap(ColorCyan, v.Error()))
 			default:
-				// 其他类型使用sprint
+				// Use sprint for other types
 				buf.WriteString(ColorTextWrap(ColorCyan, sprint(a)))
 			}
 		}
 
-		// 将缓冲区内容添加到结果中
+		// Add buffer content to result
 		formatted = append(formatted, buf.String())
 	}
 

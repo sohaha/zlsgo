@@ -14,7 +14,7 @@ func TestRuleIs(t *testing.T) {
 	tt.NoError(err)
 	err = New().Verifi("1true").IsBool().Error()
 	tt.Equal(true, err != nil)
-	// 空值会直接跳过验证的
+	// Empty values will skip validation directly
 	err = New().Verifi("").IsBool().Error()
 	tt.NoError(err)
 

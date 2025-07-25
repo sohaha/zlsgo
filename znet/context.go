@@ -203,24 +203,24 @@ func (c *Context) Next() bool {
 // next is an internal method that executes the next middleware in the chain.
 // It's called by Next() and handles the middleware execution flow.
 func (c *Context) next() {
-	// 如果已经终止，直接返回
+	// If already terminated, return directly
 	if c.stopHandle.Load() {
 		return
 	}
 
 	c.mu.Lock()
-	// 检查是否还有中间件
+	// Check if there are more middleware
 	if len(c.middleware) == 0 {
 		c.mu.Unlock()
 		return
 	}
 
-	// 获取当前中间件并前进队列
+	// Get current middleware and advance queue
 	n := c.middleware[0]
 	c.middleware = c.middleware[1:]
 	c.mu.Unlock()
 
-	// 执行中间件（锁外执行）
+	// Execute middleware (outside lock)
 	err := n(c)
 	if err != nil {
 		c.renderError(c, err)

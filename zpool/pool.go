@@ -83,7 +83,7 @@ func New(size int, max ...int) *WorkPool {
 			}
 		}},
 	}
-	// todo 定时把队列写入到 chan
+	// TODO: periodically write queue to chan
 
 	return w
 }

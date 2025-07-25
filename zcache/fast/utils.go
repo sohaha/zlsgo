@@ -1,4 +1,4 @@
-package zcache
+package fast
 
 import (
 	"github.com/sohaha/zlsgo/ztime"
@@ -157,9 +157,9 @@ func (c *lruCache) adjust(idx, f, t uint16) {
 
 // hasher computes a 32-bit hash value for a string using a simple algorithm.
 // This is used to determine the bucket index for cache sharding.
-func hasher(s string) (hash int32) {
+func hasher(s string) (hash uint16) {
 	for i := 0; i < len(s); i++ {
-		hash = hash*131 + int32(s[i])
+		hash = hash*131 + uint16(s[i])
 	}
 	return hash
 }

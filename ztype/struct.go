@@ -2,7 +2,6 @@ package ztype
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -144,9 +143,8 @@ func (b *StruBuilder) GetField(name string) *StruField {
 	return b.fields[name]
 }
 
-// 全部字段名
+// Get all field names
 func (b *StruBuilder) FieldNames() []string {
-	fmt.Println(b.fieldKeys)
 	return b.fieldKeys
 }
 
