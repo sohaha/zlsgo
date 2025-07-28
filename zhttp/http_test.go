@@ -87,6 +87,10 @@ func TestHttp(T *testing.T) {
 		expectedText string
 	)
 
+	std.OptimizeForHighConcurrency()
+
+	std.OptimizeForLowLatency()
+
 	forMethod(t)
 
 	// test post

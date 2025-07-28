@@ -25,10 +25,15 @@ func newClient() *http.Client {
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
-		MaxIdleConns:          100,
+		MaxIdleConns:          200,
+		MaxIdleConnsPerHost:   50,
+		MaxConnsPerHost:       100,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		ForceAttemptHTTP2:     true,
+		WriteBufferSize:       32 * 1024,
+		ReadBufferSize:        32 * 1024,
 	}
 	return &http.Client{
 		Jar:       jar,
@@ -267,4 +272,29 @@ func (e *Engine) getXMLEncOpts() *xmlEncOpts {
 		e.xmlEncOpts = &xmlEncOpts{}
 	}
 	return e.xmlEncOpts
+}
+
+// OptimizeForHighConcurrency High concurrency optimization
+func (e *Engine) OptimizeForHighConcurrency() {
+	e.SetTransport(func(transport *http.Transport) {
+		transport.MaxIdleConns = 500
+		transport.MaxIdleConnsPerHost = 100
+		transport.MaxConnsPerHost = 200
+		transport.IdleConnTimeout = 120 * time.Second
+		transport.WriteBufferSize = 64 * 1024
+		transport.ReadBufferSize = 64 * 1024
+	})
+}
+
+// OptimizeForLowLatency Low latency optimization
+func (e *Engine) OptimizeForLowLatency() {
+	e.SetTransport(func(transport *http.Transport) {
+		transport.MaxIdleConns = 100
+		transport.MaxIdleConnsPerHost = 20
+		transport.MaxConnsPerHost = 50
+		transport.IdleConnTimeout = 30 * time.Second
+		transport.DisableKeepAlives = false
+		transport.WriteBufferSize = 16 * 1024
+		transport.ReadBufferSize = 16 * 1024
+	})
 }

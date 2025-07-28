@@ -115,7 +115,12 @@ var (
 // New create a new *Engine
 func New() *Engine {
 	//noinspection ALL
-	return &Engine{flag: BitStdFlags, debug: Debug.Load(), mutex: zsync.NewRBMutex(), client: newClient()}
+	return &Engine{
+		flag:   BitStdFlags,
+		debug:  Debug.Load(),
+		mutex:  zsync.NewRBMutex(),
+		client: newClient(),
+	}
 }
 
 func (p *param) getValues() url.Values {
@@ -137,13 +142,27 @@ func (p *param) Copy(pp param) {
 	}
 }
 
+// Adds Add multiple parameters
 func (p *param) Adds(m map[string]interface{}) {
 	if len(m) == 0 {
 		return
 	}
 	vs := p.getValues()
 	for k, v := range m {
-		vs.Add(k, fmt.Sprint(v))
+		switch val := v.(type) {
+		case string:
+			vs.Add(k, val)
+		case int:
+			vs.Add(k, strconv.Itoa(val))
+		case int64:
+			vs.Add(k, strconv.FormatInt(val, 10))
+		case float64:
+			vs.Add(k, strconv.FormatFloat(val, 'f', -1, 64))
+		case bool:
+			vs.Add(k, strconv.FormatBool(val))
+		default:
+			vs.Add(k, fmt.Sprint(v))
+		}
 	}
 }
 
@@ -309,10 +328,22 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 
 	if !queryParam.Empty() {
 		paramStr := queryParam.Encode()
+		requiredSize := len(rawurl) + 1 + len(paramStr)
+
 		if strings.IndexByte(rawurl, '?') == -1 {
-			rawurl = rawurl + "?" + paramStr
+			sb := zutil.GetBuff(uint(requiredSize))
+			sb.WriteString(rawurl)
+			sb.WriteByte('?')
+			sb.WriteString(paramStr)
+			rawurl = sb.String()
+			zutil.PutBuff(sb)
 		} else {
-			rawurl = rawurl + "&" + paramStr
+			sb := zutil.GetBuff(uint(requiredSize))
+			sb.WriteString(rawurl)
+			sb.WriteByte('&')
+			sb.WriteString(paramStr)
+			rawurl = sb.String()
+			zutil.PutBuff(sb)
 		}
 	}
 	var u *url.URL
