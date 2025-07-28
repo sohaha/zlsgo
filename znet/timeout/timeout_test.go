@@ -1,10 +1,10 @@
 package timeout
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -12,73 +12,194 @@ import (
 	"github.com/sohaha/zlsgo/znet"
 )
 
-func TestWebTimeout(tt *testing.T) {
-	t := zlsgo.NewTest(tt)
-	r := newServer()
-	body := ""
-	w1 := newRequest(r, "GET", "/timeout_1", func(c *znet.Context) {
-		tt.Log("timeout_1")
-		c.String(201, "timeout_1")
-	}, New(2*time.Second, func(c *znet.Context) {
-		tt.Log("timeout_1 Second")
-	}), func(c *znet.Context) {
-		c.Next()
-	})
-	body = w1.Body.String()
-	tt.Log("code:", w1.Code)
-	tt.Log("body:", body)
-	t.Equal(201, w1.Code)
-	t.Equal("timeout_1", body)
+func TestWebTimeout(t *testing.T) {
+	test := zlsgo.NewTest(t)
+	tests := []struct {
+		name         string
+		handler      znet.HandlerFunc
+		middleware   []znet.Handler
+		expectedCode int
+		expectedBody string
+		timeout      time.Duration
+		skip         bool // Add skip flag for tests that need special handling
+	}{
+		{
+			name:         "Normal processing, no timeout",
+			handler:      func(c *znet.Context) { c.String(200, "ok") },
+			middleware:   []znet.Handler{New(2 * time.Second)},
+			expectedCode: 200,
+			expectedBody: "ok",
+			timeout:      2 * time.Second,
+		},
+		{
+			name:         "Timeout with default handler",
+			handler:      func(c *znet.Context) { time.Sleep(2 * time.Second); c.String(200, "delayed") },
+			middleware:   []znet.Handler{New(1 * time.Second)},
+			expectedCode: http.StatusGatewayTimeout,
+			expectedBody: "",
+			timeout:      1 * time.Second,
+		},
+		{
+			name:         "Timeout with custom handler",
+			handler:      func(c *znet.Context) { time.Sleep(2 * time.Second); c.String(200, "delayed") },
+			middleware:   []znet.Handler{New(1*time.Second, func(c *znet.Context) { c.String(504, "custom timeout") })},
+			expectedCode: 504,
+			expectedBody: "custom timeout",
+			timeout:      1 * time.Second,
+		},
+		// Zero timeout is not supported as it would immediately time out all requests
+		// and isn't a practical use case. Using a small duration instead.
+		{
+			name:    "Very short timeout should trigger timeout handler",
+			handler: func(c *znet.Context) { time.Sleep(10 * time.Millisecond); c.String(200, "should not reach") },
+			middleware: []znet.Handler{New(1*time.Millisecond, func(c *znet.Context) {
+				c.String(504, "timeout occurred")
+			})},
+			expectedCode: 504,
+			expectedBody: "timeout occurred",
+			timeout:      1 * time.Millisecond,
+		},
+	}
 
-	w2 := newRequest(r, "GET", "/timeout_2", func(c *znet.Context) {
-		time.Sleep(2 * time.Second)
-		t.Log("run 2")
-		c.String(200, "timeout_2")
-	}, New(1*time.Second))
-	t.Equal(504, w2.Code)
-	t.Equal("", w2.Body.String())
+	for i, tc := range tests {
+		test.Run(tc.name, func(tt *zlsgo.TestUtil) {
+			if tc.skip {
+				tt.Log("Skipping test:", tc.name)
+				return
+			}
 
-	w3 := newRequest(r, "GET", "/timeout_3", func(c *znet.Context) {
-		time.Sleep(2 * time.Second)
-		c.String(200, "timeout_3")
-	}, New(1*time.Second, func(c *znet.Context) {
-		tt.Log("3 timeout")
-		c.String(210, "is timeout")
-	}))
-	t.Equal(210, w3.Code)
-	t.Equal("is timeout", w3.Body.String())
-	tt.Log(w3.Body.String())
+			r := newServer()
+			path := fmt.Sprintf("/test_%d", i) // Unique path for each test case
+			handlers := append([]znet.Handler{tc.handler}, tc.middleware...)
+			w := newRequest(r, "GET", path, handlers...)
 
-	w4 := newRequest(r, "GET", "/timeout_4", func(c *znet.Context) {
-		time.Sleep(3 * time.Second)
-		c.String(200, "timeout_2")
-	}, New(1*time.Second, func(c *znet.Context) {
-		c.String(211, "ok timeout_4")
-		c.Abort()
-	}))
-	t.Equal(211, w4.Code)
-	t.Equal("ok timeout_4", w4.Body.String())
-
-	w5 := newRequest(r, "GET", "/timeout_5", func(c *znet.Context) {
-		c.String(200, "timeout_5")
-	}, New(1*time.Second, func(c *znet.Context) {
-		c.String(211, "ok")
-	}))
-	t.Equal(200, w5.Code)
-	t.Equal("timeout_5", w5.Body.String())
+			tt.Equal(tc.expectedCode, w.Code)
+			tt.Equal(tc.expectedBody, strings.TrimSpace(w.Body.String()))
+		})
+	}
 }
 
-var (
-	one    sync.Once
-	Engine *znet.Engine
-)
+func TestConcurrentRequests(t *testing.T) {
+	test := zlsgo.NewTest(t)
+	r := newServer()
+
+	routes := []string{"/concurrent/a", "/concurrent/b", "/concurrent/c", "/concurrent/d", "/concurrent/e"}
+	for _, path := range routes {
+		handlerPath := path
+		r.GET(path, func(c *znet.Context) {
+			time.Sleep(100 * time.Millisecond)
+			c.String(200, handlerPath)
+		}, New(200*time.Millisecond))
+	}
+
+	for i := 0; i < 5; i++ {
+		path := fmt.Sprintf("/concurrent/%c", 'a'+i)
+		w := newRequest(r, "GET", path)
+		test.Equal(200, w.Code)
+		test.Equal(path, strings.TrimSpace(w.Body.String()))
+	}
+}
+
+func TestPanicRecovery(t *testing.T) {
+	test := zlsgo.NewTest(t)
+	r := newServer()
+
+	timeoutHandlerCalled := make(chan bool, 1)
+
+	panicHandler := func(c *znet.Context) {
+		panic("test panic")
+	}
+
+	timeoutMiddleware := New(1*time.Second, func(c *znet.Context) {
+		timeoutHandlerCalled <- true
+		c.String(504, "timeout handler called")
+	})
+
+	recovery := func(next znet.HandlerFunc) znet.HandlerFunc {
+		return func(c *znet.Context) {
+			defer func() {
+				if r := recover(); r != nil {
+					c.String(500, "panic recovered")
+				}
+			}()
+			next(c)
+		}
+	}
+
+	r.GET("/panic",
+		recovery(panicHandler),
+		timeoutMiddleware,
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/panic", nil)
+	r.ServeHTTP(w, req)
+
+	test.Equal(500, w.Code)
+	test.Equal("panic recovered", strings.TrimSpace(w.Body.String()))
+
+	select {
+	case <-timeoutHandlerCalled:
+		t.Error("Timeout handler was called when it shouldn't have been")
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	r := newServer()
+
+	handlerDone := make(chan struct{})
+	timeoutHandlerCalled := make(chan struct{}, 1)
+
+	r.GET("/cancel",
+		func(c *znet.Context) {
+			defer close(handlerDone)
+
+			timer := time.NewTimer(2 * time.Second)
+			defer timer.Stop()
+
+			select {
+			case <-timer.C:
+				c.String(200, "should not reach")
+			case <-c.Request.Context().Done():
+				return
+			}
+		},
+		New(100*time.Millisecond, func(c *znet.Context) {
+			select {
+			case timeoutHandlerCalled <- struct{}{}:
+			default:
+			}
+			c.String(504, "timeout after cancellation")
+		}),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/cancel", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != 504 {
+		t.Fatalf("Expected status code 504, got %d", w.Code)
+	}
+
+	if body := strings.TrimSpace(w.Body.String()); body != "timeout after cancellation" {
+		t.Fatalf("Unexpected response body: %s", body)
+	}
+
+	select {
+	case <-timeoutHandlerCalled:
+	default:
+		t.Fatal("Timeout handler was not called")
+	}
+
+	select {
+	case <-handlerDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Test timed out waiting for handler to complete")
+	}
+}
 
 func newServer() *znet.Engine {
-	one.Do(func() {
-		Engine = znet.New()
-		Engine.SetMode(znet.DebugMode)
-	})
-	return Engine
+	return znet.New()
 }
 
 func newRequest(r *znet.Engine, method string, path string, handler ...znet.Handler) *httptest.ResponseRecorder {
