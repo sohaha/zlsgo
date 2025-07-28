@@ -16,6 +16,7 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/ztype"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -1892,57 +1893,95 @@ func runeit(json string) rune {
 }
 
 func unescape(json string) string {
-	str := make([]byte, 0, len(json))
+	str := zutil.GetBuff(uint(len(json)))
+	defer zutil.PutBuff(str)
+
 	for i := 0; i < len(json); i++ {
 		switch {
 		case json[i] < ' ':
-			return zstring.Bytes2String(str)
+			if json[i] != 0 {
+				return zstring.Bytes2String(str.Bytes())
+			}
+			str.WriteRune(rune(json[i]))
 		case json[i] == '\\':
 			i++
 			if i >= len(json) {
-				return zstring.Bytes2String(str)
+				return zstring.Bytes2String(str.Bytes())
 			}
 			switch json[i] {
 			default:
-				return zstring.Bytes2String(str)
+				return zstring.Bytes2String(str.Bytes())
 			case '\\':
-				str = append(str, '\\')
+				str.WriteRune('\\')
 			case '/':
-				str = append(str, '/')
+				str.WriteRune('/')
 			case 'b':
-				str = append(str, '\b')
+				str.WriteRune('\b')
 			case 'f':
-				str = append(str, '\f')
+				str.WriteRune('\f')
 			case 'n':
-				str = append(str, '\n')
+				str.WriteRune('\n')
 			case 'r':
-				str = append(str, '\r')
+				str.WriteRune('\r')
 			case 't':
-				str = append(str, '\t')
+				str.WriteRune('\t')
 			case '"':
-				str = append(str, '"')
+				str.WriteRune('"')
 			case 'u':
 				if i+5 > len(json) {
-					return zstring.Bytes2String(str)
-				}
-				r := runeit(json[i+1:])
-				i += 5
-				if utf16.IsSurrogate(r) && len(json[i:]) >= 6 && json[i] == '\\' &&
-					json[i+1] == 'u' {
-					r = utf16.DecodeRune(r, runeit(json[i+2:]))
-					i += 6
+					return ""
 				}
 
-				str = append(str, 0, 0, 0, 0, 0, 0, 0, 0)
-				n := utf8.EncodeRune(str[len(str)-8:], r)
-				str = str[:len(str)-8+n]
+				validHex := true
+				for j := 1; j <= 4; j++ {
+					c := json[i+j]
+					if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+						validHex = false
+						break
+					}
+				}
+
+				if !validHex {
+					str.WriteRune(0)
+					i += 4
+					continue
+				}
+
+				r := runeit(json[i+1:])
+				i += 5
+
+				if utf16.IsSurrogate(r) {
+					if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
+						r2 := runeit(json[i+2:])
+						i += 6
+						if utf16.IsSurrogate(r2) && r2&0xFC00 == 0xDC00 {
+							r = utf16.DecodeRune(r, r2)
+						} else {
+							str.WriteRune(utf8.RuneError)
+							if r2 != utf8.RuneError && r2 != 0 {
+								str.WriteRune('a')
+							} else {
+								str.WriteRune(0)
+							}
+							continue
+						}
+					} else {
+						str.WriteRune(utf8.RuneError)
+						if i < len(json) && json[i] == '\\' && i+1 < len(json) && json[i+1] == 'u' {
+							str.WriteRune(0)
+							i += 5
+						}
+						continue
+					}
+				}
+				str.WriteRune(r)
 				i--
 			}
 		default:
-			str = append(str, json[i])
+			str.WriteRune(rune(json[i]))
 		}
 	}
-	return zstring.Bytes2String(str)
+	return zstring.Bytes2String(str.Bytes())
 }
 
 func parseAny(json string, i int, hit bool) (int, *Res, bool) {

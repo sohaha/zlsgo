@@ -10,22 +10,23 @@ import (
 	"unsafe"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 // Error definitions for common JSON operations
 var (
 	// ErrNoChange is returned when an operation doesn't modify the JSON
-	ErrNoChange              = errors.New("no change")
+	ErrNoChange = errors.New("no change")
 	// ErrPathEmpty is returned when an empty path is provided
-	ErrPathEmpty             = errors.New("path cannot be empty")
+	ErrPathEmpty = errors.New("path cannot be empty")
 	// ErrInvalidJSON is returned when the input is not valid JSON
-	ErrInvalidJSON           = errors.New("invalid json")
+	ErrInvalidJSON = errors.New("invalid json")
 	// ErrNotAllowedWildcard is returned when a wildcard is used in a path where not allowed
-	ErrNotAllowedWildcard    = errors.New("wildcard characters not allowed in path")
+	ErrNotAllowedWildcard = errors.New("wildcard characters not allowed in path")
 	// ErrNotAllowedArrayAccess is returned when array access is used in a path where not allowed
 	ErrNotAllowedArrayAccess = errors.New("array access character not allowed in path")
 	// ErrTypeError is returned when the JSON value is not of the expected type
-	ErrTypeError             = errors.New("json must be an object or array")
+	ErrTypeError = errors.New("json must be an object or array")
 )
 
 // MatchKeys returns a new Res containing only the key-value pairs where the key
@@ -106,18 +107,28 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 				}
 				return nil, nil
 			}
-			buf := make([]byte, 0, sz)
-			buf = append(buf, s[:res.index]...)
+			// Use pooled buffer for better performance
+			buf := zutil.GetBuff(uint(sz))
+			defer zutil.PutBuff(buf)
+
+			buf.WriteString(s[:res.index])
 			if stringify {
-				buf = appendStringify(buf, raw)
+				appendStringify(buf, raw)
 			} else {
-				buf = append(buf, raw...)
+				buf.WriteString(raw)
 			}
-			buf = append(buf, s[res.index+len(res.raw):]...)
-			return buf, nil
+			buf.WriteString(s[res.index+len(res.raw):])
+
+			// Copy result to avoid returning pooled buffer
+			result := make([]byte, buf.Len())
+			copy(result, buf.Bytes())
+			return result, nil
 		}
 	}
-	paths := make([]pathResult, 0, 4)
+
+	paths := getPathCache()
+	defer putPathCache(paths)
+
 	r, err := parsePath(path)
 	if err != nil {
 		return nil, err
@@ -130,17 +141,24 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 		paths = append(paths, r)
 	}
 
-	njson, err := appendRawPaths(nil, s, paths, raw, stringify, del)
-	if err != nil {
+	b := zutil.GetBuff()
+	defer zutil.PutBuff(b)
+
+	if err := appendRawPaths(b, s, paths, raw, stringify, del); err != nil {
 		return nil, err
 	}
-	return njson, nil
+
+	rb := b.Bytes()
+	n := make([]byte, len(rb))
+	copy(n, rb)
+	return n, nil
 }
 
 // SetOptions sets a JSON value at the specified path with custom options.
 // It returns the modified JSON string and any error encountered.
 func SetOptions(json, path string, value interface{},
-	opts *Options) (string, error) {
+	opts *Options,
+) (string, error) {
 	if opts != nil && opts.ReplaceInPlace {
 		nopts := *opts
 		opts = &nopts
@@ -157,7 +175,8 @@ func SetOptions(json, path string, value interface{},
 // SetBytesOptions sets a JSON value at the specified path with custom options.
 // It works directly with byte slices for better performance.
 func SetBytesOptions(json []byte, path string, value interface{},
-	opts *Options) ([]byte, error) {
+	opts *Options,
+) ([]byte, error) {
 	var optimistic, inplace bool
 	if opts != nil {
 		optimistic = opts.Optimistic
@@ -233,7 +252,8 @@ func SetBytesOptions(json []byte, path string, value interface{},
 // SetRawBytesOptions sets a raw JSON value at the specified path in a JSON byte slice with custom options.
 // It accepts raw JSON bytes for both the target JSON and the value to be set.
 func SetRawBytesOptions(json []byte, path string, value []byte,
-	opts *Options) ([]byte, error) {
+	opts *Options,
+) ([]byte, error) {
 	jstr := zstring.Bytes2String(json)
 	vstr := zstring.Bytes2String(value)
 	var optimistic, inplace bool

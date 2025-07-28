@@ -1,6 +1,7 @@
 package zjson
 
 import (
+	"bytes"
 	jsong "encoding/json"
 	"errors"
 	"strconv"
@@ -111,42 +112,43 @@ func mustMarshalString(s string) bool {
 }
 
 // appendStringify appends a JSON string representation to a byte buffer.
-func appendStringify(buf []byte, s string) []byte {
+func appendStringify(buf *bytes.Buffer, s string) {
 	if mustMarshalString(s) {
 		b, _ := jsong.Marshal(s)
-		return append(buf, b...)
+		buf.Write(b)
+		return
 	}
-	buf = append(buf, '"')
-	buf = append(buf, s...)
-	buf = append(buf, '"')
-	return buf
+
+	buf.WriteByte('"')
+	buf.WriteString(s)
+	buf.WriteByte('"')
 }
 
 // appendBuild recursively builds a JSON structure based on the provided paths.
-func appendBuild(buf []byte, array bool, paths []pathResult, raw string,
+func appendBuild(buf *bytes.Buffer, array bool, paths []pathResult, raw string,
 	stringify bool,
-) []byte {
+) *bytes.Buffer {
 	if !array {
-		buf = appendStringify(buf, paths[0].part)
-		buf = append(buf, ':')
+		appendStringify(buf, paths[0].part)
+		buf.WriteByte(':')
 	}
 	if len(paths) > 1 {
 		n, numeric := atoui(paths[1])
 		if numeric || (!paths[1].force && paths[1].part == "-1") {
-			buf = append(buf, '[')
-			buf = appendRepeat(buf, "null,", n)
-			buf = appendBuild(buf, true, paths[1:], raw, stringify)
-			buf = append(buf, ']')
+			buf.WriteByte('[')
+			appendRepeat(buf, "null,", n)
+			appendBuild(buf, true, paths[1:], raw, stringify)
+			buf.WriteByte(']')
 		} else {
-			buf = append(buf, '{')
-			buf = appendBuild(buf, false, paths[1:], raw, stringify)
-			buf = append(buf, '}')
+			buf.WriteByte('{')
+			appendBuild(buf, false, paths[1:], raw, stringify)
+			buf.WriteByte('}')
 		}
 	} else {
 		if stringify {
-			buf = appendStringify(buf, raw)
+			appendStringify(buf, raw)
 		} else {
-			buf = append(buf, raw...)
+			buf.WriteString(raw)
 		}
 	}
 	return buf
@@ -167,11 +169,10 @@ func atoui(r pathResult) (n int, ok bool) {
 }
 
 // appendRepeat appends a string to a buffer n times.
-func appendRepeat(buf []byte, s string, n int) []byte {
+func appendRepeat(buf *bytes.Buffer, s string, n int) {
 	for i := 0; i < n; i++ {
-		buf = append(buf, s...)
+		buf.WriteString(s)
 	}
-	return buf
 }
 
 // deleteTailItem removes the last item from a JSON array or object.
@@ -215,9 +216,9 @@ loop:
 }
 
 // appendRawPaths appends or deletes a value at the specified path in the JSON.
-func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
+func appendRawPaths(buf *bytes.Buffer, jstr string, paths []pathResult, raw string,
 	stringify, del bool,
-) ([]byte, error) {
+) error {
 	var err error
 	var res *Res
 	var found bool
@@ -235,20 +236,21 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	}
 	if res.index > 0 {
 		if len(paths) > 1 {
-			buf = append(buf, jstr[:res.index]...)
-			buf, err = appendRawPaths(buf, res.raw, paths[1:], raw,
+			buf.WriteString(jstr[:res.index])
+			err = appendRawPaths(buf, res.raw, paths[1:], raw,
 				stringify, del)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			buf = append(buf, jstr[res.index+len(res.raw):]...)
-			return buf, nil
+			buf.WriteString(jstr[res.index+len(res.raw):])
+			return nil
 		}
-		buf = append(buf, jstr[:res.index]...)
+		buf.WriteString(jstr[:res.index])
 		var exidx int
 		if del {
-			var delNextComma bool
-			buf, delNextComma = deleteTailItem(buf)
+			bufNew, delNextComma := deleteTailItem(buf.Bytes())
+			buf.Reset()
+			buf.Write(bufNew)
 			if delNextComma {
 				i, j := res.index+len(res.raw), 0
 				for ; i < len(jstr); i, j = i+1, j+1 {
@@ -263,16 +265,16 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 			}
 		} else {
 			if stringify {
-				buf = appendStringify(buf, raw)
+				appendStringify(buf, raw)
 			} else {
-				buf = append(buf, raw...)
+				buf.WriteString(raw)
 			}
 		}
-		buf = append(buf, jstr[res.index+len(res.raw)+exidx:]...)
-		return buf, nil
+		buf.WriteString(jstr[res.index+len(res.raw)+exidx:])
+		return nil
 	}
 	if del {
-		return nil, ErrNoChange
+		return ErrNoChange
 	}
 	n, numeric := atoui(paths[0])
 	isempty := true
@@ -311,20 +313,20 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 	}
 	switch jsres.raw[0] {
 	case '{':
-		buf = append(buf, '{')
-		buf = appendBuild(buf, false, paths, raw, stringify)
+		buf.WriteString("{")
+		appendBuild(buf, false, paths, raw, stringify)
 		if comma {
-			buf = append(buf, ',')
+			buf.WriteString(",")
 		}
-		buf = append(buf, jsres.raw[1:]...)
-		return buf, nil
+		buf.WriteString(jsres.raw[1:])
+		return nil
 	case '[':
 		var appendit bool
 		if !numeric {
 			if paths[0].part == "-1" && !paths[0].force {
 				appendit = true
 			} else {
-				return nil, errors.New("cannot set array element for non-numeric key '" + paths[0].part + "'")
+				return errors.New("cannot set array element for non-numeric key '" + paths[0].part + "'")
 			}
 		}
 		if appendit {
@@ -332,36 +334,36 @@ func appendRawPaths(buf []byte, jstr string, paths []pathResult, raw string,
 			if njson[len(njson)-1] == ']' {
 				njson = njson[:len(njson)-1]
 			}
-			buf = append(buf, njson...)
+			buf.WriteString(njson)
 			if comma {
-				buf = append(buf, ',')
+				buf.WriteString(",")
 			}
 
-			buf = appendBuild(buf, true, paths, raw, stringify)
-			buf = append(buf, ']')
-			return buf, nil
+			appendBuild(buf, true, paths, raw, stringify)
+			buf.WriteString("]")
+			return nil
 		}
-		buf = append(buf, '[')
+		buf.WriteString("[")
 		ress := jsres.Array()
 		for i := 0; i < len(ress); i++ {
 			if i > 0 {
-				buf = append(buf, ',')
+				buf.WriteString(",")
 			}
-			buf = append(buf, ress[i].raw...)
+			buf.WriteString(ress[i].raw)
 		}
 		if len(ress) == 0 {
-			buf = appendRepeat(buf, "null,", n-len(ress))
+			buf.WriteString("null,")
 		} else {
-			buf = appendRepeat(buf, ",null", n-len(ress))
+			appendRepeat(buf, ",null", n-len(ress))
 			if comma {
-				buf = append(buf, ',')
+				buf.WriteString(",")
 			}
 		}
-		buf = appendBuild(buf, true, paths, raw, stringify)
-		buf = append(buf, ']')
-		return buf, nil
+		appendBuild(buf, true, paths, raw, stringify)
+		buf.WriteString("]")
+		return nil
 	default:
-		return nil, ErrTypeError
+		return ErrTypeError
 	}
 }
 

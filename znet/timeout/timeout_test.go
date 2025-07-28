@@ -53,7 +53,6 @@ func TestWebTimeout(tt *testing.T) {
 		time.Sleep(3 * time.Second)
 		c.String(200, "timeout_2")
 	}, New(1*time.Second, func(c *znet.Context) {
-		c.Next()
 		c.String(211, "ok timeout_4")
 		c.Abort()
 	}))

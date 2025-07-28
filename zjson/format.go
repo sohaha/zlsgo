@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -71,8 +72,16 @@ func Ugly(json []byte) []byte {
 	if err == nil {
 		json = zstring.String2Bytes(jsonStr)
 	}
-	buf := make([]byte, 0, len(json))
-	return ugly(buf, json)
+
+	buf := zutil.GetBuff(uint(len(json)))
+	defer zutil.PutBuff(buf)
+
+	result := ugly(buf.Bytes(), json)
+
+	final := make([]byte, len(result))
+	copy(final, result)
+
+	return final
 }
 
 // ugly is an internal function that removes whitespace from JSON data.

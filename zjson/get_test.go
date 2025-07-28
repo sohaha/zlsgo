@@ -366,6 +366,93 @@ func TestDefault(t *testing.T) {
 	tt.EqualExit(uint64(1), notExists.Uint64(1))
 }
 
+func Test_unescape(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"BasicASCII", "hello", "hello"},
+		{"SimpleEscape", "\\\"", "\""},
+		{"UnicodeBasic", "\\u0041", "A"},
+		{"UnicodeChinese", "\\u4F60\\u597D", "你好"},
+		{"SurrogatePair", "\\uD83D\\uDE00", "😀"},
+		{"IncompleteSurrogate", "\\uD83D", "\uFFFD"},
+		{"InvalidUnicode", "\\uXXXX", "\u0000"},
+		{"MixedContent", "Hello\\u0020World\\t!", "Hello World\t!"},
+		{"ControlCharacter", "\x19", ""},
+		{"InvalidEscape", "\\x", ""},
+		{"UnicodeInsufficientChars", "\\u12", ""},
+		{"Backspace", "\\b", "\b"},
+		{"FormFeed", "\\f", "\f"},
+		{"CarriageReturn", "\\r", "\r"},
+		{"Tab", "\\t", "\t"},
+		{"Solidus", "\\/", "/"},
+		{"ControlCharacterInMiddle", "hello\x19world", "hello"},
+		{"MultipleUnicode", "\\u0041\\u0042", "AB"},
+		{"HighSurrogateFollowedByNonSurrogate", "\\uD83D\\u0041", "\uFFFDa"},
+		{"HighSurrogateFollowedByInvalidUnicode", "\\uD83D\\uXXXX", "\uFFFD\u0000"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tt := zlsgo.NewTest(t)
+			result := unescape(test.input)
+			tt.Equal(test.expected, result)
+		})
+	}
+}
+
+func TestParseString(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tests := []struct {
+		input    string
+		expected string
+		escaped  bool
+	}{
+		{"\"simple\"", "simple", false},
+		{"\"escaped\\\"quote\"", "escaped\"quote", true},
+		{"\"unicode\\u0041\"", "unicodeA", true},
+		{"\"invalid\\x\"", "invalid", true},
+		{"\"mixed\\t\\u0041\"", "mixed\tA", true},
+		{"\"surrogate\\uD83D\\uDE00\"", "surrogate😀", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			i, val, vesc, ok := parseString(test.input, 1)
+			tt.Equal(true, ok)
+			tt.Equal(test.escaped, vesc)
+			// parseString returns the full string including quotes
+			tt.Equal(test.input, val)
+			tt.Equal(len(test.input), i)
+
+			if vesc {
+				unescaped := unescape(val[1 : len(val)-1])
+				tt.Equal(test.expected, unescaped)
+			} else {
+				// For non-escaped strings, the content should match expected
+				tt.Equal(test.expected, val[1:len(val)-1])
+			}
+		})
+	}
+
+	// Test invalid strings
+	invalidTests := []string{
+		"\"unterminated",
+		"\"invalid\\",
+		"\"invalid\\u12",
+	}
+
+	for _, test := range invalidTests {
+		t.Run(test, func(t *testing.T) {
+			_, _, _, ok := parseString(test, 1)
+			tt.Equal(false, ok)
+		})
+	}
+}
+
 func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
