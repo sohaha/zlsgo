@@ -102,11 +102,53 @@ func TestFindRange(t *testing.T) {
 	})
 }
 
+func stepDay(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.AddDate(0, 0, n)
+	}
+}
+
+func stepHour(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.Add(time.Duration(n) * time.Hour)
+	}
+}
+
+func stepMinute(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.Add(time.Duration(n) * time.Minute)
+	}
+}
+
+func stepSecond(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.Add(time.Duration(n) * time.Second)
+	}
+}
+
+func stepWeek(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.AddDate(0, 0, n*7)
+	}
+}
+
+func stepMonth(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.AddDate(0, n, 0)
+	}
+}
+
+func stepYear(n int) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		return t.AddDate(n, 0, 0)
+	}
+}
+
 func TestSequence(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	tt.Run("days", func(tt *zlsgo.TestUtil) {
-		days, err := ztime.Sequence("2023-01-01", "2023-01-05", time.Hour*24, "Y-m-d")
+		days, err := ztime.Sequence("2023-01-01", "2023-01-05", stepDay(1), "Y-m-d")
 		tt.Log(days)
 		tt.NoError(err)
 		tt.Equal(5, len(days))
@@ -115,7 +157,7 @@ func TestSequence(t *testing.T) {
 	})
 
 	tt.Run("hours", func(tt *zlsgo.TestUtil) {
-		hours, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 05:00", time.Hour, "Y-m-d H:i")
+		hours, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 05:00", stepHour(1), "Y-m-d H:i")
 		tt.NoError(err)
 		tt.Equal(6, len(hours))
 		tt.Equal("2023-01-01 00:00", hours[0])
@@ -123,7 +165,7 @@ func TestSequence(t *testing.T) {
 	})
 
 	tt.Run("only minutes", func(tt *zlsgo.TestUtil) {
-		minutes, err := ztime.Sequence("00:00", "15:00", time.Minute*3, "H:i")
+		minutes, err := ztime.Sequence("00:00", "15:00", stepMinute(3), "H:i")
 		tt.NoError(err)
 		tt.Equal(301, len(minutes))
 		tt.Equal("00:00", minutes[0])
@@ -132,24 +174,24 @@ func TestSequence(t *testing.T) {
 	})
 
 	tt.Run("invalid range", func(tt *zlsgo.TestUtil) {
-		_, err := ztime.Sequence("2023-01-05", "2023-01-01", 0, "Y-m-d")
+		_, err := ztime.Sequence("2023-01-05", "2023-01-01", nil, "Y-m-d")
 		tt.NotNil(err)
 	})
 
 	tt.Run("invalid time", func(tt *zlsgo.TestUtil) {
-		_, err := ztime.Sequence("xxx", "2023-01-01", 0, "Y-m-d")
+		_, err := ztime.Sequence("xxx", "2023-01-01", nil, "Y-m-d")
 		tt.NotNil(err)
 	})
 
 	tt.Run("step length", func(tt *zlsgo.TestUtil) {
-		equalRange, err := ztime.Sequence("2023-01-01 00:00", "2023-01-02 00:00", time.Hour*24, "Y-m-d H:i")
+		equalRange, err := ztime.Sequence("2023-01-01 00:00", "2023-01-02 00:00", stepDay(1), "Y-m-d H:i")
 		tt.NoError(err)
 		tt.Log("equalRange:", equalRange)
 		tt.Equal(2, len(equalRange))
 		tt.Equal("2023-01-01 00:00", equalRange[0])
 		tt.Equal("2023-01-02 00:00", equalRange[1])
 
-		largerStep, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 20:00", time.Hour*24, "Y-m-d H:i")
+		largerStep, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 20:00", stepDay(1), "Y-m-d H:i")
 		tt.NoError(err)
 		tt.Log("largerStep:", largerStep)
 		tt.Equal(2, len(largerStep))
@@ -160,7 +202,7 @@ func TestSequence(t *testing.T) {
 			tt.Equal("2023-01-01 20:00", largerStep[1])
 		}
 
-		muchLargerStep, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 01:00", time.Hour*24, "Y-m-d H:i")
+		muchLargerStep, err := ztime.Sequence("2023-01-01 00:00", "2023-01-01 01:00", stepDay(1), "Y-m-d H:i")
 		tt.NoError(err)
 		tt.Log("muchLargerStep:", muchLargerStep)
 		tt.Equal(2, len(muchLargerStep))
@@ -173,7 +215,7 @@ func TestSequence(t *testing.T) {
 
 		start, _ := time.Parse("2006-01-02 15:04", "2023-01-01 00:00")
 		end, _ := time.Parse("2006-01-02 15:04", "2023-01-01 01:00")
-		timeTypeInput, err := ztime.Sequence(start, end, time.Hour*24, "Y-m-d H:i")
+		timeTypeInput, err := ztime.Sequence(start, end, stepDay(1), "Y-m-d H:i")
 		tt.NoError(err)
 		tt.Log("timeTypeInput:", timeTypeInput)
 		tt.Equal(2, len(timeTypeInput))
@@ -183,5 +225,38 @@ func TestSequence(t *testing.T) {
 		if len(timeTypeInput) >= 2 {
 			tt.Equal("2023-01-01 01:00", timeTypeInput[1])
 		}
+	})
+
+	tt.Run("new step units", func(tt *zlsgo.TestUtil) {
+		seconds, err := ztime.Sequence("2023-01-01 00:00:00", "2023-01-01 00:00:10", stepSecond(5), "Y-m-d H:i:s")
+		tt.NoError(err)
+		tt.Equal(3, len(seconds))
+		tt.Equal("2023-01-01 00:00:00", seconds[0])
+		tt.Equal("2023-01-01 00:00:05", seconds[1])
+		tt.Equal("2023-01-01 00:00:10", seconds[2])
+
+		weeks, err := ztime.Sequence("2023-01-01", "2023-01-22", stepWeek(1), "Y-m-d")
+		tt.NoError(err)
+		tt.Equal(4, len(weeks))
+		tt.Equal("2023-01-01", weeks[0])
+		tt.Equal("2023-01-08", weeks[1])
+		tt.Equal("2023-01-15", weeks[2])
+		tt.Equal("2023-01-22", weeks[3])
+
+		months, err := ztime.Sequence("2023-01-01", "2023-04-01", stepMonth(1), "Y-m-d")
+		tt.NoError(err)
+		tt.Equal(4, len(months))
+		tt.Equal("2023-01-01", months[0])
+		tt.Equal("2023-02-01", months[1])
+		tt.Equal("2023-03-01", months[2])
+		tt.Equal("2023-04-01", months[3])
+
+		years, err := ztime.Sequence("2020-01-01", "2023-01-01", stepYear(1), "Y-m-d")
+		tt.NoError(err)
+		tt.Equal(4, len(years))
+		tt.Equal("2020-01-01", years[0])
+		tt.Equal("2021-01-01", years[1])
+		tt.Equal("2022-01-01", years[2])
+		tt.Equal("2023-01-01", years[3])
 	})
 }

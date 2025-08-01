@@ -89,12 +89,7 @@ func parseGenericTime[T time.Time | string](t T, format ...string) (time.Time, e
 }
 
 // Sequence generates a sequence of time strings between start and end times based on the given format.
-// It takes start and end time strings, a step duration, and optional format strings.
-func Sequence[T time.Time | string](start, end T, step time.Duration, format ...string) ([]string, error) {
-	if step <= 0 {
-		step = time.Hour * 24
-	}
-
+func Sequence[T time.Time | string](start, end T, stepFn func(time.Time) time.Time, format ...string) ([]string, error) {
 	startTime, err := parseGenericTime(start, format...)
 	if err != nil {
 		return nil, err
@@ -114,14 +109,23 @@ func Sequence[T time.Time | string](start, end T, step time.Duration, format ...
 		tpl = FormatTlp(format[0])
 	}
 
-	result := make([]string, 0, int(endTime.Sub(startTime)/step)+2)
-	for current := startTime; !current.After(endTime); current = current.Add(step) {
+	result := make([]string, 0)
+	current := startTime
+
+	if stepFn == nil {
+		stepFn = func(t time.Time) time.Time {
+			return t.Add(time.Hour * 24)
+		}
+	}
+
+	for !current.After(endTime) {
 		result = append(result, inlay.In(current).Format(tpl))
+		current = stepFn(current)
 	}
 
 	if len(result) > 0 {
 		lastTime, _ := Parse(result[len(result)-1], format...)
-		if !lastTime.Equal(endTime) {
+		if !lastTime.Equal(endTime) && !endTime.Before(lastTime) {
 			result = append(result, inlay.In(endTime).Format(tpl))
 		}
 	}
