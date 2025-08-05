@@ -16,7 +16,6 @@ import (
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/ztime"
 	"github.com/sohaha/zlsgo/ztype"
-	"github.com/sohaha/zlsgo/zutil"
 )
 
 type (
@@ -673,7 +672,11 @@ func tostr(json string) (raw string, str string) {
 			} else {
 				ret = json[:i]
 			}
-			return ret, unescape(json[1:i])
+			unescaped := unescape(json[1:i])
+			if unescaped == "" {
+				return ret, json[1:i]
+			}
+			return ret, unescaped
 		}
 	}
 	return json, json[1:]
@@ -1893,95 +1896,84 @@ func runeit(json string) rune {
 }
 
 func unescape(json string) string {
-	str := zutil.GetBuff(uint(len(json)))
-	defer zutil.PutBuff(str)
-
+	str := make([]byte, 0, len(json))
 	for i := 0; i < len(json); i++ {
 		switch {
 		case json[i] < ' ':
-			if json[i] != 0 {
-				return zstring.Bytes2String(str.Bytes())
-			}
-			str.WriteRune(rune(json[i]))
+			return zstring.Bytes2String(str)
 		case json[i] == '\\':
 			i++
 			if i >= len(json) {
-				return zstring.Bytes2String(str.Bytes())
+				return zstring.Bytes2String(str)
 			}
 			switch json[i] {
 			default:
-				return zstring.Bytes2String(str.Bytes())
+				return zstring.Bytes2String(str)
 			case '\\':
-				str.WriteRune('\\')
+				str = append(str, '\\')
 			case '/':
-				str.WriteRune('/')
+				str = append(str, '/')
 			case 'b':
-				str.WriteRune('\b')
+				str = append(str, '\b')
 			case 'f':
-				str.WriteRune('\f')
+				str = append(str, '\f')
 			case 'n':
-				str.WriteRune('\n')
+				str = append(str, '\n')
 			case 'r':
-				str.WriteRune('\r')
+				str = append(str, '\r')
 			case 't':
-				str.WriteRune('\t')
+				str = append(str, '\t')
 			case '"':
-				str.WriteRune('"')
+				str = append(str, '"')
 			case 'u':
 				if i+5 > len(json) {
-					return ""
+					return zstring.Bytes2String(str)
 				}
-
-				validHex := true
-				for j := 1; j <= 4; j++ {
-					c := json[i+j]
-					if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-						validHex = false
-						break
-					}
-				}
-
-				if !validHex {
-					str.WriteRune(0)
-					i += 4
-					continue
-				}
-
 				r := runeit(json[i+1:])
 				i += 5
-
+				
+				// 处理 Unicode 代理对
 				if utf16.IsSurrogate(r) {
-					if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
-						r2 := runeit(json[i+2:])
-						i += 6
-						if utf16.IsSurrogate(r2) && r2&0xFC00 == 0xDC00 {
-							r = utf16.DecodeRune(r, r2)
-						} else {
-							str.WriteRune(utf8.RuneError)
-							if r2 != utf8.RuneError && r2 != 0 {
-								str.WriteRune('a')
+					// 检查是否是高代理字符
+					if 0xD800 <= r && r <= 0xDBFF {
+						// 高代理字符，需要查找低代理字符
+						if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
+							r2 := runeit(json[i+2:])
+							// 检查是否是有效的低代理字符
+							if 0xDC00 <= r2 && r2 <= 0xDFFF {
+								// 有效的代理对
+								r = utf16.DecodeRune(r, r2)
+								i += 6
 							} else {
-								str.WriteRune(0)
+								// 高代理字符后跟无效的低代理字符
+								// 输出替换字符，然后继续处理后续的 Unicode 序列
+								str = append(str, 0, 0, 0, 0, 0, 0, 0, 0)
+								n := utf8.EncodeRune(str[len(str)-8:], '\uFFFD')
+								str = str[:len(str)-8+n]
+								// 不增加 i，让下一轮循环处理这个 Unicode 序列
+								i--
+								continue
 							}
-							continue
+						} else {
+							// 高代理字符后没有跟 \u 序列，输出替换字符
+							r = '\uFFFD'
 						}
 					} else {
-						str.WriteRune(utf8.RuneError)
-						if i < len(json) && json[i] == '\\' && i+1 < len(json) && json[i+1] == 'u' {
-							str.WriteRune(0)
-							i += 5
-						}
-						continue
+						// 低代理字符单独出现，使用替换字符
+						r = '\uFFFD'
 					}
 				}
-				str.WriteRune(r)
+
+				str = append(str, 0, 0, 0, 0, 0, 0, 0, 0)
+				n := utf8.EncodeRune(str[len(str)-8:], r)
+				str = str[:len(str)-8+n]
 				i--
 			}
 		default:
-			str.WriteRune(rune(json[i]))
+			str = append(str, json[i])
 		}
 	}
-	return zstring.Bytes2String(str.Bytes())
+	return zstring.Bytes2String(str)
 }
 
 func parseAny(json string, i int, hit bool) (int, *Res, bool) {

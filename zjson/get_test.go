@@ -390,8 +390,9 @@ func Test_unescape(t *testing.T) {
 		{"Solidus", "\\/", "/"},
 		{"ControlCharacterInMiddle", "hello\x19world", "hello"},
 		{"MultipleUnicode", "\\u0041\\u0042", "AB"},
-		{"HighSurrogateFollowedByNonSurrogate", "\\uD83D\\u0041", "\uFFFDa"},
+		{"HighSurrogateFollowedByNonSurrogate", "\\uD83D\\u0041", "\uFFFDA"},
 		{"HighSurrogateFollowedByInvalidUnicode", "\\uD83D\\uXXXX", "\uFFFD\u0000"},
+		{"Unescape", `{\"name\":null,\"text\":\"您好，我该怎么称呼您呢？\"}`, `{"name":null,"text":"您好，我该怎么称呼您呢？"}`},
 	}
 
 	for _, test := range tests {
