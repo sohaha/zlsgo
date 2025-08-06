@@ -62,26 +62,26 @@ type (
 		injector             zdi.Injector
 		preHandler           Handler
 		views                Template
+		BindStructCase       func(string) string
 		template             *tpl
 		Log                  *zlog.Logger
 		templateFuncMap      template.FuncMap
 		router               *router
-		BindTag              string
-		webModeName          string
-		BindStructDelimiter  string
-		BindStructCase       func(string) string
 		BindStructSuffix     string
+		webModeName          string
+		BindTag              string
 		customMethodType     string
+		BindStructDelimiter  string
+		customRenderings     []reflect.Type
 		addr                 []addrSt
 		shutdowns            []func()
 		MaxMultipartMemory   int64
-		MaxRequestBodySize   int64
 		webMode              int
 		writeTimeout         time.Duration
 		readTimeout          time.Duration
+		MaxRequestBodySize   int64
 		ShowFavicon          bool
 		AllowQuerySemicolons bool
-		customRenderings     []reflect.Type
 	}
 	// TlsCfg holds TLS configuration for secure HTTP connections.
 	TlsCfg struct {

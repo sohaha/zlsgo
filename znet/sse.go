@@ -22,6 +22,7 @@ type SSE struct {
 	option    *SSEOption
 	ctxCancel context.CancelFunc
 	flush     func()
+	stopping  *zutil.Bool
 	lastID    string
 	method    string
 	Comment   []byte
@@ -49,6 +50,12 @@ func (s *SSE) Done() <-chan struct{} {
 // Stop terminates the SSE connection.
 // This will close the event stream and release associated resources.
 func (s *SSE) Stop() {
+	s.stopping.Store(true)
+
+	for len(s.events) > 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	s.ctxCancel()
 }
 
@@ -155,6 +162,10 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 		return errors.New("client has been closed")
 	}
 
+	if s.stopping.Load() {
+		return errors.New("SSE is stopping, no new events accepted")
+	}
+
 	ev := &sseEvent{
 		ID:   id,
 		Data: data,
@@ -186,6 +197,7 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 		net:       c,
 		ctx:       ctx,
 		ctxCancel: cancel,
+		stopping:  zutil.NewBool(false),
 		option: &SSEOption{
 			// RetryTime:      3000,
 			HeartbeatsTime: 15000,

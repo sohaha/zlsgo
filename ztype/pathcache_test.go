@@ -21,19 +21,19 @@ func TestPathParsingCorrectness(t *testing.T) {
 	}
 
 	tests := []struct {
-		path      string
 		expected  interface{}
+		path      string
 		exists    bool
 		skipValue bool
 	}{
-		{"user.profile.name", "John", true, false},
-		{"user.profile.age", 30, true, false},
-		{"items.0.id", 1, true, false},
-		{"items.1.name", "item2", true, false},
-		{"simple", "value", true, false},
-		{"user.nonexistent", nil, false, false},
-		{"items.5.id", nil, false, false},
-		{"", testData, true, true},
+		{path: "user.profile.name", expected: "John", exists: true, skipValue: false},
+		{path: "user.profile.age", expected: 30, exists: true, skipValue: false},
+		{path: "items.0.id", expected: 1, exists: true, skipValue: false},
+		{path: "items.1.name", expected: "item2", exists: true, skipValue: false},
+		{path: "simple", expected: "value", exists: true, skipValue: false},
+		{path: "user.nonexistent", expected: nil, exists: false, skipValue: false},
+		{path: "items.5.id", expected: nil, exists: false, skipValue: false},
+		{path: "", expected: testData, exists: true, skipValue: true},
 	}
 
 	for _, test := range tests {
@@ -58,13 +58,13 @@ func TestPathParsingWithEscapeChars(t *testing.T) {
 	}
 
 	tests := []struct {
-		path     string
 		expected interface{}
+		path     string
 		exists   bool
 	}{
-		{"user\\.name", "John", true},
-		{"user\\.email", "john@example.com", true},
-		{"data.key\\.with\\.dots", "value", true},
+		{path: "user\\.name", expected: "John", exists: true},
+		{path: "user\\.email", expected: "john@example.com", exists: true},
+		{path: "data.key\\.with\\.dots", expected: "value", exists: true},
 	}
 
 	for _, test := range tests {

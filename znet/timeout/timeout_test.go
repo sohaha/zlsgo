@@ -15,13 +15,13 @@ import (
 func TestWebTimeout(t *testing.T) {
 	test := zlsgo.NewTest(t)
 	tests := []struct {
-		name         string
 		handler      znet.HandlerFunc
+		name         string
+		expectedBody string
 		middleware   []znet.Handler
 		expectedCode int
-		expectedBody string
 		timeout      time.Duration
-		skip         bool // Add skip flag for tests that need special handling
+		skip         bool
 	}{
 		{
 			name:         "Normal processing, no timeout",

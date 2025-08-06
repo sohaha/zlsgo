@@ -11,19 +11,19 @@ import (
 
 // fieldInfo cache struct field info
 type fieldInfo struct {
-	Name       string
-	Index      int
-	Tag        string
 	Type       reflect.Type
-	IsTime     bool
+	Name       string
+	Tag        string
 	Options    []string
+	Index      int
+	IsTime     bool
 	IsExported bool
 }
 
 // structCacheEntry struct cache entry
 type structCacheEntry struct {
-	Fields   []fieldInfo
 	TypeName string
+	Fields   []fieldInfo
 }
 
 // structCache struct cache using reflect.Type as key to avoid name conflicts

@@ -13,9 +13,9 @@ import (
 
 // Memory implements the Session interface using an in-memory map.
 type Memory struct {
-	id        string
-	data      sync.Map
 	expiresAt time.Time
+	data      sync.Map
+	id        string
 	mu        sync.RWMutex
 }
 
@@ -84,8 +84,8 @@ func (s *Memory) Destroy() error {
 // It provides a simple, non-persistent session storage solution
 // suitable for development, testing, or single-instance applications.
 type MemoryStore struct {
-	sessions    sync.Map  // Lock-free concurrent map for session storage
-	sessionPool sync.Pool // Pool for session object reuse
+	sessionPool sync.Pool
+	sessions    sync.Map
 }
 
 var _ Store = (*MemoryStore)(nil)

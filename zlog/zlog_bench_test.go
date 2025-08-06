@@ -59,10 +59,10 @@ func BenchmarkComplexLogging(b *testing.B) {
 	logger := NewZLog(io.Discard, "", BitDefault, LogDump, false, 3)
 
 	type complexStruct struct {
-		Name   string
-		Age    int
-		Scores []float64
 		Tags   map[string]string
+		Name   string
+		Scores []float64
+		Age    int
 	}
 
 	data := complexStruct{

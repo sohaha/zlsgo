@@ -118,8 +118,27 @@ func TestFlatMap(t *testing.T) {
 	})
 	tt.Log(data)
 	tt.Equal(2, len(data))
-	tt.Equal("1", data[0].Get("id").String())
-	tt.Equal("test", data[0].Get("name").String())
-	tt.Equal("2", data[1].Get("id").String())
-	tt.Equal("test2", data[1].Get("name").String())
+
+	expected := map[string]map[string]string{
+		"1": {"id": "1", "name": "test"},
+		"2": {"id": "2", "name": "test2"},
+	}
+
+	found := make(map[string]bool)
+	for _, item := range data {
+		id := item.Get("id").String()
+		name := item.Get("name").String()
+
+		exp, exists := expected[id]
+		tt.Equal(true, exists)
+		if !exists {
+			continue
+		}
+
+		tt.Equal(exp["name"], name)
+
+		found[id] = true
+	}
+
+	tt.Equal(len(expected), len(found))
 }

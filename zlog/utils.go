@@ -19,8 +19,8 @@ type astCacheEntry struct {
 }
 
 var astCache = struct {
-	sync.RWMutex
 	entries map[string]astCacheEntry
+	sync.RWMutex
 }{
 	entries: make(map[string]astCacheEntry),
 }

@@ -9,9 +9,9 @@ import (
 
 // pathToken represents a parsed token in a path
 type pathToken struct {
-	kind  int    // Token type: 0=field access, 1=array index
-	key   string // Field name or index string
-	index int    // Array index (used when kind=1)
+	key   string
+	kind  int
+	index int
 }
 
 // pathResult represents the result of a parsed path
