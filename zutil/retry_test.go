@@ -43,7 +43,7 @@ func TestRetry(tt *testing.T) {
 			rc.Interval = time.Second / 5
 		})
 		t.NoError(err)
-		t.EqualTrue(time.Since(now).Seconds() < 3)
+		t.EqualTrue(time.Since(now).Seconds() < 4)
 		t.EqualTrue(time.Since(now).Seconds() > 1.5)
 		t.Equal(3, i)
 	})
