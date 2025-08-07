@@ -2,6 +2,7 @@ package cors
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,17 +14,17 @@ import (
 
 type (
 	Config struct {
-		CustomHandler   Handler
-		methods         string
-		credentials     string
-		headers         string
-		exposeHeaders   string
-		Domains         []string
-		Methods         []string
-		Credentials     []string
-		Headers         []string
-		ExposeHeaders   []string
-		once            sync.Once
+		CustomHandler Handler
+		methods       string
+		credentials   string
+		headers       string
+		exposeHeaders string
+		Domains       []string
+		Methods       []string
+		Credentials   []string
+		Headers       []string
+		ExposeHeaders []string
+		once          sync.Once
 	}
 	Handler func(conf *Config, c *znet.Context)
 )
@@ -150,25 +151,58 @@ func New(conf *Config) znet.HandlerFunc {
 	}
 }
 
-func validateOrigin(origin string) bool {
+func validateOrigin(origin string, conf *Config) bool {
 	if origin == "" {
 		return false
 	}
 
+	// 检查 Origin 长度是否超过 2048 字节
 	if len(origin) > 2048 {
 		return false
 	}
 
+	if len(conf.Domains) > 0 && conf.Domains[0] == "*" {
+		return true
+	}
+
+	// 检查 origin 是否包含协议和主机部分
+	if !strings.Contains(origin, "://") {
+		return false
+	}
+
+	// 检查 origin 是否以 http:// 或 https:// 开头
+	if !strings.HasPrefix(origin, "http://") && !strings.HasPrefix(origin, "https://") {
+		return false
+	}
+
+	// 检查 origin 是否包含有效的 scheme 和 host
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return false
 	}
 
+	// 确保 scheme 和 host 都存在
 	if parsed.Scheme == "" || parsed.Host == "" {
 		return false
 	}
 
+	// 只允许 http 和 https 协议
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+
+	// 检查 host 是否包含点号（简单验证）
+	host := parsed.Host
+	if strings.Contains(host, ":") {
+		host, _, _ = net.SplitHostPort(host)
+	}
+
+	// 检查 host 是否为有效的域名或 IP 地址
+	if host == "" || (!strings.Contains(host, ".") && host != "localhost" && !strings.HasPrefix(host, "localhost:")) {
+		return false
+	}
+
+	if strings.ContainsAny(host, " \t\n\r\f\v") {
 		return false
 	}
 
@@ -211,7 +245,7 @@ func applyCors(c *znet.Context, conf *Config) bool {
 		return true
 	}
 
-	if !validateOrigin(origin) {
+	if !validateOrigin(origin, conf) {
 		c.Abort(http.StatusBadRequest)
 		return false
 	}
