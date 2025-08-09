@@ -2,6 +2,8 @@ package session_test
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -74,6 +76,60 @@ func TestMemorySession(t *testing.T) {
 		tt.EqualFalse(s.Get("key1").Exists())
 		tt.EqualFalse(s.Get("key2").Exists())
 	})
+}
+
+func TestMemoryStore_Persistence_Sharded(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	dir := t.TempDir()
+
+	store := session.NewMemoryStore(
+		func(o *session.MemoryStoreOptions) {
+			o.Dir = dir
+			o.IntervalSec = 1
+			o.Shards = 4
+			o.FilenamePrefix = "sessions"
+		},
+	)
+
+	aliveIDs := []string{"a1", "a2", "a3", "a4", "a5"}
+	for _, id := range aliveIDs {
+		s, err := store.New(id, time.Now().Add(30*time.Minute))
+		tt.NoError(err, true)
+		s.Set("k", id)
+	}
+	expiredIDs := []string{"e1", "e2"}
+	for _, id := range expiredIDs {
+		_, err := store.New(id, time.Now().Add(-1*time.Hour))
+		tt.NoError(err, true)
+	}
+
+	time.Sleep(1500 * time.Millisecond)
+
+	for i := 0; i < 4; i++ {
+		fi, err := os.Stat(fmt.Sprintf("%s/sessions-%d.json", dir, i))
+		tt.NoError(err, true)
+		tt.EqualTrue(fi.Size() > 0)
+	}
+
+	store2 := session.NewMemoryStore(
+		func(o *session.MemoryStoreOptions) {
+			o.Dir = dir
+			o.IntervalSec = 10
+			o.Shards = 4
+			o.FilenamePrefix = "sessions"
+		},
+	)
+
+	for _, id := range aliveIDs {
+		s2, err := store2.Get(id)
+		tt.NoError(err, true)
+		tt.Equal(id, s2.Get("k").String())
+	}
+
+	for _, id := range expiredIDs {
+		_, err := store2.Get(id)
+		tt.Equal(errors.New("session not found"), err)
+	}
 }
 
 func TestMemoryStore(t *testing.T) {
@@ -192,4 +248,46 @@ func TestMemoryStore_Save(t *testing.T) {
 	s2, err := store.Get(sessionID)
 	tt.NoError(err, true)
 	tt.Equal(sessionID, s2.ID())
+}
+
+func TestMemoryStore_Persistence(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	dir := t.TempDir()
+
+	store := session.NewMemoryStore(
+		func(o *session.MemoryStoreOptions) {
+			o.Dir = dir
+			o.IntervalSec = 1
+			o.Filename = "sessions.json"
+		},
+	)
+
+	activeID := "persist-active"
+	s, err := store.New(activeID, time.Now().Add(1*time.Hour))
+	tt.NoError(err, true)
+	s.Set("k", "v")
+
+	expiredID := "persist-expired"
+	_, err = store.New(expiredID, time.Now().Add(-1*time.Hour))
+	tt.NoError(err, true)
+
+	time.Sleep(1500 * time.Millisecond)
+	fi, err := os.Stat(dir + "/sessions.json")
+	tt.NoError(err, true)
+	tt.EqualTrue(fi.Size() > 0)
+
+	store2 := session.NewMemoryStore(
+		func(o *session.MemoryStoreOptions) {
+			o.Dir = dir
+			o.IntervalSec = 10
+			o.Filename = "sessions.json"
+		},
+	)
+
+	s2, err := store2.Get(activeID)
+	tt.NoError(err, true)
+	tt.Equal("v", s2.Get("k").String())
+
+	_, err = store2.Get(expiredID)
+	tt.Equal(errors.New("session not found"), err)
 }
