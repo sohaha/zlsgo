@@ -94,3 +94,8 @@ func (l *FastCache) Delete(key string) {
 func (l *FastCache) ForEach(walker func(key string, iface interface{}) bool) {
 	l.c.ForEach(walker)
 }
+
+// Close stops the background cleaner if it is running.
+func (l *FastCache) Close() {
+	l.c.Close()
+}

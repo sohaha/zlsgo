@@ -2,6 +2,7 @@ package fast
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -12,20 +13,33 @@ import (
 // FastCache implements a high-performance concurrent LRU (Least Recently Used) cache
 // with support for expiration, callbacks, and multiple buckets for reduced lock contention.
 type FastCache struct {
-	gsf        singleflight.Group
-	callback   handler
-	locks      []sync.Mutex
-	insts      [][2]*lruCache
-	expiration time.Duration
-	mask       uint16
+	gsf           singleflight.Group
+	callback      handler
+	locks         []sync.Mutex
+	insts         [][2]*lruCache
+	expiration    time.Duration
+	mask          uint16
+	ticker        *time.Ticker
+	stopCh        chan struct{}
+	cleanIdx      uint16
+	cleanInterval time.Duration
+	cleanerMu     sync.Mutex
+	cleanerOn     bool
+	lastActiveMs  int64
+	autoCleaner   bool
+	lazyCleaner   bool
+	idleAfter     time.Duration
 }
 
 // NewFast creates a new FastCache instance with the specified options.
 // If no options are provided, default values are used.
 func NewFast(opt ...func(o *Options)) *FastCache {
 	o := Options{
-		Cap:    1 << 10,
-		Bucket: 4,
+		Cap:         1 << 10,
+		Bucket:      4,
+		AutoCleaner: true,
+		LazyCleaner: true,
+		IdleAfter:   30 * time.Second,
 	}
 
 	for _, f := range opt {
@@ -42,11 +56,14 @@ func NewFast(opt ...func(o *Options)) *FastCache {
 		mask = o.Bucket | (o.Bucket >> 8)
 	}
 	c := &FastCache{
-		locks:      make([]sync.Mutex, mask+1),
-		insts:      make([][2]*lruCache, mask+1),
-		expiration: o.Expiration,
-		mask:       mask,
-		callback:   o.Callback,
+		locks:       make([]sync.Mutex, mask+1),
+		insts:       make([][2]*lruCache, mask+1),
+		expiration:  o.Expiration,
+		mask:        mask,
+		callback:    o.Callback,
+		autoCleaner: o.AutoCleaner,
+		lazyCleaner: o.LazyCleaner,
+		idleAfter:   o.IdleAfter,
 	}
 	for i := range c.insts {
 		c.insts[i][0] = &lruCache{dlList: make([][2]uint16, uint32(o.Cap)+1), nodes: make([]node, o.Cap), hashmap: make(map[string]uint16, o.Cap), last: 0}
@@ -55,6 +72,12 @@ func NewFast(opt ...func(o *Options)) *FastCache {
 		}
 	}
 
+	if c.expiration > 0 && c.autoCleaner {
+		c.cleanInterval = c.expiration
+		if !c.lazyCleaner {
+			c.startCleaner()
+		}
+	}
 	return c
 }
 
@@ -70,6 +93,12 @@ type Options struct {
 	Cap uint16
 	// LRU2Cap is the capacity of the secondary LRU cache per bucket (for multi-level LRU)
 	LRU2Cap uint16
+	// AutoCleaner enables background cleaner when Expiration>0 (default: true)
+	AutoCleaner bool
+	// LazyCleaner delays starting the cleaner until first activity (default: true)
+	LazyCleaner bool
+	// IdleAfter >0 enables idle self-stop when cache remains empty and inactive for this duration
+	IdleAfter time.Duration
 }
 
 // set is an internal method that adds or updates an item in the cache.
@@ -97,6 +126,7 @@ func (l *FastCache) set(k string, v *interface{}, b []byte, expiration ...time.D
 	l.locks[idx].Lock()
 	l.insts[idx][0].put(k, v, b, expireAt)
 	l.locks[idx].Unlock()
+	l.markActive()
 }
 
 // Set adds or updates an item in the cache with the specified key, value, and optional expiration.
@@ -246,4 +276,113 @@ func (l *FastCache) ForEach(walker func(key string, iface interface{}) bool) {
 		}
 		l.locks[i].Unlock()
 	}
+}
+
+func (l *FastCache) clean() {
+	if len(l.insts) == 0 {
+		return
+	}
+
+	idx := l.cleanIdx & l.mask
+	l.cleanIdx++
+	l.locks[idx].Lock()
+	now := ztime.Clock() * 1000
+	if l.insts[idx][0] != nil {
+		l.insts[idx][0].cleanExpired(now)
+	}
+	if l.insts[idx][1] != nil {
+		l.insts[idx][1].cleanExpired(now)
+	}
+	l.locks[idx].Unlock()
+
+	if l.idleAfter > 0 && (l.cleanIdx&l.mask) == 0 {
+		allEmpty := true
+		for i := range l.insts {
+			l.locks[i].Lock()
+			if (l.insts[i][0] != nil && !l.insts[i][0].isEmpty()) || (l.insts[i][1] != nil && !l.insts[i][1].isEmpty()) {
+				allEmpty = false
+				l.locks[i].Unlock()
+				break
+			}
+			l.locks[i].Unlock()
+		}
+		if allEmpty {
+			nowMs := ztime.Clock() * 1000
+			last := atomic.LoadInt64(&l.lastActiveMs)
+			if last > 0 && time.Duration(nowMs-last)*time.Millisecond >= l.idleAfter {
+				l.stopCleaner()
+			}
+		}
+	}
+}
+
+// Close stops the background cleaner if it is running.
+func (l *FastCache) Close() {
+	if l.stopCh != nil {
+		select {
+		case <-l.stopCh:
+		default:
+			close(l.stopCh)
+		}
+	}
+}
+
+// markActive records recent activity and triggers lazy cleaner start if needed.
+func (l *FastCache) markActive() {
+	if l.expiration <= 0 || !l.autoCleaner {
+		return
+	}
+	atomic.StoreInt64(&l.lastActiveMs, ztime.Clock()*1000)
+	if l.lazyCleaner {
+		l.startCleaner()
+	}
+}
+
+// startCleaner starts the background cleaner if not already running.
+func (l *FastCache) startCleaner() {
+	l.cleanerMu.Lock()
+	defer l.cleanerMu.Unlock()
+	if l.cleanerOn || l.expiration <= 0 || !l.autoCleaner {
+		return
+	}
+	if l.cleanInterval == 0 {
+		l.cleanInterval = l.expiration
+	}
+	if l.stopCh == nil {
+		l.stopCh = make(chan struct{})
+	}
+	l.ticker = time.NewTicker(l.cleanInterval)
+	l.cleanerOn = true
+	t := l.ticker
+	ch := l.stopCh
+	go func(tk *time.Ticker, stop <-chan struct{}) {
+		for {
+			select {
+			case <-tk.C:
+				l.clean()
+			case <-stop:
+				tk.Stop()
+				return
+			}
+		}
+	}(t, ch)
+}
+
+// stopCleaner stops the background cleaner if running.
+func (l *FastCache) stopCleaner() {
+	l.cleanerMu.Lock()
+	defer l.cleanerMu.Unlock()
+	if !l.cleanerOn {
+		return
+	}
+	if l.stopCh != nil {
+		select {
+		case <-l.stopCh:
+		default:
+			close(l.stopCh)
+		}
+	}
+	l.cleanerOn = false
+	l.stopCh = nil
+	l.ticker = nil
 }

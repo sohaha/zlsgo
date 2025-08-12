@@ -71,6 +71,7 @@ type (
 		dlList  [][2]uint16
 		nodes   []node
 		last    uint16
+		size    int
 	}
 )
 
@@ -78,6 +79,9 @@ type (
 // Returns 0 if the item was updated, 1 if it was added.
 func (c *lruCache) put(k string, i *interface{}, b []byte, expireAt int64) int {
 	if x, ok := c.hashmap[k]; ok {
+		if c.nodes[x-1].isDelete {
+			c.size++
+		}
 		c.nodes[x-1].value.value, c.nodes[x-1].value.byteValue, c.nodes[x-1].expireAt, c.nodes[x-1].isDelete = i, b, expireAt, false
 		c.adjust(x, p, n)
 		return 0
@@ -98,6 +102,7 @@ func (c *lruCache) put(k string, i *interface{}, b []byte, expireAt int64) int {
 		c.dlList[c.dlList[0][n]][p] = c.last
 	}
 	c.nodes[c.last-1].key, c.nodes[c.last-1].value.value, c.nodes[c.last-1].value.byteValue, c.nodes[c.last-1].expireAt, c.nodes[c.last-1].isDelete, c.dlList[c.last], c.hashmap[k], c.dlList[0][n] = k, i, b, expireAt, false, [2]uint16{0, c.dlList[0][n]}, c.last, c.last
+	c.size++
 	return 1
 }
 
@@ -118,6 +123,9 @@ func (c *lruCache) delete(k string) (_ *node, _ int, e int64) {
 	if x, ok := c.hashmap[k]; ok && !c.nodes[x-1].isDelete {
 		c.nodes[x-1].expireAt, c.nodes[x-1].isDelete, e = 0, true, c.nodes[x-1].expireAt
 		c.adjust(x, n, p)
+		if c.size > 0 {
+			c.size--
+		}
 		return &c.nodes[x-1], 1, e
 	}
 	return nil, 0, 0
@@ -145,6 +153,25 @@ func (c *lruCache) forEach(walker func(key string, iface interface{}) bool) {
 			}
 		}
 	}
+}
+
+// cleanExpired removes expired items without invoking a walker.
+// It traverses the list and deletes nodes whose expireAt <= now.
+func (c *lruCache) cleanExpired(now int64) {
+	for idx := c.dlList[0][n]; idx != 0; idx = c.dlList[idx][n] {
+		if c.nodes[idx-1].isDelete {
+			continue
+		}
+		if c.nodes[idx-1].expireAt != 0 && now >= c.nodes[idx-1].expireAt {
+			n, _, _ := c.delete(c.nodes[idx-1].key)
+			n.value.value, n.value.byteValue = nil, nil
+		}
+	}
+}
+
+// isEmpty reports whether the cache currently holds any non-deleted items.
+func (c *lruCache) isEmpty() bool {
+	return c.size == 0
 }
 
 // adjust reorders the doubly linked list to move the specified node
