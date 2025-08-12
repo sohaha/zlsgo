@@ -32,6 +32,7 @@ func init() {
 // Returns:
 //   - 1: path exists and is a directory
 //   - 2: path exists and is a file
+//   - 3: path exists and is a symlink
 //   - 0: path does not exist
 func PathExist(path string) (int, error) {
 	path = RealPath(path)
@@ -40,6 +41,8 @@ func PathExist(path string) (int, error) {
 		isFile := 2
 		if f.IsDir() {
 			isFile = 1
+		} else if f.Mode()&os.ModeSymlink != 0 {
+			isFile = 3
 		}
 		return isFile, nil
 	}
@@ -315,9 +318,9 @@ type fileInfo struct {
 	// modTime is the last modification time of the file
 	modTime time.Time
 	// path is the absolute path to the file
-	path    string
+	path string
 	// size is the file size in bytes
-	size    uint64
+	size uint64
 }
 
 // fileInfos is a slice of fileInfo structures that implements sort.Interface
@@ -332,7 +335,7 @@ func (f fileInfos) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 type DirStatOptions struct {
 	// MaxSize is the maximum allowed total size in bytes for the directory.
 	// Files will be deleted (oldest first) if the total size exceeds this value.
-	MaxSize  uint64
+	MaxSize uint64
 	// MaxTotal is the maximum allowed number of files in the directory.
 	// Files will be deleted (oldest first) if the total count exceeds this value.
 	MaxTotal uint64
