@@ -305,12 +305,20 @@ func ToFloat64(i interface{}) float64 {
 	if v, ok := i.(float64); ok {
 		return v
 	}
-	s := strings.TrimSpace(ToString(i))
+	s := zstring.TrimSpace(ToString(i))
 	if len(s) == 0 {
 		return 0
 	}
 	s = strings.Replace(s, ",", "", -1)
+	isPercent := false
+	if len(s) > 0 && s[len(s)-1] == '%' {
+		isPercent = true
+		s = strings.TrimRight(s[:len(s)-1], " ")
+	}
 	v, _ := strconv.ParseFloat(s, 64)
+	if isPercent {
+		v = v / 100
+	}
 	return v
 }
 

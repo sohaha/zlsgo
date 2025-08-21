@@ -59,6 +59,7 @@ var (
 	ui64 uint64  = 123
 	f3   float32 = 123
 	f6   float64 = 123
+	ff   string  = "123%"
 	b            = true
 )
 
@@ -170,6 +171,7 @@ func TestTo(t *testing.T) {
 	tt.EqualExit(f3, ztype.ToFloat32(i))
 	tt.EqualExit(f3, ztype.ToFloat32(f3))
 	tt.EqualExit(f3, ztype.ToFloat32(f6))
+	tt.EqualExit(float32(1.23), ztype.ToFloat32(ff))
 	tt.EqualExit(ztype.ToFloat32(0), ztype.ToFloat32(ni))
 	tt.EqualExit(float32(123_456.123), ztype.ToFloat32("123,456.123"))
 
