@@ -11,15 +11,34 @@ import (
 	"github.com/sohaha/zlsgo/ztime"
 )
 
+// Conver provides configuration for type conversion operations
 type Conver struct {
-	MatchName     func(mapKey, fieldName string) bool
-	ConvHook      func(name string, i reflect.Value, o reflect.Type) (reflect.Value, bool)
-	TagName       string
+	// MatchName defines the function used to match map keys to struct field names
+	// Default is case-insensitive matching using strings.EqualFold
+	MatchName func(mapKey, fieldName string) bool
+
+	// ConvHook is an optional hook that can be used to customize the conversion process
+	// If it returns false as the second return value, the default conversion is skipped
+	ConvHook func(name string, i reflect.Value, o reflect.Type) (reflect.Value, bool)
+
+	// TagName specifies the struct tag name to use for field mapping
+	// Default is "z"
+	TagName string
+
+	// IgnoreTagName if true, ignores struct tags during conversion
 	IgnoreTagName bool
-	ZeroFields    bool
-	Squash        bool
-	Deep          bool
-	Merge         bool
+
+	// ZeroFields if true, zero values will be written to the destination
+	ZeroFields bool
+
+	// Squash if true, embedded structs are "squashed" (fields are at the same level as parent)
+	Squash bool
+
+	// Deep if true, performs a deep copy of nested structures
+	Deep bool
+
+	// Merge if true, merges maps and slices instead of replacing them
+	Merge bool
 }
 
 var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}
@@ -101,7 +120,7 @@ func (d *Conver) to(name string, input interface{}, outVal reflect.Value, deep b
 	case reflect.Func:
 		err = d.toFunc(name, input, outVal)
 	default:
-		return errors.New(name + ": unsupported type: " + outputKind.String())
+		return errors.New("unsupported type: " + outputKind.String())
 	}
 
 	return err
@@ -136,9 +155,7 @@ func (d *Conver) basic(name string, data interface{}, val reflect.Value) error {
 
 	dataValType := dataVal.Type()
 	if !dataValType.AssignableTo(val.Type()) {
-		return fmt.Errorf(
-			"'%s' expected type '%s', got '%s'",
-			name, val.Type(), dataValType)
+		return fmt.Errorf("expected type '%s', got '%s'", val.Type(), dataValType)
 	}
 
 	val.Set(dataVal)
@@ -182,114 +199,188 @@ func (d *Conver) toStruct(name string, data interface{}, val reflect.Value) erro
 				return nil
 			}
 		}
-		return fmt.Errorf("'%s' expected a map, got '%s'", name, dataVal.Kind())
+		return fmt.Errorf("expected a map, got '%s'", dataVal.Kind())
 	}
 }
 
-func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error {
-	dataValType := dataVal.Type()
-	if kind := dataValType.Key().Kind(); kind != reflect.String && kind != reflect.Interface {
-		return fmt.Errorf(
-			"'%s' needs a map with string keys, has '%s' keys",
-			name, dataValType.Key().Kind())
+// structFieldInfo struct field info
+type structFieldInfo struct {
+	val      reflect.Value
+	field    reflect.StructField
+	isRemain bool
+}
+
+// validateMapKeyType validate map key type
+func validateMapKeyType(_ string, mapType reflect.Type) error {
+	if kind := mapType.Key().Kind(); kind != reflect.String && kind != reflect.Interface {
+		return fmt.Errorf("needs a map with string keys, has '%s' keys", mapType.Key().Kind())
+	}
+	return nil
+}
+
+// collectMapKeys collect map keys
+func collectMapKeys(dataVal reflect.Value) (map[reflect.Value]struct{}, map[interface{}]struct{}) {
+	keys := make(map[reflect.Value]struct{}, dataVal.Len())
+	unusedKeys := make(map[interface{}]struct{}, dataVal.Len())
+
+	for _, key := range dataVal.MapKeys() {
+		keys[key] = struct{}{}
+		unusedKeys[key.Interface()] = struct{}{}
 	}
 
-	dataValKeys := make(map[reflect.Value]struct{})
-	dataValKeysUnused := make(map[interface{}]struct{})
-	for _, dataValKey := range dataVal.MapKeys() {
-		dataValKeys[dataValKey] = struct{}{}
-		dataValKeysUnused[dataValKey.Interface()] = struct{}{}
+	return keys, unusedKeys
+}
+
+// processFieldTag process field tag
+func (d *Conver) processFieldTag(fieldType reflect.StructField, fieldVal reflect.Value) (squash, remain bool) {
+	squash = d.Squash && fieldVal.Kind() == reflect.Struct && fieldType.Anonymous
+	if d.IgnoreTagName {
+		return squash, false
+	}
+	_, opt := zreflect.GetStructTag(fieldType, d.TagName, tagNameLesser)
+	if opt == "" {
+		return squash, false
 	}
 
-	targetValKeysUnused, structs := make(map[interface{}]struct{}), make([]reflect.Value, 1, 5)
-	structs[0] = val
-
-	type field struct {
-		val   reflect.Value
-		field reflect.StructField
+	const (
+		tagSquash = "squash"
+		tagRemain = "remain"
+	)
+	if !strings.Contains(opt, ",") {
+		switch opt {
+		case tagSquash:
+			return true, false
+		case tagRemain:
+			return false, true
+		}
+		return squash, false
 	}
 
-	var remainField *field
+	for _, tag := range strings.Split(opt, ",") {
+		switch tag {
+		case tagSquash:
+			squash = true
+		case tagRemain:
+			remain = true
+		}
+	}
 
-	fields := make([]field, 0)
-	for len(structs) > 0 {
-		structVal := structs[0]
-		structs = structs[1:]
+	return squash, remain
+}
+
+// collectStructFields collect struct fields
+func (d *Conver) collectStructFields(val reflect.Value) ([]structFieldInfo, *structFieldInfo, error) {
+	queue := make([]reflect.Value, 0, 4)
+	queue = append(queue, val)
+
+	fields := make([]structFieldInfo, 0, val.NumField()*2)
+	var remainField *structFieldInfo
+
+	for len(queue) > 0 {
+		structVal := queue[0]
+		queue = queue[1:]
 		structType := structVal.Type()
 
 		for i := 0; i < structType.NumField(); i++ {
 			fieldType := structType.Field(i)
 			fieldVal := structVal.Field(i)
+
 			if fieldVal.Kind() == reflect.Ptr && fieldVal.Elem().Kind() == reflect.Struct {
 				fieldVal = fieldVal.Elem()
 			}
 
-			squash := d.Squash && fieldVal.Kind() == reflect.Struct && fieldType.Anonymous
-			remain := false
-			if !d.IgnoreTagName {
-				_, opt := zreflect.GetStructTag(fieldType, d.TagName, tagNameLesser)
-				tagParts := strings.Split(opt, ",")
-				for _, tag := range tagParts {
-					if tag == "squash" {
-						squash = true
-						break
-					}
+			squash, remain := d.processFieldTag(fieldType, fieldVal)
 
-					if tag == "remain" {
-						remain = true
-						break
-					}
-				}
-			}
 			if squash {
 				if fieldVal.Kind() != reflect.Struct {
-					return fmt.Errorf("cannot squash non-struct type '%s'", fieldVal.Type())
-				} else {
-					structs = append(structs, fieldVal)
+					return nil, nil, fmt.Errorf("cannot squash non-struct type '%s'", fieldVal.Type())
 				}
+				queue = append(queue, fieldVal)
 				continue
 			}
 
+			field := structFieldInfo{val: fieldVal, field: fieldType, isRemain: remain}
+
 			if remain {
-				remainField = &field{field: fieldType, val: fieldVal}
+				remainField = &field
 			} else {
-				fields = append(fields, field{field: fieldType, val: fieldVal})
+				fields = append(fields, field)
 			}
 		}
 	}
 
-	for _, f := range fields {
-		field, fieldValue := f.field, f.val
-		var fieldName string
-		if d.IgnoreTagName {
-			fieldName = field.Name
-		} else {
-			fieldName, _ = zreflect.GetStructTag(field, d.TagName, tagNameLesser)
+	return fields, remainField, nil
+}
+
+// getFieldName get field name
+func (d *Conver) getFieldName(field reflect.StructField) string {
+	if d.IgnoreTagName {
+		return field.Name
+	}
+
+	name, _ := zreflect.GetStructTag(field, d.TagName, tagNameLesser)
+	return name
+}
+
+// findMapValue find map value
+func (d *Conver) findMapValue(fieldName string, dataVal reflect.Value, dataValKeys map[reflect.Value]struct{}) (reflect.Value, reflect.Value, bool) {
+	rawMapKey := zreflect.ValueOf(fieldName)
+	if rawMapVal := dataVal.MapIndex(rawMapKey); rawMapVal.IsValid() {
+		return rawMapKey, rawMapVal, true
+	}
+	for dataValKey := range dataValKeys {
+		mK, ok := dataValKey.Interface().(string)
+		if !ok || !d.MatchName(mK, fieldName) {
+			continue
 		}
-		rawMapKey := zreflect.ValueOf(fieldName)
-		rawMapVal := dataVal.MapIndex(rawMapKey)
-		if !rawMapVal.IsValid() {
-			for dataValKey := range dataValKeys {
-				mK, ok := dataValKey.Interface().(string)
-				if !ok {
-					continue
-				}
 
-				if d.MatchName(mK, fieldName) {
-					rawMapKey = dataValKey
-					rawMapVal = dataVal.MapIndex(dataValKey)
-					break
-				}
-			}
+		if rawMapVal := dataVal.MapIndex(dataValKey); rawMapVal.IsValid() {
+			return dataValKey, rawMapVal, true
+		}
+	}
 
-			if !rawMapVal.IsValid() {
-				targetValKeysUnused[fieldName] = struct{}{}
-				continue
-			}
+	return reflect.Value{}, reflect.Value{}, false
+}
+
+// processRemainField process remain field
+func (d *Conver) processRemainField(remainField *structFieldInfo, dataVal reflect.Value, unusedKeys map[interface{}]struct{}, name string) error {
+	if remainField == nil || len(unusedKeys) == 0 {
+		return nil
+	}
+
+	remain := make(map[interface{}]interface{}, len(unusedKeys))
+	for key := range unusedKeys {
+		remain[key] = dataVal.MapIndex(zreflect.ValueOf(key)).Interface()
+	}
+
+	return d.toMap(name, remain, remainField.val, true)
+}
+
+// toStructFromMap converts a map value to a struct value
+func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error {
+	if err := validateMapKeyType(name, dataVal.Type()); err != nil {
+		return fmt.Errorf("invalid map key type: %w", err)
+	}
+
+	dataValKeys, dataValKeysUnused := collectMapKeys(dataVal)
+	targetValKeysUnused := make(map[interface{}]struct{}, len(dataValKeys))
+
+	fields, remainField, err := d.collectStructFields(val)
+	if err != nil {
+		return err
+	}
+	for _, f := range fields {
+		fieldName := d.getFieldName(f.field)
+		fieldValue := f.val
+
+		rawMapKey, rawMapVal, found := d.findMapValue(fieldName, dataVal, dataValKeys)
+		if !found {
+			targetValKeysUnused[fieldName] = struct{}{}
+			continue
 		}
 
 		if !fieldValue.IsValid() {
-			panic("field is not valid")
+			return errors.New("field is not valid")
 		}
 
 		if !fieldValue.CanSet() {
@@ -307,18 +398,7 @@ func (d *Conver) toStructFromMap(name string, dataVal, val reflect.Value) error 
 		}
 	}
 
-	if remainField != nil && len(dataValKeysUnused) > 0 {
-		remain := map[interface{}]interface{}{}
-		for key := range dataValKeysUnused {
-			remain[key] = dataVal.MapIndex(zreflect.ValueOf(key)).Interface()
-		}
-
-		if err := d.toMap(name, remain, remainField.val, true); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return d.processRemainField(remainField, dataVal, dataValKeysUnused, name)
 }
 
 func (d *Conver) toMap(name string, data interface{}, val reflect.Value, deep bool) error {
