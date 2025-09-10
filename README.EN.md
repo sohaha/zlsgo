@@ -9,20 +9,21 @@ English | [简体中文](./README.md)
 
 ![luckything](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fa4bcc6b2-32ef-4a7d-ba1c-65a0330f632d%2Flogo.png?table=block&id=37f366ec-0593-4a21-94c0-c24023a85354&width=590&cache=v2)
 
-Golang daily development common function library
+## 📚 Documentation
 
-## Documentation
-
-[Check out the documentation](https://docs.73zls.com/zls-go/#)
+[Online Documentation](https://docs.73zls.com/zls-go/#) | [Local Documentation](./docs/README.md)
 
 Recommended to use with the `zzz watch` command of [zzz](https://github.com/sohaha/zzz)
 
-## Why Zara
+## ✨ Features
 
-Simple and easy to use, lightweight enough to avoid excessive external dependencies,
-minimum compatible with old systems such as Window 7.
+- **Lightweight & Efficient**: Avoid excessive external dependencies, minimum compatible with old systems such as Windows 7
+- **Modular Design**: Import on demand, reduce unnecessary code volume
+- **Type Safe**: Fully utilize Go's type system, provide type-safe APIs
+- **High Performance**: Optimize underlying implementation, pursue ultimate performance
+- **Simple & Easy to Use**: Provide concise and intuitive API design
 
-## QuickStart
+## 🚀 QuickStart
 
 ### Install
 
@@ -41,17 +42,20 @@ import (
 )
 
 func main(){
+    // Get an instance
     r := znet.New()
 
+    // Register route
     r.GET("/hi", func(c *znet.Context) {
         c.String(200, "Hello world")
      })
     // Implicit routing (struct binding) please refer to the document
+    // Start
     znet.Run()
 }
 ```
 
-![znet](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png?table=block&id=18fdfaa9-5dab-4cb8-abb3-f19ff37ed3f0&width=2210&userId=&cache=v2)
+![znet](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F1d7f2372-5d58-4848-85ca-1bedf8ad14ae%2FUntitled.png?table=block&id=18fdfaa9-05fd-47ba-b270-59017c59817b&width=2210&userId=&cache=v2)
 
 ### Logger
 
@@ -63,8 +67,10 @@ import (
 )
 
 func main(){
-    zlog.Debug("This is a debug")
-    zlog.Error("This is a error")
+    logs := []string{"This is a test", "This is an error"}
+    zlog.Debug(logs[0])
+    zlog.Error(logs[1])
+    zlog.Dump(logs)
     // zlog...
 }
 ```
@@ -100,23 +106,23 @@ Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73z
 
 ## Todo
 
-- [x] HttpServer
-- [x] HttpClient
+- [x] HTTP Server
+- [x] HTTP Client
 - [x] JSON RPC
 - [x] Logger
-- [x] Json processing
+- [x] JSON processing
 - [x] String processing
 - [x] Validator
 - [x] Hot Restart
 - [x] Daemon
-- [x] Abnormal report
+- [x] Exception reporting
 - [x] Terminal application
 - [x] Goroutine pool
 - [x] HTML Parse
-- [x] Injection
+- [x] Dependency injection
 - [x] Server Sent Event
 - [x] High-performance HashMap
-- [ ] [Database](https://github.com/sohaha/zdb)
+- [ ] [Database operations](https://github.com/sohaha/zdb)
 - [ ] ...(Read more [documentation](https://docs.73zls.com/zls-go/#))
 
 ## LICENSE

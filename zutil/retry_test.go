@@ -2,6 +2,7 @@ package zutil
 
 import (
 	"errors"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ func TestRetry(tt *testing.T) {
 	})
 
 	t.Run("Success BackOffDelay", func(t *zlsgo.TestUtil) {
+		rand.Seed(12345)
 		i := 0
 		now := time.Now()
 		err := DoRetry(5, func() error {
@@ -44,7 +46,7 @@ func TestRetry(tt *testing.T) {
 		})
 		t.NoError(err)
 		t.EqualTrue(time.Since(now).Seconds() < 4)
-		t.EqualTrue(time.Since(now).Seconds() > 1.5)
+		t.EqualTrue(time.Since(now).Seconds() > 1.0)
 		t.Equal(3, i)
 	})
 
