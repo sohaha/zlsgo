@@ -61,16 +61,6 @@ func reflectPtr(r reflect.Value) reflect.Value {
 	return r
 }
 
-func InArray(needle, hystack interface{}) bool {
-	nt := ToString(needle)
-	for _, item := range ToSlice(hystack) {
-		if nt == ToString(item) {
-			return true
-		}
-	}
-	return false
-}
-
 func parsePath(path string, v interface{}) (interface{}, bool) {
 	return executeCompiledPath(compilePath(path), v)
 }

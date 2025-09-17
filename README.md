@@ -9,22 +9,26 @@
 
 ![luckything](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fa4bcc6b2-32ef-4a7d-ba1c-65a0330f632d%2Flogo.png?table=block&id=37f366ec-0593-4a21-94c0-c24023a85354&width=590&cache=v2)
 
-## 文档
+## 📚 文档
 
-[查看文档](https://docs.73zls.com/zls-go/#)
+[在线文档](https://docs.73zls.com/zls-go/#) | [本地文档](./docs/README.md)
 
 建议搭配 [zzz](https://github.com/sohaha/zzz) 的 `zzz watch` 指令使用
 
-## 特性
+## ✨ 特性
 
-简单易用、足够轻量，避免过多的外部依赖，最低兼容 Window 7 等老系统
+- **轻量高效**：避免过多的外部依赖，最低兼容 Windows 7 等老系统
+- **模块化设计**：按需引入，减少不必要的代码体积
+- **类型安全**：充分利用 Go 类型系统，提供类型安全的 API
+- **高性能**：优化底层实现，追求极致的性能表现
+- **简单易用**：提供简洁直观的 API 设计
 
-## 快速上手
+## 🚀 快速开始
 
 ### 安装
 
 ```bash
-$ go get github.com/sohaha/zlsgo
+go get github.com/sohaha/zlsgo
 ```
 
 ### HTTP 服务
