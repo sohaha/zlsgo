@@ -163,13 +163,13 @@ func TestGetDirSize(t *testing.T) {
 	tt.NoError(err)
 	tt.EqualTrue(size > 1*MB)
 	tt.EqualTrue(total == 20)
-	tt.Log(SizeFormat(size), size)
+	tt.Log(SizeFormat(int64(size)), size)
 
 	size, total, err = StatDir(tmp, DirStatOptions{MaxSize: 1 * MB, MaxTotal: 3})
 	tt.NoError(err)
 	tt.EqualTrue(size < 1*MB)
 	tt.EqualTrue(total == 3)
-	tt.Log(SizeFormat(size), size)
+	tt.Log(SizeFormat(int64(size)), size)
 }
 
 func TestExecutablePath(t *testing.T) {

@@ -12,4 +12,6 @@ const (
 	GB
 	// TB represents 1 terabyte (1024 gigabytes)
 	TB
+	// PB represents 1 petabyte (1024 terabytes)
+	PB
 )

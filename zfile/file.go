@@ -67,7 +67,7 @@ func FileExist(path string) bool {
 // FileSize returns the formatted size of a file (e.g., "1.5 MB").
 // If the file doesn't exist, it returns an empty string.
 func FileSize(file string) (size string) {
-	return SizeFormat(FileSizeUint(file))
+	return SizeFormat(int64(FileSizeUint(file)))
 }
 
 // FileSizeUint returns the size of a file in bytes as a uint64.
@@ -81,11 +81,15 @@ func FileSizeUint(file string) (size uint64) {
 	return uint64(fileInfo.Size())
 }
 
-// SizeFormat converts a size in bytes (uint64) to a human-readable string
+// SizeFormat converts a size in bytes (int) to a human-readable string
 // with appropriate units (B, KB, MB, GB, etc.).
-func SizeFormat(s uint64) string {
+func SizeFormat(s int64) string {
+	if s < 0 {
+		return "-" + SizeFormat(-s)
+	}
+
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
-	humanateBytes := func(s uint64, base float64, sizes []string) string {
+	humanateBytes := func(s int64, base float64, sizes []string) string {
 		if s < 10 {
 			return fmt.Sprintf("%d B", s)
 		}

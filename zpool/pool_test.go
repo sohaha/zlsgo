@@ -42,7 +42,7 @@ func TestPool(t *testing.T) {
 
 	count := 10000
 	workerNum := 160
-	var curMem uint64
+	var curMem int64
 	for i := 0; i < 10; i++ {
 		var g sync.WaitGroup
 		var now time.Time

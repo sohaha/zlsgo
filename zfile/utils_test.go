@@ -18,4 +18,7 @@ func Test_Byte(t *testing.T) {
 	tt.Equal("2.0 MB", zfile.SizeFormat(2*zfile.MB))
 	tt.Equal("2.0 GB", zfile.SizeFormat(2*zfile.GB))
 	tt.Equal("2.0 TB", zfile.SizeFormat(2*zfile.TB))
+	tt.Equal("2.0 PB", zfile.SizeFormat(2*zfile.PB))
+
+	tt.Equal("-1.0 KB", zfile.SizeFormat(-1024))
 }

@@ -34,7 +34,7 @@ func TestWithRunContext(t *testing.T) {
 
 	tt.EqualExit(true, mem > 60000)
 	t.Log(duration)
-	t.Log(zfile.SizeFormat(mem))
+	t.Log(zfile.SizeFormat(int64(mem)))
 }
 
 func TestIfVal(T *testing.T) {
