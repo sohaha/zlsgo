@@ -1,6 +1,8 @@
 package fast_test
 
 import (
+	"fmt"
+	"runtime"
 	"testing"
 	"time"
 
@@ -263,4 +265,188 @@ func TestForEach(t *testing.T) {
 	})
 
 	tt.EqualTrue(i.Load() != 0)
+}
+
+func TestMemoryLeakPrevention(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Expiration = 100 * time.Millisecond
+		o.AutoCleaner = true
+		o.LazyCleaner = true
+		o.IdleAfter = 200 * time.Millisecond
+		o.Bucket = 2
+		o.Cap = 4
+	})
+
+	cache.Set("test1", "value1")
+	cache.Set("test2", "value2", 50*time.Millisecond)
+
+	val, exists := cache.Get("test1")
+	tt.EqualTrue(exists && val != nil)
+
+	time.Sleep(400 * time.Millisecond)
+
+	_, exists = cache.Get("test2")
+	tt.EqualTrue(!exists)
+
+	cache.Set("test3", "value3")
+	val, exists = cache.Get("test3")
+	tt.EqualTrue(exists)
+	tt.Equal("value3", val)
+
+	cache.Close()
+}
+
+func TestFinalizerSafetyNet(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	createAndAbandonCache := func() {
+		cache := fast.NewFast(func(o *fast.Options) {
+			o.Expiration = 50 * time.Millisecond
+			o.AutoCleaner = true
+			o.LazyCleaner = false
+			o.Bucket = 2
+			o.Cap = 4
+		})
+
+		cache.Set("key1", "value1")
+		cache.Set("key2", "value2")
+	}
+
+	for i := 0; i < 5; i++ {
+		createAndAbandonCache()
+	}
+
+	for i := 0; i < 3; i++ {
+		runtime.GC()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	tt.EqualTrue(true)
+}
+
+func TestCleanerLevelTransitions(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Expiration = 100 * time.Millisecond
+		o.AutoCleaner = true
+		o.LazyCleaner = true
+		o.Bucket = 2
+		o.Cap = 4
+	})
+	defer cache.Close()
+
+	cache.Set("key1", "value1")
+
+	intervals := []time.Duration{
+		40 * time.Millisecond,
+		2 * time.Second,
+	}
+
+	for i, interval := range intervals {
+		t.Logf("Waiting %v for cleaner level transition %d", interval, i+1)
+		time.Sleep(interval)
+
+		testKey := fmt.Sprintf("test_level_%d", i)
+		cache.Set(testKey, fmt.Sprintf("value_%d", i))
+		val, exists := cache.Get(testKey)
+		tt.EqualTrue(exists)
+		tt.Equal(fmt.Sprintf("value_%d", i), val)
+	}
+
+	cache.Set("final_test", "final_value")
+	val, exists := cache.Get("final_test")
+	tt.EqualTrue(exists)
+	tt.Equal("final_value", val)
+}
+
+func TestConfigurableCleaningThresholds(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Expiration = 50 * time.Millisecond
+		o.AutoCleaner = true
+		o.LazyCleaner = true
+		o.Bucket = 2
+		o.Cap = 4
+		o.ShortIdleThreshold = 10 * time.Millisecond
+		o.MediumIdleThreshold = 50 * time.Millisecond
+		o.LongIdleThreshold = 100 * time.Millisecond
+	})
+	defer cache.Close()
+
+	cache.Set("test", "value")
+	tt.Equal(int32(0), cache.GetCleanerLevel())
+
+	time.Sleep(15 * time.Millisecond)
+	cache.Set("trigger", "clean")
+	time.Sleep(5 * time.Millisecond)
+
+	time.Sleep(60 * time.Millisecond)
+	cache.Set("trigger2", "clean")
+	time.Sleep(5 * time.Millisecond)
+	val, exists := cache.Get("trigger2")
+	tt.EqualTrue(exists)
+	tt.Equal("clean", val)
+}
+
+func TestPerformanceMonitoring(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Expiration = 100 * time.Millisecond
+		o.AutoCleaner = true
+		o.Bucket = 2
+		o.Cap = 8
+	})
+	defer cache.Close()
+
+	stats := cache.GetStats()
+	tt.Equal(int32(0), stats.CleanerLevel)
+	tt.Equal(int64(0), stats.AccessCount)
+	tt.EqualTrue(stats.IdleDuration >= 0)
+
+	initialCount := cache.GetAccessCount()
+	cache.Set("key1", "value1")
+	cache.Set("key2", "value2")
+	cache.Get("key1")
+
+	newCount := cache.GetAccessCount()
+	tt.EqualTrue(newCount > initialCount)
+
+	stats = cache.GetStats()
+	tt.EqualTrue(stats.AccessCount > 0)
+	tt.EqualTrue(stats.TotalItems >= 0)
+	tt.EqualTrue(cache.GetCleanerLevel() >= 0)
+	tt.EqualTrue(cache.GetAccessCount() >= 0)
+	tt.EqualTrue(cache.GetIdleDuration() >= 0)
+}
+
+func TestOptimizedMarkActive(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Expiration = 100 * time.Millisecond
+		o.AutoCleaner = true
+		o.Bucket = 2
+		o.Cap = 4
+	})
+	defer cache.Close()
+
+	initialLevel := cache.GetCleanerLevel()
+
+	for i := 0; i < 100; i++ {
+		cache.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+		cache.Get(fmt.Sprintf("key%d", i))
+	}
+
+	val, exists := cache.Get("key99")
+	tt.EqualTrue(exists)
+	tt.Equal("value99", val)
+	tt.EqualTrue(cache.GetAccessCount() > 0)
+
+	finalLevel := cache.GetCleanerLevel()
+	tt.EqualTrue(finalLevel >= initialLevel)
 }

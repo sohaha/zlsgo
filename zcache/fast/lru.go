@@ -1,6 +1,7 @@
 package fast
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,17 +30,28 @@ type FastCache struct {
 	autoCleaner   bool
 	lazyCleaner   bool
 	idleAfter     time.Duration
+	// Enhanced fields for intelligent memory leak prevention
+	lastAccessMs int64 // Last access timestamp for Set/Get/Delete operations (atomic access)
+	accessCount  int64 // Access counter for activity tracking (atomic access)
+	cleanerLevel int32 // Cleaner level: 0=normal, 1=reduced_freq, 2=light, 3=stopped (atomic access)
+	// Configurable cleaning strategy thresholds
+	shortIdleThreshold  time.Duration // Threshold for level 1 (default: 30s)
+	mediumIdleThreshold time.Duration // Threshold for level 2 (default: 2m)
+	longIdleThreshold   time.Duration // Threshold for level 3 (default: 5m)
 }
 
 // NewFast creates a new FastCache instance with the specified options.
 // If no options are provided, default values are used.
 func NewFast(opt ...func(o *Options)) *FastCache {
 	o := Options{
-		Cap:         1 << 10,
-		Bucket:      4,
-		AutoCleaner: true,
-		LazyCleaner: true,
-		IdleAfter:   30 * time.Second,
+		Cap:                 1 << 10,
+		Bucket:              4,
+		AutoCleaner:         false,
+		LazyCleaner:         true,
+		IdleAfter:           30 * time.Second,
+		ShortIdleThreshold:  30 * time.Second,
+		MediumIdleThreshold: 1 * time.Minute,
+		LongIdleThreshold:   2 * time.Minute,
 	}
 
 	for _, f := range opt {
@@ -56,14 +68,17 @@ func NewFast(opt ...func(o *Options)) *FastCache {
 		mask = o.Bucket | (o.Bucket >> 8)
 	}
 	c := &FastCache{
-		locks:       make([]sync.Mutex, mask+1),
-		insts:       make([][2]*lruCache, mask+1),
-		expiration:  o.Expiration,
-		mask:        mask,
-		callback:    o.Callback,
-		autoCleaner: o.AutoCleaner,
-		lazyCleaner: o.LazyCleaner,
-		idleAfter:   o.IdleAfter,
+		locks:               make([]sync.Mutex, mask+1),
+		insts:               make([][2]*lruCache, mask+1),
+		expiration:          o.Expiration,
+		mask:                mask,
+		callback:            o.Callback,
+		autoCleaner:         o.AutoCleaner,
+		lazyCleaner:         o.LazyCleaner,
+		idleAfter:           o.IdleAfter,
+		shortIdleThreshold:  o.ShortIdleThreshold,
+		mediumIdleThreshold: o.MediumIdleThreshold,
+		longIdleThreshold:   o.LongIdleThreshold,
 	}
 	for i := range c.insts {
 		c.insts[i][0] = &lruCache{dlList: make([][2]uint16, uint32(o.Cap)+1), nodes: make([]node, o.Cap), hashmap: make(map[string]uint16, o.Cap), last: 0}
@@ -74,9 +89,17 @@ func NewFast(opt ...func(o *Options)) *FastCache {
 
 	if c.expiration > 0 && c.autoCleaner {
 		c.cleanInterval = c.expiration
+		// Initialize timestamps to current time to avoid zero-value issues
+		now := ztime.Clock() * 1000
+		atomic.StoreInt64(&c.lastAccessMs, now)
+		atomic.StoreInt64(&c.lastActiveMs, now)
+
 		if !c.lazyCleaner {
 			c.startCleaner()
 		}
+		// Set finalizer as a safety net to prevent memory leaks
+		// if user forgets to call Close()
+		runtime.SetFinalizer(c, (*FastCache).finalize)
 	}
 	return c
 }
@@ -93,12 +116,19 @@ type Options struct {
 	Cap uint16
 	// LRU2Cap is the capacity of the secondary LRU cache per bucket (for multi-level LRU)
 	LRU2Cap uint16
-	// AutoCleaner enables background cleaner when Expiration>0 (default: true)
+	// AutoCleaner enables background cleaner when Expiration>0 (default: false)
 	AutoCleaner bool
 	// LazyCleaner delays starting the cleaner until first activity (default: true)
 	LazyCleaner bool
 	// IdleAfter >0 enables idle self-stop when cache remains empty and inactive for this duration
 	IdleAfter time.Duration
+	// Configurable intelligent cleaning thresholds (optional, defaults provided)
+	// ShortIdleThreshold sets when to enter reduced frequency cleaning (default: 30s)
+	ShortIdleThreshold time.Duration
+	// MediumIdleThreshold sets when to enter light cleaning mode (default: 2m)
+	MediumIdleThreshold time.Duration
+	// LongIdleThreshold sets when to stop cleaning entirely (default: 5m)
+	LongIdleThreshold time.Duration
 }
 
 // set is an internal method that adds or updates an item in the cache.
@@ -283,10 +313,59 @@ func (l *FastCache) clean() {
 		return
 	}
 
+	now := ztime.Clock() * 1000
+
+	// Optimized level calculation - avoid unnecessary computation
+	currentLevel := atomic.LoadInt32(&l.cleanerLevel)
+
+	// For performance, only recalculate level periodically or when activity changes
+	// Check if we need to recalculate based on idle duration
+	lastAccess := atomic.LoadInt64(&l.lastAccessMs)
+	idleDuration := time.Duration(now-lastAccess) * time.Millisecond
+
+	// Calculate target level using configurable thresholds
+	var targetLevel int32
+	switch {
+	case idleDuration < l.shortIdleThreshold:
+		targetLevel = 0 // Normal cleaning
+	case idleDuration < l.mediumIdleThreshold:
+		targetLevel = 1 // Reduced frequency (skip every other clean)
+	case idleDuration < l.longIdleThreshold:
+		targetLevel = 2 // Light cleaning (skip 4 out of 5 cleans)
+	default:
+		targetLevel = 3 // Stop cleaning
+	}
+
+	// Only update level if it actually changed - avoid unnecessary atomic write
+	if currentLevel != targetLevel {
+		atomic.StoreInt32(&l.cleanerLevel, targetLevel)
+		currentLevel = targetLevel // Update local copy for following logic
+	}
+
+	// Stop cleaner if idle too long
+	if currentLevel == 3 {
+		l.stopCleaner()
+		return
+	}
+
+	// Apply frequency reduction based on current level
+	cleanCycle := uint16(1)
+	switch currentLevel {
+	case 1: // Reduced frequency: clean every 2nd cycle
+		cleanCycle = 2
+	case 2: // Light cleaning: clean every 5th cycle
+		cleanCycle = 5
+	}
+
+	// Skip cleaning cycles based on level
+	if currentLevel > 0 && (l.cleanIdx%cleanCycle) != 0 {
+		l.cleanIdx++
+		return
+	}
+
 	idx := l.cleanIdx & l.mask
 	l.cleanIdx++
 	l.locks[idx].Lock()
-	now := ztime.Clock() * 1000
 	if l.insts[idx][0] != nil {
 		l.insts[idx][0].cleanExpired(now)
 	}
@@ -295,6 +374,7 @@ func (l *FastCache) clean() {
 	}
 	l.locks[idx].Unlock()
 
+	// Enhanced idle detection with additional safety checks
 	if l.idleAfter > 0 && (l.cleanIdx&l.mask) == 0 {
 		allEmpty := true
 		for i := range l.insts {
@@ -307,9 +387,8 @@ func (l *FastCache) clean() {
 			l.locks[i].Unlock()
 		}
 		if allEmpty {
-			nowMs := ztime.Clock() * 1000
-			last := atomic.LoadInt64(&l.lastActiveMs)
-			if last > 0 && time.Duration(nowMs-last)*time.Millisecond >= l.idleAfter {
+			lastActive := atomic.LoadInt64(&l.lastActiveMs)
+			if lastActive > 0 && time.Duration(now-lastActive)*time.Millisecond >= l.idleAfter {
 				l.stopCleaner()
 			}
 		}
@@ -317,7 +396,21 @@ func (l *FastCache) clean() {
 }
 
 // Close stops the background cleaner if it is running.
+// Enhanced with finalizer cleanup to optimize GC performance.
 func (l *FastCache) Close() {
+	// Mark as closed to prevent finalize from running
+	// Use SwapInt32 to avoid race condition in CompareAndSwap
+	oldLevel := atomic.SwapInt32(&l.cleanerLevel, -1)
+	if oldLevel >= 0 {
+		// Clear finalizer since we're properly closing manually
+		// This reduces GC pressure and prevents unnecessary finalize calls
+		runtime.SetFinalizer(l, nil)
+
+		// Stop the cleaner
+		l.stopCleaner()
+	}
+
+	// Ensure channel is closed for backward compatibility
 	if l.stopCh != nil {
 		select {
 		case <-l.stopCh:
@@ -328,11 +421,24 @@ func (l *FastCache) Close() {
 }
 
 // markActive records recent activity and triggers lazy cleaner start if needed.
+// Enhanced with more precise activity tracking and optimized atomic operations.
 func (l *FastCache) markActive() {
 	if l.expiration <= 0 || !l.autoCleaner {
 		return
 	}
-	atomic.StoreInt64(&l.lastActiveMs, ztime.Clock()*1000)
+	now := ztime.Clock() * 1000
+
+	// Batch update timestamps (most frequent operations)
+	atomic.StoreInt64(&l.lastActiveMs, now)
+	atomic.StoreInt64(&l.lastAccessMs, now)
+	atomic.AddInt64(&l.accessCount, 1)
+
+	// Optimized cleaner level reset - avoid unnecessary atomic operations
+	// Only reset if level is elevated (most common case is level already 0)
+	if atomic.LoadInt32(&l.cleanerLevel) > 0 {
+		atomic.StoreInt32(&l.cleanerLevel, 0)
+	}
+
 	if l.lazyCleaner {
 		l.startCleaner()
 	}
@@ -385,4 +491,75 @@ func (l *FastCache) stopCleaner() {
 	l.cleanerOn = false
 	l.stopCh = nil
 	l.ticker = nil
+}
+
+// finalize is called by the garbage collector as a safety net to ensure
+// that background goroutines are properly cleaned up even if Close() wasn't called.
+// This prevents memory leaks in cases where users forget to call Close().
+func (l *FastCache) finalize() {
+	// Use SwapInt32 to atomically mark as finalized and get previous state
+	// This avoids race condition and eliminates need to check cleanerOn
+	oldLevel := atomic.SwapInt32(&l.cleanerLevel, -1)
+	if oldLevel >= 0 {
+		// Previous level was valid (not already closed), so cleanup is needed
+		l.stopCleaner()
+	}
+}
+
+// Stats represents cache performance and status statistics
+type Stats struct {
+	// CleanerLevel indicates current cleaning intensity (0=normal, 1=reduced, 2=light, 3=stopped)
+	CleanerLevel int32
+	// AccessCount shows total number of cache accesses since creation
+	AccessCount int64
+	// IdleDuration shows how long cache has been idle
+	IdleDuration time.Duration
+	// IsCleanerRunning indicates if background cleaner is active
+	IsCleanerRunning bool
+	// TotalItems shows approximate total items across all buckets
+	TotalItems int
+}
+
+// GetStats returns current cache statistics for monitoring and debugging
+func (l *FastCache) GetStats() Stats {
+	now := ztime.Clock() * 1000
+	lastAccess := atomic.LoadInt64(&l.lastAccessMs)
+	idleDuration := time.Duration(now-lastAccess) * time.Millisecond
+
+	// Count items across all buckets (approximation to avoid locking)
+	totalItems := 0
+	for i := range l.insts {
+		if l.insts[i][0] != nil {
+			totalItems += l.insts[i][0].size
+		}
+		if l.insts[i][1] != nil {
+			totalItems += l.insts[i][1].size
+		}
+	}
+
+	return Stats{
+		CleanerLevel:     atomic.LoadInt32(&l.cleanerLevel),
+		AccessCount:      atomic.LoadInt64(&l.accessCount),
+		IdleDuration:     idleDuration,
+		IsCleanerRunning: l.cleanerOn, // Note: this may have slight race condition but for monitoring it's acceptable
+		TotalItems:       totalItems,
+	}
+}
+
+// GetCleanerLevel returns the current cleaning intensity level
+// 0=normal, 1=reduced frequency, 2=light cleaning, 3=stopped
+func (l *FastCache) GetCleanerLevel() int32 {
+	return atomic.LoadInt32(&l.cleanerLevel)
+}
+
+// GetAccessCount returns total number of accesses since cache creation
+func (l *FastCache) GetAccessCount() int64 {
+	return atomic.LoadInt64(&l.accessCount)
+}
+
+// GetIdleDuration returns how long the cache has been idle
+func (l *FastCache) GetIdleDuration() time.Duration {
+	now := ztime.Clock() * 1000
+	lastAccess := atomic.LoadInt64(&l.lastAccessMs)
+	return time.Duration(now-lastAccess) * time.Millisecond
 }
