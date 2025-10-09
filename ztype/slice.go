@@ -46,31 +46,61 @@ func (s SliceType) First() Type {
 // Value returns the underlying values as a slice of interface{}.
 // This unwraps all Type objects to their original values.
 func (s SliceType) Value() []interface{} {
-	ss := make([]interface{}, 0, len(s))
+	if len(s) == 0 {
+		return []interface{}{}
+	}
+
+	ss := getInterfaceSlice()
+	if cap(ss) < len(s) {
+		ss = make([]interface{}, 0, len(s))
+	}
 	for i := range s {
 		ss = append(ss, s[i].Value())
 	}
-	return ss
+	result := make([]interface{}, len(ss))
+	copy(result, ss)
+	putInterfaceSlice(ss)
+	return result
 }
 
 // String converts all elements in the slice to strings and returns them as a []string.
 // Each element is converted using the Type.String() method.
 func (s SliceType) String() []string {
-	ss := make([]string, 0, len(s))
+	if len(s) == 0 {
+		return []string{}
+	}
+
+	ss := getStringSlice()
+	if cap(ss) < len(s) {
+		ss = make([]string, 0, len(s))
+	}
 	for i := range s {
 		ss = append(ss, s[i].String())
 	}
-	return ss
+	result := make([]string, len(ss))
+	copy(result, ss)
+	putStringSlice(ss)
+	return result
 }
 
 // Int converts all elements in the slice to integers and returns them as a []int.
 // Each element is converted using the Type.Int() method.
 func (s SliceType) Int() []int {
-	ss := make([]int, 0, len(s))
+	if len(s) == 0 {
+		return []int{}
+	}
+
+	ss := getIntSlice()
+	if cap(ss) < len(s) {
+		ss = make([]int, 0, len(s))
+	}
 	for i := range s {
 		ss = append(ss, s[i].Int())
 	}
-	return ss
+	result := make([]int, len(ss))
+	copy(result, ss)
+	putIntSlice(ss)
+	return result
 }
 
 // Maps converts all elements in the slice to Map objects and returns them as a Maps slice.

@@ -20,11 +20,11 @@ type pathResult struct {
 	simple bool // Whether this is a simple path (no escape characters)
 }
 
-// pathCache stores compiled path results, using sync.Map to avoid circular dependencies
+// pathCache stores compiled path results, using optimized configuration
 var pathCache = fast.NewFast(func(o *fast.Options) {
-	o.Cap = 1 << 10
-	o.Bucket = 4
-	o.Expiration = time.Second * 60 * 60
+	o.Cap = 1 << 12
+	o.Bucket = 8
+	o.Expiration = time.Second * 60 * 30
 })
 
 // compilePath compiles a path string into pathResult

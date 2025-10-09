@@ -27,10 +27,7 @@ type structCacheEntry struct {
 }
 
 // structCache struct cache using reflect.Type as key to avoid name conflicts
-var (
-	structCache      = make(map[reflect.Type]structCacheEntry)
-	structCacheMutex sync.RWMutex
-)
+var structCache sync.Map
 
 // getStructInfo get struct info, priority from cache
 func getStructInfo(t reflect.Type) []fieldInfo {
@@ -41,22 +38,19 @@ func getStructInfo(t reflect.Type) []fieldInfo {
 		return nil
 	}
 
-	structCacheMutex.RLock()
-	entry, exists := structCache[t]
-	structCacheMutex.RUnlock()
-
-	if exists {
-		return entry.Fields
+	if cached, exists := structCache.Load(t); exists {
+		return cached.(structCacheEntry).Fields
 	}
 
 	fields := parseStructFields(t)
-
-	structCacheMutex.Lock()
-	structCache[t] = structCacheEntry{
+	entry := structCacheEntry{
 		Fields:   fields,
 		TypeName: t.String(),
 	}
-	structCacheMutex.Unlock()
+
+	if actual, loaded := structCache.LoadOrStore(t, entry); loaded {
+		return actual.(structCacheEntry).Fields
+	}
 
 	return fields
 }

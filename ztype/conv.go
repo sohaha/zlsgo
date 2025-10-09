@@ -43,10 +43,16 @@ type Conver struct {
 
 var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}
 
+// To converts input value to the output type specified by out parameter.
+// The out parameter must be a pointer to the target type.
+// Optional configuration functions can be provided to customize the conversion behavior.
 func To(input, out interface{}, opt ...func(*Conver)) error {
 	return ValueConv(input, zreflect.ValueOf(out), opt...)
 }
 
+// ValueConv converts input value to the output reflect.Value.
+// The out parameter must be a pointer value that can be addressed.
+// Optional configuration functions can be provided to customize the conversion behavior.
 func ValueConv(input interface{}, out reflect.Value, opt ...func(*Conver)) error {
 	o := conv
 	for _, f := range opt {
@@ -87,12 +93,12 @@ func (d *Conver) to(name string, input interface{}, outVal reflect.Value, deep b
 	outputKind := zreflect.GetAbbrKind(outVal)
 
 	if d.ConvHook != nil {
-		if i, next := d.ConvHook(name, inputVal, t); !next {
+		i, next := d.ConvHook(name, inputVal, t)
+		if !next {
 			outVal.Set(i)
 			return nil
-		} else {
-			input = i.Interface()
 		}
+		input = i.Interface()
 	}
 	switch outputKind {
 	case reflect.Bool:

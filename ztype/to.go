@@ -36,48 +36,49 @@ func ToString(i interface{}) string {
 	if i == nil {
 		return ""
 	}
+
 	switch value := i.(type) {
+	case string:
+		return value
 	case int:
 		return strconv.Itoa(value)
-	case int8:
-		return strconv.Itoa(int(value))
-	case int16:
-		return strconv.Itoa(int(value))
-	case int32:
-		return strconv.Itoa(int(value))
 	case int64:
-		return strconv.Itoa(int(value))
-	case uint:
-		return strconv.FormatUint(uint64(value), 10)
-	case uint8:
-		return strconv.FormatUint(uint64(value), 10)
-	case uint16:
-		return strconv.FormatUint(uint64(value), 10)
-	case uint32:
-		return strconv.FormatUint(uint64(value), 10)
+		return strconv.FormatInt(value, 10)
+	case bool:
+		return strconv.FormatBool(value)
+	case float64:
+		return strconv.FormatFloat(value, 'f', -1, 64)
+	case int32:
+		return strconv.FormatInt(int64(value), 10)
 	case uint64:
 		return strconv.FormatUint(value, 10)
 	case float32:
 		return strconv.FormatFloat(float64(value), 'f', -1, 32)
-	case float64:
-		return strconv.FormatFloat(value, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(value)
-	case string:
-		return value
 	case []byte:
 		return zstring.Bytes2String(value)
+	case uint:
+		return strconv.FormatUint(uint64(value), 10)
+	case int16:
+		return strconv.FormatInt(int64(value), 10)
+	case int8:
+		return strconv.FormatInt(int64(value), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(value), 10)
 	default:
-		if f, ok := value.(appString); ok {
-			return f.String()
+		if stringer, ok := value.(appString); ok {
+			return stringer.String()
 		}
-		return toJsonString(value)
+		return toJSONString(value)
 	}
 }
 
-// toJsonString converts a value to its JSON string representation.
+// toJSONString converts a value to its JSON string representation.
 // It removes surrounding quotes from the JSON output.
-func toJsonString(value interface{}) string {
+func toJSONString(value interface{}) string {
 	jsonContent, _ := json.Marshal(value)
 	jsonContent = bytes.Trim(jsonContent, `"`)
 	return zstring.Bytes2String(jsonContent)
@@ -140,54 +141,71 @@ func ToInt64(i interface{}) int64 {
 	if i == nil {
 		return 0
 	}
-	if v, ok := i.(int64); ok {
-		return v
-	}
+
 	switch value := i.(type) {
+	case int64:
+		return value
 	case int:
-		return int64(value)
-	case int8:
-		return int64(value)
-	case int16:
 		return int64(value)
 	case int32:
 		return int64(value)
-	case uint:
+	case int16:
 		return int64(value)
-	case uint8:
-		return int64(value)
-	case uint16:
-		return int64(value)
-	case uint32:
+	case int8:
 		return int64(value)
 	case uint64:
 		return int64(value)
-	case float32:
+	case uint:
+		return int64(value)
+	case uint32:
+		return int64(value)
+	case uint16:
+		return int64(value)
+	case uint8:
 		return int64(value)
 	case float64:
+		return int64(value)
+	case float32:
 		return int64(value)
 	case bool:
 		if value {
 			return 1
 		}
 		return 0
+	case string:
+		return parseStringToInt64(value)
 	default:
 		s := ToString(value)
-		if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
-			if v, e := strconv.ParseInt(s[2:], 16, 64); e == nil {
-				return v
-			}
-		}
-		if len(s) > 1 && s[0] == '0' {
-			if v, e := strconv.ParseInt(s[1:], 8, 64); e == nil {
-				return v
-			}
-		}
-		if v, e := strconv.ParseInt(s, 10, 64); e == nil {
+		return parseStringToInt64(s)
+	}
+}
+
+// parseStringToInt64 parse string to int64
+func parseStringToInt64(s string) int64 {
+	if s == "" {
+		return 0
+	}
+
+	if strings.ContainsAny(s, ",_") {
+		s = strings.NewReplacer(",", "", "_", "").Replace(s)
+	}
+
+	if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		if v, e := strconv.ParseInt(s[2:], 16, 64); e == nil {
 			return v
 		}
-		return int64(ToFloat64(value))
+	} else if len(s) > 1 && s[0] == '0' && s[1] >= '0' && s[1] <= '7' {
+		if v, e := strconv.ParseInt(s[1:], 8, 64); e == nil {
+			return v
+		}
+	} else if v, e := strconv.ParseInt(s, 10, 64); e == nil {
+		return v
 	}
+
+	if v, e := strconv.ParseFloat(s, 64); e == nil {
+		return int64(v)
+	}
+	return 0
 }
 
 // ToUint converts any value to a uint.

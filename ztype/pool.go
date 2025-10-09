@@ -14,7 +14,21 @@ var mapSlicePool = sync.Pool{
 // stringSlicePool string slice pool for tag option parsing
 var stringSlicePool = sync.Pool{
 	New: func() interface{} {
-		return make([]string, 0, 4)
+		return make([]string, 0, 8)
+	},
+}
+
+// interfaceSlicePool interface{} slice pool for type conversions
+var interfaceSlicePool = sync.Pool{
+	New: func() interface{} {
+		return make([]interface{}, 0, 8)
+	},
+}
+
+// intSlicePool int slice pool for numeric conversions
+var intSlicePool = sync.Pool{
+	New: func() interface{} {
+		return make([]int, 0, 8)
 	},
 }
 
@@ -26,9 +40,10 @@ func getMapSlice() []map[string]interface{} {
 
 // putMapSlice returns a map slice to object pool
 func putMapSlice(s []map[string]interface{}) {
-	if s == nil {
+	if s == nil || cap(s) > 64 {
 		return
 	}
+
 	for i := range s {
 		s[i] = nil
 	}
@@ -44,7 +59,7 @@ func getStringSlice() []string {
 
 // putStringSlice returns a string slice to object pool
 func putStringSlice(s []string) {
-	if s == nil {
+	if s == nil || cap(s) > 64 {
 		return
 	}
 	for i := range s {
@@ -54,9 +69,38 @@ func putStringSlice(s []string) {
 	stringSlicePool.Put(s)
 }
 
-// resetMap resets map for reuse
-func resetMap(m map[string]interface{}) {
-	for k := range m {
-		delete(m, k)
+// getInterfaceSlice gets an interface{} slice from object pool
+func getInterfaceSlice() []interface{} {
+	s := interfaceSlicePool.Get().([]interface{})
+	return s[:0]
+}
+
+// putInterfaceSlice returns an interface{} slice to object pool
+func putInterfaceSlice(s []interface{}) {
+	if s == nil || cap(s) > 64 {
+		return
 	}
+	for i := range s {
+		s[i] = nil
+	}
+	s = s[:0]
+	interfaceSlicePool.Put(s)
+}
+
+// getIntSlice gets an int slice from object pool
+func getIntSlice() []int {
+	s := intSlicePool.Get().([]int)
+	return s[:0]
+}
+
+// putIntSlice returns an int slice to object pool
+func putIntSlice(s []int) {
+	if s == nil || cap(s) > 64 {
+		return
+	}
+	for i := range s {
+		s[i] = 0
+	}
+	s = s[:0]
+	intSlicePool.Put(s)
 }

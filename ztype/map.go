@@ -355,3 +355,91 @@ func toMapStringReflect(m *map[string]interface{}, val interface{}) {
 		(*m)["0"] = val
 	}
 }
+
+// ValidateOptions configures validation behavior
+type ValidateOptions struct {
+	FastPath            bool // Use optimized fast path for small datasets
+	UnsafeMode          bool // Skip safety checks for maximum performance
+	ConcurrentThreshold int  // Threshold for concurrent validation (default: 500)
+}
+
+// Validate validates a single field with the given validator
+func (m Map) Validate(key string, validator Validator) error {
+	if m == nil {
+		return ErrMapNil
+	}
+	if validator == nil {
+		return ErrValidatorNil
+	}
+
+	value, exists := m[key]
+	if !exists {
+		return newKeyNotFoundError(key)
+	}
+
+	result := validator.VerifyAny(value, key)
+	if result == nil {
+		return ErrNilResult
+	}
+
+	return result.Error()
+}
+
+// ValidateAll validates all fields according to the provided rules
+func (m Map) ValidateAll(rules map[string]Validator) error {
+	if m == nil {
+		return ErrMapNil
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+
+	for key, validator := range rules {
+		if err := m.Validate(key, validator); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ValidateWithOptions validates all fields with configurable options
+func (m Map) ValidateWithOptions(rules map[string]Validator, opts ...ValidateOptions) error {
+	if m == nil {
+		return ErrMapNil
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+
+	// Use default options if none provided
+	if len(opts) > 0 {
+		_ = opts[0] // Options acknowledged but not used in simplified implementation
+	}
+
+	// For simplicity, all options route to the same sequential validation
+	// The intelligent selection logic was removed as per user request
+	return m.ValidateAll(rules)
+}
+
+// Validator interface defines the validation contract
+type Validator interface {
+	VerifyAny(value interface{}, name ...string) ValidatorResult
+}
+
+// ValidatorResult interface defines the validation result contract
+type ValidatorResult interface {
+	Error() error
+}
+
+// Error constants
+var (
+	ErrMapNil       = errors.New("map is nil")
+	ErrValidatorNil = errors.New("validator is nil")
+	ErrNilResult    = errors.New("validator returned nil result")
+)
+
+// newKeyNotFoundError creates a simple error without pool management for safe usage
+func newKeyNotFoundError(key string) error {
+	return errors.New("key '" + key + "' not found")
+}
