@@ -1,7 +1,6 @@
 package zvalid
 
 import (
-	"container/list"
 	"strconv"
 	"strings"
 
@@ -92,9 +91,12 @@ func (v Engine) Split(sep string) ([]string, error) {
 	return value, nil
 }
 
-// Valid get the final value, or an notEmpty string if an error occurs
+// Valid executes the validation queue and returns the final result.
+// Note: All queue operations will be executed even after validation errors occur,
+// ensuring that operations like Default() can work properly.
+// This method includes defensive checks to prevent panic from nil queue functions.
 func (v *Engine) valid() *Engine {
-	if v.result || v.queue == nil {
+	if v.result {
 		return v
 	}
 	v.result = true
@@ -103,20 +105,22 @@ func (v *Engine) valid() *Engine {
 		return v
 	}
 
-	queues := list.New()
-	queues.PushBackList(v.queue)
-	l := queues.Len()
-	if l > 0 {
-		for i := 0; i < l; i++ {
-			queue := queues.Front()
-			if q, ok := queue.Value.(queueT); ok {
-				nv := q(v)
-				v.value = nv.value
-				v.err = nv.err
-				v.defaultValue = nv.defaultValue
-			}
-			queues.Remove(queue)
+	if len(v.queue) == 0 {
+		return v
+	}
+
+	for _, q := range v.queue {
+		if q == nil {
+			continue // Skip nil queue functions to prevent panic
 		}
+		nv := q(v)
+		if nv == nil {
+			continue // Skip nil results to prevent nil pointer dereference
+		}
+		v.value = nv.value
+		v.err = nv.err
+		v.defaultValue = nv.defaultValue
+		// Continue executing queue items even after error to allow Default() to work
 	}
 	return v
 }

@@ -2,7 +2,6 @@
 package zvalid
 
 import (
-	"container/list"
 	"errors"
 	"strconv"
 
@@ -14,7 +13,7 @@ type (
 	Engine struct {
 		err          error
 		defaultValue interface{}
-		queue        *list.List
+		queue        []queueT
 		name         string
 		value        string
 		sep          string
@@ -30,10 +29,10 @@ type (
 // ErrNoValidationValueSet no verification value set
 var ErrNoValidationValueSet = errors.New("未设置验证值")
 
-// New  valid
+// New valid
 func New() Engine {
 	return Engine{
-		queue: list.New(),
+		queue: make([]queueT, 0, 4),
 	}
 }
 
@@ -47,7 +46,7 @@ func Text(value string, name ...string) Engine {
 	var obj Engine
 	obj.value = value
 	obj.setRawValue = true
-	obj.queue = list.New()
+	obj.queue = make([]queueT, 0, 4)
 	if len(name) > 0 {
 		obj.name = name[0]
 	}
@@ -100,12 +99,11 @@ func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) Engine {
 			return fn(v)
 		}
 	}
-	queue := list.New()
-	if v.queue != nil {
-		queue.PushBackList(v.queue)
-	}
-	queue.PushBack(pFn)
-	v.queue = queue
+
+	newQueue := make([]queueT, len(v.queue), len(v.queue)+1)
+	copy(newQueue, v.queue)
+	newQueue = append(newQueue, pFn)
+	v.queue = newQueue
 	return *v
 }
 

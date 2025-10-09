@@ -71,7 +71,7 @@ func TestValidNew(tt *testing.T) {
 	tt.Log(v.value, v.err)
 
 	test2 := validObj.Verifi("", "测试2").Required("Test2")
-	tt.Log("test2 queue", test2.queue.Len())
+	tt.Log("test2 queue", len(test2.queue))
 	v = test2.valid()
 	t.Equal(true, v.Error() != nil)
 	tt.Log(v.Value(), err)
@@ -82,7 +82,7 @@ func TestValidNew(tt *testing.T) {
 
 	test3 := validObj.IsNumber().Verifi("test3", "测试3")
 	v = test3.valid()
-	tt.Log("test3 queue", test3.queue.Len())
+	tt.Log("test3 queue", len(test3.queue))
 	t.Equal(true, v.Error() != nil)
 	t.Equal(v.value, test3.Value())
 	t.Equal(v.Error(), test3.Error())
@@ -96,7 +96,7 @@ func TestValidNew(tt *testing.T) {
 	})
 
 	str, err = test4.String()
-	tt.Log("test4 queue", test4.queue.Len())
+	tt.Log("test4 queue", len(test4.queue))
 	t.Equal(nil, err)
 	tt.Log(str, err)
 }
@@ -186,6 +186,58 @@ func TestPassword(t *testing.T) {
 	tt.EqualNil(err)
 	t.Log(str)
 	t.Log("time", time.Since(now).Seconds())
+}
+
+func TestBoundaryConditions(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	t.Run("NilQueueFunction", func(t *testing.T) {
+		v := New()
+		v.queue = append(v.queue, nil)
+		v.setRawValue = true
+		v.value = "test"
+
+		result := v.valid()
+		tt.NotNil(result)
+		tt.Equal("test", result.value)
+	})
+
+	t.Run("EmptyEngine", func(t *testing.T) {
+		v := Engine{}
+		result := v.valid()
+		tt.NotNil(result)
+		tt.Equal(ErrNoValidationValueSet, result.err)
+	})
+
+	t.Run("MultipleNilQueueFunctions", func(t *testing.T) {
+		v := New()
+		v.queue = append(v.queue, nil, nil, nil)
+		v.setRawValue = true
+		v.value = "test"
+
+		result := v.valid()
+		tt.NotNil(result)
+		tt.Equal("test", result.value)
+	})
+
+	t.Run("MixedNilAndValidQueue", func(t *testing.T) {
+		v := Text("test").Required("test required")
+		originalLen := len(v.queue)
+		if originalLen > 0 {
+			newQueue := make([]queueT, 0, originalLen+2)
+			newQueue = append(newQueue, v.queue[0])
+			newQueue = append(newQueue, nil)
+			if originalLen > 1 {
+				newQueue = append(newQueue, v.queue[1:]...)
+			}
+			v.queue = newQueue
+
+			result := v.valid()
+			tt.NotNil(result)
+		} else {
+			t.Skip("Text() returned empty queue, skipping mixed queue test")
+		}
+	})
 }
 
 func BenchmarkStr(b *testing.B) {
