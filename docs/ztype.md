@@ -85,6 +85,55 @@ func (t Type) Map() Map
 func (t Type) Maps() Maps
 ```
 
+### Map 类型能力
+
+```go
+type Map map[string]interface{}
+```
+
+- **DeepCopy**: 深拷贝当前映射，适用于隔离原始数据
+- **Get / Set / Has / Delete**: 安全访问与修改键值
+- **Valid / Keys / ForEach / IsEmpty**: 快速校验、遍历与检查状态
+
+#### 验证接口
+
+```go
+type Validator interface {
+    VerifyAny(value interface{}, name ...string) ValidatorResult
+}
+
+type ValidatorResult interface {
+    Error() error
+}
+
+type ValidateOptions struct {
+    FastPath            bool
+    UnsafeMode          bool
+    ConcurrentThreshold int
+}
+
+func (m Map) Validate(key string, validator Validator) error
+func (m Map) ValidateAll(rules map[string]Validator) error
+func (m Map) ValidateWithOptions(rules map[string]Validator, opts ...ValidateOptions) error
+```
+
+```go
+// 示例：结合 zvalid 进行字段校验
+rules := map[string]ztype.Validator{
+    "name":  zvalid.Text("").SetAlias("姓名").Required().MinLength(1),
+    "email": zvalid.Text("").SetAlias("邮箱").Required().IsMail(),
+}
+
+payload := ztype.New(map[string]interface{}{
+    "name":  "Alice",
+    "email": "alice@example.com",
+}).Map()
+
+if err := payload.ValidateAll(rules); err != nil {
+    log.Fatal(err)
+}
+```
+
 ### 工具函数
 
 #### 基础类型转换
