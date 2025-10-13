@@ -3,7 +3,6 @@ package zstring
 
 import (
 	"bytes"
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -41,21 +40,26 @@ func Pad(raw string, length int, padStr string, padType PadType) string {
 	if l <= 0 {
 		return raw
 	}
-	if padType == PadRight {
-		raw = fmt.Sprintf("%s%s", raw, strings.Repeat(padStr, l))
-	} else if padType == PadLeft {
-		raw = fmt.Sprintf("%s%s", strings.Repeat(padStr, l), raw)
-	} else {
-		left := 0
-		right := 0
-		if l > 1 {
-			left = l / 2
-			right = (l / 2) + (l % 2)
-		}
 
-		raw = fmt.Sprintf("%s%s%s", strings.Repeat(padStr, left), raw, strings.Repeat(padStr, right))
+	// Use builder for better performance
+	var b strings.Builder
+	b.Grow(length * len(padStr))
+
+	switch padType {
+	case PadRight:
+		b.WriteString(raw)
+		b.WriteString(strings.Repeat(padStr, l))
+	case PadLeft:
+		b.WriteString(strings.Repeat(padStr, l))
+		b.WriteString(raw)
+	default: // PadSides
+		left := l / 2
+		right := l - left
+		b.WriteString(strings.Repeat(padStr, left))
+		b.WriteString(raw)
+		b.WriteString(strings.Repeat(padStr, right))
 	}
-	return raw
+	return b.String()
 }
 
 // Len returns the number of characters (runes) in a UTF-8 encoded string.
@@ -135,21 +139,19 @@ func Lcfirst(str string) string {
 // IsUcfirst checks if the first letter of a string is uppercase.
 // Returns false if the string is empty or the first character is not a letter.
 func IsUcfirst(str string) bool {
-	b := String2Bytes(str)
-	if b[0] >= byte('A') && b[0] <= byte('Z') {
-		return true
+	if len(str) == 0 {
+		return false
 	}
-	return false
+	return str[0] >= 'A' && str[0] <= 'Z'
 }
 
 // IsLcfirst checks if the first letter of a string is lowercase.
 // Returns false if the string is empty or the first character is not a letter.
 func IsLcfirst(str string) bool {
-	b := String2Bytes(str)
-	if b[0] >= byte('a') && b[0] <= byte('z') {
-		return true
+	if len(str) == 0 {
+		return false
 	}
-	return false
+	return str[0] >= 'a' && str[0] <= 'z'
 }
 
 // TrimBOM removes the UTF-8 Byte Order Mark (BOM) from the beginning of a byte slice if present.
@@ -186,24 +188,26 @@ func CamelCaseToSnakeCase(str string, delimiter ...string) string {
 	if str == "" {
 		return ""
 	}
-	sep := []byte("_")
+	sep := "_"
 	if len(delimiter) > 0 {
-		sep = []byte(delimiter[0])
+		sep = delimiter[0]
 	}
 	strLen := len(str)
-	result := make([]byte, 0, strLen*2)
+	var b strings.Builder
+	b.Grow(strLen + strLen/2)
+
 	j := false
 	for i := 0; i < strLen; i++ {
 		char := str[i]
 		if i > 0 && char >= 'A' && char <= 'Z' && j {
-			result = append(result, sep...)
+			b.WriteString(sep)
 		}
 		if char != '_' {
 			j = true
 		}
-		result = append(result, char)
+		b.WriteByte(char)
 	}
-	return strings.ToLower(string(result))
+	return strings.ToLower(b.String())
 }
 
 // XSSClean removes HTML and JavaScript tags from a string to prevent XSS attacks.
@@ -217,10 +221,12 @@ func XSSClean(str string) string {
 	return strings.TrimSpace(str)
 }
 
+var trimLineRegex = regexp.MustCompile(`\s+`)
+
 // TrimLine removes leading and trailing whitespace from each line in a string,
 // and removes empty lines. It preserves the newline characters between non-empty lines.
 func TrimLine(s string) string {
-	str := strings.TrimSpace(regexp.MustCompile(`\s+`).ReplaceAllString(s, " "))
+	str := strings.TrimSpace(trimLineRegex.ReplaceAllString(s, " "))
 	str = strings.Replace(str, " <", "<", -1)
 	str = strings.Replace(str, "> ", ">", -1)
 	return str

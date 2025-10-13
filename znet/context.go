@@ -148,15 +148,16 @@ func (c *Context) write() {
 	}
 
 	data := c.PrevContent()
-
 	header := c.Writer.Header()
-	for key, values := range c.header {
-		if len(values) == 0 {
+
+	for key := range c.header {
+		vLen := len(c.header[key])
+		if vLen == 0 {
 			continue
 		}
-		header.Set(key, values[0])
-		for i := 1; i < len(values); i++ {
-			header.Add(key, values[i])
+		header.Set(key, c.header[key][0])
+		for i := 1; i < vLen; i++ {
+			header.Add(key, c.header[key][i])
 		}
 	}
 
@@ -174,7 +175,7 @@ func (c *Context) write() {
 		if err != nil && c.Log != nil {
 			c.Log.Error(err)
 		}
-	} else if code != 200 {
+	} else if code != http.StatusOK {
 		c.Writer.WriteHeader(code)
 	}
 

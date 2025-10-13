@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-func DisableChunke(enable ...bool) {
-	std.DisableChunke(enable...)
+func DisableChunked(enable ...bool) {
+	std.DisableChunked(enable...)
 }
 
 func Get(url string, v ...interface{}) (*Res, error) {

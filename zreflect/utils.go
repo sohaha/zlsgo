@@ -52,7 +52,7 @@ func GetStructTag(field reflect.StructField, tags ...string) (tagValue, tagOpts 
 // Nonzero determines whether a reflect.Value is the zero value for its type.
 // This is useful for checking if a value has been initialized or set to a non-default value.
 func Nonzero(v reflect.Value) bool {
-	switch v.Kind() {
+	switch k := v.Kind(); k {
 	case reflect.Bool:
 		return v.Bool()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -65,10 +65,14 @@ func Nonzero(v reflect.Value) bool {
 		return v.Complex() != complex(0, 0)
 	case reflect.String:
 		return v.String() != ""
+	case reflect.Map, reflect.Interface, reflect.Slice, reflect.Ptr, reflect.Chan, reflect.Func:
+		return !v.IsNil()
+	case reflect.UnsafePointer:
+		return v.Pointer() != 0
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		numField := v.NumField()
+		for i := 0; i < numField; i++ {
 			field := v.Field(i)
-
 			if field.Kind() == reflect.Ptr {
 				if field.IsNil() {
 					continue
@@ -81,16 +85,13 @@ func Nonzero(v reflect.Value) bool {
 		}
 		return false
 	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		vLen := v.Len()
+		for i := 0; i < vLen; i++ {
 			if Nonzero(v.Index(i)) {
 				return true
 			}
 		}
 		return false
-	case reflect.Map, reflect.Interface, reflect.Slice, reflect.Ptr, reflect.Chan, reflect.Func:
-		return !v.IsNil()
-	case reflect.UnsafePointer:
-		return v.Pointer() != 0
 	}
 	return true
 }

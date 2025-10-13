@@ -21,10 +21,10 @@ import (
 // Memory implements the Session interface using an in-memory map.
 type Memory struct {
 	expiresAt time.Time
+	store     *MemoryStore
 	data      sync.Map
 	id        string
 	mu        sync.RWMutex
-	store     *MemoryStore
 }
 
 // reset clears the session data and prepares it for reuse from the pool.
@@ -94,17 +94,15 @@ func (s *Memory) Destroy() error {
 // It provides a simple, non-persistent session storage solution
 // suitable for development, testing, or single-instance applications.
 type MemoryStore struct {
-	sessionPool sync.Pool
-	sessions    sync.Map
-	// optional persistence
+	sessionPool     sync.Pool
 	persist         *zfile.MemoryFile
-	persistPath     string
-	persistInterval int64
 	persistStop     chan struct{}
-	// sharding support
-	shards       int
-	persistFiles []*zfile.MemoryFile
-	persistPaths []string
+	sessions        sync.Map
+	persistPath     string
+	persistFiles    []*zfile.MemoryFile
+	persistPaths    []string
+	persistInterval int64
+	shards          int
 }
 
 var _ Store = (*MemoryStore)(nil)
@@ -113,13 +111,11 @@ var _ Store = (*MemoryStore)(nil)
 // Dir: directory to store snapshot file. IntervalSec: auto-flush seconds.
 // Filename: optional filename (default: "sessions.json").
 type MemoryStoreOptions struct {
-	Dir         string
-	IntervalSec int64
-	Filename    string
-	// Shards number of snapshot shards, default 1 (no sharding)
-	Shards int
-	// FilenamePrefix used when Shards > 1, default "sessions"
+	Dir            string
+	Filename       string
 	FilenamePrefix string
+	IntervalSec    int64
+	Shards         int
 }
 
 // NewMemoryStore creates and initializes a new in-memory session store.

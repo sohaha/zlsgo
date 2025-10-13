@@ -43,12 +43,16 @@ const (
 // WithRunContext measures the execution time and memory allocation of a function.
 // It returns the duration of execution and the number of bytes allocated during execution.
 func WithRunContext(handler func()) (time.Duration, int64) {
-	start, mem := time.Now(), runtime.MemStats{}
+	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-	curMem := mem.Alloc
+	startMem := mem.Alloc
+	start := time.Now()
+	
 	handler()
+	
+	duration := time.Since(start)
 	runtime.ReadMemStats(&mem)
-	return time.Since(start), int64(mem.Alloc) - int64(curMem)
+	return duration, int64(mem.Alloc - startMem)
 }
 
 // TryCatch executes a function and captures any panic that occurs, converting it to an error.

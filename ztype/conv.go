@@ -226,10 +226,13 @@ func validateMapKeyType(_ string, mapType reflect.Type) error {
 
 // collectMapKeys collect map keys
 func collectMapKeys(dataVal reflect.Value) (map[reflect.Value]struct{}, map[interface{}]struct{}) {
-	keys := make(map[reflect.Value]struct{}, dataVal.Len())
-	unusedKeys := make(map[interface{}]struct{}, dataVal.Len())
+	mapLen := dataVal.Len()
+	keys := make(map[reflect.Value]struct{}, mapLen)
+	unusedKeys := make(map[interface{}]struct{}, mapLen)
 
-	for _, key := range dataVal.MapKeys() {
+	mapKeys := dataVal.MapKeys()
+	for i := 0; i < len(mapKeys); i++ {
+		key := mapKeys[i]
 		keys[key] = struct{}{}
 		unusedKeys[key.Interface()] = struct{}{}
 	}

@@ -4,13 +4,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"time"
+	"unsafe"
 
+	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
@@ -43,23 +44,26 @@ func newClient() *http.Client {
 }
 
 func (e *Engine) Client() *http.Client {
-	r := e.mutex.RLock()
-	defer e.mutex.RUnlock(r)
-	return e.client
+	c := e.client.Load()
+	if c == nil {
+		cn := newClient()
+		e.client.CAS(nil, unsafe.Pointer(cn))
+		return cn
+	}
+
+	return (*http.Client)(c)
 }
 
 func (e *Engine) SetClient(client *http.Client) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	e.client = client
+	e.client.Store(unsafe.Pointer(client))
 }
 
-func (e *Engine) DisableChunke(enable ...bool) {
+func (e *Engine) DisableChunked(enable ...bool) {
 	state := true
 	if len(enable) > 0 && enable[0] {
 		state = false
 	}
-	e.disableChunke = state
+	e.disableChunked = state
 }
 
 func (e *Engine) Get(url string, v ...interface{}) (*Res, error) {
@@ -150,13 +154,17 @@ func (e *Engine) TlsCertificate(certs ...Certificate) error {
 	return nil
 }
 
-func (e *Engine) EnableCookie(enable bool) {
+func (e *Engine) EnableCookie(enable bool) error {
 	if enable {
-		jar, _ := cookiejar.New(nil)
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			return err
+		}
 		e.Client().Jar = jar
 	} else {
 		e.Client().Jar = nil
 	}
+	return nil
 }
 
 func (e *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request) error) {
@@ -242,7 +250,7 @@ func (e *Engine) SetSsl(certPath, keyPath, CAPath string) (*tls.Config, error) {
 		return nil, err
 	}
 
-	caData, err := ioutil.ReadFile(CAPath)
+	caData, err := zfile.ReadFile(CAPath)
 	if err != nil {
 		zlog.Error("read ca fail", err)
 		return nil, err

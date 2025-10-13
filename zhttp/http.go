@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -18,12 +17,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/sohaha/zlsgo/zcache/fast"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zstring"
-	"github.com/sohaha/zlsgo/zsync"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -53,14 +53,14 @@ type (
 	DownloadProgress func(current, total int64)
 	UploadProgress   func(current, total int64)
 	Engine           struct {
-		client        *http.Client
-		jsonEncOpts   *jsonEncOpts
-		xmlEncOpts    *xmlEncOpts
-		getUserAgent  func() string
-		mutex         *zsync.RBMutex
-		flag          int
-		debug         bool
-		disableChunke bool
+		client         *zutil.Pointer
+		jsonEncOpts    *jsonEncOpts
+		xmlEncOpts     *xmlEncOpts
+		getUserAgent   func() string
+		urlCache       *fast.FastCache
+		flag           int
+		debug          bool
+		disableChunked bool
 	}
 
 	bodyJson struct {
@@ -112,15 +112,81 @@ var (
 	ErrNoMatched       = errors.New("no file have been matched")
 )
 
-// New create a new *Engine
+type Request struct {
+	engine       *Engine
+	url          string
+	method       string
+	headers      Header
+	queryParams  QueryParam
+	formParams   Param
+	body         interface{}
+	uploads      []FileUpload
+	client       *http.Client
+	cookies      []*http.Cookie
+	ctx          context.Context
+	host         string
+	uploadProg   UploadProgress
+	downloadProg DownloadProgress
+	noRedirect   bool
+	customReq    CustomReq
+}
+
+type RequestArgs struct {
+	Headers      Header
+	QueryParams  QueryParam
+	FormParams   Param
+	Body         interface{}
+	Uploads      []FileUpload
+	Client       *http.Client
+	Cookies      []*http.Cookie
+	Ctx          context.Context
+	Host         string
+	UploadProg   UploadProgress
+	DownloadProg DownloadProgress
+	NoRedirect   bool
+	CustomReq    CustomReq
+}
+
+var requestPool = sync.Pool{
+	New: func() interface{} {
+		return &Request{
+			headers:     make(Header, 8),
+			queryParams: make(QueryParam, 8),
+			formParams:  make(Param, 8),
+			cookies:     make([]*http.Cookie, 0, 4),
+			uploads:     make([]FileUpload, 0, 2),
+		}
+	},
+}
+
+// New create a new Engine
 func New() *Engine {
-	//noinspection ALL
-	return &Engine{
-		flag:   BitStdFlags,
-		debug:  Debug.Load(),
-		mutex:  zsync.NewRBMutex(),
-		client: newClient(),
+	e := &Engine{
+		flag:  BitStdFlags,
+		debug: Debug.Load(),
+		urlCache: fast.NewFast(func(o *fast.Options) {
+			o.Bucket = uint16(4)
+			o.Expiration = 0
+			o.AutoCleaner = false
+		}),
+		client: zutil.NewPointer(nil),
 	}
+	e.SetClient(newClient())
+	return e
+}
+
+func (e *Engine) parseURL(rawurl string) (*url.URL, error) {
+	if u, ok := e.urlCache.Get(rawurl); ok {
+		return u.(*url.URL), nil
+	}
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		return nil, err
+	}
+
+	e.urlCache.Set(rawurl, u)
+	return u, nil
 }
 
 func (p *param) getValues() url.Values {
@@ -149,20 +215,28 @@ func (p *param) Adds(m map[string]interface{}) {
 	}
 	vs := p.getValues()
 	for k, v := range m {
+		var str string
 		switch val := v.(type) {
 		case string:
-			vs.Add(k, val)
+			str = val
 		case int:
-			vs.Add(k, strconv.Itoa(val))
+			str = strconv.Itoa(val)
 		case int64:
-			vs.Add(k, strconv.FormatInt(val, 10))
+			str = strconv.FormatInt(val, 10)
+		case uint:
+			str = strconv.FormatUint(uint64(val), 10)
+		case uint64:
+			str = strconv.FormatUint(val, 10)
 		case float64:
-			vs.Add(k, strconv.FormatFloat(val, 'f', -1, 64))
+			str = strconv.FormatFloat(val, 'f', -1, 64)
+		case float32:
+			str = strconv.FormatFloat(float64(val), 'f', -1, 32)
 		case bool:
-			vs.Add(k, strconv.FormatBool(val))
+			str = strconv.FormatBool(val)
 		default:
-			vs.Add(k, fmt.Sprint(v))
+			str = fmt.Sprint(v)
 		}
+		vs.Add(k, str)
 	}
 }
 
@@ -187,11 +261,12 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 
 	req := &http.Request{
 		Method:     strings.ToUpper(method),
-		Header:     make(http.Header),
+		Header:     make(http.Header, 8),
 		Proto:      "Engine/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 	}
+
 	resp = &Res{req: req, r: e}
 	if e.getUserAgent != nil {
 		ua := e.getUserAgent()
@@ -306,7 +381,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 			uploads:        uploads,
 			uploadProgress: up,
 		}
-		if e.disableChunke {
+		if e.disableChunked {
 			multipartHelper.Upload(req)
 		} else {
 			multipartHelper.UploadChunke(req)
@@ -347,7 +422,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		}
 	}
 	var u *url.URL
-	u, err = url.Parse(rawurl)
+	u, err = e.parseURL(rawurl) // 使用缓存的 URL 解析
 	if err != nil {
 		return
 	}
@@ -399,12 +474,13 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	Debug.Load() || e.debug {
 		zlog.Println(resp.Dump())
 	}
+
 	return
 }
 
 func setBodyBytes(req *http.Request, resp *Res, data []byte) {
 	resp.requesterBody = data
-	req.Body = ioutil.NopCloser(bytes.NewReader(data))
+	req.Body = io.NopCloser(bytes.NewReader(data))
 	req.ContentLength = int64(len(data))
 }
 
@@ -496,7 +572,7 @@ func setBodyReader(req *http.Request, resp *Res, rd io.Reader) func() {
 	case io.ReadCloser:
 		rc = r
 	default:
-		rc = ioutil.NopCloser(rd)
+		rc = io.NopCloser(rd)
 	}
 	bw := &bodyWrapper{
 		ReadCloser: rc,
@@ -569,7 +645,7 @@ func (m *multipartHelper) Upload(req *http.Request) {
 	copy(bodyBytes, bodyBuf.Bytes())
 	b := bytes.NewReader(bodyBytes)
 
-	req.Body = ioutil.NopCloser(b)
+	req.Body = io.NopCloser(b)
 	req.ContentLength = int64(b.Len())
 }
 
@@ -627,7 +703,7 @@ func (m *multipartHelper) UploadChunke(req *http.Request) {
 		m.upload(req, upload, bodyWriter)
 	}()
 	req.Header.Set(textContentType, bodyWriter.FormDataContentType())
-	req.Body = ioutil.NopCloser(pr)
+	req.Body = io.NopCloser(pr)
 }
 
 func (m *multipartHelper) Dump() []byte {
@@ -711,8 +787,8 @@ func TlsCertificate(certs ...Certificate) error {
 	return std.TlsCertificate(certs...)
 }
 
-func EnableCookie(enable bool) {
-	std.EnableCookie(enable)
+func EnableCookie(enable bool) error {
+	return std.EnableCookie(enable)
 }
 
 func SetTimeout(d time.Duration) {
@@ -753,4 +829,254 @@ func SetJSONIndent(prefix, indent string) {
 
 func SetXMLIndent(prefix, indent string) {
 	std.SetXMLIndent(prefix, indent)
+}
+
+// DoWithArgs use struct args to do request
+func (e *Engine) DoWithArgs(method, rawurl string, args *RequestArgs) (*Res, error) {
+	if rawurl == "" {
+		return nil, ErrUrlNotSpecified
+	}
+
+	var (
+		queryParam     param
+		formParam      param
+		uploads        []FileUpload
+		uploadProgress UploadProgress
+		progress       func(int64, int64)
+		delayedFunc    []func()
+		lastFunc       []func()
+	)
+
+	req := &http.Request{
+		Method:     strings.ToUpper(method),
+		Header:     make(http.Header, 8),
+		Proto:      "Engine/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+	}
+	resp := &Res{req: req, r: e}
+
+	if e.getUserAgent != nil {
+		ua := e.getUserAgent()
+		if ua == "" {
+			ua = UserAgentLists[zstring.RandInt(0, len(UserAgentLists)-1)]
+		}
+		req.Header.Add("User-Agent", ua)
+	}
+
+	if args != nil {
+		if args.NoRedirect {
+			r := e.Client().CheckRedirect
+			e.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+			defer func() {
+				e.Client().CheckRedirect = r
+			}()
+		}
+
+		if args.CustomReq != nil {
+			args.CustomReq(req)
+		}
+
+		if len(args.Headers) > 0 {
+			for key, value := range args.Headers {
+				req.Header.Add(key, value)
+			}
+		}
+
+		if args.Body != nil {
+			switch vv := args.Body.(type) {
+			case *bodyJson:
+				fn, err := setBodyJson(req, resp, e.jsonEncOpts, vv.v)
+				if err != nil {
+					return nil, err
+				}
+				delayedFunc = append(delayedFunc, fn)
+			case *bodyXml:
+				fn, err := setBodyXml(req, resp, e.xmlEncOpts, vv.v)
+				if err != nil {
+					return nil, err
+				}
+				delayedFunc = append(delayedFunc, fn)
+			case string:
+				setBodyBytes(req, resp, []byte(vv))
+			case []byte:
+				setBodyBytes(req, resp, vv)
+			case bytes.Buffer:
+				setBodyBytes(req, resp, vv.Bytes())
+			case io.Reader:
+				fn := setBodyReader(req, resp, vv)
+				lastFunc = append(lastFunc, fn)
+			}
+		}
+
+		if len(args.QueryParams) > 0 {
+			queryParam.Adds(args.QueryParams)
+		}
+		if len(args.FormParams) > 0 {
+			if method == "GET" || method == "HEAD" {
+				queryParam.Adds(args.FormParams)
+			} else {
+				formParam.Adds(args.FormParams)
+			}
+		}
+
+		if args.Client != nil {
+			resp.client = args.Client
+		}
+
+		if len(args.Uploads) > 0 {
+			uploads = args.Uploads
+		}
+
+		for _, cookie := range args.Cookies {
+			if cookie != nil {
+				req.AddCookie(cookie)
+			}
+		}
+
+		if args.Host != "" {
+			req.Host = args.Host
+		}
+		if args.Ctx != nil {
+			req = req.WithContext(args.Ctx)
+			resp.req = req
+		}
+
+		if args.UploadProg != nil {
+			uploadProgress = args.UploadProg
+		}
+		if args.DownloadProg != nil {
+			resp.downloadProgress = args.DownloadProg
+		}
+	}
+
+	if length := req.Header.Get("Content-Length"); length != "" {
+		if l, err := strconv.ParseInt(length, 10, 64); err == nil {
+			req.ContentLength = l
+		}
+	}
+
+	if len(uploads) > 0 && (req.Method == "POST" || req.Method == "PUT") {
+		var up UploadProgress
+		if uploadProgress != nil {
+			up = uploadProgress
+		} else if progress != nil {
+			up = UploadProgress(progress)
+		}
+		multipartHelper := &multipartHelper{
+			form:           formParam.Values,
+			uploads:        uploads,
+			uploadProgress: up,
+		}
+		if e.disableChunked {
+			multipartHelper.Upload(req)
+		} else {
+			multipartHelper.UploadChunke(req)
+		}
+		resp.multipartHelper = multipartHelper
+	} else {
+		if progress != nil {
+			resp.downloadProgress = DownloadProgress(progress)
+		}
+		if !formParam.Empty() {
+			if req.Body != nil {
+				queryParam.Copy(formParam)
+			} else {
+				setBodyBytes(req, resp, []byte(formParam.Encode()))
+				setContentType(req, "application/x-www-form-urlencoded; charset=UTF-8")
+			}
+		}
+	}
+
+	if !queryParam.Empty() {
+		paramStr := queryParam.Encode()
+		requiredSize := len(rawurl) + 1 + len(paramStr)
+
+		if strings.IndexByte(rawurl, '?') == -1 {
+			sb := zutil.GetBuff(uint(requiredSize))
+			sb.WriteString(rawurl)
+			sb.WriteByte('?')
+			sb.WriteString(paramStr)
+			rawurl = sb.String()
+			zutil.PutBuff(sb)
+		} else {
+			sb := zutil.GetBuff(uint(requiredSize))
+			sb.WriteString(rawurl)
+			sb.WriteByte('&')
+			sb.WriteString(paramStr)
+			rawurl = sb.String()
+			zutil.PutBuff(sb)
+		}
+	}
+
+	var u *url.URL
+	var err error
+	u, err = e.parseURL(rawurl)
+	if err != nil {
+		return nil, err
+	}
+	req.URL = u
+
+	if host := req.Header.Get("Host"); host != "" {
+		req.Host = host
+	}
+
+	for _, fn := range delayedFunc {
+		fn()
+	}
+
+	if resp.client == nil {
+		resp.client = e.Client()
+	}
+
+	var response *http.Response
+
+	if e.flag&BitTime != 0 {
+		before := time.Now()
+		response, err = resp.client.Do(req)
+		after := time.Now()
+		resp.cost = after.Sub(before)
+	} else {
+		response, err = resp.client.Do(req)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fn := range lastFunc {
+		fn()
+	}
+
+	resp.resp = response
+
+	if _, ok := resp.client.Transport.(*http.Transport); ok && response.Header.Get("Content-Encoding") == "gzip" && req.Header.Get("Accept-Encoding") != "" {
+		var body *gzip.Reader
+		body, err = gzip.NewReader(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		response.Body = body
+	}
+
+	if //noinspection GoBoolExpressions
+	Debug.Load() || e.debug {
+		zlog.Println(resp.Dump())
+	}
+	return resp, nil
+}
+
+// DoWithArgs use struct args to do request
+func DoWithArgs(method, rawurl string, args *RequestArgs) (*Res, error) {
+	return std.DoWithArgs(method, rawurl, args)
+}
+
+// NewRequest create new request
+func (e *Engine) NewRequest() *Request {
+	req := requestPool.Get().(*Request)
+	req.engine = e
+	req.Reset()
+	return req
 }

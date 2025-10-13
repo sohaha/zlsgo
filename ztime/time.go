@@ -69,19 +69,23 @@ func In(tt time.Time) time.Time {
 	return inlay.In(tt)
 }
 
-var clock = time.Now().UnixNano() / 1000
+var clock int64
 
 func init() {
+	atomic.StoreInt64(&clock, time.Now().UnixNano()/1000)
+
 	go func() {
-		m := 10 * time.Millisecond
-		t := int64(10000)
-		ticker := time.NewTicker(m)
+		const updateInterval = 10 * time.Millisecond
+		const microsecondsPerUpdate = int64(10000)
+
+		ticker := time.NewTicker(updateInterval)
 		defer ticker.Stop()
+
 		for {
 			atomic.StoreInt64(&clock, time.Now().UnixNano()/1000)
 			for i := 0; i < 10; i++ {
 				<-ticker.C
-				atomic.AddInt64(&clock, t)
+				atomic.AddInt64(&clock, microsecondsPerUpdate)
 			}
 			<-ticker.C
 		}

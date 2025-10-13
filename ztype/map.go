@@ -233,13 +233,27 @@ func ToMaps(value interface{}) Maps {
 // This is an internal function used by ToMap to handle different map types.
 func toMapString(value interface{}) map[string]interface{} {
 	if value == nil {
-		return make(map[string]interface{})
+		return make(map[string]interface{}, 0)
 	}
 	if r, ok := value.(map[string]interface{}); ok {
 		return r
 	}
 
-	m := make(map[string]interface{})
+	var capacity int
+	switch v := value.(type) {
+	case map[interface{}]interface{}:
+		capacity = len(v)
+	case map[interface{}]string:
+		capacity = len(v)
+	case map[string]bool:
+		capacity = len(v)
+	case map[string]int:
+		capacity = len(v)
+	default:
+		capacity = 8
+	}
+
+	m := make(map[string]interface{}, capacity)
 	switch val := value.(type) {
 	case map[interface{}]interface{}:
 		for k, v := range val {

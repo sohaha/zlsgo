@@ -112,7 +112,7 @@ func (arr *Array) Push(values ...interface{}) {
 // Returns an error if the index is out of bounds or if the operation fails.
 func (arr *Array) Add(index int, value interface{}) (err error) {
 	if index < 0 || index > arr.size {
-		err = errors.New("sdd failed. Require index >= 0 and index <= size")
+		err = errors.New("add failed. Require index >= 0 and index <= size")
 		return
 	}
 

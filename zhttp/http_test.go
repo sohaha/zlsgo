@@ -35,6 +35,16 @@ func TestMain(m *testing.M) {
 	r = znet.New("zhttp-test")
 	r.SetAddr("3788")
 	r.Log.Discard()
+
+	r.GET("/get", func(c *znet.Context) {
+		c.JSON(200, map[string]interface{}{
+			"code":   200,
+			"msg":    "get request",
+			"params": c.GetAllParam(),
+			"query":  c.GetAllQuery(),
+		})
+	})
+
 	r.POST("/upload", func(c *znet.Context) {
 		file, err := c.FormFile("file")
 		if err == nil {
@@ -377,7 +387,7 @@ func TestFile(t *testing.T) {
 		transport.MaxIdleConnsPerHost = 100
 	})
 
-	DisableChunke()
+	DisableChunked()
 	res, err = Post("http://127.0.0.1:18181/upload", h, CustomReq(func(req *http.Request) {
 	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)

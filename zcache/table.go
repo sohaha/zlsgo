@@ -38,8 +38,9 @@ type (
 // Count returns the total number of items currently stored in the cache table
 func (table *Table) Count() int {
 	table.RLock()
-	defer table.RUnlock()
-	return len(table.items)
+	count := len(table.items)
+	table.RUnlock()
+	return count
 }
 
 // ForEach iterates through all cache items and applies the provided function to each key-value pair.
@@ -74,8 +75,8 @@ func (table *Table) ForEachRaw(trans func(key string, value *Item) bool) {
 // The callback function can generate a new cache item based on the key and additional arguments.
 func (table *Table) SetLoadNotCallback(f func(key string, args ...interface{}) *Item) {
 	table.Lock()
-	defer table.Unlock()
 	table.loadNotCallback = f
+	table.Unlock()
 }
 
 // SetAddCallback sets a function to be called whenever a new item is added to the cache.

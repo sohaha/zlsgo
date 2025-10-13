@@ -108,16 +108,14 @@ func (n *filterNode) replaceWithAsterisk(chars []rune, start, stop int) {
 
 // collectKeywords extracts unique keywords from the identified scopes in the text.
 func (n *filterNode) collectKeywords(chars []rune, scopes []scope) []string {
-	set := make(map[string]struct{})
+	set := make(map[string]struct{}, len(scopes))
 	for _, v := range scopes {
 		set[string(chars[v.start:v.stop])] = struct{}{}
 	}
 
-	var i int
-	keywords := make([]string, len(set))
+	keywords := make([]string, 0, len(set))
 	for k := range set {
-		keywords[i] = k
-		i++
+		keywords = append(keywords, k)
 	}
 
 	return keywords

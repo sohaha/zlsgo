@@ -100,10 +100,7 @@ func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) Engine {
 		}
 	}
 
-	newQueue := make([]queueT, len(v.queue), len(v.queue)+1)
-	copy(newQueue, v.queue)
-	newQueue = append(newQueue, pFn)
-	v.queue = newQueue
+	v.queue = append(v.queue, pFn)
 	return *v
 }
 
