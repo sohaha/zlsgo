@@ -6,6 +6,7 @@
 
 - **HTTP 引擎**: 可配置的 HTTP 客户端引擎
 - **请求方法**: 支持所有 HTTP 方法
+- **Fluent 请求构建器**: 基于链式的请求构建与发送 API，支持复用与对象池
 - **响应处理**: 响应数据解析和转换
 - **JSON-RPC**: 支持 JSON-RPC 2.0 客户端
 - **SSE**: Server-Sent Events 客户端
@@ -70,6 +71,78 @@ func Connect(url string, v ...interface{}) (*Res, error)
 func Trace(url string, v ...interface{}) (*Res, error)
 func Do(method, rawurl string, v ...interface{}) (resp *Res, err error)
 func DoRetry(attempt int, sleep time.Duration, fn func() (*Res, error)) (*Res, error)
+```
+
+### Fluent 请求构建器
+
+基于 `Request` 的链式请求构建与复用能力，便于以统一方式设置 URL、方法、头、参数、Body、上传与回调等，然后执行请求。
+
+```go
+// 创建与获取 Request
+func NewRequest() *Request                // 使用默认引擎
+func (e *Engine) NewRequest() *Request    // 从自定义引擎创建
+func (e *Engine) GetRequest() *Request    // 等价于 NewRequest
+func GetRequest() *Request                // 使用默认引擎获取
+
+// 链式配置
+func (r *Request) URL(url string) *Request
+func (r *Request) Method(method string) *Request
+func (r *Request) Header(key, value string) *Request
+func (r *Request) Headers(headers Header) *Request
+func (r *Request) Query(key string, value interface{}) *Request
+func (r *Request) QueryMap(params QueryParam) *Request
+func (r *Request) Form(key string, value interface{}) *Request
+func (r *Request) FormMap(params Param) *Request
+func (r *Request) Body(body interface{}) *Request
+func (r *Request) JSON(v interface{}) *Request
+func (r *Request) XML(v interface{}) *Request
+func (r *Request) File(fieldName, fileName string, file io.ReadCloser) *Request
+func (r *Request) Client(client *http.Client) *Request
+func (r *Request) Cookie(cookie *http.Cookie) *Request
+func (r *Request) Context(ctx context.Context) *Request
+func (r *Request) Host(host string) *Request
+func (r *Request) UploadProgress(progress UploadProgress) *Request
+func (r *Request) DownloadProgress(progress DownloadProgress) *Request
+func (r *Request) NoRedirect(disable bool) *Request
+func (r *Request) Custom(fn CustomReq) *Request
+
+// 执行
+func (r *Request) Do() (*Res, error)
+func (r *Request) GET() (*Res, error)
+func (r *Request) POST() (*Res, error)
+func (r *Request) PUT() (*Res, error)
+func (r *Request) PATCH() (*Res, error)
+func (r *Request) DELETE() (*Res, error)
+func (r *Request) HEAD() (*Res, error)
+func (r *Request) OPTIONS() (*Res, error)
+
+// 复用与对象池
+func (r *Request) Reset() *Request
+func (r *Request) Release()
+func (r *Request) DoAndRelease() (*Res, error)
+func (r *Request) GetAndRelease() (*Res, error)
+func (r *Request) PostAndRelease() (*Res, error)
+```
+
+示例：
+
+```go
+req := zhttp.NewRequest().
+    URL("https://httpbin.org/anything").
+    Method("post").
+    Headers(zhttp.Header{"X-Trace": "demo"}).
+    Query("page", 1).
+    Form("q", "keyword").
+    JSON(map[string]any{"name": "zlsgo"}).
+    NoRedirect(true)
+res, err := req.Do()
+if err != nil { /* handle */ }
+body := res.String()
+
+// 或使用便捷方法
+res, err = zhttp.GetRequest().URL("https://httpbin.org/get").GET()
+// 完成后释放（推荐在高频场景下）
+_ = req.Reset() // 或 req.Release() 归还到池
 ```
 
 ### 响应处理
@@ -190,6 +263,8 @@ func NewJSONRPC(address string, path string, opts ...func(o *JSONRPCOptions)) (*
 // 创建 SSE 连接
 func SSE(url string, v ...interface{}) (*SSEEngine, error)
 ```
+
+> 提示：如需更精细的组装控制（含分块上传、进度回调、禁用重定向、上下文传递等），可以结合 `DoWithArgs` 与 Fluent 构建器一起使用。
 
 ## 使用示例
 
