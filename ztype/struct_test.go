@@ -149,3 +149,101 @@ func TestStructEdit(t *testing.T) {
 	j3, _ := json.Marshal(r3)
 	tt.Log(string(j3))
 }
+
+func TestStructBuilderHelpers(t *testing.T) {
+	b := ztype.NewStruct()
+	b.AddField("A", 1, `json:"a"`).AddField("B", "x")
+	if !b.HasField("A") || b.GetField("A") == nil {
+		t.Fatal("expected field A to exist")
+	}
+	names := b.FieldNames()
+	if len(names) != 2 {
+		t.Fatalf("unexpected field names: %#v", names)
+	}
+
+	f := b.GetField("A")
+	f.SetType(reflect.TypeOf(""))
+	f.SetTag(`json:"aa"`)
+	_ = b.Interface()
+
+	s := ztype.NewSliceStruct()
+	beforeKind := s.Type().Kind()
+	other := ztype.NewStruct().AddField("C", 1)
+	s.Copy(other)
+	if s.Type().Kind() != beforeKind || !s.HasField("C") {
+		t.Fatal("Copy did not preserve type or fields")
+	}
+}
+
+func TestGetFieldNotExists(t *testing.T) {
+	b := ztype.NewStruct()
+	b.AddField("A", 1)
+	if b.GetField("NOPE") != nil {
+		t.Fatalf("expected nil for non-existing field")
+	}
+}
+
+func TestNewMapStructEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	builder := ztype.NewMapStruct("")
+	builder.AddField("Name", "")
+	builder.AddField("Age", 0)
+	tt.NotNil(builder.Interface())
+
+	builder2 := ztype.NewMapStruct(reflect.TypeOf(""))
+	builder2.AddField("Field1", "value")
+	tt.NotNil(builder2.Interface())
+
+	sliceBuilder := ztype.NewSliceStruct()
+	sliceBuilder.AddField("ID", 0)
+	sliceBuilder.AddField("Name", "")
+	tt.NotNil(sliceBuilder.Interface())
+}
+
+func TestStructBuilderMergeEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	builder := ztype.NewStruct()
+
+	err := builder.Merge(123)
+	tt.EqualTrue(err != nil)
+
+	type Sample struct {
+		Name string
+		Age  int
+	}
+
+	err = builder.Merge(Sample{Name: "test", Age: 25})
+	tt.NoError(err)
+
+	builder2 := ztype.NewStruct()
+	err = builder2.Merge(
+		Sample{Name: "first", Age: 20},
+		Sample{Name: "second", Age: 30},
+	)
+	tt.NoError(err)
+}
+
+func TestCacheParseStructFieldsEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	type Simple struct {
+		Field1 string `z:"field1"`
+		Field2 int    `z:"field2"`
+	}
+
+	s := Simple{
+		Field1: "value1",
+		Field2: 42,
+	}
+
+	m := ztype.ToMap(s)
+	tt.Equal("value1", m.Get("field1").String())
+	tt.Equal(42, m.Get("field2").Int())
+
+	type Empty struct{}
+	e := Empty{}
+	m2 := ztype.ToMap(e)
+	tt.NotNil(m2)
+}

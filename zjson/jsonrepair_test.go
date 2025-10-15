@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zjson"
-	"github.com/sohaha/zlsgo/zstring"
 )
 
 func TestRepair(t *testing.T) {
@@ -772,16 +770,6 @@ func TestRepairWithOptions(t *testing.T) {
 	}
 }
 
-func removeWhitespace(s string) string {
-	var result strings.Builder
-	for _, c := range s {
-		if !zstring.IsSpace(c) {
-			result.WriteRune(c)
-		}
-	}
-	return result.String()
-}
-
 func BenchmarkRepair(b *testing.B) {
 	samples := []string{
 		`{"name":"张三","age":30,"active":true}`,
@@ -880,4 +868,39 @@ func BenchmarkRepairComplex(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestJSONRepairEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tests := []zlsgo.ErrorTestCase[string, string]{
+		{
+			Name:     "missing closing brace",
+			Input:    `{"a":1`,
+			Expected: `{"a":1}`,
+			WantErr:  false,
+		},
+		{
+			Name:     "missing closing bracket",
+			Input:    `[1,2,3`,
+			Expected: `[1,2,3]`,
+			WantErr:  false,
+		},
+		{
+			Name:     "single quotes",
+			Input:    `{'a':1}`,
+			Expected: `{"a":1}`,
+			WantErr:  false,
+		},
+		{
+			Name:     "unquoted keys",
+			Input:    `{a:1,b:2}`,
+			Expected: `{"a":1,"b":2}`,
+			WantErr:  false,
+		},
+	}
+
+	zlsgo.RunErrorTests(tt, tests, func(input string) (string, error) {
+		return zjson.Repair(input)
+	})
 }

@@ -366,42 +366,42 @@ func TestDefault(t *testing.T) {
 	tt.EqualExit(uint64(1), notExists.Uint64(1))
 }
 
+type UnescapeTestCase struct {
+	input    string
+	expected string
+}
+
 func Test_unescape(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{"BasicASCII", "hello", "hello"},
-		{"SimpleEscape", "\\\"", "\""},
-		{"UnicodeBasic", "\\u0041", "A"},
-		{"UnicodeChinese", "\\u4F60\\u597D", "你好"},
-		{"SurrogatePair", "\\uD83D\\uDE00", "😀"},
-		{"IncompleteSurrogate", "\\uD83D", "\uFFFD"},
-		{"InvalidUnicode", "\\uXXXX", "\u0000"},
-		{"MixedContent", "Hello\\u0020World\\t!", "Hello World\t!"},
-		{"ControlCharacter", "\x19", ""},
-		{"InvalidEscape", "\\x", ""},
-		{"UnicodeInsufficientChars", "\\u12", ""},
-		{"Backspace", "\\b", "\b"},
-		{"FormFeed", "\\f", "\f"},
-		{"CarriageReturn", "\\r", "\r"},
-		{"Tab", "\\t", "\t"},
-		{"Solidus", "\\/", "/"},
-		{"ControlCharacterInMiddle", "hello\x19world", "hello"},
-		{"MultipleUnicode", "\\u0041\\u0042", "AB"},
-		{"HighSurrogateFollowedByNonSurrogate", "\\uD83D\\u0041", "\uFFFDA"},
-		{"HighSurrogateFollowedByInvalidUnicode", "\\uD83D\\uXXXX", "\uFFFD\u0000"},
-		{"Unescape", `{\"name\":null,\"text\":\"您好，我该怎么称呼您呢？\"}`, `{"name":null,"text":"您好，我该怎么称呼您呢？"}`},
+	tt := zlsgo.NewTest(t)
+
+	tests := []zlsgo.TestCase[UnescapeTestCase]{
+		{Name: "BasicASCII", Data: UnescapeTestCase{"hello", "hello"}},
+		{Name: "SimpleEscape", Data: UnescapeTestCase{"\\\"", "\""}},
+		{Name: "UnicodeBasic", Data: UnescapeTestCase{"\\u0041", "A"}},
+		{Name: "UnicodeChinese", Data: UnescapeTestCase{"\\u4F60\\u597D", "你好"}},
+		{Name: "SurrogatePair", Data: UnescapeTestCase{"\\uD83D\\uDE00", "😀"}},
+		{Name: "IncompleteSurrogate", Data: UnescapeTestCase{"\\uD83D", "\uFFFD"}},
+		{Name: "InvalidUnicode", Data: UnescapeTestCase{"\\uXXXX", "\u0000"}},
+		{Name: "MixedContent", Data: UnescapeTestCase{"Hello\\u0020World\\t!", "Hello World\t!"}},
+		{Name: "ControlCharacter", Data: UnescapeTestCase{"\x19", ""}},
+		{Name: "InvalidEscape", Data: UnescapeTestCase{"\\x", ""}},
+		{Name: "UnicodeInsufficientChars", Data: UnescapeTestCase{"\\u12", ""}},
+		{Name: "Backspace", Data: UnescapeTestCase{"\\b", "\b"}},
+		{Name: "FormFeed", Data: UnescapeTestCase{"\\f", "\f"}},
+		{Name: "CarriageReturn", Data: UnescapeTestCase{"\\r", "\r"}},
+		{Name: "Tab", Data: UnescapeTestCase{"\\t", "\t"}},
+		{Name: "Solidus", Data: UnescapeTestCase{"\\/", "/"}},
+		{Name: "ControlCharacterInMiddle", Data: UnescapeTestCase{"hello\x19world", "hello"}},
+		{Name: "MultipleUnicode", Data: UnescapeTestCase{"\\u0041\\u0042", "AB"}},
+		{Name: "HighSurrogateFollowedByNonSurrogate", Data: UnescapeTestCase{"\\uD83D\\u0041", "\uFFFDA"}},
+		{Name: "HighSurrogateFollowedByInvalidUnicode", Data: UnescapeTestCase{"\\uD83D\\uXXXX", "\uFFFD\u0000"}},
+		{Name: "Unescape", Data: UnescapeTestCase{`{\"name\":null,\"text\":\"您好，我该怎么称呼您呢？\"}`, `{"name":null,"text":"您好，我该怎么称呼您呢？"}`}},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tt := zlsgo.NewTest(t)
-			result := unescape(test.input)
-			tt.Equal(test.expected, result)
-		})
-	}
+	zlsgo.RunTests(tt, tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase[UnescapeTestCase]) {
+		result := unescape(tc.Data.input)
+		subTt.Equal(tc.Data.expected, result)
+	})
 }
 
 func TestParseString(t *testing.T) {
@@ -454,6 +454,206 @@ func TestParseString(t *testing.T) {
 	}
 }
 
+func TestNameOfLastAndSimpleName(t *testing.T) {
+	cases := []struct {
+		path string
+		exp  string
+	}{
+		{"foo.bar", "bar"},
+		{"alpha|beta", "beta"},
+		{"foo\\.bar", "foo\\.bar"},
+	}
+	for _, tc := range cases {
+		if got := nameOfLast(tc.path); got != tc.exp {
+			t.Fatalf("nameOfLast(%q)=%q want %q", tc.path, got, tc.exp)
+		}
+	}
+
+	if !isSimpleName("simpleName") {
+		t.Fatal("expected simple name to be allowed")
+	}
+	if isSimpleName("pipe|name") {
+		t.Fatal("expected pipe to mark name complex")
+	}
+	if isSimpleName("bad\nname") {
+		t.Fatal("expected control characters to mark name complex")
+	}
+}
+
+func TestAppendJSONString(t *testing.T) {
+	if got := string(appendJSONString(nil, "plain")); got != "\"plain\"" {
+		t.Fatalf("appendJSONString plain got %s", got)
+	}
+	encoded := appendJSONString([]byte{'p'}, "emoji😀")
+	if string(encoded[1:]) == "emoji😀" {
+		t.Fatal("expected encoded string to escape non-ascii content")
+	}
+}
+
+func TestValidNullHelper(t *testing.T) {
+	if _, ok := validnull([]byte("ull"), 0); !ok {
+		t.Fatal("expected validnull to accept ull sequence")
+	}
+	if _, ok := validnull([]byte("ulx"), 0); ok {
+		t.Fatal("expected validnull to reject invalid sequence")
+	}
+}
+
+func TestArrayQueriesAndPipes(t *testing.T) {
+	data := `{"users":[{"name":"Ann","age":25},{"name":"Bob","age":20},{"name":"Eve","age":30}]}`
+	all := Get(data, "users.#(age>=25)#.name")
+	if all.String() != `["Ann","Eve"]` {
+		t.Fatalf("unexpected all query result %s", all.String())
+	}
+	first := Get(data, "users.#(age>=25).name")
+	if first.String() != "Ann" {
+		t.Fatalf("unexpected first query result %s", first.String())
+	}
+	count := Get(data, "users.#")
+	if count.Int() != 3 {
+		t.Fatalf("unexpected count %d", count.Int())
+	}
+	SetModifiersState(true)
+	defer SetModifiersState(false)
+	reversed := Get(data, "users.#.age|@reverse")
+	if reversed.String() != `[30,20,25]` {
+		t.Fatalf("unexpected reversed result %s", reversed.String())
+	}
+}
+
+func TestSplitPossiblePipe(t *testing.T) {
+	left, right, ok := splitPossiblePipe(".age|@reverse")
+	if !ok || left != ".age" || right != "@reverse" {
+		t.Fatalf("splitPossiblePipe failed: %v %q %q", ok, left, right)
+	}
+	if _, _, ok = splitPossiblePipe(`.value\|literal`); ok {
+		t.Fatal("expected escaped pipe not to split")
+	}
+}
+
+func TestParseSubSelectors(t *testing.T) {
+	sels, rest, ok := parseSubSelectors(`{"label":.users.0.name,.users.list[0]}`)
+	if !ok || rest != "" || len(sels) != 2 {
+		t.Fatalf("unexpected selector parse result ok=%v rest=%q len=%d", ok, rest, len(sels))
+	}
+	if sels[0].name != `"label"` || sels[0].path != ".users.0.name" {
+		t.Fatalf("unexpected first selector %#v", sels[0])
+	}
+	if sels[1].name != "" || sels[1].path != ".users.list[0]" {
+		t.Fatalf("unexpected second selector %#v", sels[1])
+	}
+	_, trailing, ok := parseSubSelectors(`{.users.0.name}.extra`)
+	if !ok || trailing != ".extra" {
+		t.Fatalf("expected trailing path, got ok=%v tail=%q", ok, trailing)
+	}
+}
+
+func TestQueryMatchesVariants(t *testing.T) {
+	data := `{"items":[{"name":"Anne","active":true,"score":5,"meta":{"flag":true}},{"name":"Bob","active":false,"score":10,"meta":{"flag":false}},{"name":"Carla","active":true,"score":8,"meta":{"flag":true}}]}`
+	meta := Get(data, "items.#(meta.flag==true)#.name")
+	if meta.String() != `["Anne","Carla"]` {
+		t.Fatalf("meta flag filter unexpected %s", meta.String())
+	}
+	contains := Get(data, `items.#(name!%"B*")#.name`)
+	if contains.String() != `["Anne","Carla"]` {
+		t.Fatalf("contains filter unexpected %s", contains.String())
+	}
+	gt := Get(data, "items.#(active> false)#.name")
+	if gt.String() != `["Anne","Carla"]` {
+		t.Fatalf("bool greater filter unexpected %s", gt.String())
+	}
+	lt := Get(data, "items.#(active< true)#.name")
+	if lt.String() != `["Bob"]` {
+		t.Fatalf("bool less filter unexpected %s", lt.String())
+	}
+	smaller := Get(data, "items.#(score<8)#.score")
+	if smaller.String() != `[5]` {
+		t.Fatalf("numeric less filter unexpected %s", smaller.String())
+	}
+}
+
+func TestParseArrayPathDirect(t *testing.T) {
+	cases := []struct {
+		path  string
+		check func(*testing.T, arrayPathResult)
+	}{
+		{
+			path: "3",
+			check: func(t *testing.T, res arrayPathResult) {
+				if res.part != "3" || res.more || res.piped {
+					t.Fatalf("unexpected simple result %#v", res)
+				}
+			},
+		},
+		{
+			path: "2.rest",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.more || res.path != "rest" {
+					t.Fatalf("expected nested path %#v", res)
+				}
+			},
+		},
+		{
+			path: "1|@reverse",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.piped || res.pipe != "@reverse" {
+					t.Fatalf("expected pipe split %#v", res)
+				}
+			},
+		},
+		{
+			path: "#.name",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.arrch || !res.alogok || res.alogkey != "name" || res.part != "#" {
+					t.Fatalf("expected aggregator metadata %#v", res)
+				}
+			},
+		},
+		{
+			path: "#(count>=2)#.value|@ugly",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.query.on || !res.query.all || res.query.path != "count" || res.query.op != ">=" || res.query.value != "2" {
+					t.Fatalf("expected query fields %#v", res)
+				}
+				if !res.more || res.path != "value|@ugly" {
+					t.Fatalf("expected more path with pipe %#v", res)
+				}
+				if left, right, ok := splitPossiblePipe(res.path); !ok || left != "value" || right != "@ugly" {
+					t.Fatalf("expected splitPossiblePipe to detect pipe, got %v %q %q", ok, left, right)
+				}
+			},
+		},
+	}
+	for _, tc := range cases {
+		res := parseArrayPath(tc.path)
+		tc.check(t, res)
+	}
+}
+
+func TestResValueVariants(t *testing.T) {
+	json := `{"num":1.5,"bool":true,"obj":{"name":"Anne"},"arr":[1,2]}`
+	res := Parse(json)
+	if v := res.Get("num").Value(); v != 1.5 {
+		t.Fatalf("expected numeric value 1.5 got %v", v)
+	}
+	if v := res.Get("bool").Value(); v != true {
+		t.Fatalf("expected boolean true got %v", v)
+	}
+	objVal := res.Get("obj").Value()
+	objMap, ok := objVal.(map[string]interface{})
+	if !ok || objMap["name"] != "Anne" {
+		t.Fatalf("expected map with name Anne, got %#v", objVal)
+	}
+	arrVal := res.Get("arr").Value()
+	arrSlice, ok := arrVal.([]interface{})
+	if !ok || len(arrSlice) != 2 || arrSlice[0].(float64) != 1 {
+		t.Fatalf("unexpected array value %#v", arrVal)
+	}
+	if res.Get("missing").Value() != nil {
+		t.Fatal("expected nil for missing value")
+	}
+}
+
 func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -482,5 +682,790 @@ func BenchmarkGetBigBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = GetBytes(json, "i")
+	}
+}
+
+type QueryTestCase struct {
+	json   string
+	path   string
+	expect string
+}
+
+func TestQueryMatchesEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tests := []zlsgo.TestCase[QueryTestCase]{
+		{
+			Name: "string less than",
+			Data: QueryTestCase{
+				`{"items":[{"name":"apple"},{"name":"banana"},{"name":"cherry"}]}`,
+				"items.#(name<\"banana\")#.name",
+				`["apple"]`,
+			},
+		},
+		{
+			Name: "string less than or equal",
+			Data: QueryTestCase{
+				`{"items":[{"name":"apple"},{"name":"banana"},{"name":"cherry"}]}`,
+				"items.#(name<=\"banana\")#.name",
+				`["apple","banana"]`,
+			},
+		},
+		{
+			Name: "string greater than",
+			Data: QueryTestCase{
+				`{"items":[{"name":"apple"},{"name":"banana"},{"name":"cherry"}]}`,
+				"items.#(name>\"banana\")#.name",
+				`["cherry"]`,
+			},
+		},
+		{
+			Name: "string greater than or equal",
+			Data: QueryTestCase{
+				`{"items":[{"name":"apple"},{"name":"banana"},{"name":"cherry"}]}`,
+				"items.#(name>=\"banana\")#.name",
+				`["banana","cherry"]`,
+			},
+		},
+		{
+			Name: "number not equal",
+			Data: QueryTestCase{
+				`{"items":[{"val":1},{"val":2},{"val":3}]}`,
+				"items.#(val!=2)#.val",
+				`[1,3]`,
+			},
+		},
+		{
+			Name: "number less than or equal",
+			Data: QueryTestCase{
+				`{"items":[{"val":1},{"val":2},{"val":3}]}`,
+				"items.#(val<=2)#.val",
+				`[1,2]`,
+			},
+		},
+		{
+			Name: "bool equals false",
+			Data: QueryTestCase{
+				`{"items":[{"active":true},{"active":false}]}`,
+				"items.#(active==false)#.active",
+				`[false]`,
+			},
+		},
+		{
+			Name: "bool not equals false",
+			Data: QueryTestCase{
+				`{"items":[{"active":true},{"active":false}]}`,
+				"items.#(active!=false)#.active",
+				`[true]`,
+			},
+		},
+		{
+			Name: "bool greater than or equal true",
+			Data: QueryTestCase{
+				`{"items":[{"active":true},{"active":false}]}`,
+				"items.#(active>=true)#.active",
+				`[true]`,
+			},
+		},
+		{
+			Name: "bool less than or equal true",
+			Data: QueryTestCase{
+				`{"items":[{"active":true},{"active":false}]}`,
+				"items.#(active<=false)#.active",
+				`[false]`,
+			},
+		},
+		{
+			Name: "pattern match",
+			Data: QueryTestCase{
+				`{"items":[{"name":"test123"},{"name":"foo"},{"name":"test456"}]}`,
+				`items.#(name%"test*")#.name`,
+				`["test123","test456"]`,
+			},
+		},
+		{
+			Name: "pattern not match",
+			Data: QueryTestCase{
+				`{"items":[{"name":"test123"},{"name":"foo"},{"name":"test456"}]}`,
+				`items.#(name!%"test*")#.name`,
+				`["foo"]`,
+			},
+		},
+	}
+
+	zlsgo.RunTests(tt, tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase[QueryTestCase]) {
+		result := Get(tc.Data.json, tc.Data.path)
+		subTt.Equal(tc.Data.expect, result.String())
+	})
+}
+
+func TestSplitPossiblePipeEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		hasLeft  string
+		hasRight string
+		hasSplit bool
+	}{
+		{
+			name:     "no pipe",
+			path:     "users.0.name",
+			hasSplit: false,
+		},
+		{
+			name:     "simple pipe",
+			path:     "users|@reverse",
+			hasLeft:  "users",
+			hasRight: "@reverse",
+			hasSplit: true,
+		},
+		{
+			name:     "escaped pipe in path",
+			path:     `users\.name\|escaped`,
+			hasSplit: false,
+		},
+		{
+			name:     "pipe after query with brackets",
+			path:     "users.#[name==\"test\"]#.id|@ugly",
+			hasLeft:  "users.#[name==\"test\"]#.id",
+			hasRight: "@ugly",
+			hasSplit: true,
+		},
+		{
+			name:     "pipe after query with parens",
+			path:     "users.#(name==\"test\")#.id|@pretty",
+			hasLeft:  "users.#(name==\"test\")#.id",
+			hasRight: "@pretty",
+			hasSplit: true,
+		},
+		{
+			name:     "nested brackets with pipe",
+			path:     `users.#[data.items[0]=="test"]#.id|@reverse`,
+			hasLeft:  `users.#[data.items[0]=="test"]#.id`,
+			hasRight: "@reverse",
+			hasSplit: true,
+		},
+		{
+			name:     "nested parens with pipe",
+			path:     `users.#(data.check(val))#.id|@reverse`,
+			hasLeft:  `users.#(data.check(val))#.id`,
+			hasRight: "@reverse",
+			hasSplit: true,
+		},
+		{
+			name:     "nested string with pipe inside query",
+			path:     `users.#(name=="test|pipe")#.id|@ugly`,
+			hasLeft:  `users.#(name=="test|pipe")#.id`,
+			hasRight: "@ugly",
+			hasSplit: true,
+		},
+		{
+			name:     "path ends with dot-hash",
+			path:     "users.#",
+			hasSplit: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			left, right, ok := splitPossiblePipe(tt.path)
+			if ok != tt.hasSplit {
+				t.Errorf("splitPossiblePipe(%q) ok = %v, want %v", tt.path, ok, tt.hasSplit)
+			}
+			if ok {
+				if left != tt.hasLeft {
+					t.Errorf("splitPossiblePipe(%q) left = %q, want %q", tt.path, left, tt.hasLeft)
+				}
+				if right != tt.hasRight {
+					t.Errorf("splitPossiblePipe(%q) right = %q, want %q", tt.path, right, tt.hasRight)
+				}
+			}
+		})
+	}
+}
+
+func TestParseArrayPathComplexQueries(t *testing.T) {
+	tests := []struct {
+		name  string
+		path  string
+		check func(t *testing.T, res arrayPathResult)
+	}{
+		{
+			name: "query with brackets",
+			path: "#[age>25]",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.query.on || res.query.path != "age" || res.query.op != ">" || res.query.value != "25" {
+					t.Errorf("unexpected query result: %+v", res)
+				}
+			},
+		},
+		{
+			name: "query with parentheses all",
+			path: "#(status==\"active\")#",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.query.on || !res.query.all {
+					t.Errorf("expected query all: %+v", res)
+				}
+			},
+		},
+		{
+			name: "query with nested path",
+			path: "#(user.name==\"test\").data",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.query.on || res.query.path != "user.name" {
+					t.Errorf("expected nested query path: %+v", res)
+				}
+				if !res.more || res.path != "data" {
+					t.Errorf("expected more path: %+v", res)
+				}
+			},
+		},
+		{
+			name: "array alog key",
+			path: "#.items",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.alogok || res.alogkey != "items" {
+					t.Errorf("expected alog key items: %+v", res)
+				}
+			},
+		},
+		{
+			name: "array index with more path",
+			path: "5.nested.value",
+			check: func(t *testing.T, res arrayPathResult) {
+				if res.part != "5" || !res.more || res.path != "nested.value" {
+					t.Errorf("unexpected indexed path: %+v", res)
+				}
+			},
+		},
+		{
+			name: "piped result",
+			path: "3|@reverse",
+			check: func(t *testing.T, res arrayPathResult) {
+				if !res.piped || res.pipe != "@reverse" {
+					t.Errorf("expected pipe: %+v", res)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := parseArrayPath(tt.path)
+			tt.check(t, res)
+		})
+	}
+}
+
+func TestIntUintEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		wantInt  int
+		wantUint uint
+	}{
+		{
+			name:     "negative int",
+			json:     `{"val":-123}`,
+			path:     "val",
+			wantInt:  -123,
+			wantUint: 0,
+		},
+		{
+			name:     "large positive",
+			json:     `{"val":999999}`,
+			path:     "val",
+			wantInt:  999999,
+			wantUint: 999999,
+		},
+		{
+			name:     "zero",
+			json:     `{"val":0}`,
+			path:     "val",
+			wantInt:  0,
+			wantUint: 0,
+		},
+		{
+			name:     "string number",
+			json:     `{"val":"42"}`,
+			path:     "val",
+			wantInt:  42,
+			wantUint: 42,
+		},
+		{
+			name:     "invalid string",
+			json:     `{"val":"abc"}`,
+			path:     "val",
+			wantInt:  0,
+			wantUint: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Get(tt.json, tt.path)
+			if res.Int() != tt.wantInt {
+				t.Errorf("Int() = %d, want %d", res.Int(), tt.wantInt)
+			}
+			if res.Uint() != tt.wantUint {
+				t.Errorf("Uint() = %d, want %d", res.Uint(), tt.wantUint)
+			}
+		})
+	}
+}
+
+func TestSliceEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		path  string
+		check func(t *testing.T, res *Res)
+	}{
+		{
+			name: "array of mixed types",
+			json: `{"arr":[1,"two",true,null,{"key":"val"}]}`,
+			path: "arr",
+			check: func(t *testing.T, res *Res) {
+				slice := res.Slice()
+				if len(slice) != 5 {
+					t.Errorf("expected 5 items, got %d", len(slice))
+				}
+			},
+		},
+		{
+			name: "non-array",
+			json: `{"val":"notarray"}`,
+			path: "val",
+			check: func(t *testing.T, res *Res) {
+				slice := res.Slice()
+				if len(slice) != 0 {
+					t.Errorf("expected empty slice for non-array, got %d items", len(slice))
+				}
+			},
+		},
+		{
+			name: "empty array",
+			json: `{"arr":[]}`,
+			path: "arr",
+			check: func(t *testing.T, res *Res) {
+				slice := res.Slice()
+				if len(slice) != 0 {
+					t.Errorf("expected empty slice, got %d items", len(slice))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Get(tt.json, tt.path)
+			tt.check(t, res)
+		})
+	}
+}
+
+func TestArrayEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		path  string
+		check func(t *testing.T, res *Res)
+	}{
+		{
+			name: "nested array",
+			json: `{"data":[[1,2],[3,4]]}`,
+			path: "data",
+			check: func(t *testing.T, res *Res) {
+				arr := res.Array()
+				if len(arr) != 2 {
+					t.Errorf("expected 2 items, got %d", len(arr))
+				}
+			},
+		},
+		{
+			name: "array in non-array value",
+			json: `{"val":123}`,
+			path: "val",
+			check: func(t *testing.T, res *Res) {
+				arr := res.Array()
+				// Non-array values return a single-element array
+				if len(arr) != 1 {
+					t.Errorf("expected single-element array for non-array, got %d", len(arr))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Get(tt.json, tt.path)
+			tt.check(t, res)
+		})
+	}
+}
+
+func TestValueEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		path  string
+		check func(t *testing.T, val interface{})
+	}{
+		{
+			name: "null value",
+			json: `{"val":null}`,
+			path: "val",
+			check: func(t *testing.T, val interface{}) {
+				if val != nil {
+					t.Errorf("expected nil for null, got %v", val)
+				}
+			},
+		},
+		{
+			name: "string value",
+			json: `{"val":"hello"}`,
+			path: "val",
+			check: func(t *testing.T, val interface{}) {
+				if val != "hello" {
+					t.Errorf("expected 'hello', got %v", val)
+				}
+			},
+		},
+		{
+			name: "nested object",
+			json: `{"val":{"nested":{"deep":"value"}}}`,
+			path: "val",
+			check: func(t *testing.T, val interface{}) {
+				m, ok := val.(map[string]interface{})
+				if !ok {
+					t.Errorf("expected map, got %T", val)
+					return
+				}
+				nested, ok := m["nested"].(map[string]interface{})
+				if !ok || nested["deep"] != "value" {
+					t.Errorf("unexpected nested structure: %+v", m)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Get(tt.json, tt.path)
+			tt.check(t, res.Value())
+		})
+	}
+}
+
+func TestParseEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		check func(t *testing.T, res *Res)
+	}{
+		{
+			name: "incomplete number at end",
+			json: `{"val":12`,
+			check: func(t *testing.T, res *Res) {
+				val := res.Get("val").Int()
+				if val != 12 {
+					t.Errorf("expected to parse incomplete number, got %d", val)
+				}
+			},
+		},
+		{
+			name: "incomplete string",
+			json: `{"val":"test`,
+			check: func(t *testing.T, res *Res) {
+				val := res.Get("val").String()
+				// Incomplete strings return empty
+				if val != "" {
+					t.Logf("incomplete string parsed as: %q", val)
+				}
+			},
+		},
+		{
+			name: "multiple values",
+			json: `{"a":1}{"b":2}`,
+			check: func(t *testing.T, res *Res) {
+				if res.Get("a").Int() != 1 {
+					t.Errorf("expected first object to parse")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Parse(tt.json)
+			tt.check(t, res)
+		})
+	}
+}
+
+func TestForEachEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		path  string
+		check func(t *testing.T)
+	}{
+		{
+			name: "stop iteration",
+			json: `{"items":[1,2,3,4,5]}`,
+			path: "items",
+			check: func(t *testing.T) {
+				count := 0
+				Get(`{"items":[1,2,3,4,5]}`, "items").ForEach(func(key, value *Res) bool {
+					count++
+					return count < 3 // Stop after 3 items
+				})
+				if count != 3 {
+					t.Errorf("expected to stop at 3, got %d", count)
+				}
+			},
+		},
+		{
+			name: "empty object",
+			json: `{"obj":{}}`,
+			path: "obj",
+			check: func(t *testing.T) {
+				count := 0
+				Get(`{"obj":{}}`, "obj").ForEach(func(key, value *Res) bool {
+					count++
+					return true
+				})
+				if count != 0 {
+					t.Errorf("expected 0 iterations for empty object, got %d", count)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.check(t)
+		})
+	}
+}
+
+func TestGetMultipleEdgeCases(t *testing.T) {
+	json := `{"a":1,"b":2,"c":3}`
+	results := GetMultiple(json, "a", "b", "c")
+
+	if len(results) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(results))
+	}
+
+	if results[0].Int() != 1 {
+		t.Errorf("expected a=1, got %d", results[0].Int())
+	}
+	if results[1].Int() != 2 {
+		t.Errorf("expected b=2, got %d", results[1].Int())
+	}
+	if results[2].Int() != 3 {
+		t.Errorf("expected c=3, got %d", results[2].Int())
+	}
+}
+
+func TestForEachLineEdgeCases(t *testing.T) {
+	json := `{"a":1}
+{"b":2}
+{"c":3}`
+
+	count := 0
+	ForEachLine(json, func(line *Res) bool {
+		count++
+		return true
+	})
+
+	if count != 3 {
+		t.Errorf("expected 3 lines, got %d", count)
+	}
+
+	// Test early termination
+	count = 0
+	ForEachLine(json, func(line *Res) bool {
+		count++
+		return count < 2
+	})
+
+	if count != 2 {
+		t.Errorf("expected early termination at 2, got %d", count)
+	}
+}
+
+func TestParseComplexPaths(t *testing.T) {
+	json := `{
+		"users": [
+			{"name": "Alice", "age": 30, "active": true},
+			{"name": "Bob", "age": 25, "active": false},
+			{"name": "Charlie", "age": 35, "active": true}
+		],
+		"metadata": {
+			"total": 3,
+			"page": 1
+		}
+	}`
+
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "array length",
+			path:     "users.#",
+			expected: "3",
+		},
+		{
+			name:     "nested object",
+			path:     "metadata.total",
+			expected: "3",
+		},
+		{
+			name:     "array index",
+			path:     "users.0.name",
+			expected: "Alice",
+		},
+		{
+			name:     "array last element",
+			path:     "users.2.name",
+			expected: "Charlie",
+		},
+		{
+			name:     "query equals",
+			path:     "users.#(name==\"Bob\").age",
+			expected: "25",
+		},
+		{
+			name:     "query all",
+			path:     "users.#(active==true)#.name",
+			expected: `["Alice","Charlie"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Get(json, tt.path)
+			if result.String() != tt.expected {
+				t.Errorf("Get(%q) = %q, want %q", tt.path, result.String(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestToNumEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		expected float64
+	}{
+		{
+			name:     "integer",
+			json:     `{"val":42}`,
+			path:     "val",
+			expected: 42,
+		},
+		{
+			name:     "negative integer",
+			json:     `{"val":-42}`,
+			path:     "val",
+			expected: -42,
+		},
+		{
+			name:     "float",
+			json:     `{"val":3.14}`,
+			path:     "val",
+			expected: 3.14,
+		},
+		{
+			name:     "scientific notation",
+			json:     `{"val":1.23e10}`,
+			path:     "val",
+			expected: 1.23e10,
+		},
+		{
+			name:     "zero",
+			json:     `{"val":0}`,
+			path:     "val",
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Get(tt.json, tt.path).Float64()
+			if result != tt.expected {
+				t.Errorf("Float64() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseObjectPathEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "simple key",
+			json:     `{"key":"value"}`,
+			path:     "key",
+			expected: "value",
+		},
+		{
+			name:     "nested keys",
+			json:     `{"a":{"b":{"c":"deep"}}}`,
+			path:     "a.b.c",
+			expected: "deep",
+		},
+		{
+			name:     "key with spaces",
+			json:     `{"key with spaces":"value"}`,
+			path:     "key with spaces",
+			expected: "value",
+		},
+		{
+			name:     "unicode key",
+			json:     `{"键":"值"}`,
+			path:     "键",
+			expected: "值",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Get(tt.json, tt.path)
+			if result.String() != tt.expected {
+				t.Errorf("Get(%q) = %q, want %q", tt.path, result.String(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsOptimisticPath(t *testing.T) {
+	tests := []struct {
+		path     string
+		expected bool
+	}{
+		{"simple", true},
+		{"simple.path", true},
+		{"simple.path.nested", true},
+		{"a.b.c.d.e", true},
+		{"path0.with1.numbers2", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			result := isOptimisticPath(tt.path)
+			if result != tt.expected {
+				t.Errorf("isOptimisticPath(%q) = %v, want %v", tt.path, result, tt.expected)
+			}
+		})
 	}
 }

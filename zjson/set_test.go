@@ -10,7 +10,7 @@ import (
 )
 
 func TestSet(t *testing.T) {
-	var demoData = "{}"
+	demoData := "{}"
 	var err error
 	var str string
 	tt := zlsgo.NewTest(t)
@@ -86,7 +86,7 @@ func TestSet(t *testing.T) {
 	t.Log(string(strBytes), err)
 	_, _ = DeleteBytes(strBytes, "setRawBytes")
 
-	var j = struct {
+	j := struct {
 		Name string `json:"n"`
 	}{"isName"}
 	jj, err := Marshal(j)
@@ -95,7 +95,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestSetSt(tt *testing.T) {
-	var j = struct {
+	j := struct {
 		Name string `json:"n"`
 	}{"isName"}
 	t := zlsgo.NewTest(tt)
@@ -116,6 +116,28 @@ func TestSetSt(tt *testing.T) {
 	t.Equal("isName", Get(json, "data.n").String())
 }
 
+func TestSetRawArrayExpansion(t *testing.T) {
+	json := "[]"
+	expanded, err := SetRaw(json, "2", "3")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := Get(expanded, "1").String(); got != "3" {
+		t.Fatalf("expanded result %s", expanded)
+	}
+	if Get(expanded, "0").Raw() != "null" {
+		t.Fatalf("expected filler null at index 0, got %s", Get(expanded, "0").Raw())
+	}
+	json = `{"arr":[0]}`
+	updated, err := SetRaw(json, "arr.3", "4")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated != `{"arr":[0,null,null,4]}` {
+		t.Fatalf("unexpected array result %s", updated)
+	}
+}
+
 func BenchmarkSet(b *testing.B) {
 	s := zstring.Rand(100)
 	json := "{}"
@@ -131,5 +153,193 @@ func BenchmarkSetBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = SetBytes(json, strconv.Itoa(i), s)
+	}
+}
+
+func TestSetOptionsEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		value    interface{}
+		expected string
+	}{
+		{
+			name:     "set in nested object",
+			json:     `{"a":{"b":{"c":1}}}`,
+			path:     "a.b.c",
+			value:    2,
+			expected: `{"a":{"b":{"c":2}}}`,
+		},
+		{
+			name:     "set new key",
+			json:     `{"a":1}`,
+			path:     "b",
+			value:    2,
+			expected: `{"b":2,"a":1}`,
+		},
+		{
+			name:     "set in array",
+			json:     `{"arr":[1,2,3]}`,
+			path:     "arr.1",
+			value:    99,
+			expected: `{"arr":[1,99,3]}`,
+		},
+		{
+			name:     "set deep nested",
+			json:     `{}`,
+			path:     "a.b.c.d",
+			value:    "deep",
+			expected: `{"a":{"b":{"c":{"d":"deep"}}}}`,
+		},
+		{
+			name:     "set with escaped key",
+			json:     `{}`,
+			path:     `key\.with\.dots`,
+			value:    "value",
+			expected: `{"key.with.dots":"value"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := SetOptions(tt.json, tt.path, tt.value, &Options{Optimistic: true})
+			if err != nil {
+				t.Fatalf("SetOptions failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("SetOptions() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSetRawBytesOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		value    string
+		expected string
+	}{
+		{
+			name:     "set raw object",
+			json:     `{"a":1}`,
+			path:     "b",
+			value:    `{"nested":true}`,
+			expected: `{"b":{"nested":true},"a":1}`,
+		},
+		{
+			name:     "set raw array",
+			json:     `{"a":1}`,
+			path:     "arr",
+			value:    `[1,2,3]`,
+			expected: `{"arr":[1,2,3],"a":1}`,
+		},
+		{
+			name:     "replace with raw",
+			json:     `{"a":"old"}`,
+			path:     "a",
+			value:    `"new"`,
+			expected: `{"a":"new"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := SetRawBytesOptions([]byte(tt.json), tt.path, []byte(tt.value), &Options{})
+			if err != nil {
+				t.Fatalf("SetRawBytesOptions failed: %v", err)
+			}
+			if string(result) != tt.expected {
+				t.Errorf("SetRawBytesOptions() = %q, want %q", string(result), tt.expected)
+			}
+		})
+	}
+}
+
+func TestSetRawOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		value    string
+		opts     *Options
+		expected string
+	}{
+		{
+			name:     "set raw with optimistic",
+			json:     `{"a":1}`,
+			path:     "b.c",
+			value:    `"value"`,
+			opts:     &Options{Optimistic: true},
+			expected: `{"b":{"c":"value"},"a":1}`,
+		},
+		{
+			name:     "set raw replace",
+			json:     `{"a":{"b":1}}`,
+			path:     "a.b",
+			value:    `2`,
+			opts:     &Options{},
+			expected: `{"a":{"b":2}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := SetRawOptions(tt.json, tt.path, tt.value, tt.opts)
+			if err != nil {
+				t.Fatalf("SetRawOptions failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("SetRawOptions() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDeleteEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "delete key",
+			json:     `{"a":1,"b":2,"c":3}`,
+			path:     "b",
+			expected: `{"a":1,"c":3}`,
+		},
+		{
+			name:     "delete nested key",
+			json:     `{"a":{"b":{"c":1}}}`,
+			path:     "a.b.c",
+			expected: `{"a":{"b":{}}}`,
+		},
+		{
+			name:     "delete array element",
+			json:     `{"arr":[1,2,3]}`,
+			path:     "arr.1",
+			expected: `{"arr":[1,3]}`,
+		},
+		{
+			name:     "delete non-existent",
+			json:     `{"a":1}`,
+			path:     "b",
+			expected: `{"a":1}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Delete(tt.json, tt.path)
+			if err != nil {
+				t.Fatalf("Delete failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("Delete() = %q, want %q", result, tt.expected)
+			}
+		})
 	}
 }

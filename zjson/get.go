@@ -1931,35 +1931,25 @@ func unescape(json string) string {
 				}
 				r := runeit(json[i+1:])
 				i += 5
-				
-				// 处理 Unicode 代理对
+
 				if utf16.IsSurrogate(r) {
-					// 检查是否是高代理字符
 					if 0xD800 <= r && r <= 0xDBFF {
-						// 高代理字符，需要查找低代理字符
 						if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
 							r2 := runeit(json[i+2:])
-							// 检查是否是有效的低代理字符
 							if 0xDC00 <= r2 && r2 <= 0xDFFF {
-								// 有效的代理对
 								r = utf16.DecodeRune(r, r2)
 								i += 6
 							} else {
-								// 高代理字符后跟无效的低代理字符
-								// 输出替换字符，然后继续处理后续的 Unicode 序列
 								str = append(str, 0, 0, 0, 0, 0, 0, 0, 0)
 								n := utf8.EncodeRune(str[len(str)-8:], '\uFFFD')
 								str = str[:len(str)-8+n]
-								// 不增加 i，让下一轮循环处理这个 Unicode 序列
 								i--
 								continue
 							}
 						} else {
-							// 高代理字符后没有跟 \u 序列，输出替换字符
 							r = '\uFFFD'
 						}
 					} else {
-						// 低代理字符单独出现，使用替换字符
 						r = '\uFFFD'
 					}
 				}
@@ -2428,27 +2418,45 @@ func validnumber(data []byte, i int) (outi int, ok bool) {
 }
 
 func validtrue(data []byte, i int) (outi int, ok bool) {
-	if i+3 <= len(data) && data[i] == 'r' && data[i+1] == 'u' &&
-		data[i+2] == 'e' {
-		return i + 3, true
+	end := i + 3
+	if end <= len(data) && data[i] == 'r' && data[i+1] == 'u' && data[i+2] == 'e' {
+		if end < len(data) && !isValueTerminator(data[end]) {
+			return i, false
+		}
+		return end, true
 	}
 	return i, false
 }
 
 func validfalse(data []byte, i int) (outi int, ok bool) {
-	if i+4 <= len(data) && data[i] == 'a' && data[i+1] == 'l' &&
+	end := i + 4
+	if end <= len(data) && data[i] == 'a' && data[i+1] == 'l' &&
 		data[i+2] == 's' && data[i+3] == 'e' {
-		return i + 4, true
+		if end < len(data) && !isValueTerminator(data[end]) {
+			return i, false
+		}
+		return end, true
 	}
 	return i, false
 }
 
 func validnull(data []byte, i int) (outi int, ok bool) {
-	if i+3 <= len(data) && data[i] == 'u' && data[i+1] == 'l' &&
-		data[i+2] == 'l' {
-		return i + 3, true
+	end := i + 3
+	if end <= len(data) && data[i] == 'u' && data[i+1] == 'l' && data[i+2] == 'l' {
+		if end < len(data) && !isValueTerminator(data[end]) {
+			return i, false
+		}
+		return end, true
 	}
 	return i, false
+}
+
+func isValueTerminator(b byte) bool {
+	switch b {
+	case ' ', '\t', '\n', '\r', ',', ']', '}':
+		return true
+	}
+	return false
 }
 
 func Valid(json string) (ok bool) {

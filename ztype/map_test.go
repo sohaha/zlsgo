@@ -101,7 +101,7 @@ func TestMapCopy(t *testing.T) {
 	z["a"] = 2
 
 	tt.EqualTrue(m.Get("z.a").String() != m2.Get("z.a").String())
-	t.Log(m, m2, m3)
+	tt.Log(m, m2, m3)
 	tt.EqualTrue(m.Get("z.a").String() == m3.Get("z.a").String())
 }
 
@@ -111,16 +111,16 @@ func TestMapNil(t *testing.T) {
 	var m Map
 	tt.Equal(true, m.IsEmpty())
 	err := m.Delete("no")
-	t.Log(err)
+	tt.Log(err)
 
 	err = m.Set("val", "99")
-	t.Log(err)
+	tt.Log(err)
 	tt.EqualTrue(err != nil)
 
 	m2 := &Map{}
 	tt.Equal(true, m2.IsEmpty())
 	err = m.Delete("no")
-	t.Log(err)
+	tt.Log(err)
 
 	err = m2.Set("val", "99")
 	tt.NoError(err)
@@ -613,4 +613,415 @@ func TestMapConcurrentValidationStress(t *testing.T) {
 
 	t.Logf("stress test completed: %d goroutines, %d iterations, duration: %v",
 		numGoroutines, numIterations, duration)
+}
+
+func TestMapHasAndForEach(t *testing.T) {
+	m := Map{"a": 1, "b": 2}
+	if !m.Has("a") || m.Has("c") {
+		t.Fatalf("Has failed: %v", m)
+	}
+
+	sum := 0
+	visited := 0
+	m.ForEach(func(k string, v Type) bool {
+		visited++
+		sum += v.Int()
+		return visited < 1
+	})
+	if visited != 1 || sum == 0 {
+		t.Fatalf("ForEach short-circuit failed, visited=%d sum=%d", visited, sum)
+	}
+}
+
+func TestMapsForEach(t *testing.T) {
+	ms := Maps{{"x": 1}, {"y": 2}, {"z": 3}}
+	count := 0
+	acc := 0
+	ms.ForEach(func(i int, value Map) bool {
+		count++
+		acc += len(value)
+		return i < 1
+	})
+	if count != 2 || acc == 0 {
+		t.Fatalf("Maps.ForEach behavior unexpected: count=%d acc=%d", count, acc)
+	}
+}
+
+func TestHasOptionAndValidateMapKeyType(t *testing.T) {
+	f := fieldInfo{Options: []string{"omitempty", "squash"}}
+	if !f.hasOption("squash") || f.hasOption("remain") {
+		t.Fatalf("hasOption failed: %#v", f.Options)
+	}
+
+	if err := validateMapKeyType("", reflect.TypeOf(map[string]int{})); err != nil {
+		t.Fatalf("unexpected error for string-key map: %v", err)
+	}
+	if err := validateMapKeyType("", reflect.TypeOf(map[int]int{})); err == nil {
+		t.Fatal("expected error for non-string-key map, got nil")
+	}
+}
+
+func TestProcessFieldTagAndRemainField(t *testing.T) {
+	type Emb struct{ X int }
+	type T struct {
+		Emb `z:",squash"`
+		Rem map[interface{}]interface{} `z:"Rem,remain"`
+		N   int                         `z:"n"`
+	}
+	c := &Conver{TagName: tagName, Squash: true}
+
+	val := reflect.New(reflect.TypeOf(T{})).Elem()
+	sfEmb := val.Type().Field(0)
+	fvEmb := val.Field(0)
+	squash, remain := c.processFieldTag(sfEmb, fvEmb)
+	if !squash || remain {
+		t.Fatalf("processFieldTag squash failed: squash=%v remain=%v", squash, remain)
+	}
+
+	sfRem := val.Type().Field(1)
+	fvRem := val.Field(1)
+	squash, remain = c.processFieldTag(sfRem, fvRem)
+	if squash || !remain {
+		t.Fatalf("processFieldTag remain failed: squash=%v remain=%v", squash, remain)
+	}
+
+	data := map[string]interface{}{`n`: 1, `a`: 2, `b`: 3}
+	unused := map[interface{}]struct{}{"a": {}, "b": {}}
+	rf := &structFieldInfo{val: fvRem}
+	if err := c.processRemainField(rf, reflect.ValueOf(data), unused, ""); err != nil {
+		t.Fatalf("processRemainField error: %v", err)
+	}
+	rem := val.Field(1).Interface().(map[interface{}]interface{})
+	if len(rem) != 2 || rem["a"].(int) != 2 || rem["b"].(int) != 3 {
+		t.Fatalf("unexpected remain: %#v", rem)
+	}
+}
+
+func TestExecuteArrayAccessVariants(t *testing.T) {
+	if v, ok := executeArrayAccess(1, []string{"x", "y"}); !ok || v.(string) != "y" {
+		t.Fatalf("array access on []string failed: %v %v", v, ok)
+	}
+	if v, ok := executeArrayAccess(0, []interface{}{"a"}); !ok || v.(string) != "a" {
+		t.Fatalf("array access on []interface{} failed: %v %v", v, ok)
+	}
+
+	if v, ok := executeArrayAccess(1, [2]int{5, 6}); !ok || v.(int) != 6 {
+		t.Fatalf("array access on array via ToSlice failed: %v %v", v, ok)
+	}
+
+	tok := pathToken{kind: 1, index: 0}
+	if v, ok := executePathToken(tok, []string{"p"}); !ok || v.(string) != "p" {
+		t.Fatalf("executePathToken(kind=1) failed: %v %v", v, ok)
+	}
+}
+
+func TestMapDeleteAndIndexBounds(t *testing.T) {
+	m := Map{"a": 1, "b": 2}
+	if err := m.Delete("a"); err != nil {
+		t.Fatalf("delete existing failed: %v", err)
+	}
+	if _, ok := m["a"]; ok {
+		t.Fatal("key a should be deleted")
+	}
+	ms := Maps{{"x": 1}}
+	if v := ms.Index(-1); len(v) != 0 {
+		t.Fatal("negative index should return empty Map")
+	}
+	if v := ms.Index(99); len(v) != 0 {
+		t.Fatal("oob index should return empty Map")
+	}
+	var empty Maps
+	if v := empty.Last(); len(v) != 0 {
+		t.Fatal("Last on empty should be empty Map")
+	}
+}
+
+func TestExecuteFieldAccessNumericKey(t *testing.T) {
+	v, ok := executeFieldAccess("1", []string{"a", "b"})
+	if !ok || v.(string) != "b" {
+		t.Fatalf("numeric-key field access failed: %v %v", v, ok)
+	}
+	if v, ok := executeFieldAccess("k", map[string]int{"k": 3}); !ok || v.(int) != 3 {
+		t.Fatalf("map[string]int field access failed: %v %v", v, ok)
+	}
+}
+
+func TestToMapStringReflectSliceStruct(t *testing.T) {
+	type Inner struct {
+		Z int `z:"z"`
+	}
+	type Outer struct {
+		L []Inner `z:"l"`
+	}
+	o := Outer{L: []Inner{{Z: 1}, {Z: 2}}}
+	mp := ToMap(o)
+	l, ok := mp["l"].([]map[string]interface{})
+	if !ok || len(l) != 2 || l[0]["z"].(int) != 1 || l[1]["z"].(int) != 2 {
+		t.Fatalf("unexpected mapped slice-of-struct: %#v", mp["l"])
+	}
+}
+
+func TestMapDeepCopyMore(t *testing.T) {
+	var nilMap Map = nil
+	src := Map{
+		"n": nilMap,
+		"m": map[string]interface{}{"k": 1},
+		"r": map[int]int{1: 2},
+	}
+	cp := src.DeepCopy()
+	if v, ok := cp["n"].(Map); !ok || v != nil {
+		t.Fatal("typed nil Map should be preserved in copy")
+	}
+	src["m"].(map[string]interface{})["k"] = 9
+	getK := func(x interface{}) int {
+		switch v := x.(type) {
+		case Map:
+			return v["k"].(int)
+		case map[string]interface{}:
+			return v["k"].(int)
+		default:
+			t.Fatalf("unexpected type for m: %T", x)
+			return 0
+		}
+	}
+	if getK(cp["m"]) == 9 {
+		t.Fatal("deep copy should be independent")
+	}
+}
+
+func TestMapGetDisabled(t *testing.T) {
+	m := Map{"a.b": 3, "a": Map{"b": 4}}
+	if m.Get("a.b").Int() != 4 {
+		t.Fatal("path parsing should access nested value 4")
+	}
+	if m.Get("a.b", true).Int() != 3 {
+		t.Fatal("disabled path parsing should access raw key 3")
+	}
+}
+
+func TestExecuteArrayAccessOnMapSlice(t *testing.T) {
+	m := []Map{{"a": 1}, {"b": 2}}
+	v, ok := executeArrayAccess(1, m)
+	if !ok {
+		t.Fatal("executeArrayAccess on []Map failed")
+	}
+	mv, ok := v.(Map)
+	if !ok || mv["b"].(int) != 2 {
+		t.Fatalf("unexpected value: %#v", v)
+	}
+}
+
+func TestToMapEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var nilMap Map
+	result := ToMap(nilMap)
+	tt.EqualTrue(result == nil)
+
+	m := Map{"key": "value"}
+	result = ToMap(m)
+	tt.Equal("value", result.Get("key").String())
+
+	stdMap := map[string]interface{}{"test": 123}
+	result = ToMap(stdMap)
+	tt.Equal(123, result.Get("test").Int())
+
+	type nested struct {
+		Inner string `z:"inner"`
+	}
+	type outer struct {
+		Nested nested `z:"nested"`
+		Value  int    `z:"value"`
+	}
+	o := outer{
+		Nested: nested{Inner: "test"},
+		Value:  100,
+	}
+	result = ToMap(o)
+	tt.Equal("test", result.Get("nested.inner").String())
+	tt.Equal(100, result.Get("value").Int())
+}
+
+func TestValidateWithOptionsEmptyRules(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	m := Map{"key": "value"}
+
+	err := m.ValidateWithOptions(map[string]Validator{})
+	tt.NoError(err)
+
+	var nilMap Map
+	err = nilMap.ValidateWithOptions(map[string]Validator{"key": newTestValidator("required")})
+	tt.EqualTrue(err != nil)
+}
+
+func TestToMapFromMapEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	source := map[string]interface{}{
+		"nested": map[string]interface{}{
+			"deep": "value",
+		},
+		"array": []int{1, 2, 3},
+	}
+
+	var target map[string]interface{}
+	err := To(source, &target)
+	tt.NoError(err)
+	tt.NotNil(target)
+
+	sourceIntKey := map[int]string{
+		1: "one",
+		2: "two",
+	}
+
+	var targetIntKey map[int]string
+	err = To(sourceIntKey, &targetIntKey)
+	tt.NoError(err)
+	tt.Equal("one", targetIntKey[1])
+
+	emptySource := map[string]int{}
+	var emptyTarget map[string]int
+	err = To(emptySource, &emptyTarget)
+	tt.NoError(err)
+	tt.NotNil(emptyTarget)
+}
+
+func TestToMapStringEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	type Inner struct {
+		Value string `z:"value"`
+	}
+	type Outer struct {
+		Inner *Inner `z:"inner"`
+		Name  string `z:"name"`
+	}
+
+	obj := Outer{
+		Inner: &Inner{Value: "test"},
+		Name:  "outer",
+	}
+
+	result := ToMap(&obj)
+	tt.Equal("outer", result.Get("name").String())
+	tt.Equal("test", result.Get("inner.value").String())
+
+	type Item struct {
+		ID   int    `z:"id"`
+		Name string `z:"name"`
+	}
+
+	items := []Item{
+		{ID: 1, Name: "first"},
+		{ID: 2, Name: "second"},
+	}
+
+	result2 := ToMap(items)
+	tt.NotNil(result2)
+
+	intKeyMap := map[int]string{
+		1: "one",
+		2: "two",
+	}
+	result3 := ToMap(intKeyMap)
+	tt.NotNil(result3)
+}
+
+func TestValidEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	m := Map{"key": "value"}
+	exists := m.Valid("nonexistent")
+	tt.EqualTrue(!exists)
+
+	exists = m.Valid("key")
+	tt.EqualTrue(exists)
+
+	m2 := Map{"a": 1, "b": 2, "c": 3}
+	exists = m2.Valid("a", "b", "c")
+	tt.EqualTrue(exists)
+
+	exists = m2.Valid("a", "b", "d")
+	tt.EqualTrue(!exists)
+}
+
+func TestMapSetAndDeleteEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var m Map
+	err := m.Set("key", "value")
+	tt.EqualTrue(err != nil)
+
+	err = m.Delete("key")
+	tt.EqualTrue(err != nil)
+
+	m = Map{"key": "value", "other": "value"}
+	err = m.Delete("key")
+	tt.NoError(err)
+	tt.EqualTrue(!m.Valid("key"))
+
+	m = Map{"key": "old"}
+	err = m.Set("key", "new")
+	tt.NoError(err)
+	tt.Equal("new", m.Get("key").String())
+}
+
+func TestToMapFromMapWithDifferentKeyTypes(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	source := map[interface{}]interface{}{
+		"key1": "value1",
+		"key2": 123,
+		1:      "number key",
+	}
+
+	var target map[string]interface{}
+	err := To(source, &target)
+	tt.NoError(err)
+	tt.NotNil(target)
+
+	sourceBool := map[bool]string{
+		true:  "yes",
+		false: "no",
+	}
+
+	var targetBool map[bool]string
+	err = To(sourceBool, &targetBool)
+	tt.NoError(err)
+	tt.Equal("yes", targetBool[true])
+}
+
+func TestToMapStringWithComplexTypes(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	intKeyMap := map[int]interface{}{
+		1: "one",
+		2: "two",
+		3: map[string]string{"nested": "value"},
+	}
+	result := ToMap(intKeyMap)
+	tt.NotNil(result)
+
+	sliceMap := map[string][]int{
+		"numbers": {1, 2, 3},
+		"more":    {4, 5},
+	}
+	result2 := ToMap(sliceMap)
+	tt.NotNil(result2)
+
+	ptrMap := &map[string]string{"key": "value"}
+	result3 := ToMap(ptrMap)
+	tt.Equal("value", result3.Get("key").String())
+}
+
+func TestMapValidWithNilMap(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var m Map
+	exists := m.Valid("key")
+	tt.EqualTrue(!exists)
+
+	exists = m.Valid()
+	tt.EqualTrue(!exists)
 }

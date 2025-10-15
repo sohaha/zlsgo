@@ -1,6 +1,7 @@
 package ztype_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -137,4 +138,29 @@ func TestMapSet(t *testing.T) {
 	tt.EqualTrue(m2.Get("a").Exists())
 	tt.Equal(1, m2.Get("a").Int())
 	tt.EqualTrue(!m2.IsEmpty())
+}
+
+func TestGetTypeCoverage(t *testing.T) {
+	if ztype.GetType(nil) != "nil" {
+		t.Fatal("GetType(nil) != nil")
+	}
+	if ztype.GetType(1) != "int" || ztype.GetType(int8(1)) != "int8" || ztype.GetType(uint(1)) != "uint" {
+		t.Fatal("GetType integer branches failed")
+	}
+	if ztype.GetType(1.0) != "float64" || ztype.GetType(float32(1)) != "float32" {
+		t.Fatal("GetType float branches failed")
+	}
+	if ztype.GetType(true) != "bool" || ztype.GetType("s") != "string" || ztype.GetType([]byte("x")) != "[]byte" {
+		t.Fatal("GetType basic types failed")
+	}
+	typ := ztype.GetType(errors.New("x"))
+	if typ == "" {
+		t.Fatal("GetType non-basic returned empty string")
+	}
+}
+
+func TestGetTypeMore(t *testing.T) {
+	if ztype.GetType(int32(1)) != "int32" || ztype.GetType(uint32(1)) != "uint32" { t.Fatal("GetType int32/uint32 failed") }
+	if ztype.GetType(uint16(1)) != "uint16" || ztype.GetType(int16(1)) != "int16" { t.Fatal("GetType int16/uint16 failed") }
+	if ztype.GetType(uint8(1)) != "uint8" { t.Fatal("GetType uint8 failed") }
 }

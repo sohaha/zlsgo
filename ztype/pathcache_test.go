@@ -2,10 +2,13 @@ package ztype
 
 import (
 	"testing"
+
+	"github.com/sohaha/zlsgo"
 )
 
 // TestPathParsingCorrectness tests path parsing correctness
 func TestPathParsingCorrectness(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	testData := map[string]interface{}{
 		"user": map[string]interface{}{
 			"profile": map[string]interface{}{
@@ -38,17 +41,16 @@ func TestPathParsingCorrectness(t *testing.T) {
 
 	for _, test := range tests {
 		result, exists := parsePath(test.path, testData)
-		if exists != test.exists {
-			t.Errorf("Path %s: expected exists %v, got %v", test.path, test.exists, exists)
-		}
-		if exists && !test.skipValue && result != test.expected {
-			t.Errorf("Path %s: expected value %v, got %v", test.path, test.expected, result)
+		tt.Equal(test.exists, exists)
+		if exists && !test.skipValue {
+			tt.Equal(test.expected, result)
 		}
 	}
 }
 
 // TestPathParsingWithEscapeChars tests escape character handling
 func TestPathParsingWithEscapeChars(t *testing.T) {
+	tt := zlsgo.NewTest(t)
 	testData := map[string]interface{}{
 		"user.name":  "John",
 		"user.email": "john@example.com",
@@ -69,12 +71,10 @@ func TestPathParsingWithEscapeChars(t *testing.T) {
 
 	for _, test := range tests {
 		result, exists := parsePath(test.path, testData)
-		t.Logf("Path: %s, Result: %v, Exists: %v", test.path, result, exists)
-		if exists != test.exists {
-			t.Errorf("Path %s: expected exists %v, got %v", test.path, test.exists, exists)
-		}
-		if exists && result != test.expected {
-			t.Errorf("Path %s: expected value %v, got %v", test.path, test.expected, result)
+		tt.Logf("Path: %s, Result: %v, Exists: %v", test.path, result, exists)
+		tt.Equal(test.exists, exists)
+		if exists {
+			tt.Equal(test.expected, result)
 		}
 	}
 }
