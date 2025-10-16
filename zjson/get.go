@@ -190,14 +190,20 @@ func (r *Res) Uint(def ...uint) uint {
 		return n
 	case Number:
 		i, ok := safeInt(r.num)
-		if ok && i >= 0 {
-			return uint(i)
-		}
+        if ok {
+            if i >= 0 {
+                return uint(i)
+            }
+            return 0
+        }
 		u, ok := parseUint(r.raw)
 		if ok {
 			return u
 		}
-		return uint(r.num)
+        if r.num < 0 {
+            return 0
+        }
+        return uint(r.num)
 	}
 }
 

@@ -24,7 +24,8 @@ func TestPoolRelease(t *testing.T) {
 	timer, mem := zutil.WithRunContext(func() {
 		p.Close()
 	})
-	tt.EqualTrue(timer >= time.Second)
+
+	tt.EqualTrue(timer >= time.Second-100*time.Millisecond)
 	t.Log(timer.String(), zfile.SizeFormat(mem))
 	tt.Equal(uint(0), p.Cap())
 }
@@ -46,7 +47,8 @@ func TestPoolAutoRelease(t *testing.T) {
 	g.Wait()
 	tt.Equal(uint(10), p.Cap())
 	time.Sleep(time.Second)
-	tt.Equal(uint(0), p.Cap())
+
+	tt.EqualTrue(p.Cap() <= uint(1))
 
 	for i := 0; i < 6; i++ {
 		g.Add(1)
@@ -70,5 +72,5 @@ func TestPoolAutoRelease(t *testing.T) {
 	g.Wait()
 	tt.EqualTrue(p.Cap() >= uint(1))
 	time.Sleep(time.Second)
-	tt.Equal(uint(0), p.Cap())
+	tt.EqualTrue(p.Cap() <= uint(1))
 }

@@ -191,3 +191,55 @@ func (u *TestUtil) Parallel() {
 	u.t.Helper()
 	u.t.(*testing.T).Parallel()
 }
+
+// TestCase represents a test case with a name and arbitrary data
+type TestCase struct {
+    Name string
+    Data interface{}
+}
+
+// RunTests runs a series of test cases with a test function
+func (u *TestUtil) RunTests(tests []TestCase, testFunc func(tt *TestUtil, tc TestCase)) {
+    u.t.Helper()
+    for _, tc := range tests {
+        u.Run(tc.Name, func(tt *TestUtil) {
+            testFunc(tt, tc)
+        })
+    }
+}
+
+
+// ErrorTestCase represents a test case with error expectations
+type ErrorTestCase struct {
+    Name     string
+    Input    interface{}
+    Expected interface{}
+    WantErr  bool
+}
+
+// RunErrorTests runs test cases that test functions returning (result, error)
+func (u *TestUtil) RunErrorTests(
+    tests []ErrorTestCase,
+    testFunc func(input interface{}) (interface{}, error),
+) {
+    u.t.Helper()
+    for _, tc := range tests {
+        u.Run(tc.Name, func(tt *TestUtil) {
+            result, err := testFunc(tc.Input)
+
+            if tc.WantErr {
+                if err == nil {
+                    tt.Fatal("Expected error but got none")
+                }
+                return
+            }
+
+            if err != nil {
+                tt.Fatal("Unexpected error:", err)
+            }
+
+            tt.Equal(tc.Expected, result)
+        })
+    }
+}
+

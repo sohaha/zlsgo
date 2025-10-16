@@ -873,7 +873,7 @@ func BenchmarkRepairComplex(b *testing.B) {
 func TestJSONRepairEdgeCases(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	tests := []zlsgo.ErrorTestCase[string, string]{
+    tests := []zlsgo.ErrorTestCase{
 		{
 			Name:     "missing closing brace",
 			Input:    `{"a":1`,
@@ -900,7 +900,7 @@ func TestJSONRepairEdgeCases(t *testing.T) {
 		},
 	}
 
-	zlsgo.RunErrorTests(tt, tests, func(input string) (string, error) {
-		return zjson.Repair(input)
+    tt.RunErrorTests(tests, func(input interface{}) (interface{}, error) {
+        return zjson.Repair(input.(string))
 	})
 }

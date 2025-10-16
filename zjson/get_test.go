@@ -374,7 +374,7 @@ type UnescapeTestCase struct {
 func Test_unescape(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	tests := []zlsgo.TestCase[UnescapeTestCase]{
+    tests := []zlsgo.TestCase{
 		{Name: "BasicASCII", Data: UnescapeTestCase{"hello", "hello"}},
 		{Name: "SimpleEscape", Data: UnescapeTestCase{"\\\"", "\""}},
 		{Name: "UnicodeBasic", Data: UnescapeTestCase{"\\u0041", "A"}},
@@ -398,10 +398,11 @@ func Test_unescape(t *testing.T) {
 		{Name: "Unescape", Data: UnescapeTestCase{`{\"name\":null,\"text\":\"您好，我该怎么称呼您呢？\"}`, `{"name":null,"text":"您好，我该怎么称呼您呢？"}`}},
 	}
 
-	zlsgo.RunTests(tt, tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase[UnescapeTestCase]) {
-		result := unescape(tc.Data.input)
-		subTt.Equal(tc.Data.expected, result)
-	})
+    tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
+        d := tc.Data.(UnescapeTestCase)
+        result := unescape(d.input)
+        subTt.Equal(d.expected, result)
+    })
 }
 
 func TestParseString(t *testing.T) {
@@ -694,7 +695,7 @@ type QueryTestCase struct {
 func TestQueryMatchesEdgeCases(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	tests := []zlsgo.TestCase[QueryTestCase]{
+    tests := []zlsgo.TestCase{
 		{
 			Name: "string less than",
 			Data: QueryTestCase{
@@ -793,10 +794,11 @@ func TestQueryMatchesEdgeCases(t *testing.T) {
 		},
 	}
 
-	zlsgo.RunTests(tt, tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase[QueryTestCase]) {
-		result := Get(tc.Data.json, tc.Data.path)
-		subTt.Equal(tc.Data.expect, result.String())
-	})
+    tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
+        d := tc.Data.(QueryTestCase)
+        result := Get(d.json, d.path)
+        subTt.Equal(d.expect, result.String())
+    })
 }
 
 func TestSplitPossiblePipeEdgeCases(t *testing.T) {

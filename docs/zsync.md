@@ -29,8 +29,48 @@ func (wg *WaitGroup) Wait() error
 func NewRBMutex() *RBMutex
 func (m *RBMutex) Lock()
 func (m *RBMutex) Unlock()
-func (m *RBMutex) RLock() uint64
-func (m *RBMutex) RUnlock(token uint64)
+func (m *RBMutex) RLock() RBToken
+func (m *RBMutex) RUnlock(token RBToken)
+```
+
+说明：RBMutex 为读偏向锁。在读多写少场景下，读锁开销更低；在写入后短时间内会根据“写入动量”抑制读偏向以避免写方饥饿。非 64 位架构上自动回退为标准 RWMutex 实现，API 保持一致。
+
+示例：
+
+```go
+mu := zsync.NewRBMutex()
+
+// 写
+mu.Lock()
+shared = 42
+mu.Unlock()
+
+// 读
+tok := mu.RLock()
+_ = shared
+mu.RUnlock(tok)
+```
+
+### SeqLock（泛型）
+
+提供基于序列号的无锁读方案，读路径在无写竞争时无需加锁，适合“多读少写”的只读快照场景。
+
+```go
+type SeqLockT[T any] struct{}
+
+func NewSeqLock[T any]() *SeqLockT[T]
+func (s *SeqLockT[T]) Write(v T)
+func (s *SeqLockT[T]) Read() (T, bool)
+```
+
+示例：
+
+```go
+s := zsync.NewSeqLock[*Data]()
+s.Write(&Data{A: 1})
+if v, ok := s.Read(); ok {
+    _ = v.A
+}
 ```
 
 ### Promise
@@ -501,6 +541,16 @@ mutex.Lock()           // 写锁
 mutex.Unlock()         // 释放写锁
 token := mutex.RLock() // 读锁
 mutex.RUnlock(token)   // 释放读锁
+```
+
+### 序列锁模式
+```go
+// 无锁读快照（多读少写）
+type Data struct{ A int }
+s := zsync.NewSeqLock[Data]()
+s.Write(Data{A: 1})
+v, ok := s.Read()
+if ok { _ = v.A }
 ```
 
 ### Promise 模式

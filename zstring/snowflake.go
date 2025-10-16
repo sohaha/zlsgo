@@ -65,13 +65,9 @@ func (iw *IDWorker) timeGen() int64 {
 // It spins until a newer timestamp is obtained.
 func (iw *IDWorker) timeReGen(last int64) int64 {
 	ts := iw.timeGen()
-	for {
-		if ts < last {
-			ts = iw.timeGen()
-		} else {
-			break
-		}
-	}
+    for ts <= last {
+        ts = iw.timeGen()
+    }
 	return ts
 }
 
@@ -81,10 +77,10 @@ func (iw *IDWorker) ID() (ts int64, err error) {
 	iw.Lock()
 	defer iw.Unlock()
 	ts = iw.timeGen()
-	if ts == iw.lastTimeStamp {
+    if ts == iw.lastTimeStamp {
 		iw.sequence = (iw.sequence + 1) & sequenceMask
 		if iw.sequence == 0 {
-			ts = iw.timeReGen(ts)
+            ts = iw.timeReGen(iw.lastTimeStamp)
 		}
 	} else {
 		iw.sequence = 0
