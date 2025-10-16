@@ -228,3 +228,19 @@ func TestPromiseAny(t *testing.T) {
 	tt.Equal(0, val)
 	tt.Log(err)
 }
+
+func TestPromiseZeroInputs(t *testing.T) {
+	tt := zls.NewTest(t)
+
+	all, err := zsync.PromiseAll[int]().Done()
+	tt.NoError(err)
+	tt.Equal(0, len(all))
+
+	val, err := zsync.PromiseRace[int]().Done()
+	tt.NoError(err)
+	tt.Equal(0, val)
+
+	val, err = zsync.PromiseAny[int]().Done()
+	tt.NoError(err)
+	tt.Equal(0, val)
+}

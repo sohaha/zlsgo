@@ -1,124 +1,228 @@
+//go:build amd64 || arm64 || ppc64 || ppc64le || mips64 || mips64le || s390x || riscv64 || loong64
+
 package zsync
 
 import (
-	"runtime"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	"github.com/sohaha/zlsgo/zstring"
+    "runtime"
+    "sync"
+    "sync/atomic"
+    "time"
+    _ "unsafe" // required for //go:linkname
 )
 
-type (
-	// RBMutex is a reader biased reader/writer mutual exclusion lock.
-	// It is optimized for read-heavy workloads by minimizing contention between readers.
-	// Writers will still block all readers, similar to sync.RWMutex.
-	RBMutex struct {
-		inhibitUntil time.Time      // Time until which read bias is inhibited
-		rslots       []rslot        // Array of reader slots to distribute contention
-		rw           sync.RWMutex   // Underlying RWMutex for write locking
-		rmask        uint32         // Mask for selecting reader slots
-		rbias        int32          // Flag indicating if read bias is active
-	}
+type RBMutex struct {
+	state uint64
+	_     [56]byte
 
-	// RToken represents a read lock token that must be passed to RUnlock.
-	// It contains the slot information needed to release the correct read lock.
-	RToken struct {
-		slot uint32                  // The reader slot index
-		pad  [cacheLineSize - 4]byte // Padding to prevent false sharing
-	}
+	rslots []optRSlot
 
-	// rslot is an internal structure representing a single reader slot.
-	// Each slot has its own mutex to minimize contention between readers.
-	rslot struct {
-		mu  int32                   // Mutex for this slot (0=unlocked, 1=locked)
-		pad [cacheLineSize - 4]byte // Padding to prevent false sharing
-	}
-)
-
-const nslowdown = 7
-
-var rtokenPool sync.Pool
-
-// NewRBMutex creates a new RBMutex instance.
-// It initializes the mutex with a number of reader slots based on the system's parallelism level,
-// which helps distribute reader lock contention across multiple memory locations.
-func NewRBMutex() *RBMutex {
-	nslots := nextPowOf2(parallelism())
-	mu := RBMutex{
-		rslots: make([]rslot, nslots),
-		rmask:  nslots - 1,
-		rbias:  1,
-	}
-	return &mu
+	_              [64]byte
+	rw             sync.RWMutex
+	rmask          uint32
+	writerMomentum uint32
+	_              [4]byte
 }
 
-// RLock acquires a read lock and returns a token that must be used to release the lock.
-// Unlike sync.RWMutex, this method returns a token that must be passed to RUnlock.
-// Multiple readers can hold the lock simultaneously while no writers are holding it.
-func (mu *RBMutex) RLock() *RToken {
-	if atomic.LoadInt32(&mu.rbias) == 1 {
-		t, ok := rtokenPool.Get().(*RToken)
-		if !ok {
-			t = &RToken{}
-			t.slot = zstring.RandUint32()
-		}
-		for i := 0; i < len(mu.rslots); i++ {
-			slot := t.slot + uint32(i)
-			rslot := &mu.rslots[slot&mu.rmask]
-			rslotmu := atomic.LoadInt32(&rslot.mu)
-			if atomic.CompareAndSwapInt32(&rslot.mu, rslotmu, rslotmu+1) {
-				if atomic.LoadInt32(&mu.rbias) == 1 {
-					t.slot = slot
-					return t
-				}
-				atomic.AddInt32(&rslot.mu, -1)
-				rtokenPool.Put(t)
-				break
+type optRSlot struct {
+	counter uint64
+	_       [56]byte
+}
+
+type RBToken struct {
+    p    *uint64
+}
+
+const (
+	rbiasShift           = 63
+	rbiasMask            = uint64(1) << rbiasShift
+	writerShift          = 32
+	writerMask           = uint64(0x7FFFFFFF) << writerShift
+	defaultBiasLimit     = 4
+	writerMomentumMedium = 6
+	writerMomentumHigh   = 12
+)
+
+// Use runtime's proc pin/unpin to obtain a stable per-P identifier.
+// These are internal runtime functions accessed via linkname.
+// See: src/runtime/proc.go (procPin/procUnpin)
+//go:linkname runtime_procPin runtime.procPin
+func runtime_procPin() int
+
+//go:linkname runtime_procUnpin runtime.procUnpin
+func runtime_procUnpin()
+
+//go:nosplit
+func getProcID() uint32 {
+    // Pin to current P to retrieve its id, then unpin immediately.
+    // We only need the id for slot selection; we do not keep the P pinned
+    // across the critical section to avoid excessive overhead.
+    id := runtime_procPin()
+    runtime_procUnpin()
+    return uint32(id)
+}
+
+//go:nosplit
+func likely(b bool) bool {
+	return b
+}
+
+//go:nosplit
+func unlikely(b bool) bool {
+	return b
+}
+
+// NewRBMutex Extreme optimized version of read bias lock (read more and write less scene)
+func NewRBMutex() *RBMutex {
+    p := parallelism()
+    if p == 0 {
+        p = 1
+    }
+    nslots := nextPowOf2(p * 4)
+    if nslots == 0 {
+        nslots = 1
+    }
+	mu := &RBMutex{
+		state:  rbiasMask,
+		rslots: make([]optRSlot, nslots),
+		rmask:  nslots - 1,
+	}
+	return mu
+}
+
+//go:nosplit
+func (mu *RBMutex) RLock() RBToken {
+	state := atomic.LoadUint64(&mu.state)
+	if likely(state&rbiasMask != 0 && (state&writerMask) == 0) {
+        // If slots are not initialized, fall back to RWMutex to keep semantics safe.
+        if len(mu.rslots) == 0 {
+            mu.rw.RLock()
+            return RBToken{p: nil}
+        }
+        slot := getProcID() & mu.rmask
+        cptr := &mu.rslots[slot].counter
+		atomic.AddUint64(cptr, 1)
+        return RBToken{p: cptr}
+	}
+
+	if unlikely(state&rbiasMask != 0) {
+		momentum := atomic.LoadUint32(&mu.writerMomentum)
+		limit := biasLimit(momentum)
+
+		if (state & writerMask) < uint64(limit)<<writerShift {
+            if len(mu.rslots) == 0 {
+                mu.rw.RLock()
+                return RBToken{p: nil}
+            }
+            slot := getProcID() & mu.rmask
+            cptr := &mu.rslots[slot].counter
+			atomic.AddUint64(cptr, 1)
+
+			s2 := atomic.LoadUint64(&mu.state)
+			if likely(s2&rbiasMask != 0 && (s2&writerMask) < uint64(limit)<<writerShift) {
+                return RBToken{p: cptr}
 			}
+			atomic.AddUint64(cptr, ^uint64(0))
 		}
 	}
 
 	mu.rw.RLock()
-	if atomic.LoadInt32(&mu.rbias) == 0 && time.Now().After(mu.inhibitUntil) {
-		atomic.StoreInt32(&mu.rbias, 1)
-	}
-	return nil
+    return RBToken{p: nil}
 }
 
-// RUnlock releases a read lock using the token obtained from RLock.
-// The token must match the one returned by the corresponding RLock call.
-func (mu *RBMutex) RUnlock(t *RToken) {
-	if t == nil {
+//go:nosplit
+func (mu *RBMutex) RUnlock(token RBToken) {
+    if token.p == nil {
 		mu.rw.RUnlock()
 		return
 	}
-	if atomic.AddInt32(&mu.rslots[t.slot&mu.rmask].mu, -1) < 0 {
-		panic("invalid reader state detected")
-	}
-	rtokenPool.Put(t)
+
+    atomic.AddUint64(token.p, ^uint64(0))
 }
 
-// Lock acquires a write lock, blocking all readers and other writers.
-// This behaves similarly to sync.RWMutex.Lock() but also temporarily
-// disables the read bias optimization after the lock is released.
 func (mu *RBMutex) Lock() {
+	for {
+		state := atomic.LoadUint64(&mu.state)
+		newState := (state &^ rbiasMask) + (1 << writerShift)
+		if atomic.CompareAndSwapUint64(&mu.state, state, newState) {
+			break
+		}
+	}
+
+	atomic.AddUint32(&mu.writerMomentum, 1)
+
 	mu.rw.Lock()
-	if atomic.LoadInt32(&mu.rbias) == 1 {
-		atomic.StoreInt32(&mu.rbias, 0)
-		start := time.Now()
-		for i := 0; i < len(mu.rslots); i++ {
-			for atomic.LoadInt32(&mu.rslots[i].mu) > 0 {
-				runtime.Gosched()
+
+	tries := 0
+	for {
+		allZero := true
+		for i := range mu.rslots {
+			if atomic.LoadUint64(&mu.rslots[i].counter) > 0 {
+				allZero = false
+				break
 			}
 		}
-		mu.inhibitUntil = time.Now().Add(time.Since(start) * nslowdown)
+		if allZero {
+			break
+		}
+		tries++
+		// Adaptive backoff to reduce potential writer starvation
+		switch {
+		case tries < 64:
+			if tries&7 == 0 {
+				runtime.Gosched()
+			}
+		case tries < 256:
+			runtime.Gosched()
+		default:
+			// As contention persists, yield more aggressively
+			time.Sleep(time.Microsecond)
+		}
 	}
 }
 
-// Unlock releases a write lock, allowing readers and other writers to proceed.
-// After a write lock is released, read bias is temporarily inhibited to
-// give waiting writers a fair chance to acquire the lock.
 func (mu *RBMutex) Unlock() {
 	mu.rw.Unlock()
+
+	for {
+		state := atomic.LoadUint64(&mu.state)
+		writerCount := (state & writerMask) >> writerShift
+		newState := state - (1 << writerShift)
+
+		if writerCount == 1 {
+            // Only enable read-bias if slots are initialized.
+            if len(mu.rslots) > 0 {
+                newState |= rbiasMask
+            }
+		}
+
+		if atomic.CompareAndSwapUint64(&mu.state, state, newState) {
+			break
+		}
+	}
+
+	for {
+		momentum := atomic.LoadUint32(&mu.writerMomentum)
+		if momentum == 0 {
+			break
+		}
+		dec := (momentum + 1) >> 1
+		if dec == 0 {
+			dec = 1
+		}
+		if atomic.CompareAndSwapUint32(&mu.writerMomentum, momentum, momentum-dec) {
+			break
+		}
+	}
+}
+
+//go:nosplit
+//go:inline
+func biasLimit(momentum uint32) uint32 {
+	if momentum > writerMomentumHigh {
+		return 1
+	}
+	if momentum > writerMomentumMedium {
+		return 2
+	}
+	return defaultBiasLimit
 }

@@ -18,4 +18,22 @@ func TestNewPool(t *testing.T) {
 		})
 		tt.Equal(1, pool.Get())
 	})
+
+	tt.Run("pointer", func(tt *zlsgo.TestUtil) {
+		type poolS struct{ V int }
+		pool := NewPool(func() *poolS { return &poolS{} })
+		v := pool.Get()
+		tt.EqualTrue(v != nil)
+		v.V = 1
+		pool.Put(v)
+		tt.EqualTrue(pool.Get() != nil)
+	})
+
+	tt.Run("slice", func(tt *zlsgo.TestUtil) {
+		pool := NewPool(func() []byte { return make([]byte, 0, 8) })
+		v := pool.Get()
+		tt.EqualTrue(v != nil)
+		pool.Put(v[:0])
+		tt.EqualTrue(pool.Get() != nil)
+	})
 }
