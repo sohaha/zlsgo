@@ -86,6 +86,21 @@ func TestMap(t *testing.T) {
 	tt.EqualTrue(mm.Valid("T"))
 }
 
+func TestMapPick(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	origin := Map{"a": 1, "b": 2, "c": 3}
+	selected := origin.Pick("a", "c", "none")
+
+	tt.Equal(2, len(selected))
+	tt.Equal(1, selected.Get("a").Int())
+	tt.Equal(3, selected.Get("c").Int())
+	tt.EqualTrue(!selected.Valid("none"))
+	tt.Equal(3, len(origin))
+
+	emptyPick := origin.Pick()
+	tt.Equal(0, len(emptyPick))
+}
+
 func TestMapCopy(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
@@ -238,6 +253,21 @@ func TestToMaps(T *testing.T) {
 
 	t.Equal("hi", data2.First().Get("name").String())
 	t.Equal("!", data2.Last().Get("name").String())
+}
+
+func TestToMapsNilInput(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var nilInterface interface{}
+	tt.EqualTrue(ToMaps(nilInterface) == nil)
+
+	var nilSlice []map[string]interface{}
+	result := ToMaps(nilSlice)
+	tt.Equal(0, len(result))
+
+	single := ToMaps(Map{"key": "value"})
+	tt.Equal(1, len(single))
+	tt.Equal("value", single.Index(0).Get("key").String())
 }
 
 func TestConvContainTime(t *testing.T) {
@@ -408,29 +438,6 @@ func TestMapValidateErrorHandling(t *testing.T) {
 	tt.NoError(m.ValidateAll(nil))
 }
 
-func TestMapValidateWithOptionsSafety(t *testing.T) {
-	tt := zlsgo.NewTest(t)
-
-	m := Map{"test": "value"}
-
-	rules := map[string]Validator{
-		"test": newTestValidator("required"),
-	}
-	tt.NoError(m.ValidateWithOptions(rules))
-	tt.NoError(m.ValidateWithOptions(rules, ValidateOptions{FastPath: true}))
-	tt.NoError(m.ValidateWithOptions(rules, ValidateOptions{UnsafeMode: true}))
-
-	errorRules := map[string]Validator{
-		"nonexistent": newTestValidator("required"),
-	}
-	tt.EqualTrue(m.ValidateWithOptions(errorRules) != nil)
-
-	nullVal := &nullValidator{}
-	tt.EqualTrue(m.ValidateWithOptions(map[string]Validator{
-		"test": nullVal,
-	}) != nil)
-}
-
 func TestMapConcurrentValidationSafety(t *testing.T) {
 	m := Map{
 		"name":  "John",
@@ -476,49 +483,6 @@ func TestMapConcurrentValidationSafety(t *testing.T) {
 
 	if errorCount != 0 {
 		t.Errorf("Should not have any concurrent validation errors, but found %d errors", errorCount)
-	}
-}
-
-func TestValidateWithOptionsConcurrentSafety(t *testing.T) {
-	m := Map{
-		"field1": "value1",
-		"field2": "value2",
-		"field3": "value3",
-	}
-
-	const numGoroutines = 20
-
-	var wg sync.WaitGroup
-	errors := make(chan error, numGoroutines*5)
-
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < 5; j++ {
-				key := "field" + strconv.Itoa((j%3)+1)
-				validator := newTestValidator("required")
-				rules := map[string]Validator{key: validator}
-
-				err := m.ValidateWithOptions(rules)
-				if err != nil {
-					errors <- err
-				}
-			}
-		}(i)
-	}
-
-	wg.Wait()
-	close(errors)
-
-	errorCount := 0
-	for err := range errors {
-		t.Errorf("ValidateWithOptions concurrent safety test failed with error: %v", err)
-		errorCount++
-	}
-
-	if errorCount != 0 {
-		t.Errorf("ValidateWithOptions concurrent safety test failed with %d errors", errorCount)
 	}
 }
 
@@ -840,19 +804,6 @@ func TestToMapEdgeCases(t *testing.T) {
 	result = ToMap(o)
 	tt.Equal("test", result.Get("nested.inner").String())
 	tt.Equal(100, result.Get("value").Int())
-}
-
-func TestValidateWithOptionsEmptyRules(t *testing.T) {
-	tt := zlsgo.NewTest(t)
-
-	m := Map{"key": "value"}
-
-	err := m.ValidateWithOptions(map[string]Validator{})
-	tt.NoError(err)
-
-	var nilMap Map
-	err = nilMap.ValidateWithOptions(map[string]Validator{"key": newTestValidator("required")})
-	tt.EqualTrue(err != nil)
 }
 
 func TestToMapFromMapEdgeCases(t *testing.T) {

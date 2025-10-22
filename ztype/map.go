@@ -122,6 +122,20 @@ func (m Map) Keys() []string {
 	return keys
 }
 
+// Pick returns a new Map that contains only the entries whose keys exist in the original map.
+func (m Map) Pick(keys ...string) Map {
+	if len(keys) == 0 {
+		return Map{}
+	}
+	filtered := make(Map, len(keys))
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			filtered[k] = v
+		}
+	}
+	return filtered
+}
+
 // ForEach iterates over all key-value pairs in the map and calls the provided function for each pair.
 // If the function returns false, iteration stops.
 func (m Map) ForEach(fn func(k string, v Type) bool) {
@@ -217,15 +231,31 @@ func ToMaps(value interface{}) Maps {
 	case []map[string]interface{}:
 		return *(*Maps)(unsafe.Pointer(&r))
 	default:
-		ref := reflect.Indirect(zreflect.ValueOf(value))
-		l := ref.Len()
-		v := ref.Slice(0, l)
-
-		result := make(Maps, 0, l)
-		for i := 0; i < l; i++ {
-			result = append(result, toMapString(v.Index(i).Interface()))
+		if value == nil {
+			return nil
 		}
-		return result
+
+		rv := zreflect.ValueOf(value)
+		if !rv.IsValid() {
+			return nil
+		}
+
+		rv = reflect.Indirect(rv)
+		if !rv.IsValid() {
+			return nil
+		}
+
+		switch rv.Kind() {
+		case reflect.Slice, reflect.Array:
+			l := rv.Len()
+			result := make(Maps, 0, l)
+			for i := 0; i < l; i++ {
+				result = append(result, toMapString(rv.Index(i).Interface()))
+			}
+			return result
+		default:
+			return Maps{toMapString(rv.Interface())}
+		}
 	}
 }
 
@@ -370,13 +400,6 @@ func toMapStringReflect(m *map[string]interface{}, val interface{}) {
 	}
 }
 
-// ValidateOptions configures validation behavior
-type ValidateOptions struct {
-	FastPath            bool // Use optimized fast path for small datasets
-	UnsafeMode          bool // Skip safety checks for maximum performance
-	ConcurrentThreshold int  // Threshold for concurrent validation (default: 500)
-}
-
 // Validate validates a single field with the given validator
 func (m Map) Validate(key string, validator Validator) error {
 	if m == nil {
@@ -415,25 +438,6 @@ func (m Map) ValidateAll(rules map[string]Validator) error {
 	}
 
 	return nil
-}
-
-// ValidateWithOptions validates all fields with configurable options
-func (m Map) ValidateWithOptions(rules map[string]Validator, opts ...ValidateOptions) error {
-	if m == nil {
-		return ErrMapNil
-	}
-	if len(rules) == 0 {
-		return nil
-	}
-
-	// Use default options if none provided
-	if len(opts) > 0 {
-		_ = opts[0] // Options acknowledged but not used in simplified implementation
-	}
-
-	// For simplicity, all options route to the same sequential validation
-	// The intelligent selection logic was removed as per user request
-	return m.ValidateAll(rules)
 }
 
 // Validator interface defines the validation contract

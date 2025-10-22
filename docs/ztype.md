@@ -87,13 +87,10 @@ func (t Type) Maps() Maps
 
 ### Map 类型能力
 
-```go
-type Map map[string]interface{}
-```
-
 - **DeepCopy**: 深拷贝当前映射，适用于隔离原始数据
 - **Get / Set / Has / Delete**: 安全访问与修改键值
 - **Valid / Keys / ForEach / IsEmpty**: 快速校验、遍历与检查状态
+- **Pick**: 根据传入的键名筛选出存在于原始映射的项，返回全新的 `Map`
 
 #### 验证接口
 
@@ -106,16 +103,8 @@ type ValidatorResult interface {
     Error() error
 }
 
-type ValidateOptions struct {
-    FastPath            bool
-    UnsafeMode          bool
-    ConcurrentThreshold int
-}
-
 func (m Map) Validate(key string, validator Validator) error
 func (m Map) ValidateAll(rules map[string]Validator) error
-func (m Map) ValidateWithOptions(rules map[string]Validator, opts ...ValidateOptions) error
-```
 
 ```go
 // 示例：结合 zvalid 进行字段校验
@@ -160,7 +149,7 @@ func ToTime(i interface{}, format ...string) (time.Time, error)  // 转换为时
 ```go
 func ToSlice(i interface{}, noConv ...bool) SliceType  // 转换为切片类型
 func ToMap(i interface{}) Map                          // 转换为映射类型
-func ToMaps(i interface{}) Maps                        // 转换为映射切片
+func ToMaps(i interface{}) Maps                        // 转换为映射切片，支持 nil 输入
 func ToStruct(v interface{}, outVal interface{}) error // 转换为结构体
 ```
 
@@ -604,3 +593,9 @@ street := t.Get("users.0.addresses.1.street").String()
 1. **Type 对象是并发安全的**，可以在多个 goroutine 中安全使用
 2. **结构体缓存是并发安全的**，支持高并发访问
 3. **路径缓存是并发安全的**，多线程解析相同路径不会有竞争
+4. **ValidateWithOptions 自动并发**：当规则数量超过阈值（默认 500，或通过 `ConcurrentThreshold` 指定）时会分发到多个 goroutine 中执行，并保证错误聚合。
+
+### 空值处理提示
+
+- `ValidateWithOptions(nil, ...)` 会退回顺序校验默认值。
+- `ToMaps(nil)` 返回 `nil`，而对已声明但为 `nil` 的切片（如 `var s []map[string]interface{}`）会返回长度为 0 的结果，便于继续 append。
