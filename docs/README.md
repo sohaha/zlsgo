@@ -31,6 +31,7 @@
 - [ztime - 时间处理库](ztime.md) - 提供时间获取、格式化、计算、转换、时区管理、定时任务等功能
 - [zutil - 通用工具库](zutil.md) - 提供反射工具、原子操作、重试机制、通道管理、缓冲区池、环境变量、参数解析、工具函数、Once 模式、选项模式等功能
 - [zvalid - 数据验证库](zvalid.md) - 提供灵活的验证规则链、多种验证方法、自定义验证函数等功能
+- [zlocale - 国际化库](zlocale.md) - 提供多语言支持、参数化翻译、缓存机制和回退策略等功能
 
 ## 快速开始
 
@@ -47,17 +48,27 @@ import (
     "fmt"
     "github.com/sohaha/zlsgo/zstring"
     "github.com/sohaha/zlsgo/zarray"
+    "github.com/sohaha/zlsgo/zlocale"
 )
 
 func main() {
     // 字符串处理
     result := zstring.Ucfirst("hello world")
     fmt.Println(result) // "Hello world"
-    
+
     // 数组操作
     arr := zarray.NewArray(5)
     arr.Push("张三", "李四", "王五")
     fmt.Printf("数组长度: %d\n", arr.Length())
+
+    // 国际化翻译
+    zlocale.LoadLanguage("zh-CN", "简体中文", map[string]string{
+        "welcome": "欢迎",
+        "user.name": "用户: {0}",
+    })
+    zlocale.SetLanguage("zh-CN")
+    fmt.Println(zlocale.T("welcome")) // "欢迎"
+    fmt.Println(zlocale.T("user.name", "张三")) // "用户: 张三"
 }
 ```
 

@@ -4,7 +4,9 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"sync"
 
+	"github.com/sohaha/zlsgo/zlocale"
 	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/ztype"
 )
@@ -28,8 +30,7 @@ type (
 		Run(args []string)
 	}
 	// errWrite is an internal type for custom error output handling
-	errWrite struct {
-	}
+	errWrite struct{}
 	// v represents a flag variable with its name, usage description, and short aliases
 	v struct {
 		name   string
@@ -41,13 +42,13 @@ type (
 		// CommandLine is the flag set for this subcommand
 		CommandLine *flag.FlagSet
 		// Name is the subcommand name as used on the command line
-		Name        string
+		Name string
 		// Desc is the short description of the subcommand
-		Desc        string
+		Desc string
 		// Supplement provides additional detailed information about the subcommand
-		Supplement  string
+		Supplement string
 		// Parameter describes the parameters accepted by the subcommand
-		Parameter   string
+		Parameter string
 		cmdCont
 	}
 )
@@ -88,7 +89,17 @@ var (
 	varsKey      = map[string]*v{}
 	varShortsKey = make([]string, 0)
 	ShortValues  = map[string]interface{}{}
-	langs        = map[string]map[string]string{
+
+	internalI18n   *zlocale.I18n
+	initOnce       sync.Once
+	lastSyncedLang string
+
+	langs = getBuiltInTranslations()
+)
+
+// getBuiltInTranslations returns the built-in translation mappings
+func getBuiltInTranslations() map[string]map[string]string {
+	return map[string]map[string]string{
 		"en": {
 			"command_empty": "Command name cannot be empty",
 			"help":          "Show Command help",
@@ -115,11 +126,50 @@ var (
 			"install":       "安装服务",
 		},
 	}
-)
+}
+
+// initInternalI18n initializes the internal zlocale instance with existing translations
+func initInternalI18n() {
+	initOnce.Do(func() {
+		internalI18n = zlocale.New(Lang)
+
+		// Load built-in translations into zlocale
+		translations := getBuiltInTranslations()
+		for langCode, langData := range translations {
+			langName := langCode
+			switch langCode {
+			case "en":
+				langName = "English"
+			case "zh":
+				langName = "简体中文"
+			}
+			internalI18n.LoadLanguage(langCode, langName, langData)
+		}
+
+		internalI18n.SetLanguage(Lang)
+		lastSyncedLang = Lang
+	})
+}
+
+// syncLanguageWithInternalI18n ensures the internal i18n instance matches the current Lang setting
+// Uses caching to avoid unnecessary language switches for better performance
+func syncLanguageWithInternalI18n() {
+	initInternalI18n()
+
+	// Only sync if language has actually changed
+	if lastSyncedLang != Lang {
+		internalI18n.SetLanguage(Lang)
+		lastSyncedLang = Lang
+	}
+}
 
 // SetLangText adds or updates a localized text string for the specified language and key.
 // This allows customizing or extending the built-in localization support.
 func SetLangText(lang, key, value string) {
+	initInternalI18n()
+
+	internalI18n.LoadLanguage(lang, lang, map[string]string{key: value})
+
 	l, ok := langs[lang]
 	if !ok {
 		l = map[string]string{}
@@ -133,17 +183,25 @@ func SetLangText(lang, key, value string) {
 // If still not found and a default value is provided, it returns that value.
 // Otherwise, it returns the key itself.
 func GetLangText(key string, def ...string) string {
-	if lang, ok := langs[Lang][key]; ok {
-		return lang
+	initInternalI18n()
+
+	syncLanguageWithInternalI18n()
+
+	translation := internalI18n.T(key)
+	if translation == key {
+		if lang, ok := langs[Lang][key]; ok {
+			return lang
+		}
+		if lang, ok := langs[defaultLang][key]; ok {
+			return lang
+		}
+		if len(def) > 0 {
+			return def[0]
+		}
+		return key
 	}
 
-	if lang, ok := langs[defaultLang][key]; ok {
-		return lang
-	}
-	if len(def) > 0 {
-		return def[0]
-	}
-	return key
+	return translation
 }
 
 // Write implements the io.Writer interface for custom error handling.

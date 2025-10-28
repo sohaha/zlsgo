@@ -628,22 +628,22 @@ func TestHasOptionAndValidateMapKeyType(t *testing.T) {
 func TestProcessFieldTagAndRemainField(t *testing.T) {
 	type Emb struct{ X int }
 	type T struct {
-		Emb `z:",squash"`
 		Rem map[interface{}]interface{} `z:"Rem,remain"`
-		N   int                         `z:"n"`
+		Emb `z:",squash"`
+		N   int `z:"n"`
 	}
 	c := &Conver{TagName: tagName, Squash: true}
 
 	val := reflect.New(reflect.TypeOf(T{})).Elem()
-	sfEmb := val.Type().Field(0)
-	fvEmb := val.Field(0)
+	sfEmb := val.Type().Field(1)
+	fvEmb := val.Field(1)
 	squash, remain := c.processFieldTag(sfEmb, fvEmb)
 	if !squash || remain {
 		t.Fatalf("processFieldTag squash failed: squash=%v remain=%v", squash, remain)
 	}
 
-	sfRem := val.Type().Field(1)
-	fvRem := val.Field(1)
+	sfRem := val.Type().Field(0)
+	fvRem := val.Field(0)
 	squash, remain = c.processFieldTag(sfRem, fvRem)
 	if squash || !remain {
 		t.Fatalf("processFieldTag remain failed: squash=%v remain=%v", squash, remain)
@@ -655,7 +655,7 @@ func TestProcessFieldTagAndRemainField(t *testing.T) {
 	if err := c.processRemainField(rf, reflect.ValueOf(data), unused, ""); err != nil {
 		t.Fatalf("processRemainField error: %v", err)
 	}
-	rem := val.Field(1).Interface().(map[interface{}]interface{})
+	rem := val.Field(0).Interface().(map[interface{}]interface{})
 	if len(rem) != 2 || rem["a"].(int) != 2 || rem["b"].(int) != 3 {
 		t.Fatalf("unexpected remain: %#v", rem)
 	}
@@ -859,8 +859,8 @@ func TestToMapStringEdgeCases(t *testing.T) {
 	tt.Equal("test", result.Get("inner.value").String())
 
 	type Item struct {
-		ID   int    `z:"id"`
 		Name string `z:"name"`
+		ID   int    `z:"id"`
 	}
 
 	items := []Item{

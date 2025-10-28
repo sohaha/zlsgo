@@ -14,30 +14,28 @@ import (
 // FastCache implements a high-performance concurrent LRU (Least Recently Used) cache
 // with support for expiration, callbacks, and multiple buckets for reduced lock contention.
 type FastCache struct {
-	gsf           singleflight.Group
-	callback      handler
-	locks         []sync.Mutex
-	insts         [][2]*lruCache
-	expiration    time.Duration
-	mask          uint16
-	ticker        *time.Ticker
-	stopCh        chan struct{}
-	cleanIdx      uint16
-	cleanInterval time.Duration
-	cleanerMu     sync.Mutex
-	cleanerOn     bool
-	lastActiveMs  int64
-	autoCleaner   bool
-	lazyCleaner   bool
-	idleAfter     time.Duration
-	// Enhanced fields for intelligent memory leak prevention
-	lastAccessMs int64 // Last access timestamp for Set/Get/Delete operations (atomic access)
-	accessCount  int64 // Access counter for activity tracking (atomic access)
-	cleanerLevel int32 // Cleaner level: 0=normal, 1=reduced_freq, 2=light, 3=stopped (atomic access)
-	// Configurable cleaning strategy thresholds
-	shortIdleThreshold  time.Duration // Threshold for level 1 (default: 30s)
-	mediumIdleThreshold time.Duration // Threshold for level 2 (default: 2m)
+	gsf                 singleflight.Group
+	ticker              *time.Ticker
+	callback            handler
+	stopCh              chan struct{}
+	insts               [][2]*lruCache
+	locks               []sync.Mutex
 	longIdleThreshold   time.Duration // Threshold for level 3 (default: 5m)
+	mediumIdleThreshold time.Duration // Threshold for level 2 (default: 2m)
+	shortIdleThreshold  time.Duration // Threshold for level 1 (default: 30s)
+	cleanInterval       time.Duration
+	expiration          time.Duration
+	idleAfter           time.Duration
+	lastActiveMs        int64
+	accessCount         int64 // Access counter for activity tracking (atomic access)
+	lastAccessMs        int64 // Last access timestamp for Set/Get/Delete operations (atomic access)
+	cleanerMu           sync.Mutex
+	cleanerLevel        int32 // Cleaner level: 0=normal, 1=reduced_freq, 2=light, 3=stopped (atomic access)
+	cleanIdx            uint16
+	mask                uint16
+	lazyCleaner         bool
+	autoCleaner         bool
+	cleanerOn           bool
 }
 
 // NewFast creates a new FastCache instance with the specified options.
@@ -508,16 +506,16 @@ func (l *FastCache) finalize() {
 
 // Stats represents cache performance and status statistics
 type Stats struct {
-	// CleanerLevel indicates current cleaning intensity (0=normal, 1=reduced, 2=light, 3=stopped)
-	CleanerLevel int32
 	// AccessCount shows total number of cache accesses since creation
 	AccessCount int64
 	// IdleDuration shows how long cache has been idle
 	IdleDuration time.Duration
-	// IsCleanerRunning indicates if background cleaner is active
-	IsCleanerRunning bool
 	// TotalItems shows approximate total items across all buckets
 	TotalItems int
+	// CleanerLevel indicates current cleaning intensity (0=normal, 1=reduced, 2=light, 3=stopped)
+	CleanerLevel int32
+	// IsCleanerRunning indicates if background cleaner is active
+	IsCleanerRunning bool
 }
 
 // GetStats returns current cache statistics for monitoring and debugging

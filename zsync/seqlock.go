@@ -12,10 +12,9 @@ import (
 // SeqLockT is a typed sequence lock that avoids interface conversions on the hot path.
 // It provides the same semantics as the untyped SeqLock but returns/accepts T directly.
 type SeqLock[T any] struct {
-	seq  uint64
-	_pad [56]byte
-
 	ptr   unsafe.Pointer
+	seq   uint64
+	_pad  [56]byte
 	_pad2 [56]byte
 }
 

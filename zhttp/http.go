@@ -113,38 +113,38 @@ var (
 )
 
 type Request struct {
-	engine       *Engine
-	url          string
-	method       string
-	headers      Header
+	body         interface{}
+	ctx          context.Context
+	client       *http.Client
+	uploadProg   UploadProgress
 	queryParams  QueryParam
 	formParams   Param
-	body         interface{}
-	uploads      []FileUpload
-	client       *http.Client
-	cookies      []*http.Cookie
-	ctx          context.Context
-	host         string
-	uploadProg   UploadProgress
-	downloadProg DownloadProgress
-	noRedirect   bool
+	headers      Header
 	customReq    CustomReq
+	engine       *Engine
+	downloadProg DownloadProgress
+	method       string
+	host         string
+	url          string
+	cookies      []*http.Cookie
+	uploads      []FileUpload
+	noRedirect   bool
 }
 
 type RequestArgs struct {
-	Headers      Header
-	QueryParams  QueryParam
-	FormParams   Param
 	Body         interface{}
-	Uploads      []FileUpload
-	Client       *http.Client
-	Cookies      []*http.Cookie
 	Ctx          context.Context
-	Host         string
 	UploadProg   UploadProgress
+	FormParams   Param
+	Client       *http.Client
+	QueryParams  QueryParam
+	Headers      Header
 	DownloadProg DownloadProgress
-	NoRedirect   bool
 	CustomReq    CustomReq
+	Host         string
+	Uploads      []FileUpload
+	Cookies      []*http.Cookie
+	NoRedirect   bool
 }
 
 var requestPool = sync.Pool{

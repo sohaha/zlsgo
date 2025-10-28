@@ -13,10 +13,10 @@ type (
 	Engine struct {
 		err          error
 		defaultValue interface{}
-		queue        []queueT
 		name         string
 		value        string
 		sep          string
+		queue        []queueT
 		valueInt     int
 		valueFloat   float64
 		setRawValue  bool

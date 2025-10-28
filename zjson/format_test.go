@@ -47,10 +47,10 @@ func TestModifierPrettyEdgeCases(t *testing.T) {
 	defer SetModifiersState(false)
 
 	tests := []struct {
+		check func(tst *zlsgo.TestUtil, result string)
 		name  string
 		json  string
 		path  string
-		check func(tst *zlsgo.TestUtil, result string)
 	}{
 		{
 			name: "pretty with default indent",

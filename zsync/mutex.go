@@ -3,23 +3,21 @@
 package zsync
 
 import (
-    "runtime"
-    "sync"
-    "sync/atomic"
-    "time"
-    _ "unsafe" // required for //go:linkname
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"time"
+	_ "unsafe" // required for //go:linkname
 )
 
 type RBMutex struct {
-	state uint64
-	_     [56]byte
-
-	rslots []optRSlot
-
-	_              [64]byte
+	rslots         []optRSlot
+	state          uint64
 	rw             sync.RWMutex
 	rmask          uint32
 	writerMomentum uint32
+	_              [64]byte
+	_              [56]byte
 	_              [4]byte
 }
 
@@ -29,7 +27,7 @@ type optRSlot struct {
 }
 
 type RBToken struct {
-    p    *uint64
+	p *uint64
 }
 
 const (
@@ -45,6 +43,7 @@ const (
 // Use runtime's proc pin/unpin to obtain a stable per-P identifier.
 // These are internal runtime functions accessed via linkname.
 // See: src/runtime/proc.go (procPin/procUnpin)
+//
 //go:linkname runtime_procPin runtime.procPin
 func runtime_procPin() int
 
@@ -53,12 +52,12 @@ func runtime_procUnpin()
 
 //go:nosplit
 func getProcID() uint32 {
-    // Pin to current P to retrieve its id, then unpin immediately.
-    // We only need the id for slot selection; we do not keep the P pinned
-    // across the critical section to avoid excessive overhead.
-    id := runtime_procPin()
-    runtime_procUnpin()
-    return uint32(id)
+	// Pin to current P to retrieve its id, then unpin immediately.
+	// We only need the id for slot selection; we do not keep the P pinned
+	// across the critical section to avoid excessive overhead.
+	id := runtime_procPin()
+	runtime_procUnpin()
+	return uint32(id)
 }
 
 //go:nosplit
@@ -73,14 +72,14 @@ func unlikely(b bool) bool {
 
 // NewRBMutex Extreme optimized version of read bias lock (read more and write less scene)
 func NewRBMutex() *RBMutex {
-    p := parallelism()
-    if p == 0 {
-        p = 1
-    }
-    nslots := nextPowOf2(p * 4)
-    if nslots == 0 {
-        nslots = 1
-    }
+	p := parallelism()
+	if p == 0 {
+		p = 1
+	}
+	nslots := nextPowOf2(p * 4)
+	if nslots == 0 {
+		nslots = 1
+	}
 	mu := &RBMutex{
 		state:  rbiasMask,
 		rslots: make([]optRSlot, nslots),
@@ -93,15 +92,15 @@ func NewRBMutex() *RBMutex {
 func (mu *RBMutex) RLock() RBToken {
 	state := atomic.LoadUint64(&mu.state)
 	if likely(state&rbiasMask != 0 && (state&writerMask) == 0) {
-        // If slots are not initialized, fall back to RWMutex to keep semantics safe.
-        if len(mu.rslots) == 0 {
-            mu.rw.RLock()
-            return RBToken{p: nil}
-        }
-        slot := getProcID() & mu.rmask
-        cptr := &mu.rslots[slot].counter
+		// If slots are not initialized, fall back to RWMutex to keep semantics safe.
+		if len(mu.rslots) == 0 {
+			mu.rw.RLock()
+			return RBToken{p: nil}
+		}
+		slot := getProcID() & mu.rmask
+		cptr := &mu.rslots[slot].counter
 		atomic.AddUint64(cptr, 1)
-        return RBToken{p: cptr}
+		return RBToken{p: cptr}
 	}
 
 	if unlikely(state&rbiasMask != 0) {
@@ -109,34 +108,34 @@ func (mu *RBMutex) RLock() RBToken {
 		limit := biasLimit(momentum)
 
 		if (state & writerMask) < uint64(limit)<<writerShift {
-            if len(mu.rslots) == 0 {
-                mu.rw.RLock()
-                return RBToken{p: nil}
-            }
-            slot := getProcID() & mu.rmask
-            cptr := &mu.rslots[slot].counter
+			if len(mu.rslots) == 0 {
+				mu.rw.RLock()
+				return RBToken{p: nil}
+			}
+			slot := getProcID() & mu.rmask
+			cptr := &mu.rslots[slot].counter
 			atomic.AddUint64(cptr, 1)
 
 			s2 := atomic.LoadUint64(&mu.state)
 			if likely(s2&rbiasMask != 0 && (s2&writerMask) < uint64(limit)<<writerShift) {
-                return RBToken{p: cptr}
+				return RBToken{p: cptr}
 			}
 			atomic.AddUint64(cptr, ^uint64(0))
 		}
 	}
 
 	mu.rw.RLock()
-    return RBToken{p: nil}
+	return RBToken{p: nil}
 }
 
 //go:nosplit
 func (mu *RBMutex) RUnlock(token RBToken) {
-    if token.p == nil {
+	if token.p == nil {
 		mu.rw.RUnlock()
 		return
 	}
 
-    atomic.AddUint64(token.p, ^uint64(0))
+	atomic.AddUint64(token.p, ^uint64(0))
 }
 
 func (mu *RBMutex) Lock() {
@@ -189,10 +188,10 @@ func (mu *RBMutex) Unlock() {
 		newState := state - (1 << writerShift)
 
 		if writerCount == 1 {
-            // Only enable read-bias if slots are initialized.
-            if len(mu.rslots) > 0 {
-                newState |= rbiasMask
-            }
+			// Only enable read-bias if slots are initialized.
+			if len(mu.rslots) > 0 {
+				newState |= rbiasMask
+			}
 		}
 
 		if atomic.CompareAndSwapUint64(&mu.state, state, newState) {

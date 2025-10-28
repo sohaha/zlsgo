@@ -45,7 +45,11 @@ func resetForTesting(args ...string) {
 func testOther(t *testing.T) {
 	tt := zls.NewTest(t)
 	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
+	oldLang := Lang
+	defer func() { 
+		osExit = oldOsExit
+		Lang = oldLang
+	}()
 	myExit := func(code int) {
 	}
 	osExit = myExit

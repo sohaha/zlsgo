@@ -468,8 +468,8 @@ func TestToMapErrorOnWrongType(t *testing.T) {
 func TestToStructFromMapRemainField(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	type S struct {
-		N   int                         `z:"n"`
 		Rem map[interface{}]interface{} `z:"Rem,remain"`
+		N   int                         `z:"n"`
 	}
 	in := map[string]interface{}{"n": 1, "a": 2, "b": 3}
 	var s S
@@ -487,8 +487,8 @@ func TestToMapFromStructSquashOmit(t *testing.T) {
 		B int `z:"b"`
 	}
 	type Outer struct {
-		Inner `z:",squash"`
 		Name  string `z:"name"`
+		Inner `z:",squash"`
 	}
 	in := Outer{Inner: Inner{A: 0, B: 2}, Name: "n"}
 	var out map[string]interface{}
@@ -739,8 +739,8 @@ func TestToStructFromMapEdgeCases(t *testing.T) {
 	tt.Equal("visible", result2.Public)
 
 	type WithRemain struct {
-		Name   string                      `z:"name"`
 		Remain map[interface{}]interface{} `z:",remain"`
+		Name   string                      `z:"name"`
 	}
 
 	data3 := map[string]interface{}{
@@ -762,10 +762,10 @@ func TestToStructFromMapWithInvalidFields(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	type Complex struct {
+		StringField string  `z:"string_field"`
 		IntField    int     `z:"int_field"`
 		FloatField  float64 `z:"float_field"`
 		BoolField   bool    `z:"bool_field"`
-		StringField string  `z:"string_field"`
 	}
 
 	data := map[string]interface{}{

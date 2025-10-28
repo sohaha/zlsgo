@@ -24,6 +24,8 @@ func init() {
 	flag.Usage = func() {
 		usage()
 	}
+
+	syncLanguageWithInternalI18n()
 }
 
 // Add registers a command handler for the provided subcommand name.

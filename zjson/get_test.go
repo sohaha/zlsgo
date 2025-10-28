@@ -374,7 +374,7 @@ type UnescapeTestCase struct {
 func Test_unescape(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-    tests := []zlsgo.TestCase{
+	tests := []zlsgo.TestCase{
 		{Name: "BasicASCII", Data: UnescapeTestCase{"hello", "hello"}},
 		{Name: "SimpleEscape", Data: UnescapeTestCase{"\\\"", "\""}},
 		{Name: "UnicodeBasic", Data: UnescapeTestCase{"\\u0041", "A"}},
@@ -398,11 +398,11 @@ func Test_unescape(t *testing.T) {
 		{Name: "Unescape", Data: UnescapeTestCase{`{\"name\":null,\"text\":\"您好，我该怎么称呼您呢？\"}`, `{"name":null,"text":"您好，我该怎么称呼您呢？"}`}},
 	}
 
-    tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
-        d := tc.Data.(UnescapeTestCase)
-        result := unescape(d.input)
-        subTt.Equal(d.expected, result)
-    })
+	tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
+		d := tc.Data.(UnescapeTestCase)
+		result := unescape(d.input)
+		subTt.Equal(d.expected, result)
+	})
 }
 
 func TestParseString(t *testing.T) {
@@ -575,8 +575,8 @@ func TestQueryMatchesVariants(t *testing.T) {
 
 func TestParseArrayPathDirect(t *testing.T) {
 	cases := []struct {
-		path  string
 		check func(*testing.T, arrayPathResult)
+		path  string
 	}{
 		{
 			path: "3",
@@ -695,7 +695,7 @@ type QueryTestCase struct {
 func TestQueryMatchesEdgeCases(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-    tests := []zlsgo.TestCase{
+	tests := []zlsgo.TestCase{
 		{
 			Name: "string less than",
 			Data: QueryTestCase{
@@ -794,11 +794,11 @@ func TestQueryMatchesEdgeCases(t *testing.T) {
 		},
 	}
 
-    tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
-        d := tc.Data.(QueryTestCase)
-        result := Get(d.json, d.path)
-        subTt.Equal(d.expect, result.String())
-    })
+	tt.RunTests(tests, func(subTt *zlsgo.TestUtil, tc zlsgo.TestCase) {
+		d := tc.Data.(QueryTestCase)
+		result := Get(d.json, d.path)
+		subTt.Equal(d.expect, result.String())
+	})
 }
 
 func TestSplitPossiblePipeEdgeCases(t *testing.T) {
@@ -888,9 +888,9 @@ func TestSplitPossiblePipeEdgeCases(t *testing.T) {
 
 func TestParseArrayPathComplexQueries(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T, res arrayPathResult)
 		name  string
 		path  string
-		check func(t *testing.T, res arrayPathResult)
 	}{
 		{
 			name: "query with brackets",
@@ -1019,10 +1019,10 @@ func TestIntUintEdgeCases(t *testing.T) {
 
 func TestSliceEdgeCases(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T, res *Res)
 		name  string
 		json  string
 		path  string
-		check func(t *testing.T, res *Res)
 	}{
 		{
 			name: "array of mixed types",
@@ -1069,10 +1069,10 @@ func TestSliceEdgeCases(t *testing.T) {
 
 func TestArrayEdgeCases(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T, res *Res)
 		name  string
 		json  string
 		path  string
-		check func(t *testing.T, res *Res)
 	}{
 		{
 			name: "nested array",
@@ -1109,10 +1109,10 @@ func TestArrayEdgeCases(t *testing.T) {
 
 func TestValueEdgeCases(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T, val interface{})
 		name  string
 		json  string
 		path  string
-		check func(t *testing.T, val interface{})
 	}{
 		{
 			name: "null value",
@@ -1162,9 +1162,9 @@ func TestValueEdgeCases(t *testing.T) {
 
 func TestParseEdgeCases(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T, res *Res)
 		name  string
 		json  string
-		check func(t *testing.T, res *Res)
 	}{
 		{
 			name: "incomplete number at end",
@@ -1208,10 +1208,10 @@ func TestParseEdgeCases(t *testing.T) {
 
 func TestForEachEdgeCases(t *testing.T) {
 	tests := []struct {
+		check func(t *testing.T)
 		name  string
 		json  string
 		path  string
-		check func(t *testing.T)
 	}{
 		{
 			name: "stop iteration",

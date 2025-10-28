@@ -122,6 +122,7 @@ func main(){
 - [x] 依赖注入
 - [x] Server Sent 推送
 - [x] 高性能 HashMap
+- [x] 国际化
 - [ ] [数据库操作](https://github.com/sohaha/zdb)
 - [ ] ...(更多请阅读[文档](https://docs.73zls.com/zls-go/#))
 
