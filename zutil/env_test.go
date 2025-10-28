@@ -1,6 +1,7 @@
 package zutil_test
 
 import (
+	"os"
 	"runtime"
 	"testing"
 
@@ -30,6 +31,13 @@ func TestEnv(T *testing.T) {
 	t.Log(zutil.Getenv("HOME"))
 	t.Log(zutil.Getenv("myos"))
 	t.Log(zutil.Getenv("我不存在", "66"))
+	_ = os.Setenv("TEST_EMPTY_VAR", "")
+	defer os.Unsetenv("TEST_EMPTY_VAR")
+	t.Equal("", zutil.Getenv("TEST_EMPTY_VAR", "default"))
+	t.Equal("default", zutil.Getenv("NON_EXISTENT_VAR", "default"))
+	_ = os.Setenv("TEST_SET_VAR", "actual_value")
+	defer os.Unsetenv("TEST_SET_VAR")
+	t.Equal("actual_value", zutil.Getenv("TEST_SET_VAR", "default"))
 }
 
 func TestGOROOT(t *testing.T) {

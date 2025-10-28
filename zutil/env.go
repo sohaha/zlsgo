@@ -42,11 +42,11 @@ func Is32BitArch() bool {
 
 // Getenv retrieves the value of an environment variable by its name.
 // If the environment variable is not set and a default value is provided,
-// the default value will be returned.
+// the default value will be returned. An empty string is considered a valid value.
 func Getenv(name string, def ...string) string {
-	val := os.Getenv(name)
-	if val == "" && len(def) > 0 {
-		val = def[0]
+	val, exists := os.LookupEnv(name)
+	if !exists && len(def) > 0 {
+		return def[0]
 	}
 	return val
 }
