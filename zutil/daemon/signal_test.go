@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -68,4 +69,53 @@ func TestSingleKillSignal(t *testing.T) {
 func TestIsSudo(t *testing.T) {
 	tt := zls.NewTest(t)
 	tt.Log(IsSudo())
+}
+
+func TestConcurrentSignalAccess(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ch := SingleKillSignal()
+			ReSingleKillSignal()
+			<-ch
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestReSingleKillSignalCoverage(t *testing.T) {
+	ReSingleKillSignal()
+
+	ch := SingleKillSignal()
+
+	ReSingleKillSignal()
+
+	process, _ := os.FindProcess(os.Getpid())
+	process.Signal(os.Interrupt)
+
+	select {
+	case <-ch:
+	case <-time.After(time.Second * 2):
+		t.Error("Expected to receive signal")
+	}
+}
+
+func TestSignalChannel(t *testing.T) {
+	sig, stop := SignalChan()
+	if sig == nil {
+		t.Error("Signal channel should not be nil")
+	}
+	if stop == nil {
+		t.Error("Stop function should not be nil")
+	}
+
+	stop()
+
+	select {
+	case <-sig:
+	default:
+	}
 }

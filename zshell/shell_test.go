@@ -23,8 +23,8 @@ func TestPipe(t *testing.T) {
 
 	commands := [][]string{
 		{"ls", "-a"},
-		{"grep", "go"},
-		{"grep", "shell_notwin"},
+		{"grep", "--color=never", "go"},
+		{"grep", "--color=never", "shell_notwin"},
 	}
 
 	code, outStr, errStr, err := PipeExecCommand(ctx, commands, func(o *Options) {
