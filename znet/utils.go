@@ -83,8 +83,10 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 		rr = rr[1:]
 		if len(matchName) != 0 {
 			for k, v := range rr {
-				if key := matchName[k]; key != "" {
-					matchParams[key] = v
+				if k < len(matchName) {
+					if key := matchName[k]; key != "" {
+						matchParams[key] = v
+					}
 				}
 			}
 		}
@@ -127,18 +129,20 @@ func parsePattern(res []string, prefix string) (string, []string) {
 			matchName = append(matchName, names[1:]...)
 			pattern = pattern + str
 		} else if firstChar == ':' {
-			matchStr := str
-			res := strings.Split(matchStr, ":")
-			key := res[1]
+			key := ""
+			if len(str) > 1 {
+				key = str[1:]
+			}
 			if key == "full" {
 				key = allKey
 			}
 			matchName = append(matchName, key)
-			if key == idKey {
+			switch key {
+			case idKey:
 				pattern = pattern + "(" + idPattern + ")"
-			} else if key == allKey {
+			case allKey:
 				pattern = pattern + "(" + allPattern + ")"
-			} else {
+			default:
 				pattern = pattern + "(" + defaultPattern + ")"
 			}
 		} else if firstChar == '*' {
@@ -150,9 +154,9 @@ func parsePattern(res []string, prefix string) (string, []string) {
 			if i2 != -1 && i != -1 {
 				if i == l && i2 == 0 {
 					matchStr := str[1:l]
-					res := strings.Split(matchStr, ":")
-					matchName = append(matchName, res[0])
-					pattern = pattern + "(" + res[1] + ")"
+					name, expr := parseBracePlaceholder(matchStr)
+					matchName = append(matchName, name)
+					pattern = pattern + "(" + expr + ")"
 				} else {
 					if i2 != 0 {
 						p, m := parsePattern([]string{str[:i2]}, "")
@@ -168,9 +172,9 @@ func parsePattern(res []string, prefix string) (string, []string) {
 							return "", nil
 						}
 						matchStr := str[1:ni]
-						res := strings.Split(matchStr, ":")
-						matchName = append(matchName, res[0])
-						pattern = pattern + "(" + res[1] + ")"
+						name, expr := parseBracePlaceholder(matchStr)
+						matchName = append(matchName, name)
+						pattern = pattern + "(" + expr + ")"
 						p, m := parsePattern([]string{str[ni+1:]}, "")
 						if p != "" {
 							pattern = pattern + p
@@ -187,6 +191,27 @@ func parsePattern(res []string, prefix string) (string, []string) {
 	}
 
 	return pattern, matchName
+}
+
+func parseBracePlaceholder(s string) (string, string) {
+	name := s
+	expr := ""
+	if idx := strings.IndexByte(s, ':'); idx >= 0 {
+		name = s[:idx]
+		expr = s[idx+1:]
+	}
+	if expr == "" {
+		switch name {
+		case idKey:
+			expr = idPattern
+		case "full", allKey:
+			name = allKey
+			expr = allPattern
+		default:
+			expr = defaultPattern
+		}
+	}
+	return name, expr
 }
 
 // getAddr normalizes an address string, ensuring it has a port.
