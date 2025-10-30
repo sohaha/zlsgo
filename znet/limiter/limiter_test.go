@@ -116,17 +116,17 @@ func run(url string, r *znet.Engine) int64 {
 func TestRemainingVisitsByIP(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Second, 5)
-	
+
 	remaining := rule.RemainingVisitsByIP("192.168.1.1")
 	t.EqualExit(1, len(remaining))
 	t.EqualExit(5, remaining[0])
-	
+
 	remaining = rule.RemainingVisitsByIP("invalid.ip")
 	t.EqualExit(0, len(remaining))
-	
+
 	remaining = rule.RemainingVisitsByIP("")
 	t.EqualExit(0, len(remaining))
 }
@@ -134,14 +134,14 @@ func TestRemainingVisitsByIP(tt *testing.T) {
 func TestAllowVisitEdgeCases(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	t.EqualTrue(rule.AllowVisit("test"))
 	t.EqualTrue(rule.AllowVisit("test", "test2"))
-	
+
 	rule.AddRule(time.Second, 2)
 	rule.AddRule(time.Second*2, 3)
-	
+
 	t.EqualTrue(rule.AllowVisit("user1"))
 	t.EqualTrue(rule.AllowVisit("user1"))
 	t.EqualFalse(rule.AllowVisit("user1"))
@@ -150,10 +150,10 @@ func TestAllowVisitEdgeCases(tt *testing.T) {
 func TestAllowVisitByIPEdgeCases(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Second, 2)
-	
+
 	t.EqualTrue(rule.AllowVisitByIP("192.168.1.1"))
 	t.EqualTrue(rule.AllowVisitByIP("invalid.ip.address"))
 	t.EqualTrue(rule.AllowVisitByIP(""))
@@ -162,30 +162,30 @@ func TestAllowVisitByIPEdgeCases(tt *testing.T) {
 func TestLimiterRecovery(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Millisecond*100, 1, 1)
-	
+
 	for i := 0; i < 10; i++ {
 		key := i
 		rule.AllowVisit(key)
 	}
-	
+
 	time.Sleep(time.Millisecond * 200)
-	
+
 	t.EqualTrue(rule.AllowVisit("test"))
 }
 
 func TestLimiterAddMethodEdgeCases(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Second, 2, 1)
-	
+
 	t.EqualTrue(rule.AllowVisit("user1"))
 	t.EqualTrue(rule.AllowVisit("user2"))
-	
+
 	for i := 0; i < 5; i++ {
 		key := i
 		t.EqualTrue(rule.AllowVisit(key))
@@ -195,10 +195,10 @@ func TestLimiterAddMethodEdgeCases(tt *testing.T) {
 func TestNewRuleWithZeroAllowed(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Second, 0)
-	
+
 	t.EqualTrue(rule.AllowVisit("test"))
 	t.EqualFalse(rule.AllowVisit("test"))
 }
@@ -206,18 +206,18 @@ func TestNewRuleWithZeroAllowed(tt *testing.T) {
 func TestNewWithMultipleOverflowHandlers(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	customHandler := func(c *znet.Context) {
 		c.String(429, "Custom rate limit exceeded")
 	}
-	
+
 	limiter := limiter.New(2, customHandler)
-	
+
 	r := znet.New("test")
 	r.GET("/test", func(c *znet.Context) {
 		c.String(200, "ok")
 	}, limiter)
-	
+
 	for i := 0; i < 2; i++ {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/test", nil)
@@ -225,7 +225,7 @@ func TestNewWithMultipleOverflowHandlers(tt *testing.T) {
 		r.ServeHTTP(w, req)
 		t.EqualExit(200, w.Code)
 	}
-	
+
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("X-Real-Ip", "10.0.0.1")
@@ -237,14 +237,14 @@ func TestNewWithMultipleOverflowHandlers(tt *testing.T) {
 func TestConcurrentAccess(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Second, 100)
-	
+
 	var wg sync.WaitGroup
 	var successCount int64
 	var failCount int64
-	
+
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go func() {
@@ -256,9 +256,9 @@ func TestConcurrentAccess(tt *testing.T) {
 			}
 		}()
 	}
-	
+
 	wg.Wait()
-	
+
 	t.EqualExit(int64(100), successCount)
 	t.EqualExit(int64(900), failCount)
 }
@@ -266,15 +266,15 @@ func TestConcurrentAccess(tt *testing.T) {
 func TestRuleSorting(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
 	t.Parallel()
-	
+
 	rule := limiter.NewRule()
 	rule.AddRule(time.Minute, 10)
 	rule.AddRule(time.Second, 1)
 	rule.AddRule(time.Hour, 100)
-	
+
 	remaining := rule.Remaining("test")
 	t.EqualExit(3, len(remaining))
-	
+
 	expected := []int{1, 10, 100}
 	for i, val := range remaining {
 		t.EqualExit(expected[i], val)

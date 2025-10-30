@@ -53,82 +53,82 @@ func TestURLMatchAndParse(t *testing.T) {
 func Test_parsPattern(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	p, s := parsePattern([]string{`{name:[\w\p\-]+}.{ext:[\w]+}`}, "")
+	p, s := ParsePattern([]string{`{name:[\w\p\-]+}.{ext:[\w]+}`}, "")
 	tt.Log(p, s)
 	tt.EqualExit(`([\w\p\-]+).([\w]+)`, p)
 	tt.EqualExit([]string{"name", "ext"}, s)
 
-	p, s = parsePattern([]string{"{name:[\\w\\d-]+}"}, "")
+	p, s = ParsePattern([]string{"{name:[\\w\\d-]+}"}, "")
 	tt.Log(p, s)
 	tt.EqualExit("([\\w\\d-]+)", p)
 	tt.EqualExit([]string{"name"}, s)
 
-	p, s = parsePattern([]string{":name", ":id"}, "/")
+	p, s = ParsePattern([]string{":name", ":id"}, "/")
 	tt.Log(p, s)
 	tt.EqualExit(`/([^/]+)/([\d]+)`, p)
 	tt.EqualExit([]string{"name", "id"}, s)
 
-	p, s = parsePattern([]string{"{p:[\\w\\d-]+}.pth"}, "")
+	p, s = ParsePattern([]string{"{p:[\\w\\d-]+}.pth"}, "")
 	tt.Log(p, s)
 	tt.EqualExit("([\\w\\d-]+).pth", p)
 	tt.EqualExit([]string{"p"}, s)
 
-	p, s = parsePattern([]string{`{key:[^\/.]+}.{ext:[^/.]+}`}, "")
+	p, s = ParsePattern([]string{`{key:[^\/.]+}.{ext:[^/.]+}`}, "")
 	tt.Log(p, s)
 	tt.EqualExit(`([^\/.]+).([^/.]+)`, p)
 	tt.EqualExit([]string{"key", "ext"}, s)
 
-	p, s = parsePattern([]string{"{name:[^\\", ".]+}"}, "")
+	p, s = ParsePattern([]string{"{name:[^\\", ".]+}"}, "")
 	tt.Log(p, s)
 	tt.EqualExit("([^/.]+)", p)
 	tt.EqualExit([]string{"name"}, s)
 
-	p, s = parsePattern([]string{`xxx-(?P<name>[\w\p{Han}\-]+).(?P<ext>[a-zA-Z]+)`}, "")
+	p, s = ParsePattern([]string{`xxx-(?P<name>[\w\p{Han}\-]+).(?P<ext>[a-zA-Z]+)`}, "")
 	tt.Log(p, s)
 	tt.EqualExit("xxx-(?P<name>[\\w\\p{Han}\\-]+).(?P<ext>[a-zA-Z]+)", p)
 	tt.EqualExit([]string{"name", "ext"}, s)
 }
 
 func TestURLMatchAndParse_SafeCases(t *testing.T) {
-    tt := zlsgo.NewTest(t)
+	tt := zlsgo.NewTest(t)
 
-    // 1) Edge case: colon without name should not panic and should match a segment
-    if params, ok := Utils.URLMatchAndParse("/a/b", "/a/:"); !ok {
-        t.Fatalf("expected ok for route /a/: with /a/b, got params=%v ok=%v", params, ok)
-    }
+	// 1) Edge case: colon without name should not panic and should match a segment
+	if params, ok := Utils.URLMatchAndParse("/a/b", "/a/:"); !ok {
+		t.Fatalf("expected ok for route /a/: with /a/b, got params=%v ok=%v", params, ok)
+	}
 
-    // 2) Braces without explicit expr defaults to defaultPattern
-    if params, ok := Utils.URLMatchAndParse("/file/readme", "/file/{name}"); !ok {
-        t.Fatalf("expected ok for /file/{name}, got params=%v ok=%v", params, ok)
-    } else if params["name"] != "readme" {
-        t.Fatalf("expected name=readme, got %v", params)
-    }
+	// 2) Braces without explicit expr defaults to defaultPattern
+	if params, ok := Utils.URLMatchAndParse("/file/readme", "/file/{name}"); !ok {
+		t.Fatalf("expected ok for /file/{name}, got params=%v ok=%v", params, ok)
+	} else if params["name"] != "readme" {
+		t.Fatalf("expected name=readme, got %v", params)
+	}
 
-    // 3) {id} defaults to digits
-    if params, ok := Utils.URLMatchAndParse("/user/123", "/user/{id}"); !ok {
-        t.Fatalf("expected ok for /user/{id}, got params=%v ok=%v", params, ok)
-    } else if params["id"] != "123" {
-        t.Fatalf("expected id=123, got %v", params)
-    }
+	// 3) {id} defaults to digits
+	if params, ok := Utils.URLMatchAndParse("/user/123", "/user/{id}"); !ok {
+		t.Fatalf("expected ok for /user/{id}, got params=%v ok=%v", params, ok)
+	} else if params["id"] != "123" {
+		t.Fatalf("expected id=123, got %v", params)
+	}
 
-    // 4) wildcard * captures rest
-    if params, ok := Utils.URLMatchAndParse("/static/css/app.css", "/static/*"); !ok {
-        t.Fatalf("expected ok for /static/*, got params=%v ok=%v", params, ok)
-    } else if params["*"] != "css/app.css" {
-        t.Fatalf("expected *=css/app.css, got %v", params)
-    }
+	// 4) wildcard * captures rest
+	if params, ok := Utils.URLMatchAndParse("/static/css/app.css", "/static/*"); !ok {
+		t.Fatalf("expected ok for /static/*, got params=%v ok=%v", params, ok)
+	} else if params["*"] != "css/app.css" {
+		t.Fatalf("expected *=css/app.css, got %v", params)
+	}
 
-    // 5) named group regex works and maps by name
-    if params, ok := Utils.URLMatchAndParse("/r/abc", "/r/(?P<slug>[^/]+)"); !ok {
-        t.Fatalf("expected ok for named group, got params=%v ok=%v", params, ok)
-    } else if params["slug"] != "abc" {
-        t.Fatalf("expected slug=abc, got %v", params)
-    }
+	// 5) named group regex works and maps by name
+	if params, ok := Utils.URLMatchAndParse("/r/abc", "/r/(?P<slug>[^/]+)"); !ok {
+		t.Fatalf("expected ok for named group, got params=%v ok=%v", params, ok)
+	} else if params["slug"] != "abc" {
+		t.Fatalf("expected slug=abc, got %v", params)
+	}
 
-    // 6) more captures than names are safely ignored
-    if _, ok := Utils.URLMatchAndParse("/x/ab12", "/x/{name:([a-z]+)([0-9]+)}"); !ok {
-        t.Fatalf("expected ok for extra-capture case")
-    }
+	// 6) more captures than names are safely ignored
+	if _, ok := Utils.URLMatchAndParse("/x/ab12", "/x/{name:([a-z]+)([0-9]+)}"); !ok {
+		t.Fatalf("expected ok for extra-capture case")
+	}
 
-    tt.EqualTrue(true)
+	tt.EqualTrue(true)
 }

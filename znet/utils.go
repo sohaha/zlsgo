@@ -58,15 +58,17 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 	var (
 		pattern   string
 		matchName []string
+		regex     *regexp.Regexp
 	)
 	matchParams, ok = make(map[string]string), true
+
 	if v, ok := matchCache.Get(path); ok {
 		m := v.([]string)
 		pattern = m[0]
 		matchName = m[1:]
 	} else {
 		res := strings.Split(path, "/")
-		pattern, matchName = parsePattern(res, "/")
+		pattern, matchName = ParsePattern(res, "/")
 		matchCache.Set(path, append([]string{pattern}, matchName...))
 	}
 
@@ -74,19 +76,30 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 		return nil, false
 	}
 
-	rr, err := zstring.RegexExtract(pattern, requestURL)
-	if err != nil || len(rr) == 0 {
+	// Compile regex to get proper subexpression names
+	if regex == nil {
+		var err error
+		regex, err = regexp.Compile(pattern)
+		if err != nil {
+			return nil, false
+		}
+	}
+
+	rr := regex.FindStringSubmatch(requestURL)
+	if len(rr) == 0 {
 		return nil, false
 	}
 
 	if rr[0] == requestURL {
-		rr = rr[1:]
-		if len(matchName) != 0 {
-			for k, v := range rr {
-				if k < len(matchName) {
-					if key := matchName[k]; key != "" {
-						matchParams[key] = v
-					}
+		// Use regex's subexpression names for proper named group support
+		subexpNames := regex.SubexpNames()
+		for i, value := range rr[1:] {
+			if i+1 < len(subexpNames) {
+				if name := subexpNames[i+1]; name != "" {
+					matchParams[name] = value
+				} else if i < len(matchName) {
+					// Fallback to parsed names for non-named capture groups
+					matchParams[matchName[i]] = value
 				}
 			}
 		}
@@ -96,10 +109,10 @@ func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map
 	return nil, false
 }
 
-// parsePattern converts a path pattern into a regular expression and extracts
+// ParsePattern converts a path pattern into a regular expression and extracts
 // parameter names. It handles various parameter formats including :param, *wildcard,
 // and {name:pattern} syntax.
-func parsePattern(res []string, prefix string) (string, []string) {
+func ParsePattern(res []string, prefix string) (string, []string) {
 	var (
 		matchName []string
 		pattern   string
@@ -115,12 +128,13 @@ func parsePattern(res []string, prefix string) (string, []string) {
 			continue
 		}
 		pattern = pattern + prefix
-		l := len(str) - 1
-		i := strings.IndexRune(str, ')')
-		i2 := strings.IndexRune(str, '(')
+		strLen := len(str)
+		l := strLen - 1
+		parenCloseIdx := strings.IndexRune(str, ')')
+		parenOpenIdx := strings.IndexRune(str, '(')
 		firstChar := str[0]
 		// TODO Need to optimize
-		if i2 != -1 && i != -1 {
+		if parenOpenIdx != -1 && parenCloseIdx != -1 && !strings.HasPrefix(str, "{") {
 			r, err := regexp.Compile(str)
 			if err != nil {
 				return "", nil
@@ -149,39 +163,42 @@ func parsePattern(res []string, prefix string) (string, []string) {
 			pattern = pattern + "(" + allPattern + ")"
 			matchName = append(matchName, allKey)
 		} else {
-			i := strings.IndexRune(str, '}')
-			i2 := strings.IndexRune(str, '{')
-			if i2 != -1 && i != -1 {
-				if i == l && i2 == 0 {
+			braceCloseIdx := strings.IndexRune(str, '}')
+			braceOpenIdx := strings.IndexRune(str, '{')
+			if braceOpenIdx != -1 && braceCloseIdx != -1 {
+				if braceCloseIdx == l && braceOpenIdx == 0 {
 					matchStr := str[1:l]
 					name, expr := parseBracePlaceholder(matchStr)
 					matchName = append(matchName, name)
 					pattern = pattern + "(" + expr + ")"
 				} else {
-					if i2 != 0 {
-						p, m := parsePattern([]string{str[:i2]}, "")
+					// 处理前缀部分（花括号前的内容）
+					if braceOpenIdx > 0 {
+						p, m := ParsePattern([]string{str[:braceOpenIdx]}, "")
 						if p != "" {
 							pattern = pattern + p
 							matchName = append(matchName, m...)
 						}
-						str = str[i2:]
+						str = str[braceOpenIdx:]
+						// 重新计算相对索引
+						braceCloseIdx = strings.IndexRune(str, '}')
+						braceOpenIdx = 0
 					}
-					if i >= 0 {
-						ni := i - i2
-						if ni < 0 {
-							return "", nil
-						}
+					// 处理花括号部分
+					ni := braceCloseIdx - braceOpenIdx
+					if ni > 0 {
 						matchStr := str[1:ni]
 						name, expr := parseBracePlaceholder(matchStr)
 						matchName = append(matchName, name)
 						pattern = pattern + "(" + expr + ")"
-						p, m := parsePattern([]string{str[ni+1:]}, "")
-						if p != "" {
-							pattern = pattern + p
-							matchName = append(matchName, m...)
+						// 处理后缀部分（花括号后的内容）
+						if ni+1 < len(str) {
+							p, m := ParsePattern([]string{str[ni+1:]}, "")
+							if p != "" {
+								pattern = pattern + p
+								matchName = append(matchName, m...)
+							}
 						}
-					} else {
-						pattern = pattern + str
 					}
 				}
 			} else {
