@@ -12,6 +12,10 @@
 - **SSE**: Server-Sent Events 客户端
 - **HTML 解析**: HTML 文档解析和查询
 - **查询选择器**: CSS 选择器查询
+- **文件上传/下载**: 支持进度回调的大文件传输
+- **代理支持**: HTTP/HTTPS/SOCKS5 代理配置
+- **Cookie 管理**: 自动或手动的 Cookie 处理
+- **重试机制**: 可配置的请求重试策略
 - **调试**: 内置的请求和响应调试工具
 
 ## 核心功能
@@ -47,10 +51,6 @@ func (e *Engine) SetJSONIndent(prefix, indent string)
 func (e *Engine) SetXMLIndent(prefix, indent string)
 // 设置用户代理
 func (e *Engine) SetUserAgent(fn func() string)
-// 设置标志
-func (e *Engine) SetFlags(flags int)
-// 获取标志
-func (e *Engine) Flags() int
 // 获取 HTTP 客户端
 func (e *Engine) Client() *http.Client
 // 设置 HTTP 客户端
@@ -300,7 +300,8 @@ func main() {
     }
     
     // POST 请求
-    resp, err = zhttp.Post("https://httpbin.org/post", map[string]interface{}{
+    file := zhttp.File("./xx.jpg")
+    resp, err = zhttp.Post("https://httpbin.org/post", file, ztype.Map{
         "name": "张三",
         "age":  25,
     })
@@ -490,28 +491,47 @@ func main() {
     }
     
     // SSE 示例
+    sse, err := zhttp.SSE("http://127.0.0.1:3788/sse")
+    if err == nil {
+        // 设置超时自动关闭
+        go func() {
+            time.Sleep(time.Second * 15)
+            sse.Close()
+        }()
+        
+        // 监听事件
+        sseFor:
+        for {
+            select {
+            case <-sse.Done():
+                fmt.Println("SSE 连接已关闭")
+                break sseFor
+            case ev := <-sse.Event():
+                fmt.Printf("ID:%s 事件:%s 数据:%s\n", ev.ID, ev.Event, string(ev.Data))
+            case err := <-sse.Error():
+                fmt.Printf("SSE 错误: %v\n", err)
+                break sseFor
+            }
+        }
+    }
+    
+    // SSE 示例 - 使用引擎配置和回调
     sseEngine, err := engine.SSE("https://example.com/events", func(opt *zhttp.SSEOption) {
         // 配置 SSE 选项
     })
     if err == nil {
-        // 监听事件
-        go func() {
-            for event := range sseEngine.Event() {
-                fmt.Printf("SSE 事件: %+v\n", event)
-            }
-        }()
+        // 验证响应头
+        sseEngine.VerifyHeader(func(header http.Header) bool {
+            return header.Get("Content-Type") == "text/event-stream"
+        })
         
-        // 监听错误
-        go func() {
-            for err := range sseEngine.Error() {
-                fmt.Printf("SSE 错误: %v\n", err)
-            }
-        }()
-        
-        // 等待完成
-        <-sseEngine.Done()
-        
-        // 关闭 SSE
+        // 使用回调方式处理消息
+        done, err := sseEngine.OnMessage(func(event *zhttp.SSEEvent) {
+            fmt.Printf("收到 SSE 消息: %s\n", string(event.Data))
+        })
+        if err == nil {
+            <-done // 等待处理完成
+        }
         sseEngine.Close()
     }
     
