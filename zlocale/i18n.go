@@ -112,6 +112,26 @@ func (i *I18n) LoadLanguageWithConfig(langCode, langName string, data map[string
 
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
+
+	if existingLang, exists := i.languages[langCode]; exists {
+		existingLang.mutex.Lock()
+		defer existingLang.mutex.Unlock()
+
+		if langName != "" {
+			existingLang.name = langName
+		}
+
+		if cache != nil {
+			existingLang.templateCache = cache
+		}
+
+		for k, v := range data {
+			existingLang.data[k] = v
+		}
+
+		return nil
+	}
+
 	lang := &Language{
 		code:          langCode,
 		name:          langName,
