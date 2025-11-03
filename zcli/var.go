@@ -131,7 +131,7 @@ func getBuiltInTranslations() map[string]map[string]string {
 // initInternalI18n initializes the internal zlocale instance with existing translations
 func initInternalI18n() {
 	initOnce.Do(func() {
-		internalI18n = zlocale.New(Lang)
+		internalI18n = zlocale.New("en")
 
 		// Load built-in translations into zlocale
 		translations := getBuiltInTranslations()
@@ -158,7 +158,11 @@ func syncLanguageWithInternalI18n() {
 
 	// Only sync if language has actually changed
 	if lastSyncedLang != Lang {
-		internalI18n.SetLanguage(Lang)
+		err := internalI18n.SetLanguage(Lang)
+		if err != nil {
+			lastSyncedLang = Lang
+			return
+		}
 		lastSyncedLang = Lang
 	}
 }
@@ -188,6 +192,17 @@ func GetLangText(key string, def ...string) string {
 	syncLanguageWithInternalI18n()
 
 	translation := internalI18n.T(key)
+
+	if _, exists := langs[Lang]; !exists {
+		if lang, ok := langs[defaultLang][key]; ok {
+			return lang
+		}
+		if len(def) > 0 {
+			return def[0]
+		}
+		return key
+	}
+
 	if translation == key {
 		if lang, ok := langs[Lang][key]; ok {
 			return lang

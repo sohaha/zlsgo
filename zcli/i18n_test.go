@@ -68,6 +68,8 @@ func TestI18n_SetLangText(t *testing.T) {
 func TestI18n_LanguageSync(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
+	resetI18nForTesting()
+
 	originalLang := Lang
 	defer func() { Lang = originalLang }()
 
@@ -82,7 +84,6 @@ func TestI18n_LanguageSync(t *testing.T) {
 	Lang = "invalid_lang"
 	syncLanguageWithInternalI18n()
 	result := GetLangText("command_empty")
-	tt.Log("Invalid language result:", result)
 	tt.EqualTrue(result == "command_empty" || result == "Command name cannot be empty")
 }
 
