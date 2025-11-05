@@ -36,11 +36,13 @@ func (m Map) DeepCopy() Map {
 		case map[string]interface{}:
 			newMap[k] = Map(v).DeepCopy()
 		default:
-			typ := zreflect.TypeOf(v)
-			if typ.Kind() == reflect.Map {
-				newMap[k] = ToMap(v).DeepCopy()
-			} else {
-				newMap[k] = v
+			if v != nil {
+				typ := zreflect.TypeOf(v)
+				if typ.Kind() == reflect.Map {
+					newMap[k] = ToMap(v).DeepCopy()
+				} else {
+					newMap[k] = v
+				}
 			}
 		}
 	}
