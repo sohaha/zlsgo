@@ -68,7 +68,6 @@ func TestNewMap(t *testing.T) {
 		}
 		t.Logf("%s %+v", v, d)
 	}
-
 }
 
 func TestNewMapKeys(t *testing.T) {
@@ -130,7 +129,7 @@ func TestMapSet(t *testing.T) {
 	tt.Equal(1, m.Get("a").Int())
 	tt.EqualTrue(!m.IsEmpty())
 
-	var m2 = ztype.Map{}
+	m2 := ztype.Map{}
 
 	tt.EqualTrue(m2.IsEmpty())
 	tt.EqualTrue(!m2.Get("a").Exists())
@@ -160,7 +159,211 @@ func TestGetTypeCoverage(t *testing.T) {
 }
 
 func TestGetTypeMore(t *testing.T) {
-	if ztype.GetType(int32(1)) != "int32" || ztype.GetType(uint32(1)) != "uint32" { t.Fatal("GetType int32/uint32 failed") }
-	if ztype.GetType(uint16(1)) != "uint16" || ztype.GetType(int16(1)) != "int16" { t.Fatal("GetType int16/uint16 failed") }
-	if ztype.GetType(uint8(1)) != "uint8" { t.Fatal("GetType uint8 failed") }
+	if ztype.GetType(int32(1)) != "int32" || ztype.GetType(uint32(1)) != "uint32" {
+		t.Fatal("GetType int32/uint32 failed")
+	}
+	if ztype.GetType(uint16(1)) != "uint16" || ztype.GetType(int16(1)) != "int16" {
+		t.Fatal("GetType int16/uint16 failed")
+	}
+	if ztype.GetType(uint8(1)) != "uint8" {
+		t.Fatal("GetType uint8 failed")
+	}
+}
+
+func TestTypeDefaults(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var nilType ztype.Type
+
+	tt.Equal("default", nilType.String("default"))
+	tt.Equal([]byte("default"), nilType.Bytes([]byte("default")))
+	tt.EqualTrue(nilType.Bool(true))
+	tt.Equal(42, nilType.Int(42))
+	tt.Equal(int8(42), nilType.Int8(42))
+	tt.Equal(int16(42), nilType.Int16(42))
+	tt.Equal(int32(42), nilType.Int32(42))
+	tt.Equal(int64(42), nilType.Int64(42))
+	tt.Equal(uint(42), nilType.Uint(42))
+	tt.Equal(uint8(42), nilType.Uint8(42))
+	tt.Equal(uint16(42), nilType.Uint16(42))
+	tt.Equal(uint32(42), nilType.Uint32(42))
+	tt.Equal(uint64(42), nilType.Uint64(42))
+	tt.Equal(float32(42.5), nilType.Float32(42.5))
+	tt.Equal(42.5, nilType.Float64(42.5))
+}
+
+func TestTypeConversionsEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	type TestStruct struct {
+		Name string
+	}
+	ts := TestStruct{Name: "test"}
+
+	wrapped := ztype.New(ts)
+	tt.EqualTrue(wrapped.Exists())
+	tt.EqualTrue(wrapped.String() != "")
+
+	outer := ztype.New(wrapped)
+	tt.Equal(wrapped.String(), outer.String())
+
+	mapData := map[string]interface{}{
+		"name": "test",
+		"items": []map[string]interface{}{
+			{"id": 1, "name": "first"},
+			{"id": 2, "name": "second"},
+		},
+	}
+	mapsType := ztype.New(mapData)
+	maps := mapsType.Maps()
+	tt.EqualTrue(len(maps) > 0)
+
+	emptyMapType := ztype.New(map[string]interface{}{})
+	emptyMaps := emptyMapType.Maps()
+	tt.EqualTrue(len(emptyMaps) == 0)
+
+	nonMapType := ztype.New("just a string")
+	resultMap := nonMapType.Map()
+	tt.EqualTrue(len(resultMap) > 0)
+}
+
+func TestTypeSliceMethods(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	sliceData := []int{1, 2, 3, 4, 5}
+	sliceType := ztype.New(sliceData)
+
+	noConvSlice := sliceType.Slice(true)
+	tt.Equal(len(sliceData), len(noConvSlice.Value()))
+
+	tt.Equal([]int{1, 2, 3, 4, 5}, sliceType.SliceInt())
+	tt.Equal([]string{"1", "2", "3", "4", "5"}, sliceType.SliceString())
+	tt.Equal(5, len(sliceType.SliceValue()))
+
+	singleValue := ztype.New(42)
+	singleSlice := singleValue.Slice()
+	tt.Equal(1, len(singleSlice.Value()))
+	tt.Equal(42, singleSlice.Int()[0])
+
+	emptyType := ztype.New(nil)
+	emptySlice := emptyType.Slice()
+	tt.Equal(0, len(emptySlice.Value()))
+
+	stringType := ztype.New("a,b,c")
+	stringSlice := stringType.Slice()
+	tt.Equal(1, len(stringSlice.Value()))
+}
+
+func TestTypeGetNestedPaths(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	nestedData := map[string]interface{}{
+		"user": map[string]interface{}{
+			"profile": map[string]interface{}{
+				"name": "John",
+				"age":  30,
+			},
+			"settings": map[string]interface{}{
+				"theme": "dark",
+			},
+		},
+		"items": []interface{}{
+			map[string]interface{}{"id": 1, "name": "first"},
+			map[string]interface{}{"id": 2, "name": "second"},
+		},
+	}
+
+	nestedType := ztype.New(nestedData)
+
+	tt.Equal("John", nestedType.Get("user.profile.name").String())
+	tt.Equal(30, nestedType.Get("user.profile.age").Int())
+	tt.Equal("dark", nestedType.Get("user.settings.theme").String())
+
+	tt.Equal("first", nestedType.Get("items.0.name").String())
+	tt.Equal(2, nestedType.Get("items.1.id").Int())
+
+	tt.EqualTrue(!nestedType.Get("user.nonexistent").Exists())
+	tt.EqualTrue(!nestedType.Get("user.profile.nonexistent").Exists())
+	tt.EqualTrue(!nestedType.Get("items.5.name").Exists())
+
+	nilType := ztype.New(nil)
+	tt.EqualTrue(!nilType.Get("any.path").Exists())
+}
+
+func TestTypeNumericConversions(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	stringInt := ztype.New("123")
+	tt.Equal(123, stringInt.Int())
+	tt.Equal(int64(123), stringInt.Int64())
+	tt.Equal(uint(123), stringInt.Uint())
+	tt.Equal(123.0, stringInt.Float64())
+
+	stringFloat := ztype.New("123.456")
+	tt.Equal(123, stringFloat.Int())
+	tt.Equal(123.456, stringFloat.Float64())
+	tt.Equal(float32(123.456), stringFloat.Float32())
+
+	trueType := ztype.New(true)
+	tt.Equal(1, trueType.Int())
+	tt.Equal(uint(1), trueType.Uint())
+	tt.Equal(0.0, trueType.Float64())
+
+	falseType := ztype.New(false)
+	tt.Equal(0, falseType.Int())
+	tt.Equal(uint(0), falseType.Uint())
+	tt.Equal(0.0, falseType.Float64())
+
+	bigNumber := ztype.New("9223372036854775806")
+	tt.EqualTrue(bigNumber.Int64() > 0)
+	tt.Equal(int64(9223372036854775806), bigNumber.Int64())
+}
+
+func TestTypeEdgeCases(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	type EmptyStruct struct{}
+	emptyType := ztype.New(EmptyStruct{})
+	tt.EqualTrue(emptyType.Exists())
+	tt.EqualTrue(emptyType.String() != "")
+
+	var nilInterface interface{}
+	nilInterfaceType := ztype.New(nilInterface)
+	tt.EqualTrue(!nilInterfaceType.Exists())
+
+	fnType := ztype.New(func() {})
+	tt.EqualTrue(fnType.Exists())
+	tt.EqualTrue(fnType.String() == "")
+
+	ch := make(chan int)
+	chType := ztype.New(ch)
+	tt.EqualTrue(chType.Exists())
+
+	value := 42
+	ptrType := ztype.New(&value)
+	tt.Equal(42, ptrType.Int())
+
+	var nilPtr *int
+	nilPtrType := ztype.New(nilPtr)
+	tt.EqualTrue(nilPtrType.Exists())
+}
+
+func TestTypeByteConversion(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	stringType := ztype.New("test string")
+	bytes := stringType.Bytes()
+	tt.Equal("test string", string(bytes))
+
+	var nilType ztype.Type
+	tt.Equal([]byte("default"), nilType.Bytes([]byte("default")))
+
+	originalBytes := []byte("original")
+	bytesType := ztype.New(originalBytes)
+	resultBytes := bytesType.Bytes()
+	tt.Equal(originalBytes, resultBytes)
+
+	numberType := ztype.New(123)
+	numberBytes := numberType.Bytes()
+	tt.Equal("123", string(numberBytes))
 }
