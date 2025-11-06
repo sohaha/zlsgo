@@ -569,6 +569,45 @@ promise.Then(func(result string) (string, error) {
 })
 ```
 
+### 调用合并器 (Coalescer)
+
+`NewCoalescer` 创建一个调用合并器，将高频调用合并为少量执行。
+
+```go
+func NewCoalescer(fn func()) func()
+```
+
+**行为说明**:
+- 线程安全。
+- 当 `fn` 执行时，新调用会累积到下一轮执行。
+- 若调用发生在 `fn` 执行期间，则至少再执行一次。
+
+**示例**:
+
+```go
+// 基础用法
+coalescer := zsync.NewCoalescer(func() {
+    fmt.Println("执行一次")
+})
+
+for i := 0; i < 100; i++ {
+    coalescer() // 仅打印少数几次
+}
+
+// 并发调用
+var count int32
+coalescer = zsync.NewCoalescer(func() {
+    atomic.AddInt32(&count, 1)
+})
+
+var wg zsync.WaitGroup
+for i := 0; i < 1000; i++ {
+    wg.Go(coalescer)
+}
+wg.Wait()
+// count 远小于 1000
+```
+
 ## 最佳实践
 
 1. 优先使用原子操作
