@@ -12,32 +12,37 @@ func TestRBMutex(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
 	var (
-		wg    WaitGroup
-		total = 100
-		maps  = make(map[int]int)
-		mu    = NewRBMutex()
+		wg      WaitGroup
+		total   = 100
+		counter int
+		mu      = NewRBMutex()
 	)
 
 	for i := 0; i < total; i++ {
-		maps[i] = i
+		wg.Go(func() {
+			mu.Lock()
+			counter++
+			mu.Unlock()
+		})
 	}
+	wg.Wait()
+	tt.Equal(total, counter)
 
+	counter = 42
+	readValues := make([]int, total)
 	for i := 0; i < total; i++ {
 		ii := i
 		wg.Go(func() {
-			mu.Lock()
-			maps[ii*2] = ii * 2
-			mu.Unlock()
-		})
-
-		wg.Go(func() {
 			token := mu.RLock()
-			tt.Equal(ii, maps[ii])
+			readValues[ii] = counter
 			mu.RUnlock(token)
 		})
 	}
-
 	wg.Wait()
+
+	for i := 0; i < total; i++ {
+		tt.Equal(42, readValues[i])
+	}
 }
 
 func BenchmarkRBMutexReadOnceAfterWrite(b *testing.B) {
