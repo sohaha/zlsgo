@@ -126,7 +126,7 @@ func (f *MemoryFile) Sync() error {
 	f.buffer.Reset()
 	f.lock.Unlock()
 
-	return WriteFile(f.name, b)
+	return WriteFile(f.name, b, true)
 }
 
 // Write writes data to the memory file.
