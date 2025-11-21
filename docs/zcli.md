@@ -204,11 +204,17 @@ if *count < 0 {
 ### 服务管理
 ```go
 // 启动后台服务
-err := zcli.LaunchService("myapp", "我的应用", func() {
-    // 服务逻辑
-    for {
-        // 服务循环
-    }
+ctx, cancel := context.WithCancel(context.Background())
+err := zcli.LaunchServiceRun("myapp", "我的应用", func() {
+    // 服务逻辑 ...
+    
+    // 等待结束
+    <-zcli.SingleKillSignal()
+    
+    // 释放
+    cancel()
+}, &daemon.Config{
+		Context: ctx,
 })
 ```
 
