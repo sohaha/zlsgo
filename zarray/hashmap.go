@@ -66,6 +66,16 @@ type (
 	}
 )
 
+type provideResult[V any] struct {
+	value V
+	ok    bool
+}
+
+func makeSingleflightKey[K hashable](hash uintptr, key K) string {
+	keyStr := zutil.KeySignature(key)
+	return "h" + strconv.FormatUint(uint64(hash), 16) + ":" + keyStr
+}
+
 // NewHashMap creates a new concurrent hashmap with the specified initial size.
 // If no size is provided, a default size is used.
 func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
@@ -192,7 +202,6 @@ func (m *Maper[K, V]) get(h uintptr, key K) (value V, ok bool) {
 	return
 }
 
-// ProvideGet retrieves a value from the map, computing and storing it if not present.
 // If the key exists, returns the value with loaded=true.
 // If the key doesn't exist, calls the provide function to compute a value,
 // stores it in the map if the provider returns true, and returns with computed=true.
@@ -213,20 +222,34 @@ func (m *Maper[K, V]) ProvideGet(key K, provide func() (V, bool)) (actual V, loa
 		}
 	}
 
-	var r bool
-	_, _, _ = m.gsf.Do(strconv.FormatInt(int64(h), 10), func() (interface{}, error) {
-		actual, loaded = provide()
-		if loaded {
-			m.Set(key, actual)
-			computed = true
+	keyStr := makeSingleflightKey(h, key)
+	v, err, shared := m.gsf.Do(keyStr, func() (interface{}, error) {
+		value, ok := provide()
+		if ok {
+			m.Set(key, value)
 		}
-		r = true
-		return nil, nil
+		return provideResult[V]{value: value, ok: ok}, nil
 	})
-
-	if !r {
-		actual, loaded = m.get(h, key)
+	if err != nil {
+		return
 	}
+
+	if res, ok := v.(provideResult[V]); ok {
+		if res.ok {
+			if !shared {
+				actual = res.value
+				loaded = true
+				computed = true
+				return
+			}
+
+			actual, loaded = m.get(h, key)
+			computed = true
+			return
+		}
+	}
+
+	actual, loaded = m.get(h, key)
 	return
 }
 

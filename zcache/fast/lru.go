@@ -194,27 +194,41 @@ func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 	return nil, false
 }
 
+// provideResult is returned through singleflight to propagate provider status.
+type provideResult struct {
+	value interface{}
+	ok    bool
+}
+
 // ProvideGet retrieves an item from the cache, or computes and stores it if not present.
 // If the item doesn't exist, the provide function is called to generate the value.
 // Returns the item's value and a boolean indicating whether the item was found or created.
 func (l *FastCache) ProvideGet(key string, provide func() (interface{}, bool), expiration ...time.Duration) (interface{}, bool) {
-	if i, _, ok := l.get(key); ok && i != nil {
-		return *i, true
+	if i, b, ok := l.get(key); ok {
+		switch {
+		case i != nil:
+			return *i, true
+		case b != nil:
+			return b, true
+		default:
+			return nil, true
+		}
 	}
 
-	v, err, _ := l.gsf.Do(key, func() (value interface{}, err error) {
+	v, err, _ := l.gsf.Do(key, func() (interface{}, error) {
 		value, ok := provide()
 		if ok {
 			l.Set(key, value, expiration...)
 		}
-		return
+		return provideResult{value: value, ok: ok}, nil
 	})
 	if err != nil {
 		return nil, false
 	}
 
-	l.gsf.Forget(key)
-
+	if res, ok := v.(provideResult); ok {
+		return res.value, res.ok
+	}
 	return v, true
 }
 

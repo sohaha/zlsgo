@@ -33,6 +33,7 @@ const (
 var (
 	ErrKeyRequired      = errors.New("key is required")
 	ErrNodeExists       = errors.New("node already exists")
+	ErrNodeNotFound     = errors.New("node not found")
 	ErrNoAvailableNodes = errors.New("no available nodes")
 	ErrEmptyCallback    = errors.New("callback function cannot be empty")
 	ErrNoNodesAdded     = errors.New("please add nodes first")
@@ -51,7 +52,7 @@ type balancerNode[T any] struct {
 	failedAt *zutil.Int64
 	cooldown *zutil.Int64
 	max      int64
-	weight   uint64
+	weight   *zutil.Uint64
 }
 
 type BalancerNodeOptions struct {
@@ -61,6 +62,16 @@ type BalancerNodeOptions struct {
 	Weight uint64
 	// Node cooldown period after failure, default is 1000ms
 	Cooldown int64
+}
+
+// BalancerNodeInfo contains complete information about a balancer node
+type BalancerNodeInfo[T any] struct {
+	Node      T    // Node data
+	Weight    uint64 // Current weight
+	MaxConns  int64  // Maximum connections
+	Cooldown  int64  // Cooldown period in milliseconds
+	Available bool   // Whether the node is available
+	Active    int64  // Current active connections
 }
 
 // NewBalancer creates a new load balancer
@@ -87,6 +98,37 @@ func (b *Balancer[T]) Get(key string) (node T, available bool, exists bool) {
 	return n.node, isAvailable, true
 }
 
+// GetWeight returns the weight of the node with the given key
+func (b *Balancer[T]) GetWeight(key string) (uint64, bool) {
+	r := b.mu.RLock()
+	defer b.mu.RUnlock(r)
+
+	n, ok := b.nodes[key]
+	if !ok {
+		return 0, false
+	}
+
+	return n.weight.Load(), true
+}
+
+// SetWeight updates the weight of the node with the given key
+func (b *Balancer[T]) SetWeight(key string, weight uint64) error {
+	if weight < 1 || weight > 1000000 {
+		return errors.New("invalid weight: must be between 1 and 1000000")
+	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	n, ok := b.nodes[key]
+	if !ok {
+		return ErrNodeNotFound
+	}
+
+	n.weight.Store(weight)
+	return nil
+}
+
 // Add adds a new node to the load balancer
 func (b *Balancer[T]) Add(key string, node T, opt ...func(opts *BalancerNodeOptions)) error {
 	if key == "" {
@@ -109,7 +151,7 @@ func (b *Balancer[T]) Add(key string, node T, opt ...func(opts *BalancerNodeOpti
 	n := &balancerNode[T]{
 		node:     node,
 		max:      o.MaxConns,
-		weight:   o.Weight,
+		weight:   zutil.NewUint64(o.Weight),
 		total:    zutil.NewInt64(0),
 		failedAt: zutil.NewInt64(0),
 		cooldown: zutil.NewInt64(o.Cooldown),
@@ -215,17 +257,24 @@ func (b *Balancer[T]) selectNode(nodes []*balancerNode[T], strategy BalancerStra
 		}
 		switch strategy {
 		case StrategyWeighted:
-			maxWeight := uint64(0)
-			for _, node := range availableNodes[:currentCount] {
-				if node.weight > maxWeight {
-					maxWeight = node.weight
+			if allSameWeight := allNodesHaveSameWeight(availableNodes[:currentCount]); allSameWeight {
+				selectedIdx = fastRand(currentCount)
+				selectedNode = availableNodes[selectedIdx]
+			} else {
+				weighted := make(map[interface{}]uint32, currentCount)
+				for _, node := range availableNodes[:currentCount] {
+					weighted[node] = uint32(node.weight.Load())
 				}
-			}
-			for i, node := range availableNodes[:currentCount] {
-				if node.weight == maxWeight {
-					selectedIdx = i
-					selectedNode = node
-					break
+				randNode, err := zstring.WeightedRand(weighted)
+				if err != nil {
+					return nil, err
+				}
+				selectedNode = randNode.(*balancerNode[T])
+				for i, node := range availableNodes[:currentCount] {
+					if node == selectedNode {
+						selectedIdx = i
+						break
+					}
 				}
 			}
 		case StrategyRandom:
@@ -235,7 +284,7 @@ func (b *Balancer[T]) selectNode(nodes []*balancerNode[T], strategy BalancerStra
 			} else {
 				weighted := make(map[interface{}]uint32, currentCount)
 				for _, node := range availableNodes[:currentCount] {
-					weighted[node] = uint32(node.weight)
+					weighted[node] = uint32(node.weight.Load())
 				}
 				randNode, err := zstring.WeightedRand(weighted)
 				if err != nil {
@@ -259,7 +308,7 @@ func (b *Balancer[T]) selectNode(nodes []*balancerNode[T], strategy BalancerStra
 			minScore := int64(math.MaxInt64)
 			for i, node := range availableNodes[:currentCount] {
 				curr := node.total.Load()
-				score := curr * 100 / int64(node.weight)
+				score := curr * 100 / int64(node.weight.Load())
 				if score < minScore {
 					minScore = score
 					selectedIdx = i
@@ -286,9 +335,9 @@ func allNodesHaveSameWeight[T any](nodes []*balancerNode[T]) bool {
 		return true
 	}
 
-	weight := nodes[0].weight
+	weight := nodes[0].weight.Load()
 	for i := 1; i < len(nodes); i++ {
-		if nodes[i].weight != weight {
+		if nodes[i].weight.Load() != weight {
 			return false
 		}
 	}
@@ -414,4 +463,31 @@ func (b *Balancer[T]) Len() int {
 	r := b.mu.RLock()
 	defer b.mu.RUnlock(r)
 	return len(b.nodes)
+}
+
+// GetNodeInfo returns complete information about the node with the given key
+func (b *Balancer[T]) GetNodeInfo(key string) (BalancerNodeInfo[T], bool) {
+	r := b.mu.RLock()
+	defer b.mu.RUnlock(r)
+
+	n, ok := b.nodes[key]
+	if !ok {
+		var d BalancerNodeInfo[T]
+		return d, false
+	}
+
+	now := time.Now().UnixMilli()
+	failedAt := n.failedAt.Load()
+	isAvailable := !(failedAt > 0 && (now-failedAt) <= n.cooldown.Load())
+
+	info := BalancerNodeInfo[T]{
+		Node:      n.node,
+		Weight:    n.weight.Load(),
+		MaxConns:  n.max,
+		Cooldown:  n.cooldown.Load(),
+		Available: isAvailable,
+		Active:    n.total.Load(),
+	}
+
+	return info, true
 }

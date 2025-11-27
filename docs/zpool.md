@@ -40,6 +40,11 @@ func (b *Balancer[T]) RunByKeys(keys []string, fn func(node T) (normal bool, err
 func (b *Balancer[T]) WalkNodes(fn func(node T, available bool) (normal bool))
 func (b *Balancer[T]) Keys() []string
 func (b *Balancer[T]) Len() int
+
+// 权重管理
+func (b *Balancer[T]) GetWeight(key string) (uint64, bool)
+func (b *Balancer[T]) SetWeight(key string, weight uint64) error
+func (b *Balancer[T]) GetNodeInfo(key string) (BalancerNodeInfo[T], bool)
 ```
 
 ### 资源注入
@@ -170,6 +175,32 @@ func main() {
     // 移除节点
     balancer.Remove("node1")
     fmt.Println("节点1已移除")
+
+    // 权重管理示例
+    // 获取节点权重
+    if weight, exists := balancer.GetWeight("node2"); exists {
+        fmt.Printf("node2 当前权重: %d\n", weight)
+    }
+
+    // 动态调整权重
+    err = balancer.SetWeight("node2", 8)
+    if err != nil {
+        fmt.Printf("调整权重失败: %v\n", err)
+    } else {
+        fmt.Println("node2 权重已调整为 8")
+    }
+
+    // 错误处理示例
+    err = balancer.SetWeight("node2", 0) // 无效权重
+    if err != nil {
+        fmt.Printf("无效权重错误: %v\n", err)
+    }
+
+    // 获取完整节点信息
+    if info, exists := balancer.GetNodeInfo("node2"); exists {
+        fmt.Printf("节点信息: 节点=%s, 权重=%d, 最大连接=%d, 可用=%t, 活跃连接=%d\n",
+            info.Node, info.Weight, info.MaxConns, info.Available, info.Active)
+    }
     
     // 实际应用示例
     // 数据库连接池
@@ -338,10 +369,30 @@ type BalancerNodeOptions struct {
 var (
     ErrKeyRequired      = errors.New("key is required")
     ErrNodeExists       = errors.New("node already exists")
+    ErrNodeNotFound     = errors.New("node not found")
     ErrNoAvailableNodes = errors.New("no available nodes")
     ErrEmptyCallback    = errors.New("callback function cannot be empty")
     ErrNoNodesAdded     = errors.New("please add nodes first")
 )
+```
+
+### 权重管理最佳实践
+- 权重范围：1-1000000，推荐使用 1-100 范围
+- 权重为 0 或超过范围会返回错误信息（不需要外部处理，主要是开发配置错误）
+- 节点不存在时会返回 ErrNodeNotFound 错误
+- 建议根据服务器性能动态调整权重
+- 使用原子操作确保并发安全
+
+### 节点信息结构体
+```go
+type BalancerNodeInfo[T any] struct {
+    Node      T     // 节点数据
+    Weight    uint64 // 当前权重
+    MaxConns  int64  // 最大连接数
+    Cooldown  int64  // 冷却时间（毫秒）
+    Available bool   // 是否可用
+    Active    int64  // 当前活跃连接数
+}
 ```
 
 ## 最佳实践
@@ -350,3 +401,10 @@ var (
 2. 实现适当的错误处理
 3. 定期检查和调整负载均衡策略
 4. 注意资源释放时机
+5. 权重管理建议：
+   - 在服务启动时设置合理的初始权重
+   - 根据服务器性能动态调整权重（高性能服务器设置更高权重）
+   - 监控节点健康状态，及时调整不可用节点的权重
+   - 使用 GetNodeInfo 定期检查节点状态和活跃连接数
+   - 权重值支持 1-1000000 范围，推荐使用 1-100 以获得最佳性能
+   - 权重设置是原子操作，支持高并发环境下的安全调整

@@ -4,13 +4,14 @@
 package zarray_test
 
 import (
-	"encoding/json"
-	"testing"
-	"time"
+    "encoding/json"
+    "sync/atomic"
+    "testing"
+    "time"
 
-	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/zarray"
-	"github.com/sohaha/zlsgo/zsync"
+    "github.com/sohaha/zlsgo"
+    "github.com/sohaha/zlsgo/zarray"
+    "github.com/sohaha/zlsgo/zsync"
 )
 
 func TestHashMap(t *testing.T) {
@@ -186,4 +187,54 @@ func TestHashMapProvideGet(t *testing.T) {
 	v, ok = m.Get(1)
 	tt.EqualTrue(ok)
 	tt.Equal(100, v)
+}
+
+func TestHashMapProvideGetSameHashDifferentKeys(t *testing.T) {
+    tt := zlsgo.NewTest(t)
+    m := zarray.NewHashMap[string, int]()
+    m.SetHasher(func(string) uintptr { return 1 })
+
+    var c1, c2 int32
+    var wg zsync.WaitGroup
+
+    wg.Go(func() {
+        v, ok, computed := m.ProvideGet("a", func() (int, bool) {
+            atomic.AddInt32(&c1, 1)
+            time.Sleep(time.Millisecond * 10)
+            return 10, true
+        })
+        tt.EqualTrue(ok)
+        tt.EqualTrue(computed)
+        tt.Equal(10, v)
+    })
+
+    wg.Go(func() {
+        v, ok, computed := m.ProvideGet("b", func() (int, bool) {
+            atomic.AddInt32(&c2, 1)
+            time.Sleep(time.Millisecond * 10)
+            return 20, true
+        })
+        tt.EqualTrue(ok)
+        tt.EqualTrue(computed)
+        tt.Equal(20, v)
+    })
+
+    _ = wg.Wait()
+
+    v, ok, computed := m.ProvideGet("a", func() (int, bool) {
+        return 11, true
+    })
+    tt.EqualTrue(ok)
+    tt.EqualTrue(!computed)
+    tt.Equal(10, v)
+
+    v, ok, computed = m.ProvideGet("b", func() (int, bool) {
+        return 22, true
+    })
+    tt.EqualTrue(ok)
+    tt.EqualTrue(!computed)
+    tt.Equal(20, v)
+
+    tt.Equal(int32(1), atomic.LoadInt32(&c1))
+    tt.Equal(int32(1), atomic.LoadInt32(&c2))
 }
