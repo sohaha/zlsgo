@@ -11,7 +11,14 @@ English | [简体中文](./README.md)
 
 ## 📚 Documentation
 
-[Online Documentation](https://docs.73zls.com/zls-go/#) | [Local Documentation](./docs/README.md)
+[Online Documentation](https://docs.73zls.com/zls-go/#)
+
+For detailed documentation of each module, please refer to the README.md file in the corresponding module directory, for example:
+- [znet - Web Framework](./znet/)
+- [zlog - Logger](./zlog/)
+- [zhttp - HTTP Client](./zhttp/)
+- [zjson - JSON Processing](./zjson/)
+- [More modules...](#-module-list)
 
 Recommended to use with the `zzz watch` command of [zzz](https://github.com/sohaha/zzz)
 
@@ -103,6 +110,37 @@ func main(){
 ### More features
 
 Please read the documentation [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
+
+## 📦 Module List
+
+### Core Modules
+- [zarray](./zarray/) - Array operations
+- [zcache](./zcache/) - Cache library
+- [zcli](./zcli/) - Command-line interface
+- [zdi](./zdi/) - Dependency injection
+- [zerror](./zerror/) - Error handling
+
+### File and Data Modules
+- [zfile](./zfile/) - File operations
+- [zhttp](./zhttp/) - HTTP client
+- [zjson](./zjson/) - JSON processing
+- [ztype](./ztype/) - Type handling
+
+### Network and Web Modules
+- [znet](./znet/) - Web framework
+- [zpool](./zpool/) - Resource pool management
+- [zpprof](./zpprof/) - Performance profiling
+
+### Utility Modules
+- [zlog](./zlog/) - Logger
+- [zreflect](./zreflect/) - Reflection utilities
+- [zshell](./zshell/) - Shell command execution
+- [zstring](./zstring/) - String processing
+- [zsync](./zsync/) - Synchronization primitives
+- [ztime](./ztime/) - Time handling
+- [zutil](./zutil/) - Common utilities
+- [zvalid](./zvalid/) - Data validation
+- [zlocale](./zlocale/) - Internationalization
 
 ## Todo
 

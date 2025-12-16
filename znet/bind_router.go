@@ -83,7 +83,7 @@ func (e *Engine) BindStruct(prefix string, s interface{}, handle ...Handler) err
 				indexs := zstring.RegexFind(`(?i)(`+methods+`)`, m.Name, 1)
 				if len(indexs) == 0 {
 					if g.IsDebug() && m.Name != "Init" {
-						g.Log.Warnf("matching rule error: %s%s\n", m.Name, m.Func.String())
+						g.Log.Warnf("matching rule error: %s%s", m.Name, m.Func.String())
 					}
 					return nil
 				}

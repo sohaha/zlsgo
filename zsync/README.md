@@ -53,14 +53,14 @@ mu.RUnlock(tok)
 
 ### SeqLock（泛型）
 
-提供基于序列号的无锁读方案，读路径在无写竞争时无需加锁，适合“多读少写”的只读快照场景。
+提供基于序列号的无锁读方案，读路径在无写竞争时无需加锁，适合"多读少写"的只读快照场景。
 
 ```go
-type SeqLockT[T any] struct{}
+type SeqLock[T any] struct{}
 
-func NewSeqLock[T any]() *SeqLockT[T]
-func (s *SeqLockT[T]) Write(v T)
-func (s *SeqLockT[T]) Read() (T, bool)
+func NewSeqLock[T any]() *SeqLock[T]
+func (s *SeqLock[T]) Write(v T)
+func (s *SeqLock[T]) Read() (T, bool)
 ```
 
 示例：

@@ -1,7 +1,9 @@
 package zlog
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
@@ -21,17 +23,17 @@ func TestLogs(T *testing.T) {
 	Debug("test")
 	Debug("debug")
 	Debug("log with Debug")
-	Debugf("%s\n", "log with Debug")
+	Debugf("%s", "log with Debug")
 	Info("log with Info")
-	Infof("%s\n", "log with Info")
+	Infof("%s", "log with Info")
 	Success("log with Success")
-	Successf("%s\n", "log with Success")
+	Successf("%s", "log with Success")
 	Tips("log with Tips")
-	Tipsf("%s\n", "log with Tips")
+	Tipsf("%s", "log with Tips")
 	Warn("log with Warn")
-	Warnf("%s\n", "log with Warn")
+	Warnf("%s", "log with Warn")
 	Error("log with Error")
-	Errorf("%s\n", "log with Error")
+	Errorf("%s", "log with Error")
 	Println("log with Println")
 	Printf("%s\n", "log with Printf")
 	Dump("log with Dump", t, T, nil)
@@ -86,7 +88,7 @@ func TestLogFatal(T *testing.T) {
 	}
 	osExit = myExit
 	Fatal("TestLogFatal")
-	Fatalf("%s\n", "Fatal")
+	Fatalf("%s", "Fatal")
 }
 
 func TestLogPanic(T *testing.T) {
@@ -99,10 +101,25 @@ func TestLogPanic(T *testing.T) {
 }
 
 func TestLogPanicf(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	buf := bytes.NewBuffer(nil)
+	oldOut := log.out
+	oldLevel := log.level
+	log.out = buf
+	log.level = LogPanic
 	defer func() {
+		log.out = oldOut
+		log.level = oldLevel
 		if err := recover(); err != nil {
 			T.Log(err)
+			t.Equal("num=1", err)
+			out := buf.String()
+			T.Log(out)
+			t.EqualExit(false, strings.Contains(out, "%!"))
+		} else {
+			T.Fatal("expected panic")
 		}
 	}()
-	Panicf("%s", "log with Panicf")
+
+	Panicf("num=%d", 1)
 }

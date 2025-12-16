@@ -11,7 +11,14 @@
 
 ## 📚 文档
 
-[在线文档](https://docs.73zls.com/zls-go/#) | [本地文档](./docs/README.md)
+[在线文档](https://docs.73zls.com/zls-go/#)
+
+各模块详细文档请查看对应模块目录下的 README.md 文件，例如：
+- [znet - Web 框架](./znet/)
+- [zlog - 日志库](./zlog/)
+- [zhttp - HTTP 客户端](./zhttp/)
+- [zjson - JSON 处理](./zjson/)
+- [更多模块...](#-模块列表)
 
 建议搭配 [zzz](https://github.com/sohaha/zzz) 的 `zzz watch` 指令使用
 
@@ -103,6 +110,37 @@ func main(){
 ### 更多功能
 
 请阅读文档 [https://docs.73zls.com/zls-go/#](https://docs.73zls.com/zls-go/#)
+
+## 📦 模块列表
+
+### 核心模块
+- [zarray](./zarray/) - 数组操作库
+- [zcache](./zcache/) - 缓存库
+- [zcli](./zcli/) - 命令行界面库
+- [zdi](./zdi/) - 依赖注入库
+- [zerror](./zerror/) - 错误处理库
+
+### 文件和数据模块
+- [zfile](./zfile/) - 文件操作库
+- [zhttp](./zhttp/) - HTTP 客户端库
+- [zjson](./zjson/) - JSON 处理库
+- [ztype](./ztype/) - 类型处理库
+
+### 网络和Web模块
+- [znet](./znet/) - Web 框架
+- [zpool](./zpool/) - 资源池管理库
+- [zpprof](./zpprof/) - 性能分析库
+
+### 工具和辅助模块
+- [zlog](./zlog/) - 日志库
+- [zreflect](./zreflect/) - 反射工具库
+- [zshell](./zshell/) - Shell 命令执行库
+- [zstring](./zstring/) - 字符串处理库
+- [zsync](./zsync/) - 同步原语库
+- [ztime](./ztime/) - 时间处理库
+- [zutil](./zutil/) - 通用工具库
+- [zvalid](./zvalid/) - 数据验证库
+- [zlocale](./zlocale/) - 国际化库
 
 ## Todo
 

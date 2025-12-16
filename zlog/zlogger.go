@@ -328,7 +328,7 @@ func (log *Logger) Debugf(format string, v ...interface{}) {
 	if log.level < LogDebug {
 		return
 	}
-	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Debug logs a debug message if the current log level permits debug output.
@@ -362,7 +362,7 @@ func (log *Logger) Successf(format string, v ...interface{}) {
 	if log.level < LogSuccess {
 		return
 	}
-	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Success logs a success message if the current log level permits.
@@ -378,7 +378,7 @@ func (log *Logger) Infof(format string, v ...interface{}) {
 	if log.level < LogInfo {
 		return
 	}
-	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Info logs an informational message if the current log level permits.
@@ -394,7 +394,7 @@ func (log *Logger) Tipsf(format string, v ...interface{}) {
 	if log.level < LogTips {
 		return
 	}
-	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Tips logs a tip message if the current log level permits.
@@ -410,7 +410,7 @@ func (log *Logger) Warnf(format string, v ...interface{}) {
 	if log.level < LogWarn {
 		return
 	}
-	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Warn logs a warning message if the current log level permits.
@@ -426,7 +426,7 @@ func (log *Logger) Errorf(format string, v ...interface{}) {
 	if log.level < LogError {
 		return
 	}
-	_ = log.outPut(LogError, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogError, fmt.Sprintf(format, v...), true, log.calldDepth)
 }
 
 // Error logs an error message if the current log level permits.
@@ -443,7 +443,7 @@ func (log *Logger) Fatalf(format string, v ...interface{}) {
 	if log.level < LogFatal {
 		return
 	}
-	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), false, log.calldDepth)
+	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), true, log.calldDepth)
 	osExit(1)
 }
 
@@ -464,7 +464,7 @@ func (log *Logger) Panicf(format string, v ...interface{}) {
 		return
 	}
 	s := fmt.Sprintf(format, v...)
-	_ = log.outPut(LogPanic, fmt.Sprintf(format, s), false, log.calldDepth)
+	_ = log.outPut(LogPanic, s, true, log.calldDepth)
 	panic(s)
 }
 

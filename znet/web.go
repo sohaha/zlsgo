@@ -324,7 +324,7 @@ func (e *Engine) LoadHTMLGlob(pattern string) {
 	pattern = zfile.RealPath(pattern)
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {
-		e.Log.Fatalf("Template loading failed: %s\n", err)
+		e.Log.Fatalf("Template loading failed: %s", err)
 		return
 	}
 	isDebug := e.IsDebug()
@@ -439,7 +439,7 @@ func (e *Engine) StartUp() []*serverMap {
 					if e.webMode > 0 {
 						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
 					}
-					e.Log.Successf("%s %s %s%s\n", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
+					e.Log.Successf("%s %s %s%s", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
 				}
 			}()
 
@@ -461,7 +461,7 @@ func (e *Engine) StartUp() []*serverMap {
 						default:
 							err = http.ListenAndServe(httpAddr, e)
 						}
-						e.Log.Errorf("HTTP Listen: %s\n", err)
+						e.Log.Errorf("HTTP Listen: %s", err)
 					}(e)
 				}
 				errChan <- srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
@@ -471,7 +471,7 @@ func (e *Engine) StartUp() []*serverMap {
 
 			err := <-errChan
 			if err != nil && err != http.ErrServerClosed {
-				e.Log.Fatalf("Listen: %s\n", err)
+				e.Log.Fatalf("Listen: %s", err)
 			} else if err != http.ErrServerClosed {
 				e.Log.Info(err)
 			}

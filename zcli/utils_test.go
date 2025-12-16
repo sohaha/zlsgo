@@ -38,7 +38,7 @@ func (cmd *testCmd) Run(args []string) {
 func resetForTesting(args ...string) {
 	os.Args = append([]string{"cmd"}, args...)
 	FirstParameter = os.Args[0]
-	Log.Debugf("resetForTesting: %s\n", os.Args)
+	Log.Debugf("resetForTesting: %s", os.Args)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
@@ -46,7 +46,7 @@ func testOther(t *testing.T) {
 	tt := zls.NewTest(t)
 	oldOsExit := osExit
 	oldLang := Lang
-	defer func() { 
+	defer func() {
 		osExit = oldOsExit
 		Lang = oldLang
 	}()
