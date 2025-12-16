@@ -43,6 +43,8 @@ type Language struct {
 	templateCache TemplateCache
 	// data contains the translation key-value pairs
 	data map[string]string
+	// dataMutex protects concurrent access to data map using standard RWMutex to satisfy the race detector
+	dataMutex sync.RWMutex
 	// mutex protects concurrent access to the translation data using read-biased mutex for performance
 	mutex *zsync.RBMutex
 
@@ -125,9 +127,11 @@ func (i *I18n) LoadLanguageWithConfig(langCode, langName string, data map[string
 			existingLang.templateCache = cache
 		}
 
+		existingLang.dataMutex.Lock()
 		for k, v := range data {
 			existingLang.data[k] = v
 		}
+		existingLang.dataMutex.Unlock()
 
 		return nil
 	}
@@ -146,9 +150,11 @@ func (i *I18n) LoadLanguageWithConfig(langCode, langName string, data map[string
 
 	lang.templateCache = cache
 
+	lang.dataMutex.Lock()
 	for k, v := range data {
 		lang.data[k] = v
 	}
+	lang.dataMutex.Unlock()
 
 	i.languages[langCode] = lang
 	return nil
@@ -192,7 +198,7 @@ func (i *I18n) GetLoadedLanguages() map[string]string {
 
 // T translates a key using the current language
 func (i *I18n) T(key string, args ...interface{}) string {
-	return i.TWithLang(i.currentLang, key, args...)
+	return i.TWithLang(i.GetLanguage(), key, args...)
 }
 
 // TWithLang translates a key using the specified language
@@ -227,6 +233,8 @@ func (i *I18n) getTranslationWithLanguage(langCode, key string) (string, *Langua
 
 	langToken := lang.mutex.RLock()
 	defer lang.mutex.RUnlock(langToken)
+	lang.dataMutex.RLock()
+	defer lang.dataMutex.RUnlock()
 	return lang.data[key], lang
 }
 
@@ -399,7 +407,9 @@ func (i *I18n) HasKey(langCode, key string) bool {
 
 	langToken := lang.mutex.RLock()
 	defer lang.mutex.RUnlock(langToken)
+	lang.dataMutex.RLock()
 	_, exists = lang.data[key]
+	lang.dataMutex.RUnlock()
 	return exists
 }
 
@@ -436,7 +446,9 @@ func (i *I18n) GetMemoryUsage() map[string]interface{} {
 
 	for code, lang := range i.languages {
 		langToken := lang.mutex.RLock()
+		lang.dataMutex.RLock()
 		translationCount := len(lang.data)
+		lang.dataMutex.RUnlock()
 		lang.mutex.RUnlock(langToken)
 
 		langStats := map[string]interface{}{
