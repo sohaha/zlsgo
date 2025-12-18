@@ -84,6 +84,10 @@ func TestMap(t *testing.T) {
 	tt.Log(mm.Keys())
 	tt.EqualTrue(!mm.Valid("val"))
 	tt.EqualTrue(mm.Valid("T"))
+
+	tt.Log(ToMap(nil))
+	tt.Log(ToMap(1))
+	tt.Log(ToMap("1"))
 }
 
 func TestMapPick(t *testing.T) {

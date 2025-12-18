@@ -41,7 +41,24 @@ type Conver struct {
 	Merge bool
 }
 
-var conv = Conver{TagName: tagName, Squash: true, MatchName: strings.EqualFold}
+var conv = Conver{TagName: tagName, Squash: true, MatchName: defaultMatchName}
+
+var nameNormalizer = strings.NewReplacer("_", "", "-", "")
+
+func defaultMatchName(mapKey, fieldName string) bool {
+	if strings.EqualFold(mapKey, fieldName) {
+		return true
+	}
+	return normalizeName(mapKey) == normalizeName(fieldName)
+}
+
+func normalizeName(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(nameNormalizer.Replace(s))
+}
 
 // To converts input value to the output type specified by out parameter.
 // The out parameter must be a pointer to the target type.

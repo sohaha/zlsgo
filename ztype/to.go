@@ -175,6 +175,9 @@ func ToInt64(i interface{}) int64 {
 	case string:
 		return parseStringToInt64(value)
 	default:
+		if unix, ok := value.(interface{ Unix() int64 }); ok {
+			return unix.Unix()
+		}
 		s := ToString(value)
 		return parseStringToInt64(s)
 	}
@@ -204,6 +207,12 @@ func parseStringToInt64(s string) int64 {
 
 	if v, e := strconv.ParseFloat(s, 64); e == nil {
 		return int64(v)
+	}
+
+	if strings.ContainsAny(s, "-/:") {
+		if t, err := ztime.Parse(s); err == nil {
+			return t.Unix()
+		}
 	}
 	return 0
 }
@@ -283,6 +292,13 @@ func ToUint64(i interface{}) uint64 {
 		}
 		return 0
 	default:
+		if unix, ok := value.(interface{ Unix() int64 }); ok {
+			v := unix.Unix()
+			if v < 0 {
+				return 0
+			}
+			return uint64(v)
+		}
 		s := ToString(value)
 		if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
 			if v, e := strconv.ParseUint(s[2:], 16, 64); e == nil {

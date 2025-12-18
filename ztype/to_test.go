@@ -33,8 +33,9 @@ type (
 		S2    *type1
 		F     []string `json:"fs"`
 		type1
-		S1 type1
-		D  bool
+		S1   type1
+		D    bool
+		Dint int
 	}
 )
 
@@ -181,13 +182,15 @@ func TestTo(t *testing.T) {
 	tt.EqualExit(false, ztype.ToBool(ni))
 	tt.EqualExit(false, ztype.ToBool("FAlse"))
 
+	now := time.Now()
 	v := map[string]interface{}{
 		"D":         true,
 		"E":         12,
 		"fs":        []string{"1", "a"},
 		"gg":        map[string]string{"a": "1"},
-		"date_time": time.Now(),
-		"j_date":    time.Now(),
+		"date_time": now,
+		"j_date":    now,
+		"d_int":     now,
 	}
 	var d type2
 	tt.NoError(ztype.To(v, &d))
@@ -197,6 +200,7 @@ func TestTo(t *testing.T) {
 	tt.EqualExit(1, d.G["a"])
 	tt.EqualTrue(d.D)
 	tt.EqualExit(uint(12), *d.E)
+	tt.EqualExit(int(now.Unix()), d.Dint)
 }
 
 func TestConv(t *testing.T) {
