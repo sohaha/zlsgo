@@ -1,6 +1,6 @@
 # zutil 模块
 
-`zutil` 提供了反射工具、原子操作、重试机制、通道管理、缓冲区池、环境变量、参数解析、工具函数、Once 模式、选项模式等功能，用于通用工具和辅助函数。
+`zutil` 提供了反射工具、原子操作、重试机制、通道管理、缓冲区池、内存监控、环境变量、参数解析、工具函数、Once 模式、选项模式等功能，用于通用工具和辅助函数。
 
 ## 功能概览
 
@@ -9,6 +9,7 @@
 - **重试机制**: 函数重试和延迟
 - **通道管理**: 通道创建和操作
 - **缓冲区池**: 缓冲区复用管理
+- **内存监控**: 内存使用监控和限制
 - **环境变量**: 环境变量和系统信息
 - **参数解析**: 命令行参数解析
 - **工具函数**: 通用工具函数
@@ -108,6 +109,38 @@ func BackOffDelay(attempt int, retryInterval, maxRetryInterval time.Duration) ti
 func NewBufferPool(left, right uint) *BufferPool
 func GetBuff(size ...uint) *bytes.Buffer
 func PutBuff(buffer *bytes.Buffer, noreset ...bool)
+```
+
+### 内存监控
+
+```go
+type MemoryStats struct {
+    CurrentUsage uint64    // 当前堆内存分配量(字节)
+    PeakUsage    uint64    // 峰值堆内存分配量(字节)
+    LastGCTime   time.Time // 上次垃圾回收时间
+    NumGC        uint32    // 垃圾回收次数
+    HeapInuse    uint64    // 正在使用的堆字节数
+    HeapSys      uint64    // 从系统申请的堆字节数
+    PauseTotalNs uint64    // GC 累计暂停时间(纳秒)
+}
+
+type MemoryStatsConfig struct {
+    Limit           uint64        // 内存硬限制(字节)
+    PauseThreshold  float64       // 暂停阈值比率 [0, 1]，默认 0.85
+    MonitorInterval time.Duration // 监控间隔，默认 1s
+    EnableGC        bool          // 超限时触发 GC，默认 true
+    SetRuntimeLimit bool          // 调用 debug.SetMemoryLimit，默认 true
+}
+
+func NewMemoryLimiter(opt ...func(cfg *Config)) *MemoryLimiter
+func (ml *MemoryLimiter) Start() bool                         // 启动监控
+func (ml *MemoryLimiter) Stop()                                // 停止监控
+func (ml *MemoryLimiter) Refresh()                             // 手动刷新统计
+func (ml *MemoryLimiter) Stats() MemoryStats                   // 获取统计信息
+func (ml *MemoryLimiter) IsPaused() bool                       // 是否暂停状态
+func (ml *MemoryLimiter) UpdateLimit(limit uint64)             // 更新内存限制
+func (ml *MemoryLimiter) OnPause(fn func(ratio float64) bool)  // 设置暂停回调
+func (ml *MemoryLimiter) OnStats(fn func(stats MemoryStats))   // 设置统计回调
 ```
 
 ### 通道管理
@@ -483,7 +516,31 @@ func main() {
     buffer.WriteString("Hello, World!")
     fmt.Printf("缓冲区内容: %s\n", buffer.String())
     pool.Put(buffer)
-    
+
+    // 内存监控示例
+    limiter := zutil.NewMemoryLimiter(func(cfg *zutil.Config) {
+        cfg.Limit = 100 * 1024 * 1024  // 100MB
+        cfg.PauseThreshold = 0.85      // 使用率达 85% 时暂停
+        cfg.MonitorInterval = time.Second
+    })
+
+    // 设置统计回调
+    limiter.OnStats(func(stats zutil.MemoryStats) {
+        fmt.Printf("[STATS] 当前: %s, 峰值: %s, GC次数: %d\n",
+            zfile.SizeFormat(int64(stats.CurrentUsage)),
+            zfile.SizeFormat(int64(stats.PeakUsage)),
+            stats.NumGC)
+    })
+
+    // 设置暂停回调
+    limiter.OnPause(func(ratio float64) bool {
+        fmt.Printf("[PAUSE] 内存使用率: %.2f%%\n", ratio*100)
+        return false  // 返回 false 表示暂停处理
+    })
+
+    limiter.Start()
+    defer limiter.Stop()
+
     // 实际应用示例
     // 配置管理
     type Config struct {
