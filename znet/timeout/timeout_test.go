@@ -47,17 +47,15 @@ func TestWebTimeout(t *testing.T) {
 			expectedBody: "custom timeout",
 			timeout:      1 * time.Second,
 		},
-		// Zero timeout is not supported as it would immediately time out all requests
-		// and isn't a practical use case. Using a small duration instead.
 		{
 			name:    "Very short timeout should trigger timeout handler",
-			handler: func(c *znet.Context) { time.Sleep(10 * time.Millisecond); c.String(200, "should not reach") },
-			middleware: []znet.Handler{New(1*time.Millisecond, func(c *znet.Context) {
+			handler: func(c *znet.Context) { time.Sleep(50 * time.Millisecond); c.String(200, "should not reach") },
+			middleware: []znet.Handler{New(5*time.Millisecond, func(c *znet.Context) {
 				c.String(504, "timeout occurred")
 			})},
 			expectedCode: 504,
 			expectedBody: "timeout occurred",
-			timeout:      1 * time.Millisecond,
+			timeout:      5 * time.Millisecond,
 		},
 	}
 

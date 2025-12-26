@@ -28,7 +28,7 @@ type MemoryStats struct {
 type MemoryStatsConfig struct {
 	Limit           uint64        // Memory hard limit in bytes
 	PauseThreshold  float64       // Pause threshold ratio [0, 1], default 0.85
-	MonitorInterval time.Duration // Monitoring interval, default 1s
+	MonitorInterval time.Duration // Monitoring interval, default 10s
 	EnableGC        bool          // Trigger GC when exceeding limit, default true
 	SetRuntimeLimit bool          // Call debug.SetMemoryLimit, default true
 }
@@ -56,7 +56,7 @@ type MemoryLimiter struct {
 func NewMemoryLimiter(opt ...func(cfg *MemoryStatsConfig)) *MemoryLimiter {
 	limit := uint64(50 * zfile.MB)
 	pauseThreshold := 0.85
-	monitorInterval := 1 * time.Second
+	monitorInterval := 10 * time.Second
 	cfg := Optional(MemoryStatsConfig{
 		Limit:           limit,
 		PauseThreshold:  pauseThreshold,
