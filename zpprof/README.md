@@ -34,6 +34,30 @@ go zpprof.ListenAndServe("0.0.0.0:8082")
 // 启动服务后直接访问 http://127.0.0.1:8082/debug/pprof/
 ```
 
+## 使用 zpprof 升级版
+
+运行时性能监控与自动分析工具，支持 CPU/内存/Goroutine/线程/GCHeap 自动触发 pprof dump，并可将性能数据上报至 Pyroscope。
+
+具体配置请参考 [zpprof](https://github.com/zlsgo/zpprof)
+
+```go
+package main
+
+import (
+    "time"
+    "github.com/zlsgo/zpprof"
+)
+
+func main() {
+    engine, _ := zpprof.New()
+
+    engine.Start()
+
+    // 运行业务逻辑
+    select {}
+}
+```
+
 ### 通过 Web 界面分析
 
 查看当前总览：访问  `http://127.0.0.1:3788/debug/pprof/`   (如设置了token自行填上)
