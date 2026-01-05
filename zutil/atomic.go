@@ -32,15 +32,15 @@ type (
 	// Uint64 is an atomic uint64 type that can be safely accessed concurrently
 	// from multiple goroutines without additional synchronization.
 	Uint64 struct {
-		_ Nocmp  // Makes the struct uncomparable
 		v uint64 // The actual value
+		_ Nocmp  // Makes the struct uncomparable
 	}
 
 	// Int64 is an atomic int64 type that can be safely accessed concurrently
 	// from multiple goroutines without additional synchronization.
 	Int64 struct {
-		_ Nocmp // Makes the struct uncomparable
 		v int64 // The actual value
+		_ Nocmp // Makes the struct uncomparable
 	}
 
 	// Uintptr is an atomic uintptr type that can be safely accessed concurrently
