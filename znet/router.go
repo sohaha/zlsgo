@@ -320,6 +320,7 @@ func (e *Engine) Group(prefix string, groupHandle ...func(e *Engine)) (engine *E
 		webMode:             e.webMode,
 		webModeName:         e.webModeName,
 		MaxMultipartMemory:  e.MaxMultipartMemory,
+		MaxRequestBodySize:  e.MaxRequestBodySize,
 		customMethodType:    e.customMethodType,
 		Log:                 e.Log,
 		BindStructCase:      e.BindStructCase,
