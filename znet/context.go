@@ -231,6 +231,7 @@ func (c *Context) next() {
 
 // SetCookie sets an HTTP cookie with the given name and value.
 // Optional maxAge parameter specifies the cookie's max age in seconds (0 = session cookie).
+// Sets SameSite=Lax by default for basic CSRF protection.
 func (c *Context) SetCookie(name, value string, maxAge ...int) {
 	a := 0
 	if len(maxAge) > 0 {
@@ -241,6 +242,28 @@ func (c *Context) SetCookie(name, value string, maxAge ...int) {
 		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   a,
+	}
+	c.Writer.Header().Add("Set-Cookie", cookie.String())
+}
+
+// SetSecureCookie sets an HTTP cookie with security flags enabled.
+// Optional maxAge parameter specifies the cookie's max age in seconds (0 = session cookie).
+// This method sets Secure=true and SameSite=Strict by default for enhanced security.
+// Use SetCookie directly for more options like Domain, Path customization, etc.
+func (c *Context) SetSecureCookie(name, value string, maxAge ...int) {
+	a := 0
+	if len(maxAge) > 0 {
+		a = maxAge[0]
+	}
+	cookie := &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   a,
 	}
 	c.Writer.Header().Add("Set-Cookie", cookie.String())

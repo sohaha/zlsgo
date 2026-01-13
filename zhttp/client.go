@@ -128,6 +128,18 @@ func (e *Engine) EnableInsecureTLS(enable bool) {
 	trans.TLSClientConfig.InsecureSkipVerify = enable
 }
 
+// DisableHTTP2 disables HTTP/2 protocol support.
+// This can be used to mitigate CVE-2023-45288 (HTTP/2 CONTINUATION flood vulnerability)
+// when upgrading golang.org/x/net is not possible.
+func (e *Engine) DisableHTTP2() {
+	trans := e.getTransport()
+	if trans == nil {
+		return
+	}
+	trans.ForceAttemptHTTP2 = false
+	trans.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
+}
+
 type Certificate struct {
 	CertFile string
 	KeyFile  string

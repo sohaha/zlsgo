@@ -945,3 +945,43 @@ func TestStatic(t *testing.T) {
 	tt.Equal(200, w.Code)
 	tt.EqualTrue(len(w.Body.String()) > 10*zfile.KB)
 }
+
+func TestCookieSecurity(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	r := New("CookieTest")
+
+	r.GET("/cookie", func(c *Context) {
+		c.SetCookie("normal", "value1")
+		c.String(200, "ok")
+	})
+
+	r.GET("/secure-cookie", func(c *Context) {
+		c.SetSecureCookie("secure", "value2", 3600)
+		c.String(200, "ok")
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/cookie", nil)
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	cookies := w.Result().Cookies()
+	tt.Equal(1, len(cookies))
+	tt.Equal("normal", cookies[0].Name)
+	tt.Equal("value1", cookies[0].Value)
+	tt.Equal(http.SameSiteLaxMode, cookies[0].SameSite)
+	tt.EqualTrue(cookies[0].HttpOnly)
+	tt.EqualTrue(!cookies[0].Secure)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/secure-cookie", nil)
+	r.ServeHTTP(w, req)
+	tt.Equal(200, w.Code)
+	cookies = w.Result().Cookies()
+	tt.Equal(1, len(cookies))
+	tt.Equal("secure", cookies[0].Name)
+	tt.Equal("value2", cookies[0].Value)
+	tt.Equal(http.SameSiteStrictMode, cookies[0].SameSite)
+	tt.EqualTrue(cookies[0].HttpOnly)
+	tt.EqualTrue(cookies[0].Secure)
+	tt.Equal(3600, cookies[0].MaxAge)
+}

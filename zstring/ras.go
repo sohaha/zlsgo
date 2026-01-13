@@ -13,11 +13,15 @@ import (
 )
 
 // GenRSAKey generates a pair of RSA private and public keys.
-// The optional bits parameter specifies the key size (defaults to 1024 bits).
+// The optional bits parameter specifies the key size (defaults to 2048 bits).
+// Minimum key size is 1024 bits.
 func GenRSAKey(bits ...int) (prvkey, pubkey []byte, err error) {
-	l := 1024
+	l := 2048
 	if len(bits) > 0 {
 		l = bits[0]
+		if l < 1024 {
+			return nil, nil, errors.New("RSA key size must be at least 1024 bits")
+		}
 	}
 	privateKey, err := rsa.GenerateKey(rand.Reader, l)
 	if err != nil {

@@ -60,6 +60,9 @@ func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
 	var block cipher.Block
 	if len(iv) > 0 {
 		k = String2Bytes(iv[0])
+		if len(k) < aes.BlockSize {
+			return nil, errors.New("IV length must be at least 16 bytes for AES")
+		}
 		block, err = aes.NewCipher(String2Bytes(key))
 	} else {
 		k = assKeyPadding(key)
@@ -76,7 +79,8 @@ func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
 }
 
 // AesDecrypt decrypts data that was encrypted with AesEncrypt.
-// If an IV is provided, it is used; otherwise, the key is used as the IV.
+// If an IV is provided, it must match the IV used during encryption.
+// If no IV is provided, the key is used as the IV.
 func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, err error) {
 	var (
 		block cipher.Block
@@ -84,6 +88,9 @@ func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, 
 	)
 	if len(iv) > 0 {
 		k = String2Bytes(iv[0])
+		if len(k) < aes.BlockSize {
+			return nil, errors.New("IV length must be at least 16 bytes for AES")
+		}
 		block, err = aes.NewCipher(String2Bytes(key))
 	} else {
 		k = assKeyPadding(key)
@@ -119,7 +126,7 @@ func AesEncryptString(plainText string, key string, iv ...string) (string, error
 	if err == nil {
 		str = Bytes2String(Base64Encode(c))
 	}
-	return str, nil
+	return str, err
 }
 
 // AesDecryptString decrypts a base64-encoded string that was encrypted with AesEncryptString.

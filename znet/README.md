@@ -344,7 +344,8 @@ func (c *Context) Status(code int)
 func (c *Context) Header(key, value string)
 func (c *Context) GetHeader(key string) string
 func (c *Context) Cookie(name string) string
-func (c *Context) SetCookie(name, value string, maxAge ...int)
+func (c *Context) SetCookie(name, value string, maxAge ...int)  // HttpOnly=true, SameSite=Lax
+func (c *Context) SetSecureCookie(name, value string, maxAge ...int)  // Secure=true, SameSite=Strict
 func (c *Context) JSON(code int32, values interface{})
 func (c *Context) ApiJSON(code int32, msg string, data interface{})
 func (c *Context) String(code int32, format string, values ...interface{})

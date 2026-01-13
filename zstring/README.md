@@ -132,6 +132,7 @@ func UrlRawDecode(str string) (string, error)
 
 ```go
 // AES-CBC 加密（可选 IV，默认使用处理后的 key 作为 IV）
+// 注意：IV 长度必须 ≥16 字节，建议使用 AesGCMEncrypt 以获得更好的安全性
 func AesEncrypt(plainText []byte, key string, iv ...string) ([]byte, error)
 // AES-CBC 解密（可选 IV）
 func AesDecrypt(cipherText []byte, key string, iv ...string) ([]byte, error)
@@ -156,7 +157,7 @@ func PKCS7UnPadding(origData []byte) ([]byte, error)
 ### RSA 加密
 
 ```go
-// 生成 RSA 私钥与公钥（bits 指定位数，默认 1024）
+// 生成 RSA 私钥与公钥（bits 指定位数，默认 2048，最小 1024）
 func GenRSAKey(bits ...int) (prvkey []byte, pubkey []byte, err error)
 // 使用公钥加密，支持大数据分块
 func RSAEncrypt(plainText []byte, publicKey string, bits ...int) ([]byte, error)
