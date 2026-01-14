@@ -233,6 +233,36 @@ commands := [][]string{
 code, output, errStr, err := zshell.PipeExecCommand(ctx, commands)
 ```
 
+## Options 配置选项
+
+```go
+type Options struct {
+    Dir        string   // 工作目录
+    Env        []string // 环境变量
+    CloseStdin bool     // 启动后立即关闭 stdin
+}
+```
+
+### 使用示例
+
+```go
+// 设置工作目录
+zshell.Run("ls", func(o *zshell.Options) {
+    o.Dir = "/tmp"
+})
+
+// 关闭 stdin（用于等待 stdin EOF 的命令）
+zshell.CallbackRunContext(ctx, "wc -l", callback, func(o *zshell.Options) {
+    o.CloseStdin = true
+})
+
+// 组合选项
+zshell.CallbackRunContext(ctx, cmd, callback, func(o *zshell.Options) {
+    o.Dir = "/tmp"
+    o.CloseStdin = true
+})
+```
+
 ## 最佳实践
 
 1. 使用上下文控制超时

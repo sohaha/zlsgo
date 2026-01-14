@@ -189,103 +189,83 @@ func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut 
 	return
 }
 
-func Run(command string, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
-	return RunContext(context.Background(), command, opt...)
-}
-
-func RunContext(ctx context.Context, command string, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
-	return ExecCommand(ctx, fixCommand(command), nil, nil, nil, opt...)
-}
-
-func OutRun(command string, stdIn io.Reader, stdOut io.Writer, stdErr io.Writer, opt ...func(o Options) Options) (code int, outStr, errStr string, err error) {
-	return ExecCommand(context.Background(), fixCommand(command), stdIn, stdOut, stdErr)
-}
-
-func BgRun(command string, opt ...func(o *Options)) (err error) {
-	return BgRunContext(context.Background(), command, opt...)
-}
-
-func BgRunContext(ctx context.Context, command string, opt ...func(o *Options)) (err error) {
-	if strings.TrimSpace(command) == "" {
-		return errors.New("no such command")
-	}
-	arr := fixCommand(command)
-	cmd := exec.CommandContext(ctx, arr[0], arr[1:]...)
-	wrapOptions(cmd, opt...)
-	err = cmd.Start()
-	if Debug {
-		fmt.Println("[Command]: ", command)
-		if err != nil {
-			fmt.Println("[Fail]", err.Error())
-		}
-	}
-	go func() {
-		_ = cmd.Wait()
-	}()
-	return err
-}
-
-func CallbackRun(command string, callback func(out string, isBasic bool), opt ...func(o *Options)) (<-chan int, func(string), error) {
-	return CallbackRunContext(context.Background(), command, callback, opt...)
-}
-
 type Options struct {
-	Dir string
-	Env []string
+	Dir        string
+	Env        []string
+	CloseStdin bool
 }
 
-func CallbackRunContext(ctx context.Context, command string, callback func(str string, isStdout bool), opt ...func(o *Options)) (<-chan int, func(string), error) {
+func callbackRunContext(ctx context.Context, commandArgs []string, callback func(str string, isStdout bool), opt ...func(o *Options)) (<-chan int, func(string), error) {
 	var (
-		cmd  *exec.Cmd
 		err  error
 		code = make(chan int, 1)
 	)
 
+	if len(commandArgs) == 0 || (len(commandArgs) == 1 && commandArgs[0] == "") {
+		return code, nil, errors.New("no such command")
+	}
+
+	chcp()
+
+	cmd := exec.CommandContext(ctx, commandArgs[0], commandArgs[1:]...)
+	if Env == nil {
+		cmd.Env = os.Environ()
+	} else {
+		cmd.Env = Env
+	}
+
+	o := Options{}
+	for _, v := range opt {
+		v(&o)
+	}
+
+	wrapOptions(cmd, opt...)
+
 	var in func(string)
-	read := func(stdout io.ReadCloser, isStdout bool) {
-		scanner := bufio.NewScanner(stdout)
+	read := func(pipe io.ReadCloser, isStdout bool) {
+		scanner := bufio.NewScanner(pipe)
 		for scanner.Scan() {
 			callback(scanner.Text(), isStdout)
 		}
 	}
 
-	_, err = ExecCommandHandle(ctx, fixCommand(command), func(c *exec.Cmd) error {
-		wrapOptions(c, opt...)
-		cmd = c
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			return err
-		}
-		in = func(s string) {
-			io.WriteString(stdin, s)
-		}
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		go read(stdout, true)
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-		go read(stderr, false)
-		return errors.New("")
-	}, nil)
-
-	if err.Error() == "" {
-		err = cmd.Start()
-		if err == nil {
-			go func() {
-				_ = cmd.Wait()
-				c, _ := cmdResult(cmd)
-				code <- c
-			}()
-		} else {
-			code <- -1
-		}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return code, nil, err
+	}
+	in = func(s string) {
+		io.WriteString(stdin, s)
 	}
 
-	return code, in, err
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return code, in, err
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return code, in, err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		code <- -1
+		return code, in, err
+	}
+
+	if o.CloseStdin {
+		stdin.Close()
+	}
+
+	go read(stdout, true)
+	go read(stderr, false)
+	go func() {
+		_ = cmd.Wait()
+		c, _ := cmdResult(cmd)
+		code <- c
+	}()
+
+	return code, in, nil
 }
 
 func fixCommand(command string) (runCommand []string) {

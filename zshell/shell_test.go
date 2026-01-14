@@ -90,21 +90,43 @@ func TestBash(t *testing.T) {
 func TestCallbackRun(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	i := 0
-	var code <-chan int
-	var err error
+	{
+		i := 0
+		var code <-chan int
+		var err error
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	code, _, err = CallbackRunContext(ctx, "ping www.npmjs.com", func(out string, isBasic bool) {
-		fmt.Println(out)
-		i = i + 1
-		if i > 3 {
-			cancel()
-		}
-	}, func(o *Options) {
-	})
-	tt.NoError(err)
-	tt.Log("code", <-code)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		code, _, err = CallbackRunContext(ctx, "ping www.npmjs.com", func(out string, isBasic bool) {
+			fmt.Println(out)
+			i = i + 1
+			if i > 3 {
+				cancel()
+			}
+		}, func(o *Options) {
+		})
+		tt.NoError(err)
+		tt.Log("code", <-code)
+	}
+
+	{
+		i := 0
+		var code <-chan int
+		var err error
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		code, _, err = CallbackRunContext(ctx, "ping www.npmjs.com", func(out string, isBasic bool) {
+			fmt.Println(out)
+			i = i + 1
+			if i > 3 {
+				cancel()
+			}
+		}, func(o *Options) {
+		}, func(o *Options) {
+			o.CloseStdin = true
+		})
+		tt.NoError(err)
+		tt.Log("code", <-code)
+	}
 }
 
 func Test_fixCommand(t *testing.T) {
