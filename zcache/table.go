@@ -100,6 +100,7 @@ func (table *Table) SetDeleteCallback(f func(key string) bool) {
 func (table *Table) expirationCheck() {
 	now := ztime.UnixMicro(ztime.Clock())
 	smallestDuration := time.Duration(0)
+	var expiredKeys []string
 	table.Lock()
 	if table.cleanupTimer != nil {
 		table.cleanupTimer.Stop()
@@ -118,7 +119,7 @@ func (table *Table) expirationCheck() {
 		if table.accessCount.Load() && intervalLifeSpan {
 			lastTime := now.Sub(accessedOn)
 			if lastTime >= lifeSpan {
-				_, _ = table.deleteInternal(key)
+				expiredKeys = append(expiredKeys, key)
 			} else {
 				lifeSpan = lifeSpan * 2
 				item.Lock()
@@ -130,7 +131,7 @@ func (table *Table) expirationCheck() {
 				}
 			}
 		} else if remainingLift <= 0 {
-			_, _ = table.deleteInternal(key)
+			expiredKeys = append(expiredKeys, key)
 		} else {
 			if smallestDuration == 0 || smallestDuration > remainingLift {
 				smallestDuration = remainingLift
@@ -145,6 +146,10 @@ func (table *Table) expirationCheck() {
 		})
 	}
 	table.Unlock()
+
+	for _, key := range expiredKeys {
+		_, _ = table.Delete(key)
+	}
 }
 
 // addInternal adds an item to the cache and handles related operations such as

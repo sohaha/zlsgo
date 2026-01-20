@@ -3,10 +3,12 @@
 package zpool
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
@@ -20,7 +22,7 @@ type (
 	WorkPool struct {
 		workers     sync.Pool
 		injector    zdi.Injector
-		queue       chan *worker
+		queue       *workerQueue
 		usedNum     *zutil.Int64
 		activeNum   *zutil.Int64
 		panicFunc   PanicFunc
@@ -35,6 +37,8 @@ type (
 		jobQueue  chan taskfn
 		stop      chan struct{}
 		Parameter chan []interface{}
+		state     int32
+		queueElem *list.Element
 	}
 	PanicFunc func(err error)
 )
@@ -43,6 +47,92 @@ var (
 	ErrPoolClosed  = errors.New("pool has been closed")
 	ErrWaitTimeout = errors.New("pool wait timeout")
 )
+
+const (
+	workerStateIdle int32 = iota
+	workerStateBusy
+	workerStateClosing
+)
+
+type workerQueue struct {
+	mu     sync.Mutex
+	list   *list.List
+	ready  chan struct{}
+}
+
+func newWorkerQueue() *workerQueue {
+	return &workerQueue{
+		list:  list.New(),
+		ready: make(chan struct{}),
+	}
+}
+
+func (q *workerQueue) push(w *worker) {
+	q.mu.Lock()
+	if w.queueElem != nil {
+		q.mu.Unlock()
+		return
+	}
+	wasEmpty := q.list.Len() == 0
+	w.queueElem = q.list.PushBack(w)
+	if wasEmpty {
+		ready := q.ready
+		q.ready = make(chan struct{})
+		close(ready)
+	}
+	q.mu.Unlock()
+}
+
+func (q *workerQueue) tryPop() *worker {
+	q.mu.Lock()
+	elem := q.list.Front()
+	if elem == nil {
+		q.mu.Unlock()
+		return nil
+	}
+	w := elem.Value.(*worker)
+	q.list.Remove(elem)
+	w.queueElem = nil
+	atomic.StoreInt32(&w.state, workerStateBusy)
+	q.mu.Unlock()
+	return w
+}
+
+func (q *workerQueue) pop(ctx context.Context) (*worker, error) {
+	for {
+		if w := q.tryPop(); w != nil {
+			return w, nil
+		}
+		q.mu.Lock()
+		if q.list.Len() != 0 {
+			q.mu.Unlock()
+			continue
+		}
+		wait := q.ready
+		q.mu.Unlock()
+		if ctx == nil {
+			<-wait
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ErrWaitTimeout
+		case <-wait:
+		}
+	}
+}
+
+func (q *workerQueue) remove(w *worker) bool {
+	q.mu.Lock()
+	if w.queueElem == nil {
+		q.mu.Unlock()
+		return false
+	}
+	q.list.Remove(w.queueElem)
+	w.queueElem = nil
+	q.mu.Unlock()
+	return true
+}
 
 // type Options func(*WorkPool)
 // // func WithReleaseTime
@@ -71,7 +161,7 @@ func New(size int, max ...int) *WorkPool {
 		minIdle:     minIdle,
 		maxIdle:     maxIdle,
 		injector:    zdi.New(),
-		queue:       make(chan *worker, maxIdle),
+		queue:       newWorkerQueue(),
 		usedNum:     zutil.NewInt64(0),
 		activeNum:   zutil.NewInt64(0),
 		releaseTime: time.Second * 60,
@@ -80,6 +170,7 @@ func New(size int, max ...int) *WorkPool {
 				jobQueue:  make(chan taskfn),
 				Parameter: make(chan []interface{}),
 				stop:      make(chan struct{}),
+				state:     workerStateIdle,
 			}
 		}},
 	}
@@ -109,54 +200,40 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 		return ErrPoolClosed
 	}
 	wp.activeNum.Add(1)
-	wp.mu.Lock()
 	run := func(w *worker) {
 		if fn != nil {
 			w.jobQueue <- fn
 		}
 	}
-	add := func() *worker {
+	wp.mu.Lock()
+	if wp.closed {
+		wp.mu.Unlock()
+		wp.activeNum.Sub(1)
+		return ErrPoolClosed
+	}
+	w := wp.queue.tryPop()
+	if w != nil {
+		wp.mu.Unlock()
+		run(w)
+		return nil
+	}
+	if uint(wp.usedNum.Load()) < wp.maxIdle {
 		wp.usedNum.Add(1)
 		wp.mu.Unlock()
 		w := wp.workers.Get().(*worker)
+		w.queueElem = nil
+		atomic.StoreInt32(&w.state, workerStateBusy)
 		go w.createGoroutines(wp, wp.queue, wp.panicFunc)
-		return w
+		run(w)
+		return nil
 	}
-	select {
-	case w := <-wp.queue:
-		wp.mu.Unlock()
-		if w != nil {
-			run(w)
-		} else {
-			return ErrPoolClosed
-		}
-	default:
-		switch {
-		case uint(wp.usedNum.Load()) >= wp.minIdle:
-			if uint(wp.usedNum.Load()) < wp.maxIdle {
-				w := add()
-				run(w)
-				return nil
-			}
-			wp.mu.Unlock()
-			select {
-			case <-cxt.Done():
-				wp.activeNum.Sub(1)
-				return ErrWaitTimeout
-			case w := <-wp.queue:
-				if w != nil {
-					run(w)
-				} else {
-					return ErrPoolClosed
-				}
-			}
-		case uint(wp.usedNum.Load()) < wp.minIdle:
-			w := add()
-			run(w)
-		default:
-			wp.mu.Unlock()
-		}
+	wp.mu.Unlock()
+	w, err := wp.queue.pop(cxt)
+	if err != nil {
+		wp.activeNum.Sub(1)
+		return err
 	}
+	run(w)
 	return nil
 }
 
@@ -177,7 +254,7 @@ func (wp *WorkPool) Close() {
 	wp.closed = true
 	for 0 < uint(wp.usedNum.Load()) {
 		wp.usedNum.Sub(1)
-		worker := <-wp.queue
+		worker, _ := wp.queue.pop(nil)
 		worker.close()
 	}
 	wp.mu.Unlock()
@@ -228,13 +305,15 @@ func (wp *WorkPool) AdjustSize(workSize int) {
 		for uint(wp.usedNum.Load()) < wp.minIdle {
 			wp.usedNum.Add(1)
 			w := wp.workers.Get().(*worker)
+			w.queueElem = nil
+			atomic.StoreInt32(&w.state, workerStateIdle)
 			go w.createGoroutines(wp, wp.queue, wp.panicFunc)
-			wp.queue <- w
+			wp.queue.push(w)
 		}
 	}
 	for wp.minIdle < uint(wp.usedNum.Load()) {
 		wp.usedNum.Sub(1)
-		worker := <-wp.queue
+		worker, _ := wp.queue.pop(nil)
 		worker.stop <- struct{}{}
 		wp.workers.Put(worker)
 	}
@@ -248,14 +327,16 @@ func (wp *WorkPool) PreInit() error {
 	for uint(wp.usedNum.Load()) < wp.minIdle {
 		wp.usedNum.Add(1)
 		w := wp.workers.Get().(*worker)
+		w.queueElem = nil
+		atomic.StoreInt32(&w.state, workerStateIdle)
 		go w.createGoroutines(wp, wp.queue, wp.panicFunc)
-		wp.queue <- w
+		wp.queue.push(w)
 	}
 	wp.mu.Unlock()
 	return nil
 }
 
-func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicFunc) {
+func (w *worker) createGoroutines(wp *WorkPool, q *workerQueue, handler PanicFunc) {
 	defer func() {
 		if r := recover(); r != nil {
 			wp.activeNum.Sub(1)
@@ -266,8 +347,9 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 			if err != nil && handler != nil {
 				handler(err)
 			}
+			atomic.StoreInt32(&w.state, workerStateIdle)
 			go w.createGoroutines(wp, q, handler)
-			q <- w
+			q.push(w)
 		}
 	}()
 	if wp.releaseTime > 0 {
@@ -276,21 +358,31 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 		for {
 			select {
 			case job := <-w.jobQueue:
-				timer.Stop()
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
 				err := job()
 				if err != nil && handler != nil {
 					handler(err)
 				}
 				wp.activeNum.Sub(1)
-				q <- w
+				atomic.StoreInt32(&w.state, workerStateIdle)
+				q.push(w)
 				timer.Reset(wp.releaseTime)
 			// case parameter := <-w.Parameter:
 			// 	q <- w
 			case <-timer.C:
-				<-wp.queue
-				wp.usedNum.Sub(1)
-				return
+				if q.remove(w) {
+					atomic.StoreInt32(&w.state, workerStateClosing)
+					wp.usedNum.Sub(1)
+					return
+				}
+				timer.Reset(wp.releaseTime)
 			case <-w.stop:
+				atomic.StoreInt32(&w.state, workerStateClosing)
 				return
 			}
 		}
@@ -303,8 +395,10 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 					handler(err)
 				}
 				wp.activeNum.Sub(1)
-				q <- w
+				atomic.StoreInt32(&w.state, workerStateIdle)
+				q.push(w)
 			case <-w.stop:
+				atomic.StoreInt32(&w.state, workerStateClosing)
 				return
 			}
 		}
@@ -312,7 +406,6 @@ func (w *worker) createGoroutines(wp *WorkPool, q chan<- *worker, handler PanicF
 }
 
 func (w *worker) close() {
+	atomic.StoreInt32(&w.state, workerStateClosing)
 	w.stop <- struct{}{}
-	close(w.stop)
-	close(w.jobQueue)
 }

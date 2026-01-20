@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo"
-	"github.com/sohaha/zlsgo/zlog"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -42,8 +41,9 @@ func TestWaitGroup(t *testing.T) {
 		}
 		err := wg.Wait()
 		tt.EqualTrue(err != nil)
-		t.Logf("%+v", err)
-		zlog.Error(err)
+		if err != nil {
+			t.Logf("%+v", err)
+		}
 		tt.Equal(int64(100), count.Load())
 	})
 }

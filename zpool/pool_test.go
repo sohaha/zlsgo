@@ -228,6 +228,49 @@ func TestPoolTimeout(t *testing.T) {
 	p.Wait()
 }
 
+func TestPoolWakeAllWaiters(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	p := zpool.New(2, 2)
+
+	block := make(chan struct{})
+	var started sync.WaitGroup
+	var running sync.WaitGroup
+	started.Add(2)
+	running.Add(2)
+	for i := 0; i < 2; i++ {
+		err := p.Do(func() {
+			started.Done()
+			<-block
+			running.Done()
+		})
+		tt.EqualNil(err)
+	}
+	started.Wait()
+
+	var waitTasks sync.WaitGroup
+	waitTasks.Add(2)
+	errCh := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			err := p.DoWithTimeout(func() {
+				waitTasks.Done()
+			}, time.Second)
+			errCh <- err
+		}()
+	}
+
+	time.Sleep(20 * time.Millisecond)
+	close(block)
+	running.Wait()
+
+	for i := 0; i < 2; i++ {
+		err := <-errCh
+		tt.EqualNil(err)
+	}
+	waitTasks.Wait()
+	p.Close()
+}
+
 func TestPoolAuto(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	var g sync.WaitGroup

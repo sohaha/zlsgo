@@ -42,8 +42,12 @@ type handler func(action ActionKind, key string, valuePtr uintptr)
 func (l *FastCache) Callback(h handler) {
 	old := l.callback
 	l.callback = func(action ActionKind, key string, valuePtr uintptr) {
-		old(action, key, valuePtr)
-		h(action, key, valuePtr)
+		if old != nil {
+			old(action, key, valuePtr)
+		}
+		if h != nil {
+			h(action, key, valuePtr)
+		}
 	}
 }
 
@@ -88,10 +92,14 @@ func (c *lruCache) put(k string, i *interface{}, b []byte, expireAt int64) int {
 	}
 
 	if c.last == uint16(cap(c.nodes)) {
-		tail := &c.nodes[c.dlList[0][p]-1]
-		delete(c.hashmap, (*tail).key)
-		c.hashmap[k], (*tail).key, (*tail).value.value, (*tail).value.byteValue, (*tail).expireAt, (*tail).isDelete = c.dlList[0][p], k, i, b, expireAt, false
-		c.adjust(c.dlList[0][p], p, n)
+		tailIdx := c.dlList[0][p]
+		tail := &c.nodes[tailIdx-1]
+		delete(c.hashmap, tail.key)
+		if tail.isDelete {
+			c.size++
+		}
+		c.hashmap[k], tail.key, tail.value.value, tail.value.byteValue, tail.expireAt, tail.isDelete = tailIdx, k, i, b, expireAt, false
+		c.adjust(tailIdx, p, n)
 		return 1
 	}
 
@@ -146,8 +154,12 @@ func (c *lruCache) forEach(walker func(key string, iface interface{}) bool) {
 				if !walker(c.nodes[idx-1].key, c.nodes[idx-1].value.byteValue) {
 					return
 				}
-			} else {
+			} else if c.nodes[idx-1].value.value != nil {
 				if !walker(c.nodes[idx-1].key, *c.nodes[idx-1].value.value) {
+					return
+				}
+			} else {
+				if !walker(c.nodes[idx-1].key, nil) {
 					return
 				}
 			}

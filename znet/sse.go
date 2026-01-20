@@ -51,18 +51,17 @@ func (s *SSE) Done() <-chan struct{} {
 // This will close the event stream and release associated resources.
 func (s *SSE) Stop() {
 	s.stopping.Store(true)
-
-	for len(s.events) > 0 {
-		time.Sleep(10 * time.Millisecond)
-	}
-
 	s.ctxCancel()
 }
 
 // sendComment sends a ping comment to keep the connection alive.
 func (s *SSE) sendComment() {
-	s.events <- &sseEvent{
-		Comment: "ping",
+	if s.ctx.Err() != nil || s.stopping.Load() {
+		return
+	}
+	select {
+	case s.events <- &sseEvent{Comment: "ping"}:
+	default:
 	}
 }
 
@@ -94,7 +93,7 @@ sseFor:
 	for {
 		select {
 		case <-ticker.C:
-			go s.sendComment()
+			s.sendComment()
 		case <-r.Context().Done():
 			s.ctxCancel()
 			break sseFor
@@ -174,10 +173,12 @@ func (s *SSE) SendByte(id string, data []byte, event ...string) error {
 	if len(event) > 0 {
 		ev.Event = event[0]
 	}
-
-	s.events <- ev
-
-	return nil
+	select {
+	case s.events <- ev:
+		return nil
+	case <-s.ctx.Done():
+		return errors.New("client has been closed")
+	}
 }
 
 // SSEOption defines configuration options for an SSE connection.
@@ -221,7 +222,7 @@ func NewSSE(c *Context, opts ...func(lastID string, opts *SSEOption)) *SSE {
 	s.net.SetHeader("Cache-Control", "no-cache", true)
 	s.net.SetHeader("Connection", "keep-alive", true)
 	c.prevData.Code.Store(http.StatusNoContent)
-	s.net.Engine.shutdowns = append(s.net.Engine.shutdowns, func() {
+	s.net.Engine.AddShutdown(func() {
 		s.Stop()
 	})
 	return s

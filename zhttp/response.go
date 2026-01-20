@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -210,7 +209,6 @@ func (r *Res) ToFile(name string) error {
 	nameSplitLen := len(nameSplit)
 	if nameSplitLen > 1 {
 		dir := strings.Join(nameSplit[0:nameSplitLen-1], "/")
-		fmt.Println("ttt", dir)
 		name = zfile.RealPathMkdir(dir) + "/" + nameSplit[nameSplitLen-1]
 	}
 

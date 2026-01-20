@@ -450,3 +450,81 @@ func TestOptimizedMarkActive(t *testing.T) {
 	finalLevel := cache.GetCleanerLevel()
 	tt.EqualTrue(finalLevel >= initialLevel)
 }
+
+func TestNilBytesHandling(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Bucket = 1
+		o.Cap = 2
+	})
+
+	cache.SetBytes("k", nil)
+
+	v, ok := cache.GetBytes("k")
+	tt.EqualTrue(ok)
+	tt.Equal(true, v == nil)
+
+	called := false
+	cache.ForEach(func(key string, value interface{}) bool {
+		called = true
+		tt.Equal("k", key)
+		tt.Equal(nil, value)
+		return true
+	})
+	tt.EqualTrue(called)
+}
+
+func TestStatsAfterDeletedReuse(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Bucket = 1
+		o.Cap = 1
+	})
+
+	cache.Set("a", "1")
+	cache.Delete("a")
+	cache.Set("b", "2")
+
+	stats := cache.GetStats()
+	tt.Equal(1, stats.TotalItems)
+}
+
+func TestCallbackChain(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	var first int
+	var second int
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Bucket = 1
+		o.Cap = 1
+		o.Callback = func(action fast.ActionKind, key string, valuePtr uintptr) {
+			if action == fast.SET {
+				first++
+			}
+		}
+	})
+	cache.Callback(func(action fast.ActionKind, key string, valuePtr uintptr) {
+		if action == fast.SET {
+			second++
+		}
+	})
+
+	cache.Set("k", "v")
+
+	tt.Equal(1, first)
+	tt.Equal(1, second)
+}
+
+func TestCallbackNilSafe(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	cache := fast.NewFast(func(o *fast.Options) {
+		o.Bucket = 1
+		o.Cap = 1
+	})
+	cache.Callback(nil)
+	cache.Set("k", "v")
+	tt.EqualTrue(true)
+}

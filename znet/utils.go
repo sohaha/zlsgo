@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"html/template"
+	"net"
 	"net/http"
 	"path"
 	"regexp"
@@ -234,18 +235,46 @@ func parseBracePlaceholder(s string) (string, string) {
 // getAddr normalizes an address string, ensuring it has a port.
 // If no port is specified or the port is 0, it finds an available port.
 func getAddr(addr string) string {
-	var port int
+	if addr == "" {
+		port, _ := Port(0, true)
+		return net.JoinHostPort("", strconv.Itoa(port))
+	}
+
+	host := ""
+	portStr := ""
 	if strings.Contains(addr, ":") {
-		port, _ = strconv.Atoi(strings.Split(addr, ":")[1])
+		if h, p, err := net.SplitHostPort(addr); err == nil {
+			host = h
+			portStr = p
+		} else if strings.HasPrefix(addr, ":") {
+			portStr = strings.TrimPrefix(addr, ":")
+		} else {
+			parts := strings.Split(addr, ":")
+			if len(parts) >= 2 {
+				host = strings.Join(parts[:len(parts)-1], ":")
+				portStr = parts[len(parts)-1]
+			} else {
+				portStr = addr
+			}
+		}
 	} else {
-		port, _ = strconv.Atoi(addr)
-		addr = ":" + addr
+		portStr = addr
 	}
-	if port != 0 {
-		return addr
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		if host == "" && !strings.Contains(addr, ":") {
+			host = addr
+		}
+		port = 0
 	}
-	port, _ = Port(port, true)
-	return ":" + strconv.Itoa(port)
+	if port == 0 {
+		port, _ = Port(0, true)
+		portStr = strconv.Itoa(port)
+	} else {
+		portStr = strconv.Itoa(port)
+	}
+	return net.JoinHostPort(host, portStr)
 }
 
 // getHostname constructs a full URL with the appropriate scheme (http/https)

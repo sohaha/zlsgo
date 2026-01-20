@@ -118,14 +118,15 @@ func TestRBMutexTokenCorrectUsage(t *testing.T) {
 func TestRBMutexCorrectPairing(t *testing.T) {
 	mu := NewRBMutex()
 	var wg WaitGroup
-	shared := 0
+	var shared int
 
 	iterations := 100
 
 	for i := 0; i < iterations; i++ {
 		wg.Go(func() {
 			token := mu.RLock()
-			_ = shared
+			v := shared
+			_ = v
 			mu.RUnlock(token)
 		})
 	}
@@ -140,6 +141,8 @@ func TestRBMutexCorrectPairing(t *testing.T) {
 
 	wg.Wait()
 
+	mu.Lock()
+	defer mu.Unlock()
 	if shared != iterations {
 		t.Errorf("Expected shared=%d, got %d", iterations, shared)
 	}

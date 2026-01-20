@@ -74,6 +74,7 @@ type (
 		BindStructDelimiter  string
 		customRenderings     []reflect.Type
 		addr                 []addrSt
+		shutdownMu           sync.Mutex
 		shutdowns            []func()
 		MaxMultipartMemory   int64
 		webMode              int
@@ -259,7 +260,9 @@ func (e *Engine) AddShutdown(done func()) {
 	if done == nil {
 		return
 	}
+	e.shutdownMu.Lock()
 	e.shutdowns = append(e.shutdowns, done)
+	e.shutdownMu.Unlock()
 }
 
 // SetAddr sets the address for the server to listen on.
@@ -437,19 +440,6 @@ func (e *Engine) StartUp() []*serverMap {
 
 			wg.Done()
 
-			go func() {
-				select {
-				case <-errChan:
-				default:
-					wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
-					wrapMode := ""
-					if e.webMode > 0 {
-						wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
-					}
-					e.Log.Successf("%s %s %s%s", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
-				}
-			}()
-
 			if isTls {
 				if cfg.Config != nil {
 					srv.TLSConfig = cfg.Config
@@ -471,10 +461,32 @@ func (e *Engine) StartUp() []*serverMap {
 						e.Log.Errorf("HTTP Listen: %s", err)
 					}(e)
 				}
-				errChan <- srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
-			} else {
-				errChan <- srv.ListenAndServe()
 			}
+			go func() {
+				if isTls {
+					errChan <- srv.ListenAndServeTLS(cfg.Cert, cfg.Key)
+				} else {
+					errChan <- srv.ListenAndServe()
+				}
+			}()
+
+			select {
+			case err := <-errChan:
+				if err != nil && err != http.ErrServerClosed {
+					e.Log.Fatalf("Listen: %s", err)
+				} else if err != http.ErrServerClosed {
+					e.Log.Info(err)
+				}
+				return
+			default:
+			}
+
+			wrapPid := e.Log.ColorTextWrap(zlog.ColorLightGrey, fmt.Sprintf("Pid: %d", os.Getpid()))
+			wrapMode := ""
+			if e.webMode > 0 {
+				wrapMode = e.Log.ColorTextWrap(zlog.ColorYellow, fmt.Sprintf("%s ", strings.ToUpper(e.webModeName)))
+			}
+			e.Log.Successf("%s %s %s%s", "Listen:", e.Log.ColorTextWrap(zlog.ColorLightGreen, e.Log.OpTextWrap(zlog.OpBold, hostname)), wrapMode, wrapPid)
 
 			err := <-errChan
 			if err != nil && err != http.ErrServerClosed {
@@ -519,7 +531,10 @@ func shutdown(sigkill bool) {
 		if sigkill {
 			r.Log.Info("Shutdown server ...")
 		}
-		for _, shutdown := range r.shutdowns {
+		r.shutdownMu.Lock()
+		shutdowns := append([]func(){}, r.shutdowns...)
+		r.shutdownMu.Unlock()
+		for _, shutdown := range shutdowns {
 			shutdown()
 		}
 		err := s.srv.Shutdown(ctx)

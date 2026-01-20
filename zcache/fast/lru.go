@@ -188,6 +188,9 @@ func (l *FastCache) GetBytes(key string) ([]byte, bool) {
 		if b != nil {
 			return b, true
 		}
+		if i == nil {
+			return nil, true
+		}
 		b, ok = (*i).([]byte)
 		return b, ok
 	}
@@ -538,15 +541,17 @@ func (l *FastCache) GetStats() Stats {
 	lastAccess := atomic.LoadInt64(&l.lastAccessMs)
 	idleDuration := time.Duration(now-lastAccess) * time.Millisecond
 
-	// Count items across all buckets (approximation to avoid locking)
+	// Count items across all buckets
 	totalItems := 0
 	for i := range l.insts {
+		l.locks[i].Lock()
 		if l.insts[i][0] != nil {
 			totalItems += l.insts[i][0].size
 		}
 		if l.insts[i][1] != nil {
 			totalItems += l.insts[i][1].size
 		}
+		l.locks[i].Unlock()
 	}
 
 	return Stats{
