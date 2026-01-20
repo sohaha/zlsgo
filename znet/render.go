@@ -105,9 +105,9 @@ var (
 // renderProcessing handles the common rendering process for all renderer types.
 // It sets the HTTP status code, processes the content, and writes it to the response.
 func (c *Context) renderProcessing(code int32, r Renderer) {
-	// if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
-	// 	return
-	// }
+	if c.stopHandle.Load() && c.prevData.Code.Load() != 0 {
+		return
+	}
 	if code != 0 {
 		c.prevData.Code.Store(code)
 	}

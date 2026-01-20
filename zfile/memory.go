@@ -59,6 +59,7 @@ func NewMemoryFile(name string, opt ...MemoryFileOption) *MemoryFile {
 // based on the configured timing interval.
 func (f *MemoryFile) flushLoop() {
 	ticker := time.NewTicker(time.Second * time.Duration(f.timing))
+	defer ticker.Stop()
 	for {
 		select {
 		case <-f.stopTiming:
@@ -101,11 +102,12 @@ func (f *MemoryFile) Read(buffer []byte) (int, error) {
 func (f *MemoryFile) Close() error {
 	f.lock.Lock()
 	if f.stop {
+		f.lock.Unlock()
 		return nil
 	}
 	f.stop = true
 	f.lock.Unlock()
-	f.stopTiming <- struct{}{}
+	close(f.stopTiming)
 	return f.Sync()
 }
 

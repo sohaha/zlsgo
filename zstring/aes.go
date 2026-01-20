@@ -52,11 +52,18 @@ func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 func PKCS7UnPadding(origData []byte) ([]byte, error) {
 	length := len(origData)
 	if length == 0 {
-		return nil, errors.New("encryption string error")
-	} else {
-		u := int(origData[length-1])
-		return origData[:(length - u)], nil
+		return nil, errors.New("pkcs7 padding is invalid")
 	}
+	padding := int(origData[length-1])
+	if padding == 0 || padding > length {
+		return nil, errors.New("pkcs7 padding is invalid")
+	}
+	for i := length - padding; i < length; i++ {
+		if origData[i] != byte(padding) {
+			return nil, errors.New("pkcs7 padding is invalid")
+		}
+	}
+	return origData[:length-padding], nil
 }
 
 // AesEncrypt encrypts data using AES in CBC mode with PKCS#7 padding.

@@ -143,11 +143,16 @@ func (c *Context) write() {
 
 	c.Next()
 
-	if c.Request == nil || c.Request.Context().Err() != nil {
+	if c.Request == nil {
 		return
 	}
 
 	data := c.PrevContent()
+	if err := c.Request.Context().Err(); err != nil {
+		if data.Code.Load() == 0 && len(data.Content) == 0 {
+			return
+		}
+	}
 	header := c.Writer.Header()
 
 	for key := range c.header {

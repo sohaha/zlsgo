@@ -255,6 +255,13 @@ func OnShutdown(done func()) {
 	shutdownDone = done
 }
 
+func (e *Engine) AddShutdown(done func()) {
+	if done == nil {
+		return
+	}
+	e.shutdowns = append(e.shutdowns, done)
+}
+
 // SetAddr sets the address for the server to listen on.
 // Optional TLS configuration can be provided for HTTPS support.
 func (e *Engine) SetAddr(addrString string, tlsConfig ...TlsCfg) {

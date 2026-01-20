@@ -2,8 +2,9 @@ package limiter
 
 import (
 	"errors"
-	"sync"
 	"time"
+
+	"github.com/sohaha/zlsgo/zsync"
 )
 
 type circleQueue struct {
@@ -11,7 +12,7 @@ type circleQueue struct {
 	maxSize int
 	head    int
 	tail    int
-	sync.RWMutex
+	mu      *zsync.RBMutex
 }
 
 // newCircleQueue Initialize ring queue
@@ -19,11 +20,14 @@ func newCircleQueue(size int) *circleQueue {
 	var c circleQueue
 	c.maxSize = size + 1
 	c.slice = make([]int64, c.maxSize)
+	c.mu = zsync.NewRBMutex()
 	return &c
 }
 
 func (c *circleQueue) push(val int64) (err error) {
-	if c.isFull() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if (c.tail+1)%c.maxSize == c.head {
 		return errors.New("queue is full")
 	}
 	c.slice[c.tail] = val
@@ -32,27 +36,31 @@ func (c *circleQueue) push(val int64) (err error) {
 }
 
 func (c *circleQueue) pop() (val int64, err error) {
-	if c.isEmpty() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.tail == c.head {
 		return 0, errors.New("queue is empty")
 	}
-	c.Lock()
-	defer c.Unlock()
 	val = c.slice[c.head]
 	c.head = (c.head + 1) % c.maxSize
 	return
 }
 
 func (c *circleQueue) isFull() bool {
+	t := c.mu.RLock()
+	defer c.mu.RUnlock(t)
 	return (c.tail+1)%c.maxSize == c.head
 }
 
 func (c *circleQueue) isEmpty() bool {
+	t := c.mu.RLock()
+	defer c.mu.RUnlock(t)
 	return c.tail == c.head
 }
 
 func (c *circleQueue) usedSize() int {
-	c.RLock()
-	defer c.RUnlock()
+	t := c.mu.RLock()
+	defer c.mu.RUnlock(t)
 	return (c.tail + c.maxSize - c.head) % c.maxSize
 }
 
@@ -66,15 +74,13 @@ func (c *circleQueue) size() int {
 
 func (c *circleQueue) deleteExpired() {
 	now := time.Now().UnixNano()
-	size := c.usedSize()
-	if size == 0 {
-		return
-	}
-	for i := 0; i < size; i++ {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for c.tail != c.head {
 		if now > c.slice[c.head] {
-			_, _ = c.pop()
-		} else {
-			return
+			c.head = (c.head + 1) % c.maxSize
+			continue
 		}
+		break
 	}
 }

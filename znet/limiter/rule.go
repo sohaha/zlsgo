@@ -65,9 +65,14 @@ func (r *singleRule) allowVisit(key interface{}) bool {
 
 // remainingVisits Remaining visits
 func (r *singleRule) remainingVisits(key interface{}) int {
+	r.locker.Lock()
+	defer r.locker.Unlock()
 	if index, exist := r.usedRecordsIndex.Load(key); exist {
-		r.records[index.(int)].deleteExpired()
-		return r.records[index.(int)].unUsedSize()
+		idx := index.(int)
+		if idx >= 0 && idx < len(r.records) {
+			r.records[idx].deleteExpired()
+			return r.records[idx].unUsedSize()
+		}
 	}
 	return r.allowed
 }
@@ -106,8 +111,9 @@ func (r *singleRule) deleteExpired() {
 
 // deleteExpiredOnce Delete expired data once in a specific time interval
 func (r *singleRule) deleteExpiredOnce() {
+	r.locker.Lock()
+	defer r.locker.Unlock()
 	r.usedRecordsIndex.Range(func(k, v interface{}) bool {
-		r.locker.Lock()
 		index := v.(int)
 		if index < len(r.records) && index >= 0 {
 			r.records[index].deleteExpired()
@@ -118,7 +124,6 @@ func (r *singleRule) deleteExpiredOnce() {
 		} else {
 			r.usedRecordsIndex.Delete(k)
 		}
-		r.locker.Unlock()
 		return true
 	})
 }
@@ -141,16 +146,27 @@ func (r *singleRule) recovery() {
 			visitorRecordsNew[i] = newCircleQueue(r.allowed)
 		}
 		r.notRecordsIndex = make(map[int]struct{})
-		indexNew := 0
+		type entry struct {
+			key   interface{}
+			queue *circleQueue
+		}
+		entries := make([]entry, 0, usedLen)
 		r.usedRecordsIndex.Range(func(k, v interface{}) bool {
 			indexOld := v.(int)
-			visitorRecordsNew[indexNew] = r.records[indexOld]
-			indexNew++
+			if indexOld < 0 || indexOld >= len(r.records) {
+				r.usedRecordsIndex.Delete(k)
+				return true
+			}
+			entries = append(entries, entry{key: k, queue: r.records[indexOld]})
 			return true
 		})
+		for i := range entries {
+			visitorRecordsNew[i] = entries[i].queue
+			r.usedRecordsIndex.Store(entries[i].key, i)
+		}
 		r.records = visitorRecordsNew
 		for index := range r.records {
-			if index >= indexNew {
+			if index >= len(entries) {
 				r.notRecordsIndex[index] = struct{}{}
 			}
 		}
