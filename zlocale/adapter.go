@@ -1,10 +1,10 @@
 package zlocale
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/sohaha/zlsgo/zsync"
 	"github.com/sohaha/zlsgo/ztime"
 )
 
@@ -15,7 +15,7 @@ type LegacyCacheAdapter struct {
 	hitCount  int64
 	missCount int64
 	maxSize   int
-	mutex     sync.RWMutex
+	mutex     *zsync.RBMutex
 }
 
 // NewLegacyCacheAdapter creates a new legacy map-based cache adapter
@@ -23,32 +23,38 @@ func NewLegacyCacheAdapter(maxSize int) *LegacyCacheAdapter {
 	return &LegacyCacheAdapter{
 		cache:   make(map[string]*TemplateCacheEntry),
 		maxSize: maxSize,
+		mutex:   zsync.NewRBMutex(),
 	}
 }
 
 // Get retrieves a cached template entry by key
 func (l *LegacyCacheAdapter) Get(key string) (*TemplateCacheEntry, bool) {
-	l.mutex.RLock()
+	mu := zsync.EnsureRBMutex(&l.mutex)
+	mu.Lock()
 	entry, found := l.cache[key]
-	if found {
-		entry.Accessed = ztime.UnixMicro(ztime.Clock())
-		atomic.AddInt64(&entry.Hits, 1)
-	}
-	l.mutex.RUnlock()
 
 	if !found {
+		mu.Unlock()
 		atomic.AddInt64(&l.missCount, 1)
 		return nil, false
 	}
 
+	entry.Accessed = ztime.UnixMicro(ztime.Clock())
+	atomic.AddInt64(&entry.Hits, 1)
+	mu.Unlock()
 	atomic.AddInt64(&l.hitCount, 1)
 	return entry, true
 }
 
 // Set stores a template entry with optional expiration
 func (l *LegacyCacheAdapter) Set(key string, entry *TemplateCacheEntry) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	mu := zsync.EnsureRBMutex(&l.mutex)
+	mu.Lock()
+	defer mu.Unlock()
+
+	if l.cache == nil {
+		l.cache = make(map[string]*TemplateCacheEntry)
+	}
 
 	now := ztime.UnixMicro(ztime.Clock())
 	if entry.Created.IsZero() {
@@ -80,22 +86,25 @@ func (l *LegacyCacheAdapter) Set(key string, entry *TemplateCacheEntry) {
 
 // Delete removes a template from the cache
 func (l *LegacyCacheAdapter) Delete(key string) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	mu := zsync.EnsureRBMutex(&l.mutex)
+	mu.Lock()
+	defer mu.Unlock()
 	delete(l.cache, key)
 }
 
 // Clear removes all templates from the cache
 func (l *LegacyCacheAdapter) Clear() {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	mu := zsync.EnsureRBMutex(&l.mutex)
+	mu.Lock()
+	defer mu.Unlock()
 	l.cache = make(map[string]*TemplateCacheEntry)
 }
 
 // Count returns the number of cached templates
 func (l *LegacyCacheAdapter) Count() int {
-	l.mutex.RLock()
-	defer l.mutex.RUnlock()
+	mu := zsync.EnsureRBMutex(&l.mutex)
+	tok := mu.RLock()
+	defer mu.RUnlock(tok)
 	return len(l.cache)
 }
 

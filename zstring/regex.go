@@ -114,9 +114,9 @@ func clearRegexpCompile() {
 		return
 	}
 	now := time.Now().Unix()
-	for k := range regexCache {
-		if uint(now-regexCache[k].Time) <= regexCacheTimeout {
-			newRegexCache[k] = &regexMapStruct{Value: regexCache[k].Value, Time: now}
+	for k, v := range regexCache {
+		if uint(now-v.Time) <= regexCacheTimeout {
+			newRegexCache[k] = v
 		}
 	}
 	regexCache = newRegexCache
@@ -125,15 +125,14 @@ func clearRegexpCompile() {
 // getRegexpCompile retrieves a compiled regular expression from the cache or compiles it if not found.
 // The compiled expression is cached for future use to improve performance.
 func getRegexpCompile(pattern string) (r *regexp.Regexp, err error) {
-	l.RLock()
-	var data *regexMapStruct
-	var ok bool
-	data, ok = regexCache[pattern]
-	l.RUnlock()
-	if ok {
+	l.Lock()
+	if data, ok := regexCache[pattern]; ok {
+		data.Time = time.Now().Unix()
 		r = data.Value
+		l.Unlock()
 		return
 	}
+	l.Unlock()
 	r, err = regexp.Compile(pattern)
 	if err != nil {
 		return

@@ -89,3 +89,44 @@ func TestNewChanBuffered(t *testing.T) {
 		t.Log(v, ch.Len())
 	}
 }
+
+func TestNewChanUnboundedCloseInput(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	ch := zutil.NewChan[int]()
+	in := ch.In()
+	for i := 0; i < 5; i++ {
+		in <- i
+	}
+	close(in)
+
+	count := 0
+	for range ch.Out() {
+		count++
+	}
+	tt.Equal(5, count)
+}
+
+func TestNewChanUnboundedCloseStopsSend(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	ch := zutil.NewChan[int]()
+	ch.In() <- 1
+	ch.Close()
+
+	panicked := false
+	func() {
+		defer func() {
+			if recover() != nil {
+				panicked = true
+			}
+		}()
+		ch.In() <- 2
+	}()
+
+	tt.EqualTrue(panicked)
+
+	count := 0
+	for range ch.Out() {
+		count++
+	}
+	tt.Equal(1, count)
+}

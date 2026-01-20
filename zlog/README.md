@@ -34,6 +34,8 @@ func AddFlag(flag int)
 func ResetFlags(flag int)
 func SetFile(filepath string, archive ...bool)
 func SetSaveFile(filepath string, archive ...bool)
+func SetLevelFile(level int, filepath string, archive ...bool)
+func SetLevelSaveFile(level int, filepath string, archive ...bool)
 ```
 
 ### 颜色控制
@@ -97,6 +99,8 @@ func (log *Logger) GetFlags() int
 func (log *Logger) AddFlag(flag int)
 func (log *Logger) SetFile(filepath string, archive ...bool)
 func (log *Logger) SetSaveFile(filepath string, archive ...bool)
+func (log *Logger) SetLevelFile(level int, filepath string, archive ...bool)
+func (log *Logger) SetLevelSaveFile(level int, filepath string, archive ...bool)
 func (log *Logger) SetFormatter(formatter Formatter)
 func (log *Logger) SetIgnoreLog(logs ...string)
 func (log *Logger) Write(b []byte) (n int, err error)
@@ -162,6 +166,10 @@ func main() {
     if err != nil {
         fmt.Printf("设置日志文件失败: %v\n", err)
     }
+
+    // 按等级分文件
+    logger.SetLevelFile(zlog.LogInfo, "logs/info.log")
+    logger.SetLevelFile(zlog.LogError, "logs/error.log")
     
     // 基本日志记录
     logger.Info("应用程序启动")

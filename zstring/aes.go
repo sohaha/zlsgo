@@ -9,7 +9,15 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 )
+
+var aesCipherPool = sync.Pool{
+	New: func() interface{} {
+		buf := make([]byte, 0, 4096)
+		return &buf
+	},
+}
 
 // assKeyPadding ensures the encryption key is of valid length (16, 24, or 32 bytes).
 // If the key is too short, it is padded with spaces; if too long, it is truncated.
@@ -72,8 +80,26 @@ func AesEncrypt(plainText []byte, key string, iv ...string) (ciphertext []byte,
 		blockSize := block.BlockSize()
 		plainText = PKCS7Padding(plainText, blockSize)
 		blocMode := cipher.NewCBCEncrypter(block, k[:blockSize])
-		ciphertext = make([]byte, len(plainText))
-		blocMode.CryptBlocks(ciphertext, plainText)
+
+		needed := len(plainText)
+		bufPtr := aesCipherPool.Get().(*[]byte)
+		buf := *bufPtr
+
+		if cap(buf) < needed {
+			buf = make([]byte, needed)
+		}
+		buf = buf[:needed]
+
+		blocMode.CryptBlocks(buf, plainText)
+
+		ciphertext = make([]byte, len(buf))
+		copy(ciphertext, buf)
+
+		for i := range buf {
+			buf[i] = 0
+		}
+		*bufPtr = buf[:0]
+		aesCipherPool.Put(bufPtr)
 	}
 	return
 }
@@ -100,7 +126,16 @@ func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, 
 	if err == nil {
 		blockSize := block.BlockSize()
 		blockMode := cipher.NewCBCDecrypter(block, k[:blockSize])
-		plainText = make([]byte, len(cipherText))
+
+		needed := len(cipherText)
+		bufPtr := aesCipherPool.Get().(*[]byte)
+		buf := *bufPtr
+
+		if cap(buf) < needed {
+			buf = make([]byte, needed)
+		}
+		buf = buf[:needed]
+
 		defer func() {
 			if e := recover(); e != nil {
 				var ok bool
@@ -109,10 +144,18 @@ func AesDecrypt(cipherText []byte, key string, iv ...string) (plainText []byte, 
 					err = fmt.Errorf("%s", e)
 				}
 			}
+			for i := range buf {
+				buf[i] = 0
+			}
+			*bufPtr = buf[:0]
+			aesCipherPool.Put(bufPtr)
 		}()
-		blockMode.CryptBlocks(plainText, cipherText)
+
+		blockMode.CryptBlocks(buf, cipherText)
 		if err == nil {
-			plainText, err = PKCS7UnPadding(plainText)
+			decrypted := make([]byte, len(buf))
+			copy(decrypted, buf)
+			plainText, err = PKCS7UnPadding(decrypted)
 		}
 	}
 	return

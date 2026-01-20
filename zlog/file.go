@@ -66,6 +66,18 @@ func (log *Logger) SetFile(filepath string, archive ...bool) {
 	log.setLogfile(filepath, logArchive)
 }
 
+func (log *Logger) SetLevelFile(level int, filepath string, archive ...bool) {
+	log.DisableConsoleColor()
+	logArchive := len(archive) > 0 && archive[0]
+	log.setLevelFile(level, filepath, logArchive, false)
+}
+
+func (log *Logger) SetLevelSaveFile(level int, filepath string, archive ...bool) {
+	log.DisableConsoleColor()
+	logArchive := len(archive) > 0 && archive[0]
+	log.setLevelFile(level, filepath, logArchive, true)
+}
+
 func (log *Logger) setLogfile(filepath string, archive bool) {
 	fileObj, fileName, fileDir, _ := openFile(filepath, archive)
 	log.mu.Lock()
@@ -81,11 +93,36 @@ func (log *Logger) setLogfile(filepath string, archive bool) {
 	log.mu.Unlock()
 }
 
+func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStdout bool) {
+	fileObj, _, _, _ := openFile(filepath, archive)
+	log.mu.Lock()
+	if log.levelFiles == nil {
+		log.levelFiles = map[int]*levelFile{}
+	}
+	if old, ok := log.levelFiles[level]; ok && old != nil && old.file != nil {
+		_ = old.file.Close()
+	}
+	var out io.Writer = fileObj
+	if andStdout {
+		out = io.MultiWriter(fileObj, os.Stdout)
+	}
+	log.levelFiles[level] = &levelFile{file: fileObj, out: out}
+	log.mu.Unlock()
+}
+
 func (log *Logger) Discard() {
 	log.mu.Lock()
 	log.out = ioutil.Discard
 	if log.file != nil {
 		_ = log.file.Close()
+	}
+	if log.levelFiles != nil {
+		for _, lf := range log.levelFiles {
+			if lf != nil && lf.file != nil {
+				_ = lf.file.Close()
+			}
+		}
+		log.levelFiles = nil
 	}
 	log.level = LogNot
 	log.mu.Unlock()
@@ -97,6 +134,23 @@ func (log *Logger) SetSaveFile(filepath string, archive ...bool) {
 	log.fileAndStdout = true
 	log.out = io.MultiWriter(log.file, os.Stdout)
 	log.mu.Unlock()
+}
+
+func (log *Logger) CloseLevelFiles() {
+	log.mu.Lock()
+	log.closeLevelFilesLocked()
+	log.mu.Unlock()
+}
+
+func (log *Logger) closeLevelFilesLocked() {
+	if log.levelFiles != nil {
+		for _, lf := range log.levelFiles {
+			if lf != nil && lf.file != nil {
+				_ = lf.file.Close()
+			}
+		}
+		log.levelFiles = nil
+	}
 }
 
 func (log *Logger) CloseFile() {

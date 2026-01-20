@@ -2,6 +2,7 @@ package zsync
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -21,7 +22,16 @@ func MergeContext(ctxs ...context.Context) Context {
 		doneCh:    make(chan struct{}),
 		doneIndex: -1,
 	}
-	go mc.monitor()
+	hasDone := false
+	for _, ctx := range ctxs {
+		if ctx != nil && ctx.Done() != nil {
+			hasDone = true
+			break
+		}
+	}
+	if hasDone {
+		go mc.monitor()
+	}
 
 	return &mc
 }
@@ -40,6 +50,7 @@ type mergeContext struct {
 	doneCh    chan struct{}    // Channel that is closed when any context is canceled
 	ctxs      []context.Context // The merged contexts
 	doneIndex int              // Index of the first context that was canceled
+	mu        sync.RWMutex
 }
 
 // Deadline returns the earliest deadline of all merged contexts.
@@ -67,7 +78,10 @@ func (mc *mergeContext) Done() <-chan struct{} {
 // Err returns the error from the first context that was canceled,
 // or nil if no context has been canceled yet.
 func (mc *mergeContext) Err() error {
-	return mc.err
+	mc.mu.RLock()
+	err := mc.err
+	mc.mu.RUnlock()
+	return err
 }
 
 // Value returns the value associated with the key in any of the merged contexts.
@@ -87,9 +101,13 @@ func (mc *mergeContext) Value(key any) any {
 func (mc *mergeContext) monitor() {
 	winner := multiselect(mc.ctxs)
 
+	if winner < 0 {
+		return
+	}
+	mc.mu.Lock()
 	mc.doneIndex = winner
 	mc.err = mc.ctxs[winner].Err()
-
+	mc.mu.Unlock()
 	close(mc.doneCh)
 }
 
@@ -97,31 +115,26 @@ func (mc *mergeContext) monitor() {
 // the index of the first context that was canceled.
 // It returns -1 if no context was canceled (which should not happen in practice).
 func multiselect(ctxs []context.Context) int {
-	res := make(chan int)
-
 	count := len(ctxs)
-	if count == 1 {
-		<-ctxs[0].Done()
-		return 0
+	if count == 0 {
+		return -1
 	}
-
-	var wg sync.WaitGroup
-	wg.Add(count)
-
+	cases := make([]reflect.SelectCase, 0, count)
+	indices := make([]int, 0, count)
 	for i, ctx := range ctxs {
-		go func(i int, ctx context.Context) {
-			defer wg.Done()
-			<-ctx.Done()
-			if ctx.Err() != nil {
-			}
-			res <- i
-		}(i, ctx)
+		if ctx == nil {
+			continue
+		}
+		ch := ctx.Done()
+		if ch == nil {
+			continue
+		}
+		cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)})
+		indices = append(indices, i)
 	}
-
-	go func() {
-		wg.Wait()
-		close(res)
-	}()
-
-	return <-res
+	if len(cases) == 0 {
+		return -1
+	}
+	winner, _, _ := reflect.Select(cases)
+	return indices[winner]
 }

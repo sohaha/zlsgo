@@ -114,6 +114,13 @@ func TestTrimSpace(t *testing.T) {
 	}
 }
 
+func TestTrimBOM(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Equal("abc", string(TrimBOM([]byte{0xEF, 0xBB, 0xBF, 'a', 'b', 'c'})))
+	tt.Equal(string([]byte{0xEF, 'a'}), string(TrimBOM([]byte{0xEF, 'a'})))
+	tt.Equal(string([]byte{'a', 0xEF, 0xBB, 0xBF}), string(TrimBOM([]byte{'a', 0xEF, 0xBB, 0xBF})))
+}
+
 func TestTrimLine(t *testing.T) {
 	const html = `
 		<html>

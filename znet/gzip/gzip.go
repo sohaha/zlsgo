@@ -3,6 +3,7 @@ package gzip
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
 	"strings"
 
 	"github.com/sohaha/zlsgo/znet"
@@ -35,7 +36,10 @@ func New(conf Config) znet.HandlerFunc {
 			if err != nil {
 				return
 			}
-			defer pool.Put(g)
+			defer func() {
+				g.Reset(io.Discard)
+				pool.Put(g)
+			}()
 
 			be := &bytes.Buffer{}
 			g.Reset(be)
@@ -43,7 +47,10 @@ func New(conf Config) znet.HandlerFunc {
 			if err != nil {
 				return
 			}
-			_ = g.Flush()
+			err = g.Close()
+			if err != nil {
+				return
+			}
 
 			c.SetHeader("Content-Encoding", "gzip")
 			c.Byte(p.Code.Load(), be.Bytes())

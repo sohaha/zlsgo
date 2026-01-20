@@ -67,6 +67,16 @@ func TestNewPromise(t *testing.T) {
 	tt.Equal(12, res)
 
 	tt.Equal(i, 4)
+
+	p4 := zsync.NewPromise(func() (int, error) {
+		return 3, nil
+	}).Catch(func(err error) (int, error) {
+		return 0, err
+	})
+
+	res, err = p4.Done()
+	tt.NoError(err)
+	tt.Equal(3, res)
 }
 
 func TestNewPromiseContext(t *testing.T) {

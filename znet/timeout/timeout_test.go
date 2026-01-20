@@ -143,8 +143,25 @@ func TestPanicRecovery(t *testing.T) {
 	}
 }
 
+func TestTimeoutWithGlobalRecovery(t *testing.T) {
+	test := zlsgo.NewTest(t)
+	r := znet.New()
+	r.Use(znet.Recovery(func(c *znet.Context, err error) {
+		c.String(500, "panic recovered")
+	}))
+
+	timeoutMiddleware := New(100 * time.Millisecond)
+	w := newRequest(r, "GET", "/panic-recovery", func(c *znet.Context) {
+		panic("boom")
+	}, timeoutMiddleware)
+
+	test.Equal(500, w.Code)
+	test.Equal("panic recovered", strings.TrimSpace(w.Body.String()))
+}
+
 func TestContextCancellation(t *testing.T) {
 	r := newServer()
+	start := time.Now()
 
 	handlerDone := make(chan struct{})
 	timeoutHandlerCalled := make(chan struct{}, 1)
@@ -191,8 +208,11 @@ func TestContextCancellation(t *testing.T) {
 
 	select {
 	case <-handlerDone:
-	case <-time.After(2 * time.Second):
-		t.Fatal("Test timed out waiting for handler to complete")
+		if time.Since(start) > 500*time.Millisecond {
+			t.Fatal("Handler did not observe context cancellation")
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Handler did not exit after context cancellation")
 	}
 }
 

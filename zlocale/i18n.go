@@ -43,7 +43,6 @@ type Language struct {
 	templateCache TemplateCache
 	// data contains the translation key-value pairs
 	data map[string]string
-	// dataMutex protects concurrent access to data map using standard RWMutex to satisfy the race detector
 	dataMutex sync.RWMutex
 	// mutex protects concurrent access to the translation data using read-biased mutex for performance
 	mutex *zsync.RBMutex
@@ -408,8 +407,8 @@ func (i *I18n) HasKey(langCode, key string) bool {
 	langToken := lang.mutex.RLock()
 	defer lang.mutex.RUnlock(langToken)
 	lang.dataMutex.RLock()
+	defer lang.dataMutex.RUnlock()
 	_, exists = lang.data[key]
-	lang.dataMutex.RUnlock()
 	return exists
 }
 

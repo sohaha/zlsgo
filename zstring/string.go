@@ -157,8 +157,7 @@ func IsLcfirst(str string) bool {
 // TrimBOM removes the UTF-8 Byte Order Mark (BOM) from the beginning of a byte slice if present.
 // The BOM is the byte sequence 0xEF,0xBB,0xBF that sometimes appears at the start of UTF-8 encoded files.
 func TrimBOM(fileBytes []byte) []byte {
-	trimmedBytes := bytes.Trim(fileBytes, "\xef\xbb\xbf")
-	return trimmedBytes
+	return bytes.TrimPrefix(fileBytes, []byte{0xEF, 0xBB, 0xBF})
 }
 
 // SnakeCaseToCamelCase converts a snake_case string to camelCase or PascalCase.

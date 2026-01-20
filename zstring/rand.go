@@ -46,19 +46,25 @@ func RandInt(min int, max int) int {
 // By default, it uses alphanumeric characters (0-9, a-z, A-Z).
 // An optional template string can be provided to limit the characters used.
 func Rand(n int, tpl ...string) string {
+	if n <= 0 {
+		return ""
+	}
 	var s []rune
-	b := make([]byte, n)
 	if len(tpl) > 0 {
 		s = []rune(tpl[0])
 	} else {
 		s = letterBytes
 	}
+	if len(s) == 0 {
+		return ""
+	}
 	l := len(s) - 1
+	out := make([]rune, n)
 	for i := n - 1; i >= 0; i-- {
 		idx := RandInt(0, l)
-		b[i] = byte(s[idx])
+		out[i] = s[idx]
 	}
-	return Bytes2String(b)
+	return string(out)
 }
 
 // UniqueID generates a cryptographically secure unique ID with at least the specified length.

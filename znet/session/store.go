@@ -31,4 +31,5 @@ type Store interface {
 	Delete(sessionID string) error
 	Collect() error
 	Renew(sessionID string, expiresAt time.Time) error
+	Close() error
 }

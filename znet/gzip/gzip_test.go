@@ -1,6 +1,9 @@
 package gzip_test
 
 import (
+	"bytes"
+	stdgzip "compress/gzip"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -56,6 +59,28 @@ func TestGzip(t *testing.T) {
 		}()
 	}
 	g.Wait()
+}
+
+func TestGzipReadable(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/gzip", nil)
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Host = host
+	r.ServeHTTP(w, req)
+
+	tt.Equal(200, w.Code)
+
+	gr, err := stdgzip.NewReader(bytes.NewReader(w.Body.Bytes()))
+	if !tt.NoError(err, true) {
+		return
+	}
+	defer gr.Close()
+
+	data, err := io.ReadAll(gr)
+	tt.NoError(err, true)
+	tt.Equal(size, len(data))
 }
 
 func BenchmarkGzipDoNotUse(b *testing.B) {

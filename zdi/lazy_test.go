@@ -48,7 +48,6 @@ func TestProvide(t *testing.T) {
 	di.Provide(func() *ztype.Type {
 		tt.Log("test panic")
 		panic("panic")
-		return nil
 	})
 
 	_, err = di.Invoke(func(typ *ztype.Type) {

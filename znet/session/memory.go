@@ -43,6 +43,8 @@ func (s *Memory) reset() {
 var _ Session = (*Memory)(nil)
 
 func (s *Memory) ID() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.id
 }
 
@@ -85,7 +87,7 @@ func (s *Memory) Destroy() error {
 		return true
 	})
 	if s.store != nil {
-		s.store.Delete(s.id)
+		s.store.Delete(s.ID())
 	}
 	return nil
 }
@@ -97,6 +99,8 @@ type MemoryStore struct {
 	sessionPool     sync.Pool
 	persist         *zfile.MemoryFile
 	persistStop     chan struct{}
+	persistStopOnce sync.Once
+	persistWG       sync.WaitGroup
 	sessions        sync.Map
 	persistPath     string
 	persistFiles    []*zfile.MemoryFile
@@ -155,6 +159,7 @@ func NewMemoryStore(opt ...func(*MemoryStoreOptions)) *MemoryStore {
 		_ = store.loadFromDisk()
 
 		store.persistStop = make(chan struct{})
+		store.persistWG.Add(1)
 		go store.persistLoop()
 	}
 	return store
@@ -168,7 +173,8 @@ func (store *MemoryStore) Get(sessionID string) (Session, error) {
 	}
 
 	session := value.(*Memory)
-	if !session.expiresAt.IsZero() && time.Now().After(session.expiresAt) {
+	expiresAt := session.ExpiresAt()
+	if !expiresAt.IsZero() && time.Now().After(expiresAt) {
 		go store.Delete(sessionID)
 		return nil, errors.New("session expired")
 	}
@@ -221,7 +227,8 @@ func (store *MemoryStore) Collect() error {
 		sessionID := key.(string)
 		session := value.(*Memory)
 
-		if !session.expiresAt.IsZero() && now.After(session.expiresAt) {
+		expiresAt := session.ExpiresAt()
+		if !expiresAt.IsZero() && now.After(expiresAt) {
 			expiredSessions = append(expiredSessions, session)
 			expiredIDs = append(expiredIDs, sessionID)
 		}
@@ -255,6 +262,37 @@ func (store *MemoryStore) Renew(sessionID string, expiresAt time.Time) error {
 	return nil
 }
 
+func (store *MemoryStore) Close() error {
+	if store == nil {
+		return nil
+	}
+	if store.persistStop != nil {
+		store.persistStopOnce.Do(func() {
+			close(store.persistStop)
+		})
+		store.persistWG.Wait()
+	}
+	if store.persist == nil && len(store.persistFiles) == 0 {
+		return nil
+	}
+	if err := store.writeSnapshot(); err != nil {
+		return err
+	}
+	if store.persist != nil {
+		return store.persist.Close()
+	}
+	var closeErr error
+	for _, f := range store.persistFiles {
+		if f == nil {
+			continue
+		}
+		if err := f.Close(); err != nil && closeErr == nil {
+			closeErr = err
+		}
+	}
+	return closeErr
+}
+
 // persistedSession is the on-disk representation of one session.
 type persistedSession struct {
 	ExpiresAt time.Time              `json:"expires_at"`
@@ -263,6 +301,7 @@ type persistedSession struct {
 
 // persistLoop periodically writes snapshot to memory file and syncs to disk.
 func (store *MemoryStore) persistLoop() {
+	defer store.persistWG.Done()
 	ticker := time.NewTicker(time.Duration(store.persistInterval) * time.Second)
 	for {
 		select {
@@ -291,7 +330,8 @@ func (store *MemoryStore) writeSnapshot() error {
 				return true
 			}
 			s := value.(*Memory)
-			if !s.expiresAt.IsZero() && now.After(s.expiresAt) {
+			expiresAt := s.ExpiresAt()
+			if !expiresAt.IsZero() && now.After(expiresAt) {
 				return true
 			}
 			data := make(map[string]interface{})
@@ -303,7 +343,7 @@ func (store *MemoryStore) writeSnapshot() error {
 				data[ks] = v
 				return true
 			})
-			snapshot[id] = persistedSession{ExpiresAt: s.expiresAt, Data: data}
+			snapshot[id] = persistedSession{ExpiresAt: expiresAt, Data: data}
 			return true
 		})
 		b, err := json.Marshal(snapshot)
@@ -330,7 +370,8 @@ func (store *MemoryStore) writeSnapshot() error {
 			return true
 		}
 		s := value.(*Memory)
-		if !s.expiresAt.IsZero() && now.After(s.expiresAt) {
+		expiresAt := s.ExpiresAt()
+		if !expiresAt.IsZero() && now.After(expiresAt) {
 			return true
 		}
 		data := make(map[string]interface{})
@@ -343,7 +384,7 @@ func (store *MemoryStore) writeSnapshot() error {
 			return true
 		})
 		idx := store.shardIndex(id)
-		parts[idx][id] = persistedSession{ExpiresAt: s.expiresAt, Data: data}
+		parts[idx][id] = persistedSession{ExpiresAt: expiresAt, Data: data}
 		return true
 	})
 
@@ -385,6 +426,7 @@ func (store *MemoryStore) loadFromDisk() error {
 			sess.mu.Lock()
 			sess.id = id
 			sess.expiresAt = ps.ExpiresAt
+			sess.store = store
 			sess.mu.Unlock()
 			for k, v := range ps.Data {
 				sess.data.Store(k, v)
@@ -415,6 +457,7 @@ func (store *MemoryStore) loadFromDisk() error {
 			sess.mu.Lock()
 			sess.id = id
 			sess.expiresAt = ps.ExpiresAt
+			sess.store = store
 			sess.mu.Unlock()
 			for k, v := range ps.Data {
 				sess.data.Store(k, v)

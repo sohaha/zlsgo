@@ -178,6 +178,28 @@ func TestMemoryLimiter_OnStats(t *testing.T) {
 	ml.Stop()
 }
 
+func TestMemoryLimiter_OnStatsPanic(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	ml := zutil.NewMemoryLimiter()
+	defer ml.Stop()
+
+	sentinel := &struct{}{}
+	ml.OnStats(func(stats zutil.MemoryStats) {
+		panic(sentinel)
+	})
+
+	var recovered interface{}
+	func() {
+		defer func() {
+			recovered = recover()
+		}()
+		ml.Refresh()
+	}()
+
+	tt.Equal(sentinel, recovered)
+}
+
 func TestMemoryLimiter_Refresh(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
@@ -192,6 +214,56 @@ func TestMemoryLimiter_Refresh(t *testing.T) {
 
 	ml.Refresh()
 	tt.EqualTrue(onStatsCalled.Load() > 0)
+}
+
+func TestMemoryLimiter_ConcurrentRefreshPauseState(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	ml := zutil.NewMemoryLimiter(func(cfg *zutil.MemoryStatsConfig) {
+		cfg.Limit = 1
+		cfg.PauseThreshold = 0.01
+	})
+	defer ml.Stop()
+
+	var calls atomic.Int32
+	firstStart := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	secondDone := make(chan struct{})
+	firstDone := make(chan struct{})
+
+	ml.OnPause(func(ratio float64) bool {
+		n := calls.Add(1)
+		if n == 1 {
+			close(firstStart)
+			<-releaseFirst
+			close(firstDone)
+			return false
+		}
+		if n == 2 {
+			close(secondDone)
+			return true
+		}
+		return true
+	})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ml.Refresh()
+	}()
+
+	<-firstStart
+	ml.Refresh()
+	<-secondDone
+
+	tt.EqualFalse(ml.IsPaused())
+
+	close(releaseFirst)
+	<-firstDone
+	wg.Wait()
+
+	tt.EqualFalse(ml.IsPaused())
 }
 
 func TestMemoryLimiter_Concurrent(t *testing.T) {

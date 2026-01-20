@@ -25,6 +25,7 @@ type (
 		close   chan struct{} // Channel for signaling close operations
 		conf    conf          // Configuration
 		q       []T           // Internal queue for unbounded channels
+		closed  *Bool
 	}
 
 	// Options contains configuration options for channel creation
@@ -67,7 +68,7 @@ func NewChan[T any](cap ...int) *Chan[T] {
 		}
 	}
 
-	ch := &Chan[T]{conf: o, close: make(chan struct{})}
+	ch := &Chan[T]{conf: o, close: make(chan struct{}), closed: NewBool(false)}
 	switch ch.conf.typ {
 	case unbuffered:
 		ch.in = make(chan T)
@@ -95,12 +96,16 @@ func (ch *Chan[T]) Out() <-chan T { return ch.out }
 // For unbounded channels, this will drain the internal queue
 // and ensure all sent values can still be received.
 func (ch *Chan[T]) Close() {
+	if !ch.closed.CAS(false, true) {
+		return
+	}
 	switch ch.conf.typ {
 	case buffered, unbuffered:
-		close(ch.in)
+		safeClose(ch.in)
 		close(ch.close)
 	default:
-		ch.close <- struct{}{}
+		safeClose(ch.in)
+		close(ch.close)
 	}
 }
 
@@ -127,12 +132,13 @@ func (ch *Chan[T]) process() {
 		select {
 		case e, ok := <-ch.in:
 			if !ok {
+				ch.shutdownUnbounded(false)
 				return
 			}
 			ch.conf.len.Add(1)
 			ch.q = append(ch.q, e)
 		case <-ch.close:
-			ch.closeUnbounded()
+			ch.shutdownUnbounded(true)
 			return
 		}
 
@@ -144,12 +150,13 @@ func (ch *Chan[T]) process() {
 				ch.q = ch.q[1:]
 			case e, ok := <-ch.in:
 				if !ok {
+					ch.shutdownUnbounded(false)
 					return
 				}
 				ch.conf.len.Add(1)
 				ch.q = append(ch.q, e)
 			case <-ch.close:
-				ch.closeUnbounded()
+				ch.shutdownUnbounded(true)
 				return
 			}
 		}
@@ -159,13 +166,12 @@ func (ch *Chan[T]) process() {
 	}
 }
 
-// closeUnbounded is an internal method that handles closing an unbounded channel.
-// It drains any remaining elements from the input channel and internal queue,
-// ensuring they are all sent to the output channel before closing it.
-func (ch *Chan[T]) closeUnbounded() {
+func (ch *Chan[T]) shutdownUnbounded(closeInput bool) {
 	var nilT T
 
-	close(ch.in)
+	if closeInput {
+		safeClose(ch.in)
+	}
 
 	for e := range ch.in {
 		ch.q = append(ch.q, e)
@@ -178,5 +184,14 @@ func (ch *Chan[T]) closeUnbounded() {
 	}
 
 	close(ch.out)
-	close(ch.close)
+}
+
+func safeClose[T any](ch chan T) {
+	if ch == nil {
+		return
+	}
+	defer func() {
+		_ = recover()
+	}()
+	close(ch)
 }

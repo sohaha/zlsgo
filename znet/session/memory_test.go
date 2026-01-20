@@ -16,6 +16,7 @@ import (
 func TestMemorySession(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	store := session.NewMemoryStore()
+	defer store.Close()
 
 	tt.Run("New and Get", func(tt *zlsgo.TestUtil) {
 		sessionID := "test-session"
@@ -90,6 +91,7 @@ func TestMemoryStore_Persistence_Sharded(t *testing.T) {
 			o.FilenamePrefix = "sessions"
 		},
 	)
+	defer store.Close()
 
 	aliveIDs := []string{"a1", "a2", "a3", "a4", "a5"}
 	for _, id := range aliveIDs {
@@ -119,6 +121,7 @@ func TestMemoryStore_Persistence_Sharded(t *testing.T) {
 			o.FilenamePrefix = "sessions"
 		},
 	)
+	defer store2.Close()
 
 	for _, id := range aliveIDs {
 		s2, err := store2.Get(id)
@@ -135,6 +138,7 @@ func TestMemoryStore_Persistence_Sharded(t *testing.T) {
 func TestMemoryStore(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	store := session.NewMemoryStore()
+	defer store.Close()
 
 	tt.Run("Get non-existent session", func(tt *zlsgo.TestUtil) {
 		_, err := store.Get("nonexistent")
@@ -220,6 +224,7 @@ func TestMemoryStore(t *testing.T) {
 func TestMemoryStore_Delete(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	store := session.NewMemoryStore()
+	defer store.Close()
 
 	sessionID := "session-to-delete"
 	s, _ := store.New(sessionID, time.Now().Add(time.Hour))
@@ -238,6 +243,7 @@ func TestMemoryStore_Delete(t *testing.T) {
 func TestMemoryStore_Save(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	store := session.NewMemoryStore()
+	defer store.Close()
 
 	sessionID := "session-to-save"
 	s, _ := store.New(sessionID, time.Now().Add(time.Hour))
@@ -261,6 +267,7 @@ func TestMemoryStore_Persistence(t *testing.T) {
 			o.Filename = "sessions.json"
 		},
 	)
+	defer store.Close()
 
 	activeID := "persist-active"
 	s, err := store.New(activeID, time.Now().Add(1*time.Hour))
@@ -283,10 +290,16 @@ func TestMemoryStore_Persistence(t *testing.T) {
 			o.Filename = "sessions.json"
 		},
 	)
+	defer store2.Close()
 
 	s2, err := store2.Get(activeID)
 	tt.NoError(err, true)
 	tt.Equal("v", s2.Get("k").String())
+
+	err = s2.Destroy()
+	tt.NoError(err, true)
+	_, err = store2.Get(activeID)
+	tt.Equal(errors.New("session not found"), err)
 
 	_, err = store2.Get(expiredID)
 	tt.Equal(errors.New("session not found"), err)

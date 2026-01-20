@@ -3,6 +3,7 @@ package zsync
 import (
 	"context"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -58,5 +59,40 @@ func TestMergeContext(t *testing.T) {
 			tt.EqualTrue(ctx.Err() != nil)
 		}
 		tt.EqualTrue(time.Since(now).Seconds() > 0.1)
+	}
+}
+
+func TestMergeContextNoGoroutineLeak(t *testing.T) {
+	base := runtime.NumGoroutine()
+	for i := 0; i < 20; i++ {
+		ctx1, cancel1 := context.WithCancel(context.Background())
+		ctx2, cancel2 := context.WithCancel(context.Background())
+		ctx3, cancel3 := context.WithCancel(context.Background())
+		merged := MergeContext(ctx1, ctx2, ctx3)
+		cancel2()
+		<-merged.Done()
+		cancel1()
+		cancel3()
+	}
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	time.Sleep(200 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	if after > base+10 {
+		t.Fatalf("goroutine leak: base=%d after=%d", base, after)
+	}
+}
+
+func TestMergeContextNoLeakWithoutCancelable(t *testing.T) {
+	base := runtime.NumGoroutine()
+	for i := 0; i < 50; i++ {
+		_ = MergeContext(context.Background(), context.TODO())
+	}
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	time.Sleep(200 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	if after > base+10 {
+		t.Fatalf("goroutine leak: base=%d after=%d", base, after)
 	}
 }

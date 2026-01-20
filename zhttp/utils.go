@@ -41,7 +41,7 @@ func ConvertCookie(cookiesRaw string) map[string]*http.Cookie {
 	cookie := map[string]*http.Cookie{}
 	c := strings.Split(cookiesRaw, ";")
 	for _, s := range c {
-		v := strings.Split(zstring.TrimSpace(s), "=")
+		v := strings.SplitN(zstring.TrimSpace(s), "=", 2)
 		if len(v) == 2 {
 			name := zstring.TrimSpace(v[0])
 			cookie[name] = &http.Cookie{Name: name, Value: v[1]}

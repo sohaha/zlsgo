@@ -2,6 +2,7 @@ package zlog
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -60,4 +61,26 @@ func TestSetSaveFile(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	t.Log(zfile.FileSize("tmp2/test.log"))
 	t.Log(zfile.FileSize("tmp2/test2/" + ztime.Now("Y-m-d") + ".log"))
+}
+
+func TestLevelFile(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	log := New("LevelFile ")
+	defer zfile.Rmdir("tmp2/")
+	log.SetLevelFile(LogInfo, "tmp2/info.log")
+	log.SetLevelFile(LogError, "tmp2/error.log")
+	log.Info("level-info-1")
+	log.Error("level-error-1")
+	time.Sleep(time.Second * 2)
+
+	tt.EqualTrue(zfile.FileExist("tmp2/info.log"))
+	tt.EqualTrue(zfile.FileExist("tmp2/error.log"))
+
+	infoContent, err := zfile.ReadFile("tmp2/info.log")
+	tt.EqualNil(err)
+	errorContent, err := zfile.ReadFile("tmp2/error.log")
+	tt.EqualNil(err)
+	tt.EqualTrue(strings.Contains(string(infoContent), "level-info-1"))
+	tt.EqualTrue(strings.Contains(string(errorContent), "level-error-1"))
+	tt.EqualTrue(!strings.Contains(string(infoContent), "level-error-1"))
 }

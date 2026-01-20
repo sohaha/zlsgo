@@ -101,7 +101,8 @@ type (
 		// out is the destination for log output (e.g., os.Stdout)
 		out io.Writer
 		// file is the memory buffer for file-based logging
-		file *zfile.MemoryFile
+		file       *zfile.MemoryFile
+		levelFiles map[int]*levelFile
 		// prefix is prepended to each log message
 		prefix string
 		// fileDir is the directory where log files are stored
@@ -123,6 +124,10 @@ type (
 		color bool
 		// fileAndStdout indicates whether to log to both file and standard output
 		fileAndStdout bool
+	}
+	levelFile struct {
+		file *zfile.MemoryFile
+		out  io.Writer
 	}
 	// formatter is an internal type used for formatting values during pretty printing
 	formatter struct {
@@ -173,6 +178,7 @@ func NewZLog(out io.Writer, prefix string, flag int, level int, color bool, call
 // CleanLog performs cleanup operations on a logger, such as closing any open log files.
 // This is typically called by the garbage collector when a logger is no longer referenced.
 func CleanLog(log *Logger) {
+	log.CloseLevelFiles()
 	log.CloseFile()
 }
 
@@ -272,6 +278,20 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level 
 	}
 }
 
+func (log *Logger) outputWriter(level int) io.Writer {
+	log.mu.RLock()
+	if level >= 0 && log.levelFiles != nil {
+		if lf, ok := log.levelFiles[level]; ok && lf != nil && lf.out != nil {
+			out := lf.out
+			log.mu.RUnlock()
+			return out
+		}
+	}
+	out := log.out
+	log.mu.RUnlock()
+	return out
+}
+
 func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, prefixText ...string) error {
 	if log.writeBefore != nil && len(s) > 0 {
 		p := s
@@ -307,7 +327,8 @@ func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, pref
 		buf.WriteByte('\n')
 	}
 
-	_, err := log.out.Write(buf.Bytes())
+	out := log.outputWriter(level)
+	_, err := out.Write(buf.Bytes())
 	return err
 }
 
@@ -657,6 +678,7 @@ func (wr logWriter) Reset(l *Logger) {
 	wr.log.prefix = l.prefix
 	wr.log.flag = l.flag
 	wr.log.level = l.level
+	wr.log.levelFiles = l.levelFiles
 }
 
 // formatArgs formats arguments and optimizes memory usage

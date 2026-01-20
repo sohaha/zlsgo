@@ -1,6 +1,7 @@
 package zstring
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
@@ -11,6 +12,18 @@ func TestRand(T *testing.T) {
 	t.Log(Rand(4), Rand(10), Rand(4, "a1"))
 	t.Log(RandInt(4, 10), RandInt(1, 10), RandInt(1, 2), RandInt(1, 0))
 	t.Log(RandUint32Max(10), RandUint32Max(100), RandUint32Max(1000), RandUint32Max(10000))
+}
+
+func TestRandUnicodeTemplate(T *testing.T) {
+	t := zlsgo.NewTest(T)
+	tpl := "你好世界"
+	s := Rand(64, tpl)
+	t.Equal(64, Len(s))
+	for _, r := range s {
+		if !strings.ContainsRune(tpl, r) {
+			t.Fatal("unexpected rune:", r)
+		}
+	}
 }
 
 func TestUniqueID(T *testing.T) {

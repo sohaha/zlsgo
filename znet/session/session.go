@@ -3,6 +3,7 @@
 package session
 
 import (
+	"sync"
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
@@ -37,7 +38,15 @@ func New(stores Store, opt ...func(*Config)) znet.Handler {
 		ExpiresAt:  30 * time.Minute,
 	}, opt...)
 
+	var closeOnce sync.Once
 	return func(c *znet.Context) error {
+		closeOnce.Do(func() {
+			if c.Engine != nil {
+				c.Engine.AddShutdown(func() {
+					_ = stores.Close()
+				})
+			}
+		})
 		id := c.GetCookie(conf.CookieName)
 		if id == "" {
 			id = zstring.UUID()

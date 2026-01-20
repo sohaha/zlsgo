@@ -47,6 +47,9 @@ func (p *Promise[T]) Then(fulfilled func(T) (T, error), rejected ...func(error) 
 	return NewPromiseContext[T](p.ctx, func() (T, error) {
 		value, err := p.Done()
 		if err == nil {
+			if fulfilled == nil {
+				return value, nil
+			}
 			return fulfilled(value)
 		}
 

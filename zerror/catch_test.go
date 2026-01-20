@@ -23,7 +23,6 @@ func TestTryCatch(t *testing.T) {
 
 	err = zerror.TryCatch(func() error {
 		panic("测试")
-		return nil
 	})
 	tt.Equal("测试", err.Error())
 	t.Logf("%+v", err)

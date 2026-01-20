@@ -124,7 +124,6 @@ func TestInvokeWithErrorOnly(t *testing.T) {
 	{
 		err := di.InvokeWithErrorOnly(func(s *testSt) error {
 			panic("test panic")
-			return nil
 		})
 		tt.Equal("test panic", err.Error())
 	}

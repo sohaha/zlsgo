@@ -75,6 +75,14 @@ func SetSaveFile(filepath string, archive ...bool) {
 	log.SetSaveFile(filepath, archive...)
 }
 
+func SetLevelFile(level int, filepath string, archive ...bool) {
+	log.SetLevelFile(level, filepath, archive...)
+}
+
+func SetLevelSaveFile(level int, filepath string, archive ...bool) {
+	log.SetLevelSaveFile(level, filepath, archive...)
+}
+
 // SetLogLevel sets the minimum level of messages that will be logged.
 // Deprecated: please use SetDefault and access the logger's methods directly.
 func SetLogLevel(level int) {

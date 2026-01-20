@@ -54,6 +54,53 @@ func TestRegex(T *testing.T) {
 	clearRegexpCompile()
 }
 
+func TestRegexCacheClearKeepsTimestamp(t *testing.T) {
+	oldTimeout := regexCacheTimeout
+	defer func() {
+		regexCacheTimeout = oldTimeout
+		regexCache = map[string]*regexMapStruct{}
+	}()
+
+	regexCacheTimeout = 1 << 31
+	regexCache = map[string]*regexMapStruct{
+		"a": {Value: regexp.MustCompile("a"), Time: 1},
+	}
+
+	clearRegexpCompile()
+	data, ok := regexCache["a"]
+	if !ok {
+		t.Fatalf("expected cache entry")
+	}
+	if data.Time != 1 {
+		t.Fatalf("expected cache time 1, got %d", data.Time)
+	}
+}
+
+func TestRegexCacheAccessRefresh(t *testing.T) {
+	oldTimeout := regexCacheTimeout
+	defer func() {
+		regexCacheTimeout = oldTimeout
+		regexCache = map[string]*regexMapStruct{}
+	}()
+
+	regexCacheTimeout = 1 << 31
+	regexCache = map[string]*regexMapStruct{
+		"a": {Value: regexp.MustCompile("a"), Time: 1},
+	}
+
+	if _, err := getRegexpCompile("a"); err != nil {
+		t.Fatalf("expected compiled regex, got error: %v", err)
+	}
+
+	data, ok := regexCache["a"]
+	if !ok {
+		t.Fatalf("expected cache entry")
+	}
+	if data.Time == 1 {
+		t.Fatalf("expected cache time updated, got %d", data.Time)
+	}
+}
+
 func BenchmarkRegex1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		RegexMatch("是我啊", "这就是我啊!")

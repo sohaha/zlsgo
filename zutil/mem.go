@@ -50,6 +50,7 @@ type MemoryLimiter struct {
 	lastNumGC uint32
 	prevLimit int64
 	setLimit  bool
+	checkID   uint64
 }
 
 // NewMemoryLimiter creates a new memory limiter with optional configuration.
@@ -211,11 +212,20 @@ func (ml *MemoryLimiter) updateStats() {
 }
 
 func (ml *MemoryLimiter) checkMemoryUsage() {
+	var (
+		onPause     func(ratio float64) bool
+		onStats     func(stats MemoryStats)
+		statsCopy   MemoryStats
+		ratio       float64
+		callOnPause bool
+	)
+
 	ml.mu.Lock()
-	defer ml.mu.Unlock()
+	ml.checkID++
+	checkID := ml.checkID
 
 	current := ml.stats.CurrentUsage
-	ratio := float64(current) / float64(ml.config.Limit)
+	ratio = float64(current) / float64(ml.config.Limit)
 
 	if ratio > ml.config.PauseThreshold {
 		if ml.config.EnableGC {
@@ -224,9 +234,9 @@ func (ml *MemoryLimiter) checkMemoryUsage() {
 			ratio = float64(current) / float64(ml.config.Limit)
 		}
 
-		if ml.onPause != nil {
-			shouldPause := !ml.onPause(ratio)
-			ml.paused = shouldPause
+		onPause = ml.onPause
+		if onPause != nil {
+			callOnPause = true
 		} else {
 			ml.paused = true
 		}
@@ -236,11 +246,23 @@ func (ml *MemoryLimiter) checkMemoryUsage() {
 		}
 	}
 
-	if ml.onStats != nil {
-		statsCopy := ml.stats
-		ml.mu.Unlock()
-		ml.onStats(statsCopy)
+	onStats = ml.onStats
+	if onStats != nil {
+		statsCopy = ml.stats
+	}
+	ml.mu.Unlock()
+
+	if callOnPause {
+		shouldPause := !onPause(ratio)
 		ml.mu.Lock()
+		if checkID == ml.checkID {
+			ml.paused = shouldPause
+		}
+		ml.mu.Unlock()
+	}
+
+	if onStats != nil {
+		onStats(statsCopy)
 	}
 }
 
