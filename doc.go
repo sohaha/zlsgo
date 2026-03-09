@@ -3,6 +3,8 @@ Package zlsgo is golang daily development of some commonly used functions set
 
 See https://docs.73zls.com/zlsgo/#/
 
+The root package also provides TestUtil via NewTest for lightweight test assertions and subtest helpers.
+
 znet(Web development) https://pkg.go.dev/github.com/sohaha/zlsgo/znet
 
 ztype(Type correlation) https://pkg.go.dev/github.com/sohaha/zlsgo/ztype
@@ -23,7 +25,7 @@ ztime(Time) https://pkg.go.dev/github.com/sohaha/zlsgo/ztime
 
 zcli(Command line) https://pkg.go.dev/github.com/sohaha/zlsgo/zcli
 
-zshell(Shell) https://pkg.go.dev/github.com/sohaha/zlsgo/zsh
+zshell(Shell) https://pkg.go.dev/github.com/sohaha/zlsgo/zshell
 
 zarray(Array) https://pkg.go.dev/github.com/sohaha/zlsgo/zarray
 
