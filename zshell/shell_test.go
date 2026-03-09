@@ -41,6 +41,14 @@ func TestPipe(t *testing.T) {
 
 	code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{})
 	t.Log(code, outStr, errStr, err)
+
+	if !zutil.IsWin() {
+		code, outStr, errStr, err = PipeExecCommand(ctx, [][]string{{"sh", "-c", "echo err >&2; exit 3"}})
+		tt.EqualExit(3, code)
+		tt.EqualExit("", outStr)
+		tt.EqualExit("err\n", errStr)
+		tt.EqualTrue(err != nil)
+	}
 }
 
 func TestBash(t *testing.T) {

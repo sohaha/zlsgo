@@ -167,11 +167,11 @@ func PipeExecCommand(ctx context.Context, commands [][]string, opt ...func(o *Op
 		waitStatus, _ := v.cmd.ProcessState.Sys().(syscall.WaitStatus)
 		status = waitStatus.ExitStatus()
 		if err != nil {
-			return status, "", "", err
+			return status, out.String(), outErr.String(), err
 		}
 	}
 
-	return status, out.String(), "", nil
+	return status, out.String(), outErr.String(), nil
 }
 
 func ExecCommand(ctx context.Context, command []string, stdIn io.Reader, stdOut io.Writer, stdErr io.Writer, opt ...func(o *Options)) (code int, outStr, errStr string, err error) {
