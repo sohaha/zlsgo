@@ -91,7 +91,7 @@ func NewHashMap[K hashable, V any](size ...uintptr) *Maper[K, V] {
 		m.defaultSize = size[0]
 	}
 
-	m.allocate(defaultSize)
+	m.allocate(m.defaultSize)
 	m.setDefaultHasher()
 	return m
 }

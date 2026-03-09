@@ -15,11 +15,11 @@ func TestArgs(t *testing.T) {
 
 	sum := NewInt32(0)
 
-	moreNum := []interface{}{"abc " + zstring.Pad("", 88, "? ", zstring.PadRight) + " |[]", "abc " + zstring.Pad("", 88, "$? ", zstring.PadRight)}
+	moreNum := []interface{}{"abc " + strings.Repeat("? ", 88) + "|[]", "abc " + strings.Repeat("$? ", 88)}
 	for _, num := range strings.Split(zstring.Rand(88), "") {
 		moreNum = append(moreNum, num)
 	}
-	moreNum[0] = fmt.Sprintf("abc "+zstring.Pad("", 88, "? ", zstring.PadRight)+"|%v", moreNum[2:])
+	moreNum[0] = fmt.Sprintf("abc "+strings.Repeat("? ", 88)+"|%v", moreNum[2:])
 	tests := [][]interface{}{
 		{"abc ? ?|[123 321]", "abc $? $?", 123, 321},
 		{"abc ? ?|[123 123]", "abc $? $0", 123, 321},

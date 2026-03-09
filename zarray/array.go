@@ -207,6 +207,10 @@ func (arr *Array) Remove(index int, l ...int) (value []interface{}, err error) {
 	if len(l) > 0 && l[0] > 1 {
 		removeL = l[0]
 	}
+	if index+removeL > size {
+		err = ErrIllegalIndex
+		return
+	}
 
 	value = make([]interface{}, removeL)
 	copy(value, arr.data[index:index+removeL])

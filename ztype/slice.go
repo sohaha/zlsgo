@@ -185,6 +185,7 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 	default:
 		var nval []interface{}
 		vof := zreflect.ValueOf(&nval)
+		valueType := reflect.TypeOf(value)
 		to := func() {
 			if conv.to("", value, vof, true) == nil {
 				s = make(SliceType, len(nval))
@@ -194,13 +195,12 @@ func ToSlice(value interface{}, noConv ...bool) (s SliceType) {
 			}
 		}
 
-		switch vof.Type().Kind() {
-		case reflect.Slice:
+		switch {
+		case valueType != nil && (valueType.Kind() == reflect.Slice || valueType.Kind() == reflect.Array):
 			to()
+		case nc:
+			return
 		default:
-			if nc {
-				return
-			}
 			to()
 		}
 	}

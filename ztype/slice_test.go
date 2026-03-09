@@ -53,6 +53,7 @@ func TestSliceForce(t *testing.T) {
 
 	tt.Equal([]string{"test"}, ToSlice(value).String())
 	tt.Equal([]string{}, ToSlice(value, true).String())
+	tt.Equal([]string{"1.5", "2.5"}, ToSlice([]float64{1.5, 2.5}, true).String())
 }
 
 func BenchmarkSlice(b *testing.B) {

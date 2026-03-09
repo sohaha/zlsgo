@@ -37,7 +37,7 @@ var letterBytes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQR
 // If the string is already longer than the specified length, it is returned unchanged.
 func Pad(raw string, length int, padStr string, padType PadType) string {
 	l := length - Len(raw)
-	if l <= 0 {
+	if l <= 0 || padStr == "" {
 		return raw
 	}
 
@@ -48,17 +48,43 @@ func Pad(raw string, length int, padStr string, padType PadType) string {
 	switch padType {
 	case PadRight:
 		b.WriteString(raw)
-		b.WriteString(strings.Repeat(padStr, l))
+		b.WriteString(repeatRunesToLength(padStr, l))
 	case PadLeft:
-		b.WriteString(strings.Repeat(padStr, l))
+		b.WriteString(repeatRunesToLength(padStr, l))
 		b.WriteString(raw)
 	default: // PadSides
 		left := l / 2
 		right := l - left
-		b.WriteString(strings.Repeat(padStr, left))
+		padding := repeatRunesToLength(padStr, l)
+		paddingRunes := []rune(padding)
+		b.WriteString(string(paddingRunes[:left]))
 		b.WriteString(raw)
-		b.WriteString(strings.Repeat(padStr, right))
+		b.WriteString(string(paddingRunes[left : left+right]))
 	}
+	return b.String()
+}
+
+func repeatRunesToLength(padStr string, length int) string {
+	if length <= 0 || padStr == "" {
+		return ""
+	}
+
+	runes := []rune(padStr)
+	if len(runes) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(length * len(padStr))
+
+	for length >= len(runes) {
+		b.WriteString(padStr)
+		length -= len(runes)
+	}
+	if length > 0 {
+		b.WriteString(string(runes[:length]))
+	}
+
 	return b.String()
 }
 

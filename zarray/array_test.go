@@ -45,6 +45,8 @@ func TestArray(t *testing.T) {
 	copyValue, _ := oneArr.Get(0)
 	tt.Equal(one[0], copyValue)
 	_, _ = array.Remove(99)
+	_, err = array.Remove(1, 100)
+	tt.Equal(true, err != nil)
 	_, _ = array.RemoveValue("最后")
 	pop, _ := array.Pop()
 	tt.Equal(10, pop.([]interface{})[0])

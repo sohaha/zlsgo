@@ -25,18 +25,13 @@ func Slice[T comparable](s, sep string, n ...int) []T {
 	} else {
 		ss = strings.Split(s, sep)
 	}
-	res := make([]T, len(ss))
-	ni := make([]uint32, 0, len(ss))
+	res := make([]T, 0, len(ss))
 	for i := range ss {
 		if v := strings.TrimSpace(ss[i]); v != "" {
-			ztype.To(v, &res[i])
-		} else {
-			ni = append(ni, uint32(i))
+			var item T
+			ztype.To(v, &item)
+			res = append(res, item)
 		}
-	}
-
-	for i := range ni {
-		res = append(res[:ni[i]], res[ni[i]+1:]...)
 	}
 	return res
 }

@@ -53,6 +53,9 @@ func TestPad(T *testing.T) {
 
 	s4 := "我的长度是二十,不够两边补零"
 	t.Equal("000我的长度是二十,不够两边补零000", Pad(s4, 20, "0", PadSides))
+	t.Equal("axy", Pad("a", 3, "xy", PadRight))
+	t.Equal("xya", Pad("a", 3, "xy", PadLeft))
+	t.Equal("xay", Pad("a", 3, "xy", PadSides))
 }
 
 func TestFirst(T *testing.T) {

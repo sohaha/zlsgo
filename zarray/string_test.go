@@ -17,6 +17,9 @@ func TestSlice(t *testing.T) {
 	tt.Equal([]float64{1.1, 2.2, 3.3}, zarray.Slice[float64]("1.1,2.2,3.3", ","))
 	tt.Equal([]string{"1.1", "2.2,3.3"}, zarray.Slice[string]("1.1,2.2,3.3", ",", 2))
 	tt.Equal([]int{}, zarray.Slice[int]("", ","))
+	tt.Equal([]string{"a", "b"}, zarray.Slice[string]("a,,,b", ","))
+	tt.Equal([]string{"a", "b"}, zarray.Slice[string]("a,,,,b", ","))
+	tt.Equal([]string{"a"}, zarray.Slice[string]("a,,", ","))
 }
 
 func TestJoin(t *testing.T) {
