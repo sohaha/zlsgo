@@ -55,16 +55,19 @@ func SetUnexportedField(v reflect.Value, field string, value interface{}) error 
 	}
 
 	nv := reflect.ValueOf(value)
-	kind := f.Kind()
-	
-
-	if kind != reflect.Interface && kind != nv.Kind() {
-		return errors.New("value type not match: expected " + kind.String() + ", got " + nv.Kind().String())
+	if !nv.IsValid() {
+		if !canAssignNil(f.Kind()) {
+			return errors.New("value type not match: expected " + f.Type().String() + ", got nil")
+		}
+		nv = reflect.Zero(f.Type())
 	}
-	
 
-	if kind == reflect.Interface && !nv.Type().AssignableTo(f.Type()) {
-		return errors.New("value type " + nv.Type().String() + " cannot be assigned to interface " + f.Type().String())
+	if !nv.Type().AssignableTo(f.Type()) {
+		if nv.Kind() == f.Kind() && nv.Type().ConvertibleTo(f.Type()) {
+			nv = nv.Convert(f.Type())
+		} else {
+			return errors.New("value type " + nv.Type().String() + " cannot be assigned to " + f.Type().String())
+		}
 	}
 
 	if b {
@@ -75,12 +78,20 @@ func SetUnexportedField(v reflect.Value, field string, value interface{}) error 
 		return nil
 	}
 
-
 	reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).
 		Elem().
 		Set(nv)
 
 	return nil
+}
+
+func canAssignNil(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return true
+	default:
+		return false
+	}
 }
 
 // getField is an internal helper function that retrieves a field from a struct by name.

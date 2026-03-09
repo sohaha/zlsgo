@@ -770,6 +770,18 @@ func TestRepairWithOptions(t *testing.T) {
 	}
 }
 
+func TestRepairOptionsAreIsolatedPerCall(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	_, err := zjson.Repair(`{'name':'张三'}`, func(opts *zjson.RepairOptions) {
+		opts.AllowSingleQuotes = false
+	})
+	tt.EqualTrue(err != nil)
+
+	got, err := zjson.Repair(`{'name':'张三'}`)
+	tt.NoError(err)
+	tt.Equal(`{"name":"张三"}`, got)
+}
+
 func BenchmarkRepair(b *testing.B) {
 	samples := []string{
 		`{"name":"张三","age":30,"active":true}`,
@@ -873,7 +885,7 @@ func BenchmarkRepairComplex(b *testing.B) {
 func TestJSONRepairEdgeCases(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-    tests := []zlsgo.ErrorTestCase{
+	tests := []zlsgo.ErrorTestCase{
 		{
 			Name:     "missing closing brace",
 			Input:    `{"a":1`,
@@ -900,7 +912,7 @@ func TestJSONRepairEdgeCases(t *testing.T) {
 		},
 	}
 
-    tt.RunErrorTests(tests, func(input interface{}) (interface{}, error) {
-        return zjson.Repair(input.(string))
+	tt.RunErrorTests(tests, func(input interface{}) (interface{}, error) {
+		return zjson.Repair(input.(string))
 	})
 }

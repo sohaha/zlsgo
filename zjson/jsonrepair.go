@@ -34,9 +34,9 @@ var defaultRepairOptions = &RepairOptions{
 }
 
 func Repair(src string, opt ...func(*RepairOptions)) (dst string, err error) {
-	opts := defaultRepairOptions
+	opts := *defaultRepairOptions
 	for _, v := range opt {
-		v(opts)
+		v(&opts)
 	}
 
 	if src == "" {
@@ -117,7 +117,7 @@ func Repair(src string, opt ...func(*RepairOptions)) (dst string, err error) {
 		src = removeComments(src)
 	}
 
-	parser := newJSONParser(src, opts)
+	parser := newJSONParser(src, &opts)
 	result := parser.parseJSON()
 
 	if parser.err != nil {

@@ -1,6 +1,7 @@
 package zreflect
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -110,5 +111,17 @@ func TestSetUnexportedField(t *testing.T) {
 		err = SetUnexportedField(ValueOf(v), "pri", "new name")
 		tt.Log(err)
 		tt.EqualTrue(err != nil)
+	})
+
+	tt.Run("convertible type", func(tt *zlsgo.TestUtil) {
+		type myInt int
+		type sample struct {
+			Value myInt
+		}
+
+		v := sample{}
+		err := SetUnexportedField(reflect.ValueOf(&v), "Value", 2)
+		tt.NoError(err)
+		tt.EqualExit(myInt(2), v.Value)
 	})
 }
