@@ -62,9 +62,9 @@ func (j *JSONRPC) connect() error {
 	if j.options.TlsConfig == nil {
 		conn, err = d.Dial("tcp", j.address)
 	} else {
-		config := j.options.TlsConfig
-		if config.RootCAs == nil {
-			config.InsecureSkipVerify = true
+		config := j.options.TlsConfig.Clone()
+		if config == nil {
+			config = &tls.Config{}
 		}
 		conn, err = tls.DialWithDialer(&d, "tcp", j.address, config)
 	}

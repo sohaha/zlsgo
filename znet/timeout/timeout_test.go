@@ -216,6 +216,34 @@ func TestContextCancellation(t *testing.T) {
 	}
 }
 
+func TestTimeoutDoesNotBreakSSEWriter(t *testing.T) {
+	r := newServer()
+	r.GET("/sse-timeout",
+		func(c *znet.Context) {
+			flusher, ok := c.Writer.(http.Flusher)
+			if !ok {
+				t.Fatal("writer does not implement http.Flusher")
+			}
+			c.Writer.Header().Set("Content-Type", "text/event-stream")
+			_, _ = c.Writer.Write([]byte("data: ok\n\n"))
+			flusher.Flush()
+		},
+		New(100*time.Millisecond),
+	)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/sse-timeout", nil)
+	req.Header.Set("Accept", "text/event-stream")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status code 200, got %d", w.Code)
+	}
+	if body := strings.TrimSpace(w.Body.String()); body != "data: ok" {
+		t.Fatalf("unexpected response body: %s", body)
+	}
+}
+
 func newServer() *znet.Engine {
 	return znet.New()
 }
