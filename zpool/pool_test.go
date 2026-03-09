@@ -228,6 +228,32 @@ func TestPoolTimeout(t *testing.T) {
 	p.Wait()
 }
 
+func TestPoolCloseUnblocksWaitingSubmitters(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	p := zpool.New(1)
+
+	block := make(chan struct{})
+	tt.NoError(p.Do(func() {
+		<-block
+	}))
+
+	done := make(chan error, 1)
+	go func() {
+		done <- p.Do(func() {})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	go p.Close()
+
+	select {
+	case err := <-done:
+		tt.Equal(zpool.ErrPoolClosed, err)
+	case <-time.After(time.Second):
+		t.Fatal("waiting submitter was not unblocked by Close")
+	}
+	close(block)
+}
+
 func TestPoolWakeAllWaiters(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	p := zpool.New(2, 2)

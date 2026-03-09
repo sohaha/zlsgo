@@ -11,10 +11,10 @@ import (
 // - Error propagation from goroutines to the Wait call
 // - Panic recovery in goroutines
 type WaitGroup struct {
-	err error           // Stores the first error encountered in any goroutine
-	ch  chan struct{}   // Channel for limiting concurrency
-	wg  sync.WaitGroup  // Underlying wait group for synchronization
-	mu  sync.RWMutex    // Mutex for protecting err field
+	err error          // Stores the first error encountered in any goroutine
+	ch  chan struct{}  // Channel for limiting concurrency
+	wg  sync.WaitGroup // Underlying wait group for synchronization
+	mu  sync.RWMutex   // Mutex for protecting err field
 }
 
 // NewWaitGroup creates a new WaitGroup instance.
@@ -58,7 +58,17 @@ func (h *WaitGroup) Go(f func()) {
 			}
 			h.Done()
 		}()
-		f()
+		err := zerror.TryCatch(func() error {
+			f()
+			return nil
+		})
+		if err != nil {
+			h.mu.Lock()
+			if h.err == nil {
+				h.err = err
+			}
+			h.mu.Unlock()
+		}
 	}()
 }
 

@@ -3,6 +3,7 @@ package zcache_test
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -157,4 +158,44 @@ func TestDo(t *testing.T) {
 		}(i)
 	}
 	g.Wait()
+}
+
+func TestDeleteCallbackKeepsItemAlive(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	c := zcache.New("DeleteCallbackKeepAlive", true)
+	item := c.Set("key", "value", 1)
+	item.SetDeleteCallback(func(key string) bool {
+		return false
+	})
+
+	before := item.AccessedTime()
+	time.Sleep(20 * time.Millisecond)
+	got, err := c.Delete("key")
+	tt.NoError(err)
+	tt.Equal(item, got)
+	tt.EqualTrue(!got.AccessedTime().Before(before))
+}
+
+func TestDeleteCallbackConcurrentAccess(t *testing.T) {
+	c := zcache.New("DeleteCallbackConcurrentAccess", true)
+	item := c.Set("key", "value", 1)
+	item.SetDeleteCallback(func(key string) bool { return false })
+
+	var done atomic.Bool
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for !done.Load() {
+			_, _ = c.Delete("key")
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000; i++ {
+			_ = item.AccessedTime()
+		}
+		done.Store(true)
+	}()
+	wg.Wait()
 }

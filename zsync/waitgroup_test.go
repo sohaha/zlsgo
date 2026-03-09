@@ -46,6 +46,16 @@ func TestWaitGroup(t *testing.T) {
 		}
 		tt.Equal(int64(100), count.Load())
 	})
+
+	t.Run("panic in go", func(t *testing.T) {
+		tt := zlsgo.NewTest(t)
+		var wg WaitGroup
+		wg.Go(func() {
+			panic("boom")
+		})
+		err := wg.Wait()
+		tt.EqualTrue(err != nil)
+	})
 }
 
 func TestWaitGroupMax(t *testing.T) {

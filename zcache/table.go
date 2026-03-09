@@ -209,19 +209,20 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 	table.Unlock()
 	if deleteCallback != nil && !deleteCallback(r.key) {
 		table.Lock()
-		r.RLock()
+		r.Lock()
 		r.accessedTime = ztime.UnixMicro(ztime.Clock())
-		r.RUnlock()
+		r.Unlock()
 		return r, nil
 	}
 
 	r.RLock()
-	defer r.RUnlock()
-	if r.deleteCallback != nil && !r.deleteCallback(r.key) {
+	itemDeleteCallback := r.deleteCallback
+	r.RUnlock()
+	if itemDeleteCallback != nil && !itemDeleteCallback(r.key) {
 		table.Lock()
-		r.RLock()
+		r.Lock()
 		r.accessedTime = ztime.UnixMicro(ztime.Clock())
-		r.RUnlock()
+		r.Unlock()
 		return r, nil
 	}
 
@@ -386,9 +387,11 @@ func (table *Table) Clear() {
 }
 
 // Swap implements sort.Interface for CacheItemPairList
-func (p CacheItemPairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p CacheItemPairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
 // Len implements sort.Interface for CacheItemPairList
-func (p CacheItemPairList) Len() int           { return len(p) }
+func (p CacheItemPairList) Len() int { return len(p) }
+
 // Less implements sort.Interface for CacheItemPairList, sorting by access count in descending order
 func (p CacheItemPairList) Less(i, j int) bool { return p[i].AccessCount > p[j].AccessCount }
 

@@ -23,6 +23,7 @@ type (
 		workers     sync.Pool
 		injector    zdi.Injector
 		queue       *workerQueue
+		closeCh     chan struct{}
 		usedNum     *zutil.Int64
 		activeNum   *zutil.Int64
 		panicFunc   PanicFunc
@@ -55,9 +56,9 @@ const (
 )
 
 type workerQueue struct {
-	mu     sync.Mutex
-	list   *list.List
-	ready  chan struct{}
+	mu    sync.Mutex
+	list  *list.List
+	ready chan struct{}
 }
 
 func newWorkerQueue() *workerQueue {
@@ -98,7 +99,7 @@ func (q *workerQueue) tryPop() *worker {
 	return w
 }
 
-func (q *workerQueue) pop(ctx context.Context) (*worker, error) {
+func (q *workerQueue) pop(ctx context.Context, stop <-chan struct{}) (*worker, error) {
 	for {
 		if w := q.tryPop(); w != nil {
 			return w, nil
@@ -111,12 +112,22 @@ func (q *workerQueue) pop(ctx context.Context) (*worker, error) {
 		wait := q.ready
 		q.mu.Unlock()
 		if ctx == nil {
-			<-wait
-			continue
+			if stop == nil {
+				<-wait
+				continue
+			}
+			select {
+			case <-stop:
+				return nil, ErrPoolClosed
+			case <-wait:
+				continue
+			}
 		}
 		select {
 		case <-ctx.Done():
 			return nil, ErrWaitTimeout
+		case <-stop:
+			return nil, ErrPoolClosed
 		case <-wait:
 		}
 	}
@@ -162,6 +173,7 @@ func New(size int, max ...int) *WorkPool {
 		maxIdle:     maxIdle,
 		injector:    zdi.New(),
 		queue:       newWorkerQueue(),
+		closeCh:     make(chan struct{}),
 		usedNum:     zutil.NewInt64(0),
 		activeNum:   zutil.NewInt64(0),
 		releaseTime: time.Second * 60,
@@ -228,10 +240,18 @@ func (wp *WorkPool) do(cxt context.Context, fn taskfn, param []interface{}) erro
 		return nil
 	}
 	wp.mu.Unlock()
-	w, err := wp.queue.pop(cxt)
+	w, err := wp.queue.pop(cxt, wp.closeCh)
 	if err != nil {
 		wp.activeNum.Sub(1)
 		return err
+	}
+	wp.mu.RLock()
+	closed := wp.closed
+	wp.mu.RUnlock()
+	if closed {
+		wp.queue.push(w)
+		wp.activeNum.Sub(1)
+		return ErrPoolClosed
 	}
 	run(w)
 	return nil
@@ -252,9 +272,10 @@ func (wp *WorkPool) Close() {
 	}
 	wp.mu.Lock()
 	wp.closed = true
+	close(wp.closeCh)
 	for 0 < uint(wp.usedNum.Load()) {
 		wp.usedNum.Sub(1)
-		worker, _ := wp.queue.pop(nil)
+		worker, _ := wp.queue.pop(nil, nil)
 		worker.close()
 	}
 	wp.mu.Unlock()
@@ -313,7 +334,7 @@ func (wp *WorkPool) AdjustSize(workSize int) {
 	}
 	for wp.minIdle < uint(wp.usedNum.Load()) {
 		wp.usedNum.Sub(1)
-		worker, _ := wp.queue.pop(nil)
+		worker, _ := wp.queue.pop(nil, nil)
 		worker.stop <- struct{}{}
 		wp.workers.Put(worker)
 	}
