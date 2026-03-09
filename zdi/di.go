@@ -3,6 +3,9 @@ package zdi
 
 import (
 	"reflect"
+
+	"github.com/sohaha/zlsgo/zsync"
+	"golang.org/x/sync/singleflight"
 )
 
 type (
@@ -33,8 +36,10 @@ type (
 		key reflect.Type
 	}
 	injector struct {
+		mu        *zsync.RBMutex
 		values    map[reflect.Type]reflect.Value
 		providers map[reflect.Type]reflect.Value
+		group     singleflight.Group
 		parent    Injector
 	}
 )
@@ -45,6 +50,7 @@ func New(parent ...Injector) Injector {
 	inj := &injector{
 		values:    make(map[reflect.Type]reflect.Value),
 		providers: make(map[reflect.Type]reflect.Value),
+		mu:        zsync.NewRBMutex(),
 	}
 	if len(parent) > 0 {
 		inj.parent = parent[0]
@@ -55,7 +61,9 @@ func New(parent ...Injector) Injector {
 // SetParent sets the parent Injector for the current injector.
 // This allows for chaining injectors, enabling a hierarchical lookup for dependencies.
 func (inj *injector) SetParent(parent Injector) {
+	inj.mu.Lock()
 	inj.parent = parent
+	inj.mu.Unlock()
 }
 
 // WithInterface is an option used with Map or Provide methods.

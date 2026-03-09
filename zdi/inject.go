@@ -82,11 +82,13 @@ func (inj *injector) Map(val interface{}, opt ...Option) (override reflect.Type)
 	if o.key == nil {
 		o.key = reflect.TypeOf(val)
 	}
+	inj.mu.Lock()
 	if _, ok := inj.values[o.key]; ok {
 		override = o.key
 	}
 
 	inj.values[o.key] = zreflect.ValueOf(val)
+	inj.mu.Unlock()
 	return
 }
 
@@ -106,7 +108,9 @@ func (inj *injector) Maps(values ...interface{}) (override []reflect.Type) {
 // Set maps a reflect.Value to a reflect.Type in the injector.
 // This is a lower-level way to directly insert values into the injector's store.
 func (inj *injector) Set(typ reflect.Type, val reflect.Value) {
+	inj.mu.Lock()
 	inj.values[typ] = val
+	inj.mu.Unlock()
 }
 
 // Get retrieves a value of the given type from the injector.
@@ -115,37 +119,65 @@ func (inj *injector) Set(typ reflect.Type, val reflect.Value) {
 // Finally, it consults the parent injector, if one exists.
 // Returns the reflect.Value and a boolean indicating if the value was found.
 func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {
+	token := inj.mu.RLock()
 	val := inj.values[t]
 	if val.IsValid() {
+		inj.mu.RUnlock(token)
 		return val, true
 	}
+	provider, hasProvider := inj.providers[t]
+	parent := inj.parent
+	inj.mu.RUnlock(token)
 
-	if provider, ok := inj.providers[t]; ok {
-		results, err := inj.Invoke(provider.Interface())
+	if hasProvider {
+		key := providerKey(provider, t)
+		_, err, _ := inj.group.Do(key, func() (interface{}, error) {
+			token := inj.mu.RLock()
+			if current := inj.values[t]; current.IsValid() {
+				inj.mu.RUnlock(token)
+				return nil, nil
+			}
+			var ok bool
+			provider, ok = inj.providers[t]
+			inj.mu.RUnlock(token)
+			if !ok || !provider.IsValid() {
+				return nil, nil
+			}
+
+			results, err := inj.Invoke(provider.Interface())
+			if err != nil {
+				return nil, err
+			}
+
+			inj.mu.Lock()
+			for _, result := range results {
+				resultType := result.Type()
+				inj.values[resultType] = result
+				delete(inj.providers, resultType)
+			}
+			inj.mu.Unlock()
+			return nil, nil
+		})
 		if err != nil {
 			panic(err)
 		}
-		for _, result := range results {
-			resultType := result.Type()
-			inj.values[resultType] = result
-			delete(inj.providers, resultType)
-			if resultType == t {
-				val = result
-			}
-		}
-
+		token = inj.mu.RLock()
+		val = inj.values[t]
+		inj.mu.RUnlock(token)
 		if val.IsValid() {
 			return val, true
 		}
 	}
 
 	if t.Kind() == reflect.Interface {
+		token = inj.mu.RLock()
 		for k, v := range inj.values {
 			if k.Implements(t) {
 				val = v
 				break
 			}
 		}
+		inj.mu.RUnlock(token)
 	}
 
 	if val.IsValid() {
@@ -153,9 +185,18 @@ func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {
 	}
 
 	var ok bool
-	if inj.parent != nil {
-		val, ok = inj.parent.Get(t)
+	if parent != nil {
+		token = inj.mu.RLock()
+		val, ok = parent.Get(t)
+		inj.mu.RUnlock(token)
 	}
 
 	return val, ok
+}
+
+func providerKey(provider reflect.Value, t reflect.Type) string {
+	if provider.IsValid() && provider.Kind() == reflect.Func {
+		return fmt.Sprintf("%#x", provider.Pointer())
+	}
+	return t.PkgPath() + ":" + t.String()
 }

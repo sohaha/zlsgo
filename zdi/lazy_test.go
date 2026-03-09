@@ -2,6 +2,8 @@ package zdi_test
 
 import (
 	"github.com/sohaha/zlsgo/ztype"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -55,4 +57,57 @@ func TestProvide(t *testing.T) {
 	})
 	tt.EqualTrue(err != nil)
 	t.Log(err)
+}
+
+func TestProvideConcurrentGet(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	di := zdi.New()
+	di.Provide(func() *testSt {
+		time.Sleep(time.Millisecond)
+		return &testSt{Msg: "ok", Num: 1}
+	})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := di.Invoke(func(ts *testSt) {
+				tt.Equal("ok", ts.Msg)
+			})
+			tt.NoError(err)
+		}()
+	}
+	wg.Wait()
+}
+
+func TestProvideConcurrentMultiOutGet(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	di := zdi.New()
+	var calls atomic.Int32
+
+	di.Provide(func() (*testSt, *testSt2) {
+		calls.Add(1)
+		time.Sleep(time.Millisecond)
+		return &testSt{Msg: "ok", Num: 1}, &testSt2{Name: "two"}
+	})
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		_, err := di.Invoke(func(ts *testSt) {
+			tt.Equal("ok", ts.Msg)
+		})
+		tt.NoError(err)
+	}()
+	go func() {
+		defer wg.Done()
+		_, err := di.Invoke(func(ts *testSt2) {
+			tt.Equal("two", ts.Name)
+		})
+		tt.NoError(err)
+	}()
+	wg.Wait()
+	tt.Equal(int32(1), calls.Load())
 }
