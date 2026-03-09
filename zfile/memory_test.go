@@ -52,6 +52,8 @@ func TestMemoryFile(t *testing.T) {
 	tt.NoError(f.Close())
 	t.Log(FileSize("7.txt"))
 	tt.NoError(f.Close())
+	_, err = f.Write([]byte("after-close"))
+	tt.Error(err)
 }
 
 func BenchmarkFileMem6(b *testing.B) {
@@ -78,7 +80,7 @@ func BenchmarkFileReal8(b *testing.B) {
 
 func BenchmarkFileBufio7(b *testing.B) {
 	name := "7.txt"
-	file, _ := os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0766)
+	file, _ := os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0o766)
 	write := bufio.NewWriter(file)
 	for i := 0; i < b.N; i++ {
 		_, err := write.Write([]byte(strconv.Itoa(i)))

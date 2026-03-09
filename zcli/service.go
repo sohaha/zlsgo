@@ -19,6 +19,9 @@ type (
 	// app implements the daemon service interface for running the application as a service
 	app struct {
 		run    func()
+		done   chan struct{}
+		err    error
+		mu     sync.Mutex
 		status bool
 	}
 	// serviceStop implements the Cmd interface for stopping a service
@@ -47,37 +50,56 @@ var (
 	once       sync.Once
 )
 
-var s = make(chan struct{})
-
 // Start implements the daemon.ServiceIface Start method for the app type.
 // It runs the application function in a goroutine and returns any error that occurs.
 func (a *app) Start(daemon.ServiceIface) error {
+	a.mu.Lock()
+	if a.status {
+		a.mu.Unlock()
+		return nil
+	}
 	a.status = true
-	err := make(chan error, 1)
+	a.err = nil
+	a.done = make(chan struct{})
+	a.mu.Unlock()
 	go func() {
-		err <- zerror.TryCatch(func() error {
+		err := zerror.TryCatch(func() error {
 			a.run()
 			return nil
 		})
-		s <- struct{}{}
+		a.mu.Lock()
+		a.err = err
+		a.status = false
+		a.mu.Unlock()
+		close(a.done)
 	}()
-	return <-err
+	return nil
 }
 
 // Stop implements the daemon.ServiceIface Stop method for the app type.
 // It waits for the application to stop with a timeout of 30 seconds.
 func (a *app) Stop(daemon.ServiceIface) error {
-	if !a.status {
-		return nil
+	a.mu.Lock()
+	status := a.status
+	done := a.done
+	a.mu.Unlock()
+	if !status {
+		return a.lastErr()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	select {
-	case <-s:
+	case <-done:
 	case <-ctx.Done():
 		// return errors.New("forced timeout")
 	}
-	return nil
+	return a.lastErr()
+}
+
+func (a *app) lastErr() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.err
 }
 
 // Flags implements the Cmd interface for the serviceStatus command.

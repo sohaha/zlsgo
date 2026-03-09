@@ -1,6 +1,7 @@
 package zfile
 
 import (
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -135,6 +136,10 @@ func (f *MemoryFile) Sync() error {
 // It implements the io.Writer interface.
 func (f *MemoryFile) Write(buffer []byte) (int, error) {
 	f.lock.Lock()
+	if f.stop {
+		f.lock.Unlock()
+		return 0, errors.New("memory file closed")
+	}
 	n, err := f.buffer.Write(buffer)
 	f.lock.Unlock()
 	return n, err
