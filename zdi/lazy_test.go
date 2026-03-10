@@ -1,15 +1,15 @@
 package zdi_test
 
 import (
-	"github.com/sohaha/zlsgo/ztype"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/ztime"
+	"github.com/sohaha/zlsgo/ztype"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestProvide(t *testing.T) {
@@ -84,7 +84,7 @@ func TestProvideConcurrentGet(t *testing.T) {
 func TestProvideConcurrentMultiOutGet(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	di := zdi.New()
-	var calls atomic.Int32
+	calls := zutil.NewUint32(0)
 
 	di.Provide(func() (*testSt, *testSt2) {
 		calls.Add(1)
@@ -109,5 +109,5 @@ func TestProvideConcurrentMultiOutGet(t *testing.T) {
 		tt.NoError(err)
 	}()
 	wg.Wait()
-	tt.Equal(int32(1), calls.Load())
+	tt.Equal(uint32(1), calls.Load())
 }

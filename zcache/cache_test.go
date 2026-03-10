@@ -3,13 +3,13 @@ package zcache_test
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/sohaha/zlsgo"
 	"github.com/sohaha/zlsgo/zcache"
 	"github.com/sohaha/zlsgo/zstring"
+	"github.com/sohaha/zlsgo/zutil"
 )
 
 func TestCache(tt *testing.T) {
@@ -143,7 +143,8 @@ func TestDo(t *testing.T) {
 				time.Sleep(time.Duration(210*(ii-8)) * time.Millisecond)
 			}
 			v, o := c.MustGet("do", func(set func(data interface{},
-				lifeSpan time.Duration, interval ...bool)) (err error) {
+				lifeSpan time.Duration, interval ...bool),
+			) (err error) {
 				if ii < 9 {
 					set(ii, 200*time.Millisecond)
 					return nil
@@ -181,7 +182,7 @@ func TestDeleteCallbackConcurrentAccess(t *testing.T) {
 	item := c.Set("key", "value", 1)
 	item.SetDeleteCallback(func(key string) bool { return false })
 
-	var done atomic.Bool
+	done := zutil.NewBool(false)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
