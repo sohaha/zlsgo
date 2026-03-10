@@ -42,7 +42,7 @@ type Language struct {
 	// templateCache is the cache system used for template processing
 	templateCache TemplateCache
 	// data contains the translation key-value pairs
-	data map[string]string
+	data      map[string]string
 	dataMutex sync.RWMutex
 	// mutex protects concurrent access to the translation data using read-biased mutex for performance
 	mutex *zsync.RBMutex
@@ -50,7 +50,7 @@ type Language struct {
 	// Legacy template cache for backward compatibility
 	templates map[string]*zstring.Template
 	// templateMutex protects concurrent access to the legacy templates cache
-	templateMutex *zsync.RBMutex
+	templateMutex sync.RWMutex
 	// code is the language code (e.g., "en", "zh-CN", "ja")
 	code string
 	// name is the human-readable language name (e.g., "English", "简体中文")
@@ -141,7 +141,6 @@ func (i *I18n) LoadLanguageWithConfig(langCode, langName string, data map[string
 		data:          make(map[string]string, len(data)),
 		mutex:         zsync.NewRBMutex(),
 		templates:     make(map[string]*zstring.Template),
-		templateMutex: zsync.NewRBMutex(),
 		templateCount: 0,
 		maxTemplates:  1000,
 		useFastCache:  true,
@@ -271,9 +270,9 @@ func (l *Language) getOrCreateTemplateFastCache(templateStr string) (*zstring.Te
 
 // getOrCreateTemplateLegacy uses the original map-based caching for backward compatibility
 func (l *Language) getOrCreateTemplateLegacy(templateStr string) (*zstring.Template, error) {
-	token := l.templateMutex.RLock()
+	l.templateMutex.RLock()
 	tmpl, exists := l.templates[templateStr]
-	l.templateMutex.RUnlock(token)
+	l.templateMutex.RUnlock()
 
 	if exists {
 		return tmpl, nil
@@ -471,9 +470,9 @@ func (i *I18n) GetMemoryUsage() map[string]interface{} {
 			totalTemplates += cacheStats.TotalItems
 			langStats["cache_type"] = "fastcache"
 		} else {
-			templateToken := lang.templateMutex.RLock()
+			lang.templateMutex.RLock()
 			templateCount := len(lang.templates)
-			lang.templateMutex.RUnlock(templateToken)
+			lang.templateMutex.RUnlock()
 
 			langStats["templates"] = map[string]interface{}{
 				"total": templateCount,
