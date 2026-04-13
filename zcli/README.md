@@ -12,6 +12,7 @@
 - **子命令支持**: 支持多级子命令
 - **帮助文档**: 自动生成帮助信息
 - **交互式输入**: 支持用户交互输入
+- **进度条**: 支持终端进度条和 spinner
 
 ## 核心功能
 
@@ -125,6 +126,84 @@ func Help()
 func Error(format string, v ...interface{})
 ```
 
+### 进度条
+
+```go
+// 创建进度条
+func NewProgressBar(total int64, opts ...func(o *ProgressOptions)) *ProgressBar
+
+// 更新进度
+func (p *ProgressBar) Add(delta int64)
+func (p *ProgressBar) Increment()
+func (p *ProgressBar) SetTotal(total int64)
+func (p *ProgressBar) Set(value int64)
+func (p *ProgressBar) Finish()
+func (p *ProgressBar) Close() error
+
+// 读取状态
+func (p *ProgressBar) Current() int64
+func (p *ProgressBar) Total() int64
+func (p *ProgressBar) String() string
+```
+
+常用选项：
+
+```go
+type ProgressOptions struct {
+    Writer        io.Writer
+    Width         int
+    Prefix        string
+    Suffix        string
+    Fill          byte
+    Empty         byte
+    Spinner       []rune
+    FlushInterval time.Duration
+}
+```
+
+可以按需传多个 `func(o *zcli.ProgressOptions)`，未设置字段会继续使用默认值。
+
+#### 已知总量的进度条
+
+```go
+pb := zcli.NewProgressBar(100, func(o *zcli.ProgressOptions) {
+    o.Prefix = "上传"
+    o.Width = 30
+})
+defer pb.Close()
+
+for i := 0; i < 100; i++ {
+    pb.Add(1)
+}
+```
+
+#### 未知总量的 spinner
+
+```go
+pb := zcli.NewProgressBar(0, func(o *zcli.ProgressOptions) {
+    o.Prefix = "处理中"
+    o.Spinner = []rune{'⠁', '⠂', '⠄', '⠂'}
+})
+defer pb.Close()
+
+for i := 0; i < 10; i++ {
+    pb.Add(1)
+}
+```
+
+说明：
+
+- `total <= 0` 时自动进入 spinner 模式。
+- 默认会按刷新间隔输出，避免高频写终端。
+- ETA 使用平滑速率估算，长任务中的跳动会比简单累计平均更小。
+- 真实终端下会尝试读取终端宽度并自动收缩进度条，避免窄终端换行。
+- 非终端 writer 会按行输出，不再写入 `\r` 覆盖控制符，便于日志和文件消费。
+- `ProgressOptions.FlushInterval = 0` 会在每次状态变化时立即输出，包含同百分比下的计数变化，适合日志采集或测试。
+- 对于已知总量的进度条，内部会将进度限制在 `0 ~ total`，不会输出越界进度。
+- 当终端非常窄时，会优先保留核心进度信息，其次保留前缀，后缀会最后参与省略。
+- 当已知总量模式下的 meta 过长时，会优先缩写 `Elapsed/ETA`，必要时继续只保留百分比与计数等核心字段。
+- 宽度估算会优先兼容常见中文、emoji、keycap 和 ZWJ emoji 组合，但仍不是完整的 grapheme 布局引擎。
+
 ## 使用示例
 
 ```go
@@ -132,6 +211,7 @@ package main
 
 import (
     "fmt"
+
     "github.com/sohaha/zlsgo/zcli"
 )
 
@@ -152,13 +232,13 @@ func (cmd *testCmd) Run(args []string) {
 func main() {
     // 添加命令
     zcli.Add("test", "测试命令", &testCmd{})
-    
+
     // 设置未知命令处理
     zcli.SetUnknownCommand(func(cmd string) {
         fmt.Printf("未知命令: %s\n", cmd)
         zcli.Help()
     })
-    
+
     // 启动 CLI
     zcli.Start()
 }
@@ -207,10 +287,10 @@ if *count < 0 {
 ctx, cancel := context.WithCancel(context.Background())
 err := zcli.LaunchServiceRun("myapp", "我的应用", func() {
     // 服务逻辑 ...
-    
+
     // 等待结束
     <-zcli.SingleKillSignal()
-    
+
     // 释放
     cancel()
 }, &daemon.Config{
@@ -226,3 +306,4 @@ err := zcli.LaunchServiceRun("myapp", "我的应用", func() {
 4. 处理异常情况
 5. 使用有意义的命令名称
 6. 提供清晰的参数说明
+7. 大批量任务中优先使用默认刷新间隔，避免频繁输出影响性能
