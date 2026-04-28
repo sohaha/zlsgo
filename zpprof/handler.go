@@ -1,6 +1,7 @@
 package zpprof
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -84,9 +85,11 @@ func authDebug(token string) znet.HandlerFunc {
 		if token != "" {
 			getToken := c.DefaultQuery("token", c.GetCookie("debug-token"))
 			c.SetCookie("debug-token", token, 600)
-			if getToken != token {
+
+			if subtle.ConstantTimeCompare([]byte(getToken), []byte(token)) != 1 {
 				c.Byte(401, []byte("No permission"))
 				c.Abort()
+				return
 			}
 		}
 		c.Next()

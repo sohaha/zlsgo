@@ -177,7 +177,8 @@ func (table *Table) addInternal(item *Item) {
 // If intervalLifeSpan is true, the item's expiration time will be extended each time it is accessed.
 // Returns the newly created or updated cache item.
 func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
-	intervalLifeSpan ...bool) *Item {
+	intervalLifeSpan ...bool,
+) *Item {
 	item := NewCacheItem(key, data, lifeSpan)
 
 	if len(intervalLifeSpan) > 0 && intervalLifeSpan[0] {
@@ -193,12 +194,17 @@ func (table *Table) SetRaw(key string, data interface{}, lifeSpan time.Duration,
 // If interval is true, the item's expiration time will be extended each time it is accessed.
 // Returns the newly created or updated cache item.
 func (table *Table) Set(key string, data interface{}, lifeSpanSecond uint,
-	interval ...bool) *Item {
+	interval ...bool,
+) *Item {
 	return table.SetRaw(key, data, time.Duration(lifeSpanSecond)*time.Second, interval...)
 }
 
 // deleteInternal removes an item from the cache and invokes any associated delete callbacks.
 // Returns the removed item and any error that occurred during the operation.
+//
+// Deadlock Prevention: Callbacks are invoked outside of table lock to prevent
+// deadlocks when callbacks try to access the table. The item remains visible
+// until callbacks allow the deletion to proceed.
 func (table *Table) deleteInternal(key string) (*Item, error) {
 	r, ok := table.items[key]
 	if !ok {
@@ -206,7 +212,16 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 	}
 
 	deleteCallback := table.deleteCallback
+	var itemDeleteCallback func(string) bool
+
+	if r != nil {
+		r.RLock()
+		itemDeleteCallback = r.deleteCallback
+		r.RUnlock()
+	}
+
 	table.Unlock()
+
 	if deleteCallback != nil && !deleteCallback(r.key) {
 		table.Lock()
 		r.Lock()
@@ -215,9 +230,6 @@ func (table *Table) deleteInternal(key string) (*Item, error) {
 		return r, nil
 	}
 
-	r.RLock()
-	itemDeleteCallback := r.deleteCallback
-	r.RUnlock()
 	if itemDeleteCallback != nil && !itemDeleteCallback(r.key) {
 		table.Lock()
 		r.Lock()
@@ -276,7 +288,8 @@ func (table *Table) Add(key string, data interface{}, lifeSpan time.Duration, in
 // Returns the item's data and any error that occurred during the operation.
 func (table *Table) MustGet(key string, do func(set func(data interface{},
 	lifeSpan time.Duration, interval ...bool)) (
-	err error)) (data interface{}, err error) {
+	err error),
+) (data interface{}, err error) {
 	table.Lock()
 	r, ok := table.items[key]
 	if ok {
@@ -289,7 +302,8 @@ func (table *Table) MustGet(key string, do func(set func(data interface{},
 	table.items[key] = item
 	table.Unlock()
 	err = do(func(data interface{},
-		lifeSpan time.Duration, interval ...bool) {
+		lifeSpan time.Duration, interval ...bool,
+	) {
 		item.data = data
 		item.lifeSpan = lifeSpan
 		if len(interval) > 0 {

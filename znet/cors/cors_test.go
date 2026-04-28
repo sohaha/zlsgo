@@ -181,7 +181,6 @@ func TestOriginValidation(t *testing.T) {
 	tt.Equal(400, w.Code)
 }
 
-// TestRefererFallback tests that CORS uses Referer header when Origin is missing
 func TestRefererFallback(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -193,7 +192,6 @@ func TestRefererFallback(t *testing.T) {
 		c.String(200, "ok")
 	})
 
-	// Test with Referer instead of Origin
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Referer", "http://example.com/page")
@@ -202,7 +200,6 @@ func TestRefererFallback(t *testing.T) {
 	tt.Equal(200, w.Code)
 	tt.Equal("http://example.com", w.Header().Get("Access-Control-Allow-Origin"))
 
-	// Test with invalid Referer
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Referer", "http://untrusted.com/page")
@@ -211,7 +208,6 @@ func TestRefererFallback(t *testing.T) {
 	tt.Equal(403, w.Code)
 }
 
-// TestCustomMethods tests custom HTTP methods configuration
 func TestCustomMethods(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -233,7 +229,6 @@ func TestCustomMethods(t *testing.T) {
 	tt.Equal("GET, POST, PUT", w.Header().Get("Access-Control-Allow-Methods"))
 }
 
-// TestExposeHeaders tests the ExposeHeaders configuration
 func TestExposeHeaders(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -256,7 +251,6 @@ func TestExposeHeaders(t *testing.T) {
 	tt.Equal("X-Custom-Header, X-Another-Header", w.Header().Get("Access-Control-Expose-Headers"))
 }
 
-// TestCredentialsSupport tests credentials configuration
 func TestCredentialsSupport(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -278,7 +272,6 @@ func TestCredentialsSupport(t *testing.T) {
 	tt.Equal("true", w.Header().Get("Access-Control-Allow-Credentials"))
 }
 
-// TestCustomHandler tests custom handler functionality
 func TestCustomHandler(t *testing.T) {
 	tt := zls.NewTest(t)
 	customHeaderSet := false
@@ -306,7 +299,6 @@ func TestCustomHandler(t *testing.T) {
 	tt.Equal("custom-value", w.Header().Get("X-Custom-CORS"))
 }
 
-// TestInvalidDomainFormatPanic tests that invalid domain format causes panic
 func TestInvalidDomainFormatPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
@@ -319,7 +311,6 @@ func TestInvalidDomainFormatPanic(t *testing.T) {
 	})
 }
 
-// TestInvalidMethodPanic tests that invalid HTTP method causes panic
 func TestInvalidMethodPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
@@ -333,7 +324,6 @@ func TestInvalidMethodPanic(t *testing.T) {
 	})
 }
 
-// TestPreflightDetailedTests tests OPTIONS preflight request scenarios
 func TestPreflightDetailedTests(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -359,7 +349,6 @@ func TestPreflightDetailedTests(t *testing.T) {
 	tt.EqualTrue(w.Header().Get("Access-Control-Allow-Headers") != "")
 }
 
-// TestWildcardHeaders tests wildcard header support
 func TestWildcardHeaders(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -380,12 +369,11 @@ func TestWildcardHeaders(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 	tt.Equal(204, w.Code)
-	// Should reflect requested headers when using wildcard
+
 	allowHeaders := w.Header().Get("Access-Control-Allow-Headers")
 	tt.EqualTrue(allowHeaders != "")
 }
 
-// TestNoOrigin tests behavior when no Origin or Referer is provided
 func TestNoOrigin(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -397,16 +385,13 @@ func TestNoOrigin(t *testing.T) {
 		c.String(200, "ok")
 	})
 
-	// Request without Origin or Referer
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/test", nil)
 
 	r.ServeHTTP(w, req)
 	tt.Equal(200, w.Code)
-	// Should succeed without CORS headers when no origin is provided
 }
 
-// TestOriginWithInvalidProtocol tests rejection of non-HTTP protocols
 func TestOriginWithInvalidProtocol(t *testing.T) {
 	r := znet.New()
 	r.Use(cors.New(&cors.Config{
@@ -435,7 +420,6 @@ func TestOriginWithInvalidProtocol(t *testing.T) {
 	}
 }
 
-// TestOriginWithPort tests origins with port numbers
 func TestOriginWithPort(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -457,7 +441,6 @@ func TestOriginWithPort(t *testing.T) {
 	tt.Equal("http://localhost:8080", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
-// TestDomainMatching tests domain pattern matching
 func TestDomainMatching(t *testing.T) {
 	tt := zls.NewTest(t)
 	r := znet.New()
@@ -486,7 +469,6 @@ func TestDomainMatching(t *testing.T) {
 	tt.Equal(403, w.Code)
 }
 
-// TestCORSConcurrent tests concurrent CORS requests for thread-safety
 func TestCORSConcurrent(t *testing.T) {
 	r := znet.New()
 	r.Use(cors.New(&cors.Config{
@@ -542,7 +524,6 @@ func TestCORSConcurrent(t *testing.T) {
 	}
 }
 
-// TestCORSConcurrentPreflight tests concurrent preflight requests
 func TestCORSConcurrentPreflight(t *testing.T) {
 	r := znet.New()
 	r.Use(cors.New(&cors.Config{
@@ -582,13 +563,11 @@ func TestCORSConcurrentPreflight(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all requests
 	for i := 0; i < 20; i++ {
 		<-done
 	}
 }
 
-// TestCORSConcurrentMixed tests concurrent mix of regular and preflight requests
 func TestCORSConcurrentMixed(t *testing.T) {
 	r := znet.New()
 	r.Use(cors.New(&cors.Config{
@@ -599,11 +578,9 @@ func TestCORSConcurrentMixed(t *testing.T) {
 		c.String(200, "ok")
 	})
 
-	// Mix of GET and OPTIONS requests
 	done := make(chan bool, 30)
 
 	for i := 0; i < 15; i++ {
-		// Regular GET request
 		go func(id int) {
 			defer func() { done <- true }()
 
@@ -618,7 +595,6 @@ func TestCORSConcurrentMixed(t *testing.T) {
 			}
 		}(i)
 
-		// Preflight OPTIONS request
 		go func(id int) {
 			defer func() { done <- true }()
 
@@ -635,13 +611,11 @@ func TestCORSConcurrentMixed(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all requests
 	for i := 0; i < 30; i++ {
 		<-done
 	}
 }
 
-// TestCORSConcurrentCustomHandler tests concurrent requests with custom handlers
 func TestCORSConcurrentCustomHandler(t *testing.T) {
 	customHandlerCalled := make(map[int]bool)
 	customHandlerMu := sync.Mutex{}
@@ -664,7 +638,6 @@ func TestCORSConcurrentCustomHandler(t *testing.T) {
 		c.String(200, "ok")
 	})
 
-	// Concurrent requests with custom handler
 	done := make(chan bool, 10)
 
 	for i := 0; i < 10; i++ {
@@ -684,12 +657,10 @@ func TestCORSConcurrentCustomHandler(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all requests
 	for i := 0; i < 10; i++ {
 		<-done
 	}
 
-	// Verify custom handlers were called (at least some of them)
 	customHandlerMu.Lock()
 	calls := len(customHandlerCalled)
 	customHandlerMu.Unlock()

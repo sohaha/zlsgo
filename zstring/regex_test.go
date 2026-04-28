@@ -2,6 +2,7 @@ package zstring
 
 import (
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
@@ -50,7 +51,10 @@ func TestRegex(T *testing.T) {
 
 	clearRegexpCompile()
 
-	regexCache = map[string]*regexMapStruct{}
+	regexCache.Range(func(key, value interface{}) bool {
+		regexCache.Delete(key)
+		return true
+	})
 	clearRegexpCompile()
 }
 
@@ -58,21 +62,24 @@ func TestRegexCacheClearKeepsTimestamp(t *testing.T) {
 	oldTimeout := regexCacheTimeout
 	defer func() {
 		regexCacheTimeout = oldTimeout
-		regexCache = map[string]*regexMapStruct{}
+		regexCache.Range(func(key, value interface{}) bool {
+			regexCache.Delete(key)
+			return true
+		})
 	}()
 
 	regexCacheTimeout = 1 << 31
-	regexCache = map[string]*regexMapStruct{
-		"a": {Value: regexp.MustCompile("a"), Time: 1},
-	}
+	regexCache.Store("a", &regexMapStruct{Value: regexp.MustCompile("a"), Time: 1})
 
 	clearRegexpCompile()
-	data, ok := regexCache["a"]
+
+	v, ok := regexCache.Load("a")
 	if !ok {
 		t.Fatalf("expected cache entry")
 	}
-	if data.Time != 1 {
-		t.Fatalf("expected cache time 1, got %d", data.Time)
+	data := v.(*regexMapStruct)
+	if got := atomic.LoadInt64(&data.Time); got != 1 {
+		t.Fatalf("expected cache time 1, got %d", got)
 	}
 }
 
@@ -80,24 +87,26 @@ func TestRegexCacheAccessRefresh(t *testing.T) {
 	oldTimeout := regexCacheTimeout
 	defer func() {
 		regexCacheTimeout = oldTimeout
-		regexCache = map[string]*regexMapStruct{}
+		regexCache.Range(func(key, value interface{}) bool {
+			regexCache.Delete(key)
+			return true
+		})
 	}()
 
 	regexCacheTimeout = 1 << 31
-	regexCache = map[string]*regexMapStruct{
-		"a": {Value: regexp.MustCompile("a"), Time: 1},
-	}
+	regexCache.Store("a", &regexMapStruct{Value: regexp.MustCompile("a"), Time: 1})
 
 	if _, err := getRegexpCompile("a"); err != nil {
 		t.Fatalf("expected compiled regex, got error: %v", err)
 	}
 
-	data, ok := regexCache["a"]
+	v, ok := regexCache.Load("a")
 	if !ok {
 		t.Fatalf("expected cache entry")
 	}
-	if data.Time == 1 {
-		t.Fatalf("expected cache time updated, got %d", data.Time)
+	data := v.(*regexMapStruct)
+	if got := atomic.LoadInt64(&data.Time); got == 1 {
+		t.Fatalf("expected cache time updated, got %d", got)
 	}
 }
 

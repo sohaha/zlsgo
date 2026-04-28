@@ -463,39 +463,47 @@ func (l *FastCache) markActive() {
 func (l *FastCache) startCleaner() {
 	l.cleanerMu.Lock()
 	defer l.cleanerMu.Unlock()
+
 	if l.cleanerOn || l.expiration <= 0 || !l.autoCleaner {
 		return
 	}
+
 	if l.cleanInterval == 0 {
 		l.cleanInterval = l.expiration
 	}
+
 	if l.stopCh == nil {
 		l.stopCh = make(chan struct{})
 	}
-	l.ticker = time.NewTicker(l.cleanInterval)
+
 	l.cleanerOn = true
-	t := l.ticker
-	ch := l.stopCh
-	go func(tk *time.Ticker, stop <-chan struct{}) {
+
+	ticker := time.NewTicker(l.cleanInterval)
+	l.ticker = ticker
+	stop := l.stopCh
+
+	go func() {
 		for {
 			select {
-			case <-tk.C:
+			case <-ticker.C:
 				l.clean()
 			case <-stop:
-				tk.Stop()
+				ticker.Stop()
 				return
 			}
 		}
-	}(t, ch)
+	}()
 }
 
 // stopCleaner stops the background cleaner if running.
 func (l *FastCache) stopCleaner() {
 	l.cleanerMu.Lock()
 	defer l.cleanerMu.Unlock()
+
 	if !l.cleanerOn {
 		return
 	}
+
 	if l.stopCh != nil {
 		select {
 		case <-l.stopCh:
@@ -503,8 +511,10 @@ func (l *FastCache) stopCleaner() {
 			close(l.stopCh)
 		}
 	}
+
 	l.cleanerOn = false
 	l.stopCh = nil
+
 	l.ticker = nil
 }
 

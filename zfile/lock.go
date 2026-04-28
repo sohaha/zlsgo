@@ -72,9 +72,13 @@ func (l *FileLock) Unlock() error {
 		return err
 	}
 
-	err = l.file.Close()
+	closeErr := l.file.Close()
 	l.file = nil
-	return err
+	if closeErr != nil {
+		return closeErr
+	}
+
+	return nil
 }
 
 // Clean releases the lock if held and removes the lock file from the filesystem.

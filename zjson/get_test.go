@@ -241,6 +241,16 @@ func TestForEach(t *testing.T) {
 		tt.Equal(63.12, value.Get("fen").Float())
 		return true
 	})
+
+	var keys []string
+	var values []int
+	Parse(`{"a":1,"a":2,"b":3}`).ForEach(func(key, value *Res) bool {
+		keys = append(keys, key.String())
+		values = append(values, value.Int())
+		return true
+	})
+	tt.Equal([]string{"a", "a", "b"}, keys)
+	tt.Equal([]int{1, 2, 3}, values)
 }
 
 func TestUnmarshal(t *testing.T) {

@@ -132,19 +132,22 @@ func Reverse[T any](collection []T) []T {
 
 // Filter creates a new slice containing all elements from the input slice that satisfy
 // the predicate function. The original slice remains unchanged.
+// Filter creates a new slice containing only the elements that satisfy the predicate.
+// This optimized version pre-allocates capacity based on the input slice size,
+// avoiding unnecessary full copy when only a subset of elements are kept.
 func Filter[T any](slice []T, predicate func(index int, item T) bool) []T {
-	slice = CopySlice(slice)
+	// Pre-allocate with a reasonable capacity estimate
+	// Using 1/4 of original size as initial capacity to reduce allocations
+	// while avoiding excessive memory usage for highly selective filters
+	result := make([]T, 0, (len(slice)+3)/4)
 
-	j := 0
 	for i := range slice {
-		if !predicate(i, slice[i]) {
-			continue
+		if predicate(i, slice[i]) {
+			result = append(result, slice[i])
 		}
-		slice[j] = slice[i]
-		j++
 	}
 
-	return slice[:j:j]
+	return result
 }
 
 // Contains checks if a value exists in the collection.

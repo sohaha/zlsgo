@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"math/big"
 	"os"
 	"sort"
 	"strconv"
@@ -89,6 +90,81 @@ func UniqueID(n int) string {
 		return result + Rand(n-len(result))
 	}
 	return hex.EncodeToString(k)
+}
+
+// SecureRandInt generates a cryptographically secure random integer in the range [min, max].
+// This function uses crypto/rand and is suitable for security-sensitive scenarios such as:
+// - Session IDs
+// - Authentication tokens
+// - CSRF tokens
+// - Password reset tokens
+// - API keys
+//
+// For non-security-critical random numbers, use RandInt instead for better performance.
+//
+// Returns an error if the range is invalid or crypto/rand fails.
+func SecureRandInt(min, max int) (int, error) {
+	if max < min {
+		return 0, errors.New("invalid range: max must be >= min")
+	}
+	if max == min {
+		return min, nil
+	}
+
+	rangeSize := new(big.Int).Sub(big.NewInt(int64(max)), big.NewInt(int64(min)))
+	rangeSize.Add(rangeSize, big.NewInt(1))
+	randomInt, err := rand.Int(rand.Reader, rangeSize)
+	if err != nil {
+		return 0, err
+	}
+
+	randomInt.Add(randomInt, big.NewInt(int64(min)))
+	return int(randomInt.Int64()), nil
+}
+
+// SecureRandString generates a cryptographically secure random string of the specified length.
+// By default, it uses alphanumeric characters (0-9, a-z, A-Z).
+// An optional template string can be provided to limit the characters used.
+//
+// This function is suitable for security-sensitive scenarios such as:
+// - Session IDs
+// - Authentication tokens
+// - CSRF tokens
+// - Password reset tokens
+// - API keys
+//
+// For non-security-critical random strings, use Rand instead for better performance.
+//
+// Returns an error if crypto/rand fails.
+func SecureRandString(n int, tpl ...string) (string, error) {
+	if n <= 0 {
+		return "", errors.New("length must be positive")
+	}
+
+	var chars []rune
+	if len(tpl) > 0 {
+		chars = []rune(tpl[0])
+	} else {
+		chars = letterBytes
+	}
+
+	if len(chars) == 0 {
+		return "", errors.New("character template cannot be empty")
+	}
+
+	alphabetSize := len(chars)
+	result := make([]rune, n)
+	max := big.NewInt(int64(alphabetSize))
+
+	for i := 0; i < n; i++ {
+		idx, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", err
+		}
+		result[i] = chars[idx.Int64()]
+	}
+
+	return string(result), nil
 }
 
 type (

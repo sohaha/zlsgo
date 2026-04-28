@@ -8,7 +8,6 @@ import (
 
 	"github.com/sohaha/zlsgo/zdi"
 	"github.com/sohaha/zlsgo/znet"
-	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
 )
 
@@ -49,7 +48,18 @@ func New(stores Store, opt ...func(*Config)) znet.Handler {
 		})
 		id := c.GetCookie(conf.CookieName)
 		if id == "" {
-			id = zstring.UUID()
+			var err error
+			id, err = generateSessionID()
+			if err != nil {
+				return err
+			}
+		} else {
+			if err := validateSessionID(id); err != nil {
+				id, err = generateSessionID()
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		s, err := stores.Get(id)

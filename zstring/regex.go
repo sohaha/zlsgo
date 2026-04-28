@@ -3,21 +3,21 @@ package zstring
 import (
 	"regexp"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// regexMapStruct holds a compiled regular expression with its last access time
-// and a mutex for concurrent access control.
+// regexMapStruct holds a compiled regular expression with its last access time.
 type regexMapStruct struct {
 	Value *regexp.Regexp
 	Time  int64
-	sync.RWMutex
 }
 
 var (
-	l                 sync.RWMutex                                // Global mutex for regexCache access
-	regexCache                     = map[string]*regexMapStruct{} // Cache of compiled regular expressions
-	regexCacheTimeout uint         = 1800                         // Cache timeout in seconds (30 minutes)
+	// regexCache uses sync.Map for lock-free concurrent access
+	// This provides better performance under high concurrency compared to mutex-protected map
+	regexCache        sync.Map
+	regexCacheTimeout uint = 1800 // Cache timeout in seconds (30 minutes)
 )
 
 // init starts a background goroutine that periodically cleans up
@@ -106,39 +106,40 @@ func RegexSplit(pattern string, str string) ([]string, error) {
 
 // clearRegexpCompile removes expired entries from the regular expression cache.
 // An entry is considered expired if it hasn't been accessed within the timeout period.
+// This function is called periodically by a background goroutine.
 func clearRegexpCompile() {
-	newRegexCache := map[string]*regexMapStruct{}
-	l.Lock()
-	defer l.Unlock()
-	if len(regexCache) == 0 {
-		return
-	}
 	now := time.Now().Unix()
-	for k, v := range regexCache {
-		if uint(now-v.Time) <= regexCacheTimeout {
-			newRegexCache[k] = v
+	regexCache.Range(func(key, value interface{}) bool {
+		data := value.(*regexMapStruct)
+		if uint(now-atomic.LoadInt64(&data.Time)) > regexCacheTimeout {
+			regexCache.Delete(key)
 		}
-	}
-	regexCache = newRegexCache
+		return true
+	})
 }
 
 // getRegexpCompile retrieves a compiled regular expression from the cache or compiles it if not found.
 // The compiled expression is cached for future use to improve performance.
+// Uses sync.Map for lock-free concurrent access, providing better performance under high concurrency.
 func getRegexpCompile(pattern string) (r *regexp.Regexp, err error) {
-	l.Lock()
-	if data, ok := regexCache[pattern]; ok {
-		data.Time = time.Now().Unix()
-		r = data.Value
-		l.Unlock()
-		return
+	// Fast path: try to load from cache without locking
+	if v, ok := regexCache.Load(pattern); ok {
+		data := v.(*regexMapStruct)
+		atomic.StoreInt64(&data.Time, time.Now().Unix())
+		return data.Value, nil
 	}
-	l.Unlock()
+
+	// Slow path: compile and store
 	r, err = regexp.Compile(pattern)
 	if err != nil {
-		return
+		return nil, err
 	}
-	l.Lock()
-	regexCache[pattern] = &regexMapStruct{Value: r, Time: time.Now().Unix()}
-	l.Unlock()
-	return
+
+	// Store in cache for future use
+	regexCache.Store(pattern, &regexMapStruct{
+		Value: r,
+		Time:  time.Now().Unix(),
+	})
+
+	return r, nil
 }

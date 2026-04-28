@@ -103,8 +103,15 @@ func WriteFile(path string, b []byte, isAppend ...bool) (err error) {
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		closeErr := file.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
+
 	_, err = file.Write(b)
-	file.Close()
 	return err
 }
 
@@ -142,7 +149,14 @@ func PutAppend(path string, b []byte) (err error) {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+
+	defer func() {
+		closeErr := file.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
+
 	_, err = file.Write(b)
 	return err
 }

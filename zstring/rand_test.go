@@ -59,12 +59,41 @@ func TestWeightedRand(T *testing.T) {
 	t.EqualTrue(err == nil)
 }
 
-func TestNewNanoID(T *testing.T) {
-	t := zlsgo.NewTest(T)
-	t.Log(NewNanoID(10))
-	t.Log(NewNanoID(10))
-	t.Log(NewNanoID(10, "1234"))
-	t.Log(NewNanoID(10, "1234"))
+func TestNewNanoID(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Log(NewNanoID(10))
+	tt.Log(NewNanoID(10))
+	tt.Log(NewNanoID(10, "1234"))
+	tt.Log(NewNanoID(10, "1234"))
+}
+
+func TestSecureRandInt(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	v, err := SecureRandInt(1, 10)
+	tt.Log(v, err)
+	tt.NoError(err)
+	tt.EqualTrue(v >= 1 && v <= 10)
+
+	v, err = SecureRandInt(7, 7)
+	tt.NoError(err)
+	tt.Equal(7, v)
+
+	_, err = SecureRandInt(10, 1)
+	tt.EqualTrue(err != nil)
+}
+
+func TestSecureRandString(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	v, err := SecureRandString(10)
+	tt.Log(v)
+	tt.NoError(err)
+
+	v, err = SecureRandString(32, "abc")
+	tt.NoError(err)
+	tt.Equal(32, len(v))
+	for _, r := range v {
+		tt.EqualTrue(strings.ContainsRune("abc", r))
+	}
 }
 
 func BenchmarkNanoID(b *testing.B) {

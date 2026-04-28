@@ -19,7 +19,7 @@ func TestMemorySession(t *testing.T) {
 	defer store.Close()
 
 	tt.Run("New and Get", func(tt *zlsgo.TestUtil) {
-		sessionID := "test-session"
+		sessionID := "test-session-id-1234567890abcdef"
 		expiresAt := time.Now().Add(1 * time.Hour)
 
 		s, err := store.New(sessionID, expiresAt)
@@ -33,7 +33,7 @@ func TestMemorySession(t *testing.T) {
 	})
 
 	tt.Run("Set and Get", func(tt *zlsgo.TestUtil) {
-		sessionID := "test-session-2"
+		sessionID := "test-session-id-2234567890abcdef"
 		s, _ := store.New(sessionID, time.Now().Add(time.Hour))
 
 		key := "test-key"
@@ -48,7 +48,7 @@ func TestMemorySession(t *testing.T) {
 	})
 
 	tt.Run("Delete", func(tt *zlsgo.TestUtil) {
-		sessionID := "test-session-3"
+		sessionID := "test-session-id-3234567890abcdef"
 		s, _ := store.New(sessionID, time.Now().Add(time.Hour))
 
 		key := "to-delete"
@@ -62,7 +62,7 @@ func TestMemorySession(t *testing.T) {
 	})
 
 	tt.Run("Destroy", func(tt *zlsgo.TestUtil) {
-		sessionID := "test-session-4"
+		sessionID := "test-session-id-4234567890abcdef"
 		s, _ := store.New(sessionID, time.Now().Add(time.Hour))
 
 		s.Set("key1", "value1")
@@ -93,13 +93,22 @@ func TestMemoryStore_Persistence_Sharded(t *testing.T) {
 	)
 	defer store.Close()
 
-	aliveIDs := []string{"a1", "a2", "a3", "a4", "a5"}
+	aliveIDs := []string{
+		"test-session-id-a11234567890abcdef",
+		"test-session-id-a21234567890abcdef",
+		"test-session-id-a31234567890abcdef",
+		"test-session-id-a41234567890abcdef",
+		"test-session-id-a51234567890abcdef",
+	}
 	for _, id := range aliveIDs {
 		s, err := store.New(id, time.Now().Add(30*time.Minute))
 		tt.NoError(err, true)
 		s.Set("k", id)
 	}
-	expiredIDs := []string{"e1", "e2"}
+	expiredIDs := []string{
+		"test-session-id-e11234567890abcdef",
+		"test-session-id-e21234567890abcdef",
+	}
 	for _, id := range expiredIDs {
 		_, err := store.New(id, time.Now().Add(-1*time.Hour))
 		tt.NoError(err, true)
@@ -141,12 +150,22 @@ func TestMemoryStore(t *testing.T) {
 	defer store.Close()
 
 	tt.Run("Get non-existent session", func(tt *zlsgo.TestUtil) {
-		_, err := store.Get("nonexistent")
+		_, err := store.Get("test-session-id-non1234567890abcdef")
 		tt.Equal(errors.New("session not found"), err, true)
 	})
 
+	tt.Run("Store allows caller-defined IDs", func(tt *zlsgo.TestUtil) {
+		sessionID := "short"
+		_, err := store.New(sessionID, time.Now().Add(time.Hour))
+		tt.NoError(err, true)
+
+		s, err := store.Get(sessionID)
+		tt.NoError(err, true)
+		tt.Equal(sessionID, s.ID())
+	})
+
 	tt.Run("Session expiration", func(tt *zlsgo.TestUtil) {
-		sessionID := "expiring-session"
+		sessionID := "test-session-id-exp1234567890abcdef"
 		s, _ := store.New(sessionID, time.Now().Add(-time.Hour))
 		s.Set("key", "value")
 
@@ -155,7 +174,7 @@ func TestMemoryStore(t *testing.T) {
 	})
 
 	tt.Run("Renew session", func(tt *zlsgo.TestUtil) {
-		sessionID := "renewable-session"
+		sessionID := "test-session-id-ren1234567890abcdef"
 		newExpiry := time.Now().Add(2 * time.Hour)
 
 		_, _ = store.New(sessionID, time.Now().Add(-time.Hour))
@@ -169,27 +188,27 @@ func TestMemoryStore(t *testing.T) {
 	})
 
 	tt.Run("Renew non-existent session", func(tt *zlsgo.TestUtil) {
-		err := store.Renew("nonexistent", time.Now().Add(time.Hour))
+		err := store.Renew("test-session-id-non2234567890abcdef", time.Now().Add(time.Hour))
 		tt.Equal(errors.New("session not found"), err)
 	})
 
 	tt.Run("Collect expired sessions", func(tt *zlsgo.TestUtil) {
-		store.New("expired-1", time.Now().Add(-time.Hour))
-		store.New("expired-2", time.Now().Add(-30*time.Minute))
-		store.New("active-1", time.Now().Add(time.Hour))
+		store.New("test-session-id-ex11234567890abcdef", time.Now().Add(-time.Hour))
+		store.New("test-session-id-ex21234567890abcdef", time.Now().Add(-30*time.Minute))
+		store.New("test-session-id-act1234567890abcdef", time.Now().Add(time.Hour))
 		err := store.Collect()
 		tt.NoError(err, true)
 
-		_, err = store.Get("expired-1")
+		_, err = store.Get("test-session-id-ex11234567890abcdef")
 		tt.Equal(errors.New("session not found"), err)
-		_, err = store.Get("expired-2")
+		_, err = store.Get("test-session-id-ex21234567890abcdef")
 		tt.Equal(errors.New("session not found"), err)
-		_, err = store.Get("active-1")
+		_, err = store.Get("test-session-id-act1234567890abcdef")
 		tt.NoError(err, true)
 	})
 
 	tt.Run("Concurrent access", func(tt *zlsgo.TestUtil) {
-		sessionID := "concurrent-session"
+		sessionID := "test-session-id-con1234567890abcdef"
 		store.New(sessionID, time.Now().Add(time.Hour))
 
 		var wg sync.WaitGroup
@@ -226,7 +245,7 @@ func TestMemoryStore_Delete(t *testing.T) {
 	store := session.NewMemoryStore()
 	defer store.Close()
 
-	sessionID := "session-to-delete"
+	sessionID := "test-session-id-del1234567890abcdef"
 	s, _ := store.New(sessionID, time.Now().Add(time.Hour))
 	s.Set("key", "value")
 
@@ -236,7 +255,7 @@ func TestMemoryStore_Delete(t *testing.T) {
 	_, err = store.Get(sessionID)
 	tt.Equal(errors.New("session not found"), err)
 
-	err = store.Delete("nonexistent")
+	err = store.Delete("test-session-id-non3234567890abcdef")
 	tt.NoError(err, true)
 }
 
@@ -245,7 +264,7 @@ func TestMemoryStore_Save(t *testing.T) {
 	store := session.NewMemoryStore()
 	defer store.Close()
 
-	sessionID := "session-to-save"
+	sessionID := "test-session-id-sav1234567890abcdef"
 	s, _ := store.New(sessionID, time.Now().Add(time.Hour))
 
 	err := store.Save(s)
@@ -269,12 +288,12 @@ func TestMemoryStore_Persistence(t *testing.T) {
 	)
 	defer store.Close()
 
-	activeID := "persist-active"
+	activeID := "test-session-id-pact1234567890abcdef"
 	s, err := store.New(activeID, time.Now().Add(1*time.Hour))
 	tt.NoError(err, true)
 	s.Set("k", "v")
 
-	expiredID := "persist-expired"
+	expiredID := "test-session-id-pexp1234567890abcdef"
 	_, err = store.New(expiredID, time.Now().Add(-1*time.Hour))
 	tt.NoError(err, true)
 

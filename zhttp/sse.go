@@ -161,15 +161,30 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 	}
 
 	go func() {
+		defer func() {
+			if r != nil && r.resp != nil && r.resp.Body != nil {
+				_ = r.resp.Body.Close()
+			}
+			close(sse.eventCh)
+		}()
+
 		for {
 			if sse.ctx.Err() != nil {
 				break
 			}
+
 			if err == nil {
 				if r != nil {
 					if sse.verifyHeader != nil && !sse.verifyHeader(r.Response().Header) {
-						sse.eventCh <- &SSEEvent{
+						select {
+						case sse.eventCh <- &SSEEvent{
 							Undefined: r.Bytes(),
+						}:
+						case <-sse.ctx.Done():
+							break
+						}
+						if r.resp != nil && r.resp.Body != nil {
+							_ = r.resp.Body.Close()
 						}
 						r = nil
 					}
@@ -184,11 +199,21 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 				sse.readyState = 1
 
 				isPing := false
-				_ = r.Stream(func(line []byte, eof bool) error {
+				streamErr := r.Stream(func(line []byte, eof bool) error {
+					select {
+					case <-sse.ctx.Done():
+						return sse.ctx.Err()
+					default:
+					}
+
 					i := len(line)
 					if i == 1 && line[0] == dataEnd {
 						if !isPing {
-							sse.eventCh <- currEvent
+							select {
+							case sse.eventCh <- currEvent:
+							case <-sse.ctx.Done():
+								return sse.ctx.Err()
+							}
 							currEvent = &SSEEvent{}
 							isPing = false
 						} else {
@@ -227,7 +252,11 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 						currEvent.Event = zstring.Bytes2String(val)
 					case "data":
 						if len(currEvent.Data) > 0 {
-							sse.eventCh <- currEvent
+							select {
+							case sse.eventCh <- currEvent:
+							case <-sse.ctx.Done():
+								return sse.ctx.Err()
+							}
 							currEvent = &SSEEvent{}
 							isPing = false
 						}
@@ -238,13 +267,21 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 						}
 					}
 					if eof && !isPing {
-						sse.eventCh <- currEvent
+						select {
+						case sse.eventCh <- currEvent:
+						case <-sse.ctx.Done():
+							return sse.ctx.Err()
+						}
 						currEvent = &SSEEvent{}
 					}
 					return nil
 				})
 
+				if streamErr != nil {
+					err = streamErr
+				}
 			}
+
 			if sse.option.RetryNum >= 0 {
 				if sse.option.RetryNum == 0 {
 					cancel()
@@ -252,12 +289,24 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 				}
 				sse.option.RetryNum--
 			}
+
+			select {
+			case <-sse.ctx.Done():
+				return
+			case <-time.After(time.Millisecond * time.Duration(retry)):
+				// Continue to retry
+			}
+
 			sse.readyState = 0
-			time.Sleep(time.Millisecond * time.Duration(retry))
 			ndata := data
 			if lastID != "" {
 				ndata = append(ndata, Header{"Last-Event-ID": lastID})
 			}
+
+			if r != nil && r.resp != nil && r.resp.Body != nil {
+				_ = r.resp.Body.Close()
+			}
+
 			r, err = e.sseReq(sse.option.Method, url, ndata...)
 		}
 	}()

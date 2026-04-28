@@ -296,15 +296,14 @@ func (d *Conver) processFieldTag(fieldType reflect.StructField, fieldVal reflect
 
 // collectStructFields collect struct fields
 func (d *Conver) collectStructFields(val reflect.Value) ([]structFieldInfo, *structFieldInfo, error) {
-	queue := make([]reflect.Value, 0, 4)
+	queue := make([]reflect.Value, 0, 8)
 	queue = append(queue, val)
 
 	fields := make([]structFieldInfo, 0, val.NumField()*2)
 	var remainField *structFieldInfo
 
-	for len(queue) > 0 {
-		structVal := queue[0]
-		queue = queue[1:]
+	for queueIdx := 0; queueIdx < len(queue); queueIdx++ {
+		structVal := queue[queueIdx]
 		structType := structVal.Type()
 
 		for i := 0; i < structType.NumField(); i++ {
