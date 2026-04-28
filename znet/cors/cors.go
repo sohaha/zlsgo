@@ -2,7 +2,6 @@ package cors
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -30,8 +29,7 @@ type (
 )
 
 const (
-	DefaultHeaders = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name"
-	SafeHeaders    = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name,X-CSRF-Token"
+	SafeHeaders = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name,X-CSRF-Token"
 )
 
 func Default() znet.HandlerFunc {
@@ -92,6 +90,17 @@ func validateConfig(conf *Config) error {
 	return nil
 }
 
+func extractOriginFromReferer(referer string) string {
+	if referer == "" {
+		return ""
+	}
+	u, err := url.Parse(referer)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
 func (conf *Config) initConfig() {
 	conf.once.Do(func() {
 		if len(conf.Methods) == 0 {
@@ -119,10 +128,12 @@ func (conf *Config) initConfig() {
 			for _, header := range conf.Headers {
 				if header == "*" {
 					conf.headers = "*"
-					return
+					break
 				}
 			}
-			conf.headers = strings.Join(conf.Headers, ", ")
+			if conf.headers != "*" {
+				conf.headers = strings.Join(conf.Headers, ", ")
+			}
 		} else {
 			conf.headers = SafeHeaders
 		}
@@ -151,58 +162,34 @@ func New(conf *Config) znet.HandlerFunc {
 	}
 }
 
-func validateOrigin(origin string, conf *Config) bool {
+func validateOrigin(origin string) bool {
 	if origin == "" {
 		return false
 	}
 
-	// 检查 Origin 长度是否超过 2048 字节
 	if len(origin) > 2048 {
 		return false
 	}
 
-	if len(conf.Domains) > 0 && conf.Domains[0] == "*" {
-		return true
-	}
-
-	// 检查 origin 是否包含协议和主机部分
-	if !strings.Contains(origin, "://") {
-		return false
-	}
-
-	// 检查 origin 是否以 http:// 或 https:// 开头
 	if !strings.HasPrefix(origin, "http://") && !strings.HasPrefix(origin, "https://") {
 		return false
 	}
 
-	// 检查 origin 是否包含有效的 scheme 和 host
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return false
 	}
 
-	// 确保 scheme 和 host 都存在
 	if parsed.Scheme == "" || parsed.Host == "" {
 		return false
 	}
 
-	// 只允许 http 和 https 协议
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return false
 	}
 
-	// 检查 host 是否包含点号（简单验证）
-	host := parsed.Host
-	if strings.Contains(host, ":") {
-		host, _, _ = net.SplitHostPort(host)
-	}
-
-	// 检查 host 是否为有效的域名或 IP 地址
-	if host == "" || (!strings.Contains(host, ".") && host != "localhost" && !strings.HasPrefix(host, "localhost:")) {
-		return false
-	}
-
-	if strings.ContainsAny(host, " \t\n\r\f\v") {
+	host := parsed.Hostname()
+	if host == "" || strings.ContainsAny(host, " \t\n\r") {
 		return false
 	}
 
@@ -239,18 +226,24 @@ func getAllowedHeaders(conf *Config, req *http.Request) string {
 }
 
 func applyCors(c *znet.Context, conf *Config) bool {
-	origin := c.GetHeader("Origin")
+	allowedOrigin := c.GetHeader("Origin")
+	if allowedOrigin == "" {
+		referer := c.GetHeader("Referer")
+		if referer != "" {
+			allowedOrigin = extractOriginFromReferer(referer)
+		}
+	}
 
-	if origin == "" {
+	if allowedOrigin == "" {
 		return true
 	}
 
-	if !validateOrigin(origin, conf) {
+	if !validateOrigin(allowedOrigin) {
 		c.Abort(http.StatusBadRequest)
 		return false
 	}
 
-	if !isOriginAllowed(origin, conf) {
+	if !isOriginAllowed(allowedOrigin, conf) {
 		c.Abort(http.StatusForbidden)
 		return false
 	}
@@ -261,7 +254,7 @@ func applyCors(c *znet.Context, conf *Config) bool {
 		"Access-Control-Allow-Methods":     conf.methods,
 		"Access-Control-Allow-Credentials": conf.credentials,
 		"Access-Control-Allow-Headers":     allowHeaders,
-		"Access-Control-Allow-Origin":      origin,
+		"Access-Control-Allow-Origin":      allowedOrigin,
 	}
 
 	if conf.exposeHeaders != "" {
