@@ -113,6 +113,7 @@ func (s *systemd) configPath() (cp string, err error) {
 	cp = "/etc/systemd/system/" + s.Config.Name + ".service"
 	return
 }
+
 func (s *systemd) template() *template.Template {
 	return template.Must(template.New("").Funcs(tf).Parse(systemdScript))
 }
@@ -141,7 +142,7 @@ func (s *systemd) Install() error {
 		pidFile, _ = v.(string)
 	}
 	path := s.execPath()
-	var to = &struct {
+	to := &struct {
 		*Config
 		Path         string
 		ReloadSignal string
@@ -244,16 +245,14 @@ Description={{.Description}}
 ConditionFileIsExecutable={{.Path|cmdEscape}}
 
 [Service]
-StartLimitInterval=5
-StartLimitBurst=10
 ExecStart={{.Path|cmdEscape}}{{range .Arguments}} {{.|cmd}}{{end}}
 {{if .RootDir}}RootDirectory={{.RootDir|cmd}}{{end}}
 {{if .WorkingDir}}WorkingDirectory={{.WorkingDir|cmdEscape}}{{end}}
 {{if .UserName}}User={{.UserName}}{{end}}
 {{if .ReloadSignal}}ExecReload=/bin/kill -{{.ReloadSignal}} "$MAINPID"{{end}}
 {{if .PIDFile}}PIDFile={{.PIDFile|cmd}}{{end}}
-Restart=always
-RestartSec=120ms
+Restart=on-failure
+RestartSec=1
 EnvironmentFile=-/etc/sysconfig/{{.Name}}
 KillMode=process
 
