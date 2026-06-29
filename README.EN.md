@@ -24,7 +24,7 @@ Recommended to use with the `zzz watch` command of [zzz](https://github.com/soha
 
 ## ✨ Features
 
-- **Lightweight & Efficient**: Avoid excessive external dependencies, minimum compatible with old systems such as Windows 7
+- **Lightweight & Efficient**: Avoid excessive external dependencies
 - **Modular Design**: Import on demand, reduce unnecessary code volume
 - **Type Safe**: Fully utilize Go's type system, provide type-safe APIs
 - **High Performance**: Optimize underlying implementation, pursue ultimate performance
