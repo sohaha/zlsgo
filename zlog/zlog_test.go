@@ -38,6 +38,9 @@ func TestLogs(T *testing.T) {
 	Printf("%s\n", "log with Printf")
 	Dump("log with Dump", t, T, nil)
 
+	l := GetLogger()
+	t.Log(l != nil)
+
 	SetLogLevel(LogFatal)
 	level := GetLogLevel()
 	t.Equal(LogFatal, level)

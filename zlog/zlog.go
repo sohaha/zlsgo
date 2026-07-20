@@ -219,3 +219,9 @@ func Stack(v interface{}) {
 func Discard() {
 	log.Discard()
 }
+
+// GetLogger returns the default logger instance.
+// This is useful when you need to access the logger directly for advanced configuration.
+func GetLogger() *Logger {
+	return log
+}

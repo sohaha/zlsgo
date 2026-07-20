@@ -147,9 +147,7 @@ func exprToString(arg ast.Expr) string {
 		return ""
 	}
 	result := sb.String()
-	if strings.Contains(result, "\t") {
-		result = strings.Replace(result, "\t", "    ", -1)
-	}
+	result = strings.Replace(result, "\t", "    ", -1)
 
 	return result
 }
