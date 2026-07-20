@@ -126,7 +126,7 @@ func parseCommand(outHelp bool) {
 	requiredErr := parseRequiredFlags(flag.CommandLine, requiredFlags)
 	if requiredErr != nil {
 		if len(flag.Args()) > 0 {
-			Error(requiredErr.Error())
+			Error("%s", requiredErr)
 		} else if outHelp {
 			Help()
 		}

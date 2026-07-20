@@ -222,7 +222,7 @@ func GetLangText(key string, def ...string) string {
 // Write implements the io.Writer interface for custom error handling.
 // It formats and displays error messages through the Error function.
 func (e *errWrite) Write(p []byte) (n int, err error) {
-	Error(strings.Replace(ztype.ToString(p), cliPrefix, "", 1))
+	Error("%s", strings.Replace(ztype.ToString(p), cliPrefix, "", 1))
 	return 1, nil
 }
 

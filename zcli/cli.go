@@ -149,7 +149,7 @@ func Start(runFunc ...runFunc) {
 	if *flagDetach {
 		err := zshell.BgRun(strings.Join(runCmd, " "))
 		if err != nil {
-			Error(err.Error())
+			Error("%s", err)
 		}
 		return
 	}
@@ -163,7 +163,7 @@ func Start(runFunc ...runFunc) {
 	}
 	requiredErr := parseRequiredFlags(flag.CommandLine, requiredFlags)
 	if requiredErr != nil {
-		Error(requiredErr.Error())
+		Error("%s", requiredErr)
 	}
 
 	isRunFunc := len(runFunc) > 0

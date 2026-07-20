@@ -106,7 +106,7 @@ func TestCatchPanic(t *testing.T) {
 	}
 
 	panicked, recovered = catchPanic(func() { panic(nil) })
-	if !panicked || recovered != nil {
+	if !panicked || recovered == nil {
 		t.Fatalf("panicked = %v, recovered = %v", panicked, recovered)
 	}
 
