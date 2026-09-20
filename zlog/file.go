@@ -79,22 +79,30 @@ func (log *Logger) SetLevelSaveFile(level int, filepath string, archive ...bool)
 }
 
 func (log *Logger) setLogfile(filepath string, archive bool) {
-	fileObj, fileName, fileDir, _ := openFile(filepath, archive)
+	fileObj, fileName, fileDir, err := openFile(filepath, archive)
+	if err != nil || fileObj == nil {
+		// Keep the existing output instead of installing a nil writer.
+		return
+	}
 	log.mu.Lock()
 	log.CloseFile()
 	log.file = fileObj
 	log.fileDir = fileDir
 	log.fileName = fileName
 	if log.fileAndStdout {
-		log.out = io.MultiWriter(log.file, log.out)
+		log.Out = io.MultiWriter(log.file, log.Out)
 	} else {
-		log.out = fileObj
+		log.Out = fileObj
 	}
 	log.mu.Unlock()
 }
 
 func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStdout bool) {
-	fileObj, _, _, _ := openFile(filepath, archive)
+	fileObj, _, _, err := openFile(filepath, archive)
+	if err != nil || fileObj == nil {
+		// Keep the existing output instead of installing a nil writer.
+		return
+	}
 	log.mu.Lock()
 	if log.levelFiles == nil {
 		log.levelFiles = map[int]*levelFile{}
@@ -112,7 +120,7 @@ func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStd
 
 func (log *Logger) Discard() {
 	log.mu.Lock()
-	log.out = ioutil.Discard
+	log.Out = ioutil.Discard
 	if log.file != nil {
 		_ = log.file.Close()
 	}
@@ -124,7 +132,7 @@ func (log *Logger) Discard() {
 		}
 		log.levelFiles = nil
 	}
-	log.level = LogNot
+	log.level.Store(LogNot)
 	log.mu.Unlock()
 }
 
@@ -132,7 +140,7 @@ func (log *Logger) SetSaveFile(filepath string, archive ...bool) {
 	log.SetFile(filepath, archive...)
 	log.mu.Lock()
 	log.fileAndStdout = true
-	log.out = io.MultiWriter(log.file, os.Stdout)
+	log.Out = io.MultiWriter(log.file, os.Stdout)
 	log.mu.Unlock()
 }
 
@@ -157,6 +165,6 @@ func (log *Logger) CloseFile() {
 	if log.file != nil {
 		_ = log.file.Close()
 		log.file = nil
-		log.out = os.Stdout
+		log.Out = os.Stdout
 	}
 }

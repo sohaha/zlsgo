@@ -92,7 +92,7 @@ func SetLogLevel(level int) {
 // GetLogLevel returns the current minimum log level.
 // Deprecated: please use SetDefault and access the logger's methods directly.
 func GetLogLevel() int {
-	return log.level
+	return int(log.level.Load())
 }
 
 // Debugf logs a formatted debug message.
@@ -108,7 +108,7 @@ func Debug(v ...interface{}) {
 // Dump logs detailed information about variables, including their names when possible.
 // This is useful for debugging complex data structures.
 func Dump(v ...interface{}) {
-	if log.level < LogDump {
+	if log.level.Load() < LogDump {
 		return
 	}
 	args := formatArgs(v...)
@@ -224,4 +224,28 @@ func Discard() {
 // This is useful when you need to access the logger directly for advanced configuration.
 func GetLogger() *Logger {
 	return log
+}
+
+// SetFormatter sets the formatter used by the default logger to serialize
+// each record. Passing nil restores the default TextFormatter.
+func SetFormatter(f Formatter) {
+	log.SetFormatter(f)
+}
+
+// WithField returns an Entry on the default logger with the given
+// key-value pair attached to every record it writes.
+func WithField(key string, value interface{}) *Entry {
+	return log.WithField(key, value)
+}
+
+// WithFields returns an Entry on the default logger carrying a copy of
+// the given fields on every record it writes.
+func WithFields(fields Fields) *Entry {
+	return log.WithFields(fields)
+}
+
+// WithError returns an Entry on the default logger with the error
+// attached under the "error" key.
+func WithError(err error) *Entry {
+	return log.WithError(err)
 }

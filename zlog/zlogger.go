@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"text/tabwriter"
 
 	"github.com/sohaha/zlsgo/zfile"
@@ -98,8 +99,8 @@ type (
 	// Logger represents a logging object with configurable output destination,
 	// formatting options, and log level filtering.
 	Logger struct {
-		// out is the destination for log output (e.g., os.Stdout)
-		out io.Writer
+		// Out is the destination for log output (e.g., os.Stdout).
+		Out io.Writer
 		// file is the memory buffer for file-based logging
 		file       *zfile.MemoryFile
 		levelFiles map[int]*levelFile
@@ -112,10 +113,12 @@ type (
 		// writeBefore contains functions that are called before writing a log message
 		// and can prevent the message from being logged by returning false
 		writeBefore []func(level int, log string) bool
+		// formatter serializes each Record; nil selects the default TextFormatter
+		formatter Formatter
 		// calldDepth controls how many stack frames to ascend to identify the calling function
 		calldDepth int
 		// level is the current minimum log level that will be output
-		level int
+		level atomic.Int32
 		// flag contains the bitmap of header format options
 		flag int
 		// mu provides thread safety for the logger
@@ -170,7 +173,8 @@ func New(moduleName ...string) *Logger {
 //   - color: whether to use ANSI color codes
 //   - calldDepth: how many stack frames to ascend to identify the calling function
 func NewZLog(out io.Writer, prefix string, flag int, level int, color bool, calldDepth int) *Logger {
-	zlog := &Logger{out: out, prefix: prefix, flag: flag, file: nil, calldDepth: calldDepth, level: level, color: color}
+	zlog := &Logger{Out: out, prefix: prefix, flag: flag, file: nil, calldDepth: calldDepth, color: color}
+	zlog.level.Store(int32(level))
 	runtime.SetFinalizer(zlog, CleanLog)
 	return zlog
 }
@@ -222,14 +226,14 @@ func (log *Logger) OpTextWrap(color Op, text string) string {
 	return text
 }
 
-func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level int) {
-	if log.flag == 0 {
+func formatHeader(buf *bytes.Buffer, r *Record) {
+	if r.Flag == 0 || r.Level == LogNot {
 		return
 	}
 
-	t := ztime.Time(log.flag&BitMicroSeconds != 0)
+	t := r.Time
 
-	flags := log.flag
+	flags := r.Flag
 
 	if flags&BitDate != 0 {
 		formatDateAppend(buf, t)
@@ -245,10 +249,10 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level 
 		buf.WriteByte(' ')
 	}
 
-	if flags&BitLevel != 0 {
-		levelText := Levels[level]
-		if log.color {
-			buf.WriteString(log.ColorTextWrap(LevelColous[level], levelText))
+	if flags&BitLevel != 0 && r.Level >= 0 && r.Level < len(Levels) {
+		levelText := Levels[r.Level]
+		if r.Color {
+			buf.WriteString(ColorTextWrap(LevelColous[r.Level], levelText))
 			buf.WriteByte(' ')
 		} else {
 			buf.WriteString(levelText)
@@ -257,6 +261,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level 
 	}
 
 	if flags&(BitShortFile|BitLongFile) != 0 {
+		file := r.File
 		if flags&BitShortFile != 0 {
 			lastSlash := -1
 			for i := len(file) - 1; i >= 0; i-- {
@@ -273,7 +278,7 @@ func (log *Logger) formatHeader(buf *bytes.Buffer, file string, line int, level 
 
 		buf.WriteString(file)
 		buf.WriteByte(':')
-		itoa(buf, line, -1)
+		itoa(buf, r.Line, -1)
 		buf.WriteString(": ")
 	}
 }
@@ -287,19 +292,33 @@ func (log *Logger) outputWriter(level int) io.Writer {
 			return out
 		}
 	}
-	out := log.out
+	out := log.Out
 	log.mu.RUnlock()
 	return out
 }
 
 func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, prefixText ...string) error {
-	if log.writeBefore != nil && len(s) > 0 {
+	return log.outPutFields(level, s, nil, isWrap, calldDepth, prefixText...)
+}
+
+func (log *Logger) outPutFields(level int, s string, fields Fields, isWrap bool, calldDepth int, prefixText ...string) error {
+	// Snapshot mutable state once so header/formatter decisions are consistent
+	// and safe against concurrent reconfiguration.
+	log.mu.RLock()
+	flag := log.flag
+	color := log.color
+	prefix := log.prefix
+	writeBefore := log.writeBefore
+	formatter := log.formatter
+	log.mu.RUnlock()
+
+	if writeBefore != nil && len(s) > 0 {
 		p := s
 		if isWrap && len(p) > 0 && p[len(p)-1] == '\n' {
 			p = p[:len(p)-1]
 		}
-		for i := range log.writeBefore {
-			if log.writeBefore[i](level, p) {
+		for i := range writeBefore {
+			if writeBefore[i](level, p) {
 				return nil
 			}
 		}
@@ -308,22 +327,29 @@ func (log *Logger) outPut(level int, s string, isWrap bool, calldDepth int, pref
 	buf := zutil.GetBuff(uint(len(s) + 34))
 	defer zutil.PutBuff(buf)
 
-	if level != LogNot {
-		file, line := log.fileLocation(calldDepth)
-		log.formatHeader(buf, file, line, level)
+	r := &Record{
+		Time:      ztime.Time(flag&BitMicroSeconds != 0),
+		Level:     level,
+		LevelText: levelName(level),
+		Message:   s,
+		Fields:    fields,
+		Prefix:    prefix,
+		Flag:      flag,
+		Color:     color,
 	}
-
-	if log.prefix != "" {
-		buf.WriteString(log.prefix)
-	}
-
 	if len(prefixText) > 0 {
-		buf.WriteString(prefixText[0])
+		r.Tag = prefixText[0]
+	}
+	if level != LogNot {
+		r.File, r.Line = fileLocation(flag, calldDepth)
 	}
 
-	buf.WriteString(s)
+	if formatter == nil {
+		formatter = defaultFormatter
+	}
+	formatter.Format(r, buf)
 
-	if isWrap && len(s) > 0 && s[len(s)-1] != '\n' {
+	if isWrap && buf.Len() > 0 && buf.Bytes()[buf.Len()-1] != '\n' {
 		buf.WriteByte('\n')
 	}
 
@@ -346,7 +372,7 @@ func (log *Logger) Println(v ...interface{}) {
 
 // Debugf logs a formatted debug message if the current log level permits debug output.
 func (log *Logger) Debugf(format string, v ...interface{}) {
-	if log.level < LogDebug {
+	if log.level.Load() < LogDebug {
 		return
 	}
 	_ = log.outPut(LogDebug, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -354,7 +380,7 @@ func (log *Logger) Debugf(format string, v ...interface{}) {
 
 // Debug logs a debug message if the current log level permits debug output.
 func (log *Logger) Debug(v ...interface{}) {
-	if log.level < LogDebug {
+	if log.level.Load() < LogDebug {
 		return
 	}
 	_ = log.outPut(LogDebug, fmt.Sprintln(v...), true, log.calldDepth)
@@ -363,7 +389,7 @@ func (log *Logger) Debug(v ...interface{}) {
 // Dump logs detailed information about variables in a pretty-printed format.
 // It attempts to include variable names when possible, making it useful for debugging.
 func (log *Logger) Dump(v ...interface{}) {
-	if log.level < LogDump {
+	if log.level.Load() < LogDump {
 		return
 	}
 	args := formatArgs(v...)
@@ -380,7 +406,7 @@ func (log *Logger) Dump(v ...interface{}) {
 
 // Successf logs a formatted success message if the current log level permits.
 func (log *Logger) Successf(format string, v ...interface{}) {
-	if log.level < LogSuccess {
+	if log.level.Load() < LogSuccess {
 		return
 	}
 	_ = log.outPut(LogSuccess, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -388,7 +414,7 @@ func (log *Logger) Successf(format string, v ...interface{}) {
 
 // Success logs a success message if the current log level permits.
 func (log *Logger) Success(v ...interface{}) {
-	if log.level < LogSuccess {
+	if log.level.Load() < LogSuccess {
 		return
 	}
 	_ = log.outPut(LogSuccess, fmt.Sprintln(v...), true, log.calldDepth)
@@ -396,7 +422,7 @@ func (log *Logger) Success(v ...interface{}) {
 
 // Infof logs a formatted informational message if the current log level permits.
 func (log *Logger) Infof(format string, v ...interface{}) {
-	if log.level < LogInfo {
+	if log.level.Load() < LogInfo {
 		return
 	}
 	_ = log.outPut(LogInfo, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -404,7 +430,7 @@ func (log *Logger) Infof(format string, v ...interface{}) {
 
 // Info logs an informational message if the current log level permits.
 func (log *Logger) Info(v ...interface{}) {
-	if log.level < LogInfo {
+	if log.level.Load() < LogInfo {
 		return
 	}
 	_ = log.outPut(LogInfo, fmt.Sprintln(v...), true, log.calldDepth)
@@ -412,7 +438,7 @@ func (log *Logger) Info(v ...interface{}) {
 
 // Tipsf logs a formatted tip message if the current log level permits.
 func (log *Logger) Tipsf(format string, v ...interface{}) {
-	if log.level < LogTips {
+	if log.level.Load() < LogTips {
 		return
 	}
 	_ = log.outPut(LogTips, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -420,7 +446,7 @@ func (log *Logger) Tipsf(format string, v ...interface{}) {
 
 // Tips logs a tip message if the current log level permits.
 func (log *Logger) Tips(v ...interface{}) {
-	if log.level < LogTips {
+	if log.level.Load() < LogTips {
 		return
 	}
 	_ = log.outPut(LogTips, fmt.Sprintln(v...), true, log.calldDepth)
@@ -428,7 +454,7 @@ func (log *Logger) Tips(v ...interface{}) {
 
 // Warnf logs a formatted warning message if the current log level permits.
 func (log *Logger) Warnf(format string, v ...interface{}) {
-	if log.level < LogWarn {
+	if log.level.Load() < LogWarn {
 		return
 	}
 	_ = log.outPut(LogWarn, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -436,7 +462,7 @@ func (log *Logger) Warnf(format string, v ...interface{}) {
 
 // Warn logs a warning message if the current log level permits.
 func (log *Logger) Warn(v ...interface{}) {
-	if log.level < LogWarn {
+	if log.level.Load() < LogWarn {
 		return
 	}
 	_ = log.outPut(LogWarn, fmt.Sprintln(v...), true, log.calldDepth)
@@ -444,7 +470,7 @@ func (log *Logger) Warn(v ...interface{}) {
 
 // Errorf logs a formatted error message if the current log level permits.
 func (log *Logger) Errorf(format string, v ...interface{}) {
-	if log.level < LogError {
+	if log.level.Load() < LogError {
 		return
 	}
 	_ = log.outPut(LogError, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -452,7 +478,7 @@ func (log *Logger) Errorf(format string, v ...interface{}) {
 
 // Error logs an error message if the current log level permits.
 func (log *Logger) Error(v ...interface{}) {
-	if log.level < LogError {
+	if log.level.Load() < LogError {
 		return
 	}
 	_ = log.outPut(LogError, fmt.Sprintln(v...), true, log.calldDepth)
@@ -461,7 +487,7 @@ func (log *Logger) Error(v ...interface{}) {
 // Fatalf logs a formatted fatal error message and terminates the program.
 // Before terminating, it ensures all pending log messages are written.
 func (log *Logger) Fatalf(format string, v ...interface{}) {
-	if log.level < LogFatal {
+	if log.level.Load() < LogFatal {
 		return
 	}
 	_ = log.outPut(LogFatal, fmt.Sprintf(format, v...), true, log.calldDepth)
@@ -471,7 +497,7 @@ func (log *Logger) Fatalf(format string, v ...interface{}) {
 // Fatal logs a fatal error message and terminates the program.
 // Before terminating, it ensures all pending log messages are written.
 func (log *Logger) Fatal(v ...interface{}) {
-	if log.level < LogFatal {
+	if log.level.Load() < LogFatal {
 		return
 	}
 	_ = log.outPut(LogFatal, fmt.Sprintln(v...), true, log.calldDepth)
@@ -481,7 +507,7 @@ func (log *Logger) Fatal(v ...interface{}) {
 // Panicf logs a formatted error message and then panics with the same message.
 // This is useful for unrecoverable errors that require immediate termination with a stack trace.
 func (log *Logger) Panicf(format string, v ...interface{}) {
-	if log.level < LogPanic {
+	if log.level.Load() < LogPanic {
 		return
 	}
 	s := fmt.Sprintf(format, v...)
@@ -492,7 +518,7 @@ func (log *Logger) Panicf(format string, v ...interface{}) {
 // Panic logs an error message and then panics with the same message.
 // This is useful for unrecoverable errors that require immediate termination with a stack trace.
 func (log *Logger) Panic(v ...interface{}) {
-	if log.level < LogPanic {
+	if log.level.Load() < LogPanic {
 		return
 	}
 	s := fmt.Sprintln(v...)
@@ -503,7 +529,7 @@ func (log *Logger) Panic(v ...interface{}) {
 // Stack logs a stack trace along with the provided value.
 // This is useful for debugging to see the call path that led to a particular point in the code.
 func (log *Logger) Stack(v interface{}) {
-	if log.level < LogTrack {
+	if log.level.Load() < LogTrack {
 		return
 	}
 	var s string
@@ -522,7 +548,7 @@ func (log *Logger) Stack(v interface{}) {
 // The optional integer parameter controls how many levels of the stack to skip.
 // This is useful for tracing execution paths through the code.
 func (log *Logger) Track(v string, i ...int) {
-	if log.level < LogTrack {
+	if log.level.Load() < LogTrack {
 		return
 	}
 	b, skip, max, index := zutil.GetBuff(), 4, 1, 1
@@ -606,13 +632,18 @@ func (log *Logger) GetPrefix() string {
 // Messages with a level less than or equal to this value will be output;
 // messages with a higher level will be ignored.
 func (log *Logger) SetLogLevel(level int) {
-	log.level = level
+	log.level.Store(int32(level))
 }
 
 // GetLogLevel returns the current minimum log level.
 // This indicates what severity of messages are currently being logged.
 func (log *Logger) GetLogLevel() int {
-	return log.level
+	return int(log.level.Load())
+}
+
+// SetOut sets the destination for log output.
+func (log *Logger) SetOut(out io.Writer) {
+	log.Writer().Set(out)
 }
 
 func (log *Logger) Write(b []byte) (n int, err error) {
@@ -632,7 +663,25 @@ func (log *Logger) SetIgnoreLog(logs ...string) {
 }
 
 func (log *Logger) WriteBefore(fn ...func(level int, log string) bool) {
+	log.mu.Lock()
 	log.writeBefore = append(log.writeBefore, fn...)
+	log.mu.Unlock()
+}
+
+// SetFormatter sets the formatter used to serialize each log record.
+// Passing nil restores the default TextFormatter (classic zlog output).
+func (log *Logger) SetFormatter(f Formatter) {
+	log.mu.Lock()
+	log.formatter = f
+	log.mu.Unlock()
+}
+
+// GetFormatter returns the formatter currently in effect.
+// A nil return means the default TextFormatter is being used.
+func (log *Logger) GetFormatter() Formatter {
+	log.mu.RLock()
+	defer log.mu.RUnlock()
+	return log.formatter
 }
 
 func itoa(buf *bytes.Buffer, i int, wid int) {
@@ -665,20 +714,21 @@ type logWriter struct {
 }
 
 func (wr logWriter) Get() io.Writer {
-	return wr.log.out
+	return wr.log.Out
 }
 
 func (wr logWriter) Set(w io.Writer) {
-	wr.log.out = w
+	wr.log.Out = w
 }
 
 func (wr logWriter) Reset(l *Logger) {
-	wr.log.out = l.out
+	wr.log.Out = l.Out
 	wr.log.color = l.color
 	wr.log.prefix = l.prefix
 	wr.log.flag = l.flag
-	wr.log.level = l.level
+	wr.log.level.Store(l.level.Load())
 	wr.log.levelFiles = l.levelFiles
+	wr.log.formatter = l.formatter
 }
 
 // formatArgs formats arguments and optimizes memory usage
@@ -754,8 +804,8 @@ func prependArgName(names []string, values []interface{}) []interface{} {
 	return prepended
 }
 
-func (log *Logger) fileLocation(calldDepth int) (file string, line int) {
-	if log.flag&(BitShortFile|BitLongFile) != 0 {
+func fileLocation(flag int, calldDepth int) (file string, line int) {
+	if flag&(BitShortFile|BitLongFile) != 0 {
 		var ok bool
 		_, file, line, ok = runtime.Caller(calldDepth)
 		if !ok {

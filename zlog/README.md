@@ -8,6 +8,7 @@
 - **颜色支持**: 终端颜色输出和格式化
 - **文件输出**: 日志文件写入和归档
 - **调试工具**: 变量转储和调用栈跟踪
+- **结构化日志**: Fields/Entry 链式字段绑定，JSON/Text 格式化器
 - **模块化**: 支持多个模块的独立日志配置
 - **性能优化**: 高效的日志处理和输出
 
@@ -139,6 +140,76 @@ func (log *Logger) Stack(v interface{})
 func (log *Logger) Track(v string, i ...int)
 ```
 
+### 结构化日志（Entry/Fields）
+
+`Entry` 是绑定了一组固定字段的日志器，通过 `With*` 链式创建且不可变
+（链式调用返回新 Entry，不会修改原 Entry）。包级函数作用于默认日志器。
+
+```go
+type Fields map[string]interface{}
+
+func WithField(key string, value interface{}) *Entry
+func WithFields(fields Fields) *Entry
+func WithError(err error) *Entry
+func (log *Logger) WithField(key string, value interface{}) *Entry
+func (log *Logger) WithFields(fields Fields) *Entry
+func (log *Logger) WithError(err error) *Entry
+func (e *Entry) WithField(key string, value interface{}) *Entry
+func (e *Entry) WithFields(fields Fields) *Entry
+func (e *Entry) WithError(err error) *Entry
+func (e *Entry) Data() Fields
+func (e *Entry) Logger() *Logger
+func (e *Entry) Log(level int, v ...interface{})          // 泛化级别输出，Panic/Fatal 语义不变
+func (e *Entry) Logf(level int, format string, v ...interface{})
+// Entry 与 Logger 相同的级别方法：
+// Debug/Debugf, Info/Infof, Tips/Tipsf, Success/Successf,
+// Warn/Warnf, Error/Errorf, Fatal/Fatalf, Panic/Panicf, Printf, Println
+```
+
+### 格式化器（Formatter）
+
+每条日志先构造 `Record`，再交给 `Formatter` 序列化。默认为
+`TextFormatter`（与历史输出逐字节一致）；`nil` 恢复默认。
+
+```go
+type Record struct {
+    Time      time.Time // 记录时间
+    Level     int       // 日志级别；Print 系列为 LogNot(-1)
+    LevelText string    // 干净级别名，如 "INFO"
+    Message   string
+    Fields    Fields    // With* 绑定的字段，可为 nil
+    File      string    // 仅当 flag 含 BitShortFile/BitLongFile 时填充
+    Line      int
+    Prefix    string
+    Tag       string
+    Flag      int       // 渲染提示：当前 Bit* 标志位
+    Color     bool      // 渲染提示：是否启用颜色
+}
+
+type Formatter interface {
+    Format(r *Record, buf *bytes.Buffer)
+}
+
+type TextFormatter struct{} // 默认；fields 以排序后的 k=v 追加在消息换行前
+
+type JSONFormatter struct {
+    TimestampFormat  string            // time.Format 布局，默认 RFC3339Nano
+    DisableTimestamp bool              // 省略 time 键
+    Pretty           bool              // 缩进输出（调试用）
+    FieldMap         map[string]string // 重命名内建键 time/level/msg/caller/prefix/tag
+}
+
+func SetFormatter(f Formatter)
+func (log *Logger) SetFormatter(f Formatter)
+func (log *Logger) GetFormatter() Formatter
+
+var LevelNames = []string{"FATAL", "PANIC", "TRACK", "ERROR", "WARN",
+    "TIPS", "SUCCESS", "INFO", "DEBUG", "DUMP"}
+```
+
+JSON 输出示例：`{"caller":"main.go:12","level":"info","msg":"hi","time":"...","user":"bob"}`。
+`Fields` 顶层合并进对象，与内建键冲突时字段优先；无法 JSON 编码的值降级为字符串。
+
 ## 使用示例
 
 ```go
@@ -156,16 +227,13 @@ func main() {
     logger := zlog.New("main")
     
     // 设置日志级别
-    logger.SetLogLevel(zlog.LevelDebug)
+    logger.SetLogLevel(zlog.LogDebug)
     
     // 设置前缀
     logger.SetPrefix("[APP]")
     
     // 设置文件输出
-    err := logger.SetFile("logs/app.log", true)
-    if err != nil {
-        fmt.Printf("设置日志文件失败: %v\n", err)
-    }
+    logger.SetFile("logs/app.log", true)
 
     // 按等级分文件
     logger.SetLevelFile(zlog.LogInfo, "logs/info.log")
@@ -213,7 +281,7 @@ func main() {
     
     // 全局配置
     zlog.SetDefault(logger)
-    zlog.SetLogLevel(zlog.LevelInfo)
+    zlog.SetLogLevel(zlog.LogInfo)
     zlog.SetPrefix("[GLOBAL]")
     
     // 使用全局日志器
@@ -228,17 +296,20 @@ func main() {
     zlog.ForceConsoleColor()
     zlog.Info("强制颜色后的日志")
     
-    // 自定义格式化器
-    logger.SetFormatter(func(level int, msg string) string {
-        return fmt.Sprintf("[%s] %s", time.Now().Format("15:04:05"), msg)
-    })
+    // JSON 结构化输出
+    logger.SetFormatter(zlog.JSONFormatter{})
+    logger.WithFields(zlog.Fields{"user": "bob", "latency_ms": 45}).Info("request done")
+    // {"caller":"main.go:12","level":"info","latency_ms":45,"msg":"request done","time":"...","user":"bob"}
+    logger.SetFormatter(nil) // 恢复默认文本格式
     
-    logger.Info("使用自定义格式化器")
+    // 文本模式下 fields 追加在消息末尾
+    logger.WithField("trace_id", "abc123").Info("with fields")
+    // [INFO]  with fields trace_id=abc123
     
-    // 写入前处理
+    // 写入前处理（返回 true 则丢弃该条日志）
     logger.WriteBefore(func(level int, log string) bool {
         fmt.Printf("写入前处理: 级别=%d, 内容=%s\n", level, log)
-        return true // 继续写入
+        return false // 继续写入
     })
     
     logger.Info("测试写入前处理")
@@ -315,7 +386,7 @@ func main() {
     
     // 调试日志
     debugLogger := zlog.New("debug")
-    debugLogger.SetLogLevel(zlog.LevelDebug)
+    debugLogger.SetLogLevel(zlog.LogDebug)
     
     // 变量调试
     config := map[string]interface{}{

@@ -106,13 +106,13 @@ func TestLogPanic(T *testing.T) {
 func TestLogPanicf(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	buf := bytes.NewBuffer(nil)
-	oldOut := log.out
-	oldLevel := log.level
-	log.out = buf
-	log.level = LogPanic
+	oldOut := log.Out
+	oldLevel := log.level.Load()
+	log.Out = buf
+	log.level.Store(LogPanic)
 	defer func() {
-		log.out = oldOut
-		log.level = oldLevel
+		log.Out = oldOut
+		log.level.Store(oldLevel)
 		if err := recover(); err != nil {
 			T.Log(err)
 			t.Equal("num=1", err)
