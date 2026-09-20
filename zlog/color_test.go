@@ -2,16 +2,18 @@ package zlog
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	zls "github.com/sohaha/zlsgo"
 )
 
 func TestColor(t *testing.T) {
+	oldDisableColor := DisableColor
+	t.Cleanup(func() { DisableColor = oldDisableColor })
+	DisableColor = false
 	T := zls.NewTest(t)
 	testText := "ok"
-	_ = os.Setenv("ConEmuANSI", "ON")
+	t.Setenv("ConEmuANSI", "ON")
 	bl := IsSupportColor()
 	OutAllColor()
 	if bl {

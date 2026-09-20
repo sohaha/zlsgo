@@ -1,6 +1,8 @@
 package zlog
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,6 +14,41 @@ import (
 )
 
 var LogMaxDurationDate = 15
+
+// SetFileErrorHandler sets the handler for file setup and close/flush errors.
+// A nil handler reports errors to os.Stderr. Handlers run without the logger
+// lock and must be safe for concurrent calls. File replacement proceeds even
+// when closing the old file fails: MemoryFile.Close has already closed it.
+// This handler does not cover asynchronous MemoryFile auto-flush errors.
+func (log *Logger) SetFileErrorHandler(handler func(error)) {
+	log.mu.Lock()
+	log.fileErrorHandler = handler
+	log.mu.Unlock()
+}
+
+func (log *Logger) reportFileError(err error) {
+	if err == nil {
+		return
+	}
+	log.mu.RLock()
+	handler := log.fileErrorHandler
+	log.mu.RUnlock()
+	if handler != nil {
+		handler(err)
+	} else {
+		_, _ = fmt.Fprintln(os.Stderr, "zlog:", err)
+	}
+}
+
+func closeLogFile(file *zfile.MemoryFile) error {
+	if file == nil {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close log file %q: %w", file.Name(), err)
+	}
+	return nil
+}
 
 func openFile(filepa string, archive bool) (file *zfile.MemoryFile, fileName, fileDir string, err error) {
 	fullPath := zfile.RealPath(filepa)
@@ -78,29 +115,35 @@ func (log *Logger) SetLevelSaveFile(level int, filepath string, archive ...bool)
 	log.setLevelFile(level, filepath, logArchive, true)
 }
 
-func (log *Logger) setLogfile(filepath string, archive bool) {
+func (log *Logger) setLogfile(filepath string, archive bool, save ...bool) {
 	fileObj, fileName, fileDir, err := openFile(filepath, archive)
 	if err != nil || fileObj == nil {
 		// Keep the existing output instead of installing a nil writer.
+		log.reportFileError(err)
 		return
 	}
 	log.mu.Lock()
-	log.CloseFile()
+	err = log.closeFileLocked()
+	if len(save) > 0 && save[0] {
+		log.fileAndStdout = true
+	}
 	log.file = fileObj
 	log.fileDir = fileDir
 	log.fileName = fileName
 	if log.fileAndStdout {
-		log.Out = io.MultiWriter(log.file, log.Out)
+		log.Out = io.MultiWriter(fileObj, os.Stdout)
 	} else {
 		log.Out = fileObj
 	}
 	log.mu.Unlock()
+	log.reportFileError(err)
 }
 
 func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStdout bool) {
 	fileObj, _, _, err := openFile(filepath, archive)
 	if err != nil || fileObj == nil {
 		// Keep the existing output instead of installing a nil writer.
+		log.reportFileError(err)
 		return
 	}
 	log.mu.Lock()
@@ -108,7 +151,7 @@ func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStd
 		log.levelFiles = map[int]*levelFile{}
 	}
 	if old, ok := log.levelFiles[level]; ok && old != nil && old.file != nil {
-		_ = old.file.Close()
+		err = closeLogFile(old.file)
 	}
 	var out io.Writer = fileObj
 	if andStdout {
@@ -116,55 +159,56 @@ func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStd
 	}
 	log.levelFiles[level] = &levelFile{file: fileObj, out: out}
 	log.mu.Unlock()
+	log.reportFileError(err)
 }
 
 func (log *Logger) Discard() {
 	log.mu.Lock()
+	err := errors.Join(log.closeFileLocked(), log.closeLevelFilesLocked())
 	log.Out = ioutil.Discard
-	if log.file != nil {
-		_ = log.file.Close()
-	}
-	if log.levelFiles != nil {
-		for _, lf := range log.levelFiles {
-			if lf != nil && lf.file != nil {
-				_ = lf.file.Close()
-			}
-		}
-		log.levelFiles = nil
-	}
 	log.level.Store(LogNot)
 	log.mu.Unlock()
+	log.reportFileError(err)
 }
 
 func (log *Logger) SetSaveFile(filepath string, archive ...bool) {
-	log.SetFile(filepath, archive...)
-	log.mu.Lock()
-	log.fileAndStdout = true
-	log.Out = io.MultiWriter(log.file, os.Stdout)
-	log.mu.Unlock()
+	log.DisableConsoleColor()
+	log.setLogfile(filepath, len(archive) > 0 && archive[0], true)
 }
 
 func (log *Logger) CloseLevelFiles() {
 	log.mu.Lock()
-	log.closeLevelFilesLocked()
+	err := log.closeLevelFilesLocked()
 	log.mu.Unlock()
+	log.reportFileError(err)
 }
 
-func (log *Logger) closeLevelFilesLocked() {
+func (log *Logger) closeLevelFilesLocked() error {
+	var errs []error
 	if log.levelFiles != nil {
 		for _, lf := range log.levelFiles {
 			if lf != nil && lf.file != nil {
-				_ = lf.file.Close()
+				errs = append(errs, closeLogFile(lf.file))
 			}
 		}
 		log.levelFiles = nil
 	}
+	return errors.Join(errs...)
 }
 
 func (log *Logger) CloseFile() {
+	log.mu.Lock()
+	err := log.closeFileLocked()
+	log.mu.Unlock()
+	log.reportFileError(err)
+}
+
+func (log *Logger) closeFileLocked() error {
+	var err error
 	if log.file != nil {
-		_ = log.file.Close()
+		err = closeLogFile(log.file)
 		log.file = nil
 		log.Out = os.Stdout
 	}
+	return err
 }

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Fields is a set of key-value pairs attached to a log record.
@@ -101,15 +103,22 @@ func appendTextFields(buf *bytes.Buffer, fields Fields) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		buf.WriteByte(' ')
-		buf.WriteString(k)
+		appendTextToken(buf, k)
 		buf.WriteByte('=')
-		v := fmt.Sprint(fields[k])
-		if strings.IndexAny(v, " \t\n\"") >= 0 {
-			fmt.Fprintf(buf, "%q", v)
-		} else {
-			buf.WriteString(v)
-		}
+		appendTextToken(buf, fmt.Sprint(fields[k]))
 	}
+}
+
+// Keys and values share Go string quoting rules. Bare tokens must be nonempty
+// and contain no whitespace, non-printable characters, escapes or delimiters.
+func appendTextToken(buf *bytes.Buffer, s string) {
+	if s == "" || strings.ContainsAny(s, "=\\\"") || strings.IndexFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || !unicode.IsPrint(r)
+	}) >= 0 {
+		buf.WriteString(strconv.Quote(s))
+		return
+	}
+	buf.WriteString(s)
 }
 
 // JSONFormatter renders records as single-line JSON objects.

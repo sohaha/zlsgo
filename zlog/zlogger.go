@@ -102,8 +102,9 @@ type (
 		// Out is the destination for log output (e.g., os.Stdout).
 		Out io.Writer
 		// file is the memory buffer for file-based logging
-		file       *zfile.MemoryFile
-		levelFiles map[int]*levelFile
+		file             *zfile.MemoryFile
+		levelFiles       map[int]*levelFile
+		fileErrorHandler func(error)
 		// prefix is prepended to each log message
 		prefix string
 		// fileDir is the directory where log files are stored

@@ -42,6 +42,36 @@ func TestEntryFieldQuoting(t *testing.T) {
 	}
 }
 
+func TestTextFieldTokenEncoding(t *testing.T) {
+	for _, tc := range []struct{ input, encoded string }{
+		{"simple", "simple"},
+		{"", `""`},
+		{"line\nbreak", `"line\nbreak"`},
+		{"two words", `"two words"`},
+		{"a=b", `"a=b"`},
+		{"a\rb", `"a\rb"`},
+		{"a\tb", `"a\tb"`},
+		{"a\x00b", `"a\x00b"`},
+		{"a\x7fb", `"a\x7fb"`},
+		{"a\\b", `"a\\b"`},
+		{"a\"b", `"a\"b"`},
+		{"a\u2028b", `"a\u2028b"`},
+	} {
+		t.Run(tc.encoded, func(t *testing.T) {
+			var buf bytes.Buffer
+			l := newBufLogger(&buf, 0)
+			l.WithField(tc.input, tc.input).Info("message")
+			want := "message " + tc.encoded + "=" + tc.encoded + "\n"
+			if buf.String() != want {
+				t.Fatalf("got %q, want %q", buf.String(), want)
+			}
+			if strings.Count(buf.String(), "\n") != 1 || strings.Contains(buf.String(), "\r") {
+				t.Fatalf("multiline record: %q", buf.String())
+			}
+		})
+	}
+}
+
 func TestEntryImmutableAndFieldsCopied(t *testing.T) {
 	var buf bytes.Buffer
 	l := newBufLogger(&buf, BitLevel)

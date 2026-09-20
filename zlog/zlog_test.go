@@ -2,19 +2,35 @@ package zlog
 
 import (
 	"bytes"
-	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
 )
 
+// isolateDefaultLogger avoids copying mutexes/atomics and restores all state.
+// Tests using the package-level logger must not run in parallel.
+func isolateDefaultLogger(t *testing.T) {
+	t.Helper()
+	old, oldExit := log, osExit
+	current := NewZLog(&bytes.Buffer{}, "", BitDefault, LogDump, false, 4)
+	log = current
+	t.Cleanup(func() {
+		CleanLog(current)
+		log, osExit = old, oldExit
+	})
+}
+
 func TestLogTrack(T *testing.T) {
+	isolateDefaultLogger(T)
 	Track("log with Track")
 	Stack("log with Stack")
 }
 
 func TestLogs(T *testing.T) {
+	dir := T.TempDir()
+	isolateDefaultLogger(T)
 	t := zlsgo.NewTest(T)
 	text := "Text"
 
@@ -54,13 +70,14 @@ func TestLogs(T *testing.T) {
 	SetPrefix(text)
 	ForceConsoleColor()
 	ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
-	SetFile("tmp/Log.log")
+	SetFile(filepath.Join(dir, "global.log"))
 	CleanLog(log)
 	log := New(text)
+	T.Cleanup(func() { CleanLog(log) })
 	log.SetPrefix(text)
 	t.EqualExit(log.GetPrefix(), text)
 	log.GetLogLevel()
-	log.SetSaveFile("tmp/Log.log")
+	log.SetSaveFile(filepath.Join(dir, "local.log"))
 	log.ColorBackgroundWrap(ColorBlack, ColorLightGreen, text)
 	log.OpTextWrap(OpBold, text)
 	log.Dump(struct {
@@ -79,14 +96,11 @@ func TestLogs(T *testing.T) {
 		n string
 	}{n: ""}})
 	CleanLog(log)
-	e := os.RemoveAll("tmp/")
-	t.Log(e)
 }
 
 func TestLogFatal(T *testing.T) {
+	isolateDefaultLogger(T)
 	ResetFlags(0)
-	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
 	myExit := func(code int) {
 	}
 	osExit = myExit
@@ -95,6 +109,7 @@ func TestLogFatal(T *testing.T) {
 }
 
 func TestLogPanic(T *testing.T) {
+	isolateDefaultLogger(T)
 	defer func() {
 		if err := recover(); err != nil {
 			T.Log(err)
@@ -104,6 +119,7 @@ func TestLogPanic(T *testing.T) {
 }
 
 func TestLogPanicf(T *testing.T) {
+	isolateDefaultLogger(T)
 	t := zlsgo.NewTest(T)
 	buf := bytes.NewBuffer(nil)
 	oldOut := log.Out
