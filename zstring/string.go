@@ -100,12 +100,18 @@ func Len(str string) int {
 // The optional length parameter specifies how many characters to include in the result.
 func Substr(str string, start int, length ...int) string {
 	var size, ll, n, nn int
-	if len(length) > 0 {
-		ll = length[0] + start
-	}
-	lb := ll == 0
+	lb := len(length) == 0
 	if start < 0 {
 		start = Len(str) + start
+		if start < 0 {
+			start = 0
+		}
+	}
+	if !lb {
+		ll = start + length[0]
+		if ll < start {
+			ll = start
+		}
 	}
 	for i := 0; i < len(str); i++ {
 		_, size = utf8.DecodeRuneInString(str[nn:])

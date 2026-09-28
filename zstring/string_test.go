@@ -35,6 +35,30 @@ func TestSubstr(T *testing.T) {
 	t.Equal("是我呀", Substr("你好A,是我呀", -3))
 }
 
+func TestSubstrNegativeStartWithLength(T *testing.T) {
+	tt := zlsgo.NewTest(T)
+	cases := []struct {
+		name     string
+		str      string
+		start    int
+		length   int
+		expected string
+	}{
+		{"negative start, one char", "0123", -2, 1, "2"},
+		{"negative start, several chars", "0123", -2, 3, "23"},
+		{"negative start, short length", "0123", -1, 1, "3"},
+		{"start clamped to zero", "0123", -10, 2, "01"},
+		{"multibyte negative start", "你好A,是我呀", -3, 2, "是我"},
+		{"multibyte start clamped to zero", "你好A,是我呀", -7, 2, "你好"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		tt.Run(tc.name, func(tt *zlsgo.TestUtil) {
+			tt.Equal(tc.expected, Substr(tc.str, tc.start, tc.length))
+		})
+	}
+}
+
 func TestPad(T *testing.T) {
 	t := zlsgo.NewTest(T)
 	l := "我的这里一共8字"
