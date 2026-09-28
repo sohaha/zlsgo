@@ -179,6 +179,18 @@ func Is32BitArch() bool
 `Loadenv` 遵循标准 dotenv 语义：进程环境中已存在的变量不会被 `.env` 文件覆盖，
 即真实环境变量的优先级高于 `.env` 文件；当传入多个文件时，后面的文件覆盖前面的文件。
 
+不传入文件名时，`Loadenv` 会按社区惯例依次加载以下文件，不存在的文件会被跳过（优先级从低到高）：
+
+```
+.env
+.env.local
+.env.<mode>
+.env.<mode>.local
+```
+
+`<mode>` 取 `ZLSGO_ENV`、`APP_ENV`、`GO_ENV`、`NODE_ENV` 中第一个非空值；
+均未设置时只加载 `.env` 与 `.env.local`。显式传入文件名时不会启用该惯例，只会加载指定的文件。
+
 ### 参数解析
 
 ```go

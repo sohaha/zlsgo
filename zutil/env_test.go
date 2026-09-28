@@ -109,3 +109,50 @@ func TestLoadenvFileOrder(t *testing.T) {
 	tt.NoError(zutil.Loadenv(".env.base", ".env.local"))
 	tt.Equal("local", zutil.Getenv("orderkey"))
 }
+
+func TestLoadenvDefaults(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	defer unsetEnv("defaultkey", "baseonly")()
+	defer unsetEnv("ZLSGO_ENV", "APP_ENV", "GO_ENV", "NODE_ENV")()
+
+	_ = zfile.WriteFile(".env", []byte("defaultkey=base\nbaseonly=base\n"))
+	_ = zfile.WriteFile(".env.local", []byte("defaultkey=local\n"))
+	defer zfile.Rmdir(".env")
+	defer zfile.Rmdir(".env.local")
+
+	tt.NoError(zutil.Loadenv())
+	tt.Equal("local", zutil.Getenv("defaultkey"))
+	tt.Equal("base", zutil.Getenv("baseonly"))
+}
+
+func TestLoadenvMode(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	defer unsetEnv("modekey")()
+	defer unsetEnv("ZLSGO_ENV", "APP_ENV", "GO_ENV", "NODE_ENV")()
+
+	files := map[string]string{
+		".env":                  "modekey=base\n",
+		".env.local":            "modekey=local\n",
+		".env.production":       "modekey=mode\n",
+		".env.production.local": "modekey=mode_local\n",
+	}
+	for name, content := range files {
+		_ = zfile.WriteFile(name, []byte(content))
+		defer zfile.Rmdir(name)
+	}
+
+	_ = os.Setenv("ZLSGO_ENV", "production")
+
+	tt.NoError(zutil.Loadenv())
+	tt.Equal("mode_local", zutil.Getenv("modekey"))
+}
+
+func TestLoadenvOptionalFiles(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	defer unsetEnv("ZLSGO_ENV", "APP_ENV", "GO_ENV", "NODE_ENV")()
+
+	// No .env file exists: the convention set is optional and must not fail.
+	tt.NoError(zutil.Loadenv())
+	// Explicitly requested files are still reported as missing.
+	tt.Error(zutil.Loadenv(".env.does.not.exist"))
+}

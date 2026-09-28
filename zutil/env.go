@@ -59,24 +59,40 @@ func GOROOT() string {
 }
 
 // Loadenv loads environment variables from one or more .env files.
-// If no filenames are provided, it defaults to loading from a file named ".env".
+//
+// When no filenames are provided it follows the community dotenv convention and
+// loads the following files in increasing priority order, skipping any that do
+// not exist:
+//
+//	.env
+//	.env.local
+//	.env.<mode>
+//	.env.<mode>.local
+//
+// <mode> is the first non-empty value of ZLSGO_ENV, APP_ENV, GO_ENV and NODE_ENV;
+// when none of them is set only the two generic files are considered. Explicitly
+// passing filenames disables the convention and loads exactly those files.
 //
 // Variables already present in the process environment are never overwritten,
 // so the real environment always takes precedence over .env files (this matches
-// the standard dotenv semantics). When several files are given, later files
-// override earlier ones. A value defined in a .env file becomes visible to the
-// process environment only when it is not already set.
+// the standard dotenv semantics). When several files define the same key, later
+// files override earlier ones. A value defined in a .env file becomes visible to
+// the process environment only when it is not already set.
 //
 // The file format follows the standard .env format with KEY=VALUE pairs.
 // Relative filenames are resolved against zfile.ProjectPath (the executable
 // directory by default); assign zfile.ProjectPath to change the lookup base.
 func Loadenv(filenames ...string) (err error) {
+	implicit := len(filenames) == 0
 	filenames = filenamesOrDefault(filenames)
 
 	vars := make(map[string]string)
 	for _, filename := range filenames {
-		err = loadFile(filename, vars)
-		if err != nil {
+		if err = loadFile(filename, vars); err != nil {
+			if implicit && errors.Is(err, os.ErrNotExist) {
+				err = nil
+				continue
+			}
 			return
 		}
 	}
@@ -90,13 +106,31 @@ func Loadenv(filenames ...string) (err error) {
 	return
 }
 
-// filenamesOrDefault returns the provided filenames or a default filename (".env")
-// if none were provided. This is an internal helper function for Loadenv.
+// filenamesOrDefault returns the provided filenames or, when none were provided,
+// the community dotenv convention file set in increasing priority order.
+// This is an internal helper function for Loadenv.
 func filenamesOrDefault(filenames []string) []string {
-	if len(filenames) == 0 {
-		return []string{".env"}
+	if len(filenames) > 0 {
+		return filenames
 	}
-	return filenames
+
+	files := []string{".env", ".env.local"}
+	if mode := envMode(); mode != "" {
+		files = append(files, ".env."+mode, ".env."+mode+".local")
+	}
+	return files
+}
+
+// envMode returns the mode used to resolve mode-specific .env files such as
+// ".env.production". It is the first non-empty value of ZLSGO_ENV, APP_ENV,
+// GO_ENV and NODE_ENV.
+func envMode() string {
+	for _, name := range []string{"ZLSGO_ENV", "APP_ENV", "GO_ENV", "NODE_ENV"} {
+		if mode := os.Getenv(name); mode != "" {
+			return mode
+		}
+	}
+	return ""
 }
 
 // locateKeyName parses a line from an .env file to extract the key name and value.
