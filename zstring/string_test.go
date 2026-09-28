@@ -1,6 +1,7 @@
 package zstring
 
 import (
+	"math"
 	"math/rand"
 	"strings"
 	"testing"
@@ -55,6 +56,45 @@ func TestSubstrNegativeStartWithLength(T *testing.T) {
 		tc := tc
 		tt.Run(tc.name, func(tt *zlsgo.TestUtil) {
 			tt.Equal(tc.expected, Substr(tc.str, tc.start, tc.length))
+		})
+	}
+}
+
+func TestSubstrEdgeCases(T *testing.T) {
+	tt := zlsgo.NewTest(T)
+	cases := []struct {
+		name     string
+		str      string
+		start    int
+		length   []int
+		expected string
+	}{
+		{"explicit zero length", "abc", 0, []int{0}, ""},
+		{"explicit zero length mid", "abc", 1, []int{0}, ""},
+		{"huge length from zero", "abc", 0, []int{math.MaxInt}, "abc"},
+		{"huge length overflow guard", "abc", 1, []int{math.MaxInt}, "bc"},
+		{"huge length multibyte", "你好A,是我呀", 2, []int{math.MaxInt}, "A,是我呀"},
+		{"length covers to end", "abc", 1, []int{99}, "bc"},
+		{"negative length trims end", "0123", -2, []int{-1}, "2"},
+		{"negative length positive start", "0123", 1, []int{-1}, "12"},
+		{"negative length removes all", "abc", 0, []int{-5}, ""},
+		{"negative length equal to len", "abc", 0, []int{-3}, ""},
+		{"negative length multibyte", "你好A,是我呀", 0, []int{-1}, "你好A,是我"},
+		{"negative start negative length", "你好A,是我呀", -3, []int{-1}, "是我"},
+		{"negative length min int", "abc", 0, []int{math.MinInt}, ""},
+		{"start beyond end", "abc", 10, []int{2}, ""},
+		{"start beyond end no length", "abc", 10, nil, ""},
+		{"start at end", "abc", 3, []int{1}, ""},
+		{"negative start equals len", "abc", -3, []int{2}, "ab"},
+		{"empty string", "", -1, []int{2}, ""},
+		{"empty string no length", "", 0, nil, ""},
+		{"invalid utf8 byte", "a\xffb", 1, []int{1}, "\xff"},
+		{"zero start no length", "abc", 0, nil, "abc"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		tt.Run(tc.name, func(tt *zlsgo.TestUtil) {
+			tt.Equal(tc.expected, Substr(tc.str, tc.start, tc.length...))
 		})
 	}
 }

@@ -98,22 +98,35 @@ func Len(str string) int {
 // Substr extracts a substring from a UTF-8 encoded string.
 // The start parameter specifies the position of the first character (can be negative to count from the end).
 // The optional length parameter specifies how many characters to include in the result.
+// A negative length leaves that many characters off the end of the string (PHP substr semantics).
 func Substr(str string, start int, length ...int) string {
 	var size, ll, n, nn int
 	lb := len(length) == 0
+	l := Len(str)
 	if start < 0 {
-		start = Len(str) + start
+		start = l + start
 		if start < 0 {
 			start = 0
 		}
 	}
 	if !lb {
-		ll = start + length[0]
+		if length[0] < 0 {
+			// A negative length leaves that many characters off the end.
+			ll = l + length[0]
+		} else if length[0] > l {
+			// Guard against start + length[0] integer overflow.
+			ll = l
+		} else {
+			ll = start + length[0]
+		}
 		if ll < start {
 			ll = start
 		}
 	}
-	for i := 0; i < len(str); i++ {
+	for i := 0; i < l; i++ {
+		if !lb && i >= ll {
+			break
+		}
 		_, size = utf8.DecodeRuneInString(str[nn:])
 		if i < start {
 			n += size
