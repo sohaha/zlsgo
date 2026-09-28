@@ -60,15 +60,32 @@ func GOROOT() string {
 
 // Loadenv loads environment variables from one or more .env files.
 // If no filenames are provided, it defaults to loading from a file named ".env".
+//
+// Variables already present in the process environment are never overwritten,
+// so the real environment always takes precedence over .env files (this matches
+// the standard dotenv semantics). When several files are given, later files
+// override earlier ones. A value defined in a .env file becomes visible to the
+// process environment only when it is not already set.
+//
 // The file format follows the standard .env format with KEY=VALUE pairs.
+// Relative filenames are resolved against zfile.ProjectPath (the executable
+// directory by default); assign zfile.ProjectPath to change the lookup base.
 func Loadenv(filenames ...string) (err error) {
 	filenames = filenamesOrDefault(filenames)
 
+	vars := make(map[string]string)
 	for _, filename := range filenames {
-		err = loadFile(filename)
+		err = loadFile(filename, vars)
 		if err != nil {
 			return
 		}
+	}
+
+	for key, value := range vars {
+		if _, exists := os.LookupEnv(key); exists {
+			continue
+		}
+		_ = os.Setenv(key, value)
 	}
 	return
 }
@@ -118,9 +135,11 @@ loop:
 	return key, cutset, nil
 }
 
-// loadFile loads environment variables from a file.
+// loadFile parses KEY=VALUE pairs from a file into vars. Key/value pairs are not
+// applied to the process environment here: Loadenv applies them afterwards so
+// that real environment variables keep precedence and later files win.
 // This is an internal helper function for Loadenv.
-func loadFile(filename string) error {
+func loadFile(filename string, vars map[string]string) error {
 	return zfile.ReadLineFile(filename, func(line int, data []byte) error {
 		key, value, err := locateKeyName(data)
 		if err != nil {
@@ -128,11 +147,11 @@ func loadFile(filename string) error {
 		}
 
 		value = bytes.TrimSpace(value)
-		if len(value) > 0 && (value[0] == '"' || value[0] == '\'' && value[0] == value[len(value)-1]) {
+		if len(value) > 1 && (value[0] == '"' || value[0] == '\'') && value[0] == value[len(value)-1] {
 			value = value[1 : len(value)-1]
 		}
 
-		_ = os.Setenv(key, zstring.Bytes2String(value))
+		vars[key] = zstring.Bytes2String(value)
 		return nil
 	})
 }

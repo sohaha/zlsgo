@@ -176,6 +176,9 @@ func IsLinux() bool
 func Is32BitArch() bool
 ```
 
+`Loadenv` 遵循标准 dotenv 语义：进程环境中已存在的变量不会被 `.env` 文件覆盖，
+即真实环境变量的优先级高于 `.env` 文件；当传入多个文件时，后面的文件覆盖前面的文件。
+
 ### 参数解析
 
 ```go
