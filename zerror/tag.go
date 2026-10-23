@@ -1,5 +1,7 @@
 package zerror
 
+import "errors"
+
 type TagKind string
 
 const (
@@ -38,6 +40,11 @@ func (e *withTag) Error() string {
 	return e.wrapErr.Error()
 }
 
+// Unwrap returns the error carrying the tag
+func (e *withTag) Unwrap() error {
+	return e.wrapErr
+}
+
 func WrapTag(tag TagKind) External {
 	return func(err error) error {
 		return &withTag{
@@ -48,22 +55,18 @@ func WrapTag(tag TagKind) External {
 }
 
 func GetTag(err error) TagKind {
-	if err == nil {
-		return None
-	}
-
 	for err != nil {
 		if f, ok := err.(*withTag); ok {
 			return f.tag
 		}
 
 		if e, ok := err.(*Error); ok {
-			err = e.wrapErr
+			err = errors.Unwrap(e)
 			if err == nil {
 				err = e.err
 			}
 		} else {
-			break
+			err = errors.Unwrap(err)
 		}
 	}
 

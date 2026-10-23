@@ -2,6 +2,7 @@ package zerror_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -142,4 +143,40 @@ func TestFirst(t *testing.T) {
 	tt.Equal("original", ferr.Error())
 	fcode := zerror.UnwrapFirstCode(err)
 	tt.Equal(ErrCode401, fcode)
+}
+
+func TestStandardWrapInterop(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	inner := zerror.New(ErrCode500, "inner")
+	wrapped := fmt.Errorf("outer: %w", inner)
+
+	tt.Run("Is", func(tt *zlsgo.TestUtil) {
+		tt.EqualTrue(zerror.Is(wrapped, ErrCode500))
+		tt.EqualTrue(!zerror.Is(wrapped, ErrCode404))
+	})
+
+	tt.Run("Unwrap", func(tt *zlsgo.TestUtil) {
+		raw, ok := zerror.Unwrap(wrapped, ErrCode500)
+		tt.EqualTrue(ok)
+		tt.Equal("inner", raw.Error())
+	})
+
+	tt.Run("UnwrapCode", func(tt *zlsgo.TestUtil) {
+		code, ok := zerror.UnwrapCode(wrapped)
+		tt.EqualTrue(ok)
+		tt.Equal(ErrCode500, code)
+	})
+
+	tt.Run("UnwrapCodes", func(tt *zlsgo.TestUtil) {
+		chain := zerror.Wrap(inner, ErrCode404, "mid")
+		tt.Equal([]zerror.ErrCode{ErrCode404, ErrCode500}, zerror.UnwrapCodes(fmt.Errorf("outer: %w", chain)))
+	})
+
+	tt.Run("Tag", func(tt *zlsgo.TestUtil) {
+		tagged := zerror.Internal.Wrap(inner, "tagged")
+		outer := fmt.Errorf("outer: %w", tagged)
+		tt.Equal(zerror.Internal, zerror.GetTag(outer))
+		tt.EqualTrue(zerror.Is(outer, ErrCode500))
+	})
 }

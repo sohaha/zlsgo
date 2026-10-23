@@ -98,19 +98,10 @@ func With(err error, text string, w ...External) error {
 	}
 }
 
-// Unwrap returns if err is Error and its code == code
+// Unwrap returns if err chain has an Error with code == code
 func Unwrap(err error, code ErrCode) (error, bool) {
-	for {
-		if err == nil {
-			return nil, false
-		}
-
-		e, ok := err.(*Error)
-		if !ok {
-			return err, false
-		}
-
-		if e.code == code {
+	for err != nil {
+		if e, ok := err.(*Error); ok && e.code == code {
 			if e.errText != nil {
 				return errors.New(*e.errText), true
 			}
@@ -118,8 +109,9 @@ func Unwrap(err error, code ErrCode) (error, bool) {
 			return e.err, true
 		}
 
-		err = e.Unwrap()
+		err = errors.Unwrap(err)
 	}
+	return nil, false
 }
 
 // Is returns if err is Error and its code == code
@@ -134,40 +126,26 @@ func Is(err error, code ...ErrCode) bool {
 	return false
 }
 
-// UnwrapCode Returns the current error code
+// UnwrapCode returns the first non-zero error code in the chain
 func UnwrapCode(err error) (ErrCode, bool) {
-	if err == nil {
-		return 0, false
+	for err != nil {
+		if e, ok := err.(*Error); ok && e.code != 0 {
+			return e.code, true
+		}
+		err = errors.Unwrap(err)
 	}
-
-	e, ok := err.(*Error)
-	if !ok {
-		return 0, false
-	}
-
-	if e.code == 0 {
-		return UnwrapCode(e.wrapErr)
-	}
-
-	return e.code, true
+	return 0, false
 }
 
-// UnwrapCodes Returns the current all error code
+// UnwrapCodes returns all error codes in the chain
 func UnwrapCodes(err error) (codes []ErrCode) {
-	for {
-		if err == nil {
-			return
+	for err != nil {
+		if e, ok := err.(*Error); ok {
+			codes = append(codes, e.code)
 		}
-
-		e, ok := err.(*Error)
-		if !ok {
-			return
-		}
-
-		codes = append(codes, e.code)
-
-		err = e.Unwrap()
+		err = errors.Unwrap(err)
 	}
+	return
 }
 
 // UnwrapErrors Returns the current all error text
