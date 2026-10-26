@@ -13,6 +13,7 @@
 - **帮助文档**: 自动生成帮助信息
 - **交互式输入**: 支持用户交互输入
 - **进度条**: 支持终端进度条和 spinner
+- **执行引擎**: 本地 / embed / 远程下载二进制的统一执行入口
 
 ## 核心功能
 
@@ -203,6 +204,120 @@ for i := 0; i < 10; i++ {
 - 当终端非常窄时，会优先保留核心进度信息，其次保留前缀，后缀会最后参与省略。
 - 当已知总量模式下的 meta 过长时，会优先缩写 `Elapsed/ETA`，必要时继续只保留百分比与计数等核心字段。
 - 宽度估算会优先兼容常见中文、emoji、keycap 和 ZWJ emoji 组合，但仍不是完整的 grapheme 布局引擎。
+
+### 执行引擎（NewExec）
+
+`NewExec` 提供统一的二进制执行入口，支持三种来源（按优先级）：
+
+1. `BinFile` 指向的本地文件已存在：直接使用
+2. 本地文件不存在但传入了 `embed.FS`：落盘到临时目录后使用
+3. embed 内容为空且配置了 `DownloadUrl`：下载（支持 `.zip` / `.tar.gz` / `.tgz` / 单文件 `.gz`）后使用
+
+```go
+// 创建执行引擎
+func NewExec(fs embed.FS, fn ...func(options *ExecOptions)) (*Exec, error)
+
+// 同步执行，返回退出码、标准输出、标准错误与错误
+func (e *Exec) Run(ctx context.Context, args []string, opt ...func(o *ExecOptions)) (code int, outStr string, errStr string, err error)
+// 流式执行，逐行回调输出，返回退出码通道与 stdin 写入函数
+func (e *Exec) KeepRun(ctx context.Context, args []string, callback func(str string, isStdout bool), opt ...func(o *ExecOptions)) (<-chan int, func(string), error)
+// 释放引擎上下文，并清理引擎自己创建的临时目录（外部 BinFile 不会被删除）
+func (e *Exec) Release() error
+// 引擎当前存放二进制的目录
+func (e *Exec) Dir() string
+// 解析后的二进制路径
+func (e *Exec) BinFile() string
+```
+
+`ExecOptions` 可配置项：
+
+```go
+type ExecOptions struct {
+    // BinFile 既可以是已存在的二进制路径，也可以是解压/下载后的目标文件名
+    BinFile string
+    // 环境变量与工作目录覆盖（nil Env 表示继承父进程）
+    Env []string
+    Dir string
+    // KeepRun 时立即关闭子进程 stdin，适合读到 EOF 才退出的命令
+    CloseStdin bool
+    // 取消或进程退出后管道排空的上限，防止孤儿孙进程卡住 Wait。默认 5s，负值禁用
+    WaitDelay time.Duration
+    // 下载来源与进度回调
+    DownloadUrl string
+    DownloadProgress func(percent float64, size int64)
+    // 自定义下载产物处理（WithDir 版本优先）
+    DownloadHandler func(file string) error
+    DownloadHandlerWithDir func(file string, dir string) error
+}
+```
+
+#### 执行本地二进制
+
+```go
+engine, err := zcli.NewExec(embed.FS{}, func(o *zcli.ExecOptions) {
+    o.BinFile = "/path/to/tool"
+    o.Dir = "/path/to/workdir"
+    o.Env = []string{"APP_MODE=prod"}
+})
+if err != nil {
+    panic(err)
+}
+defer engine.Release()
+
+code, out, errOut, err := engine.Run(context.Background(), []string{"--version"})
+fmt.Println(code, out, errOut, err)
+```
+
+#### 使用 embed 二进制
+
+```go
+//go:embed bin/*
+var binFS embed.FS
+
+engine, err := zcli.NewExec(binFS, func(o *zcli.ExecOptions) {
+    o.BinFile = "tool"
+})
+if err != nil {
+    panic(err)
+}
+defer engine.Release()
+```
+
+#### 下载远程二进制
+
+```go
+engine, err := zcli.NewExec(embed.FS{}, func(o *zcli.ExecOptions) {
+    o.BinFile = "tool"
+    o.DownloadUrl = "https://example.com/tool.zip"
+    o.DownloadProgress = func(percent float64, size int64) {
+        fmt.Printf("progress: %.2f%% size=%d\n", percent, size)
+    }
+})
+if err != nil {
+    panic(err)
+}
+defer engine.Release()
+```
+
+#### 流式执行与 stdin 交互
+
+```go
+codeCh, input, err := engine.KeepRun(ctx, []string{"run"}, func(line string, isStdout bool) {
+    fmt.Println(line)
+})
+if err != nil {
+    panic(err)
+}
+input("hello\n")
+code := <-codeCh
+```
+
+说明：
+
+- 参数按 argv 原样传递，不经 shell 二次解析，含空格或特殊字符也安全。
+- 下载会先缓存到本地临时目录再解压，压缩包会校验魔数与解压路径，避免目录穿越与错误页面被缓存复用。
+- 解压保留 tar 中的硬链接与符号链接，并拒绝逃逸出解压目录的链接目标。
+- `Run` / `KeepRun` 可通过额外的 `func(o *ExecOptions)` 按次覆盖 `Env`、`Dir`、`CloseStdin`、`WaitDelay`。
 
 ## 使用示例
 

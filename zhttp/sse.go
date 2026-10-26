@@ -279,11 +279,22 @@ func (e *Engine) SSE(url string, opt func(*SSEOption), v ...interface{}) (*SSEEn
 
 				if streamErr != nil {
 					err = streamErr
+					// Surface the failure to Error() consumers. The channel has
+					// capacity 1, so this never blocks; before a retry the next
+					// request replaces the value only after consumers drain it.
+					select {
+					case sse.errCh <- streamErr:
+					default:
+					}
 				}
 			}
 
 			if sse.option.RetryNum >= 0 {
 				if sse.option.RetryNum == 0 {
+					select {
+					case sse.errCh <- err:
+					default:
+					}
 					cancel()
 					return
 				}

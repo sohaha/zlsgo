@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -91,7 +92,10 @@ func GzDeCompress(tarFile, dest string) error {
 			}
 		}
 		i := hdr.FileInfo()
-		filename := dest + hdr.Name
+		filename, err := safeExtractPath(dest, hdr.Name)
+		if err != nil {
+			return err
+		}
 		if i.IsDir() {
 			_ = createDir(filename, i.Mode())
 		} else {
@@ -162,7 +166,11 @@ func ZipDeCompress(zipFile, dest string) error {
 		if err != nil {
 			return err
 		}
-		filename := dest + file.Name
+		filename, err := safeExtractPath(dest, file.Name)
+		if err != nil {
+			_ = rc.Close()
+			return err
+		}
 		if file.FileInfo().IsDir() {
 			_ = createDir(filename, file.FileInfo().Mode())
 			continue
@@ -182,6 +190,28 @@ func ZipDeCompress(zipFile, dest string) error {
 	return nil
 }
 
+// safeExtractPath validates an archive entry name and returns the path where
+// it must be written, guaranteeing the result stays inside dest. Entries using
+// ".." components or absolute paths are rejected to prevent Zip Slip attacks.
+func safeExtractPath(dest, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("archive entry name is empty")
+	}
+	if filepath.IsAbs(name) || strings.HasPrefix(name, "/") || strings.HasPrefix(name, "\\") {
+		return "", fmt.Errorf("archive entry with absolute path not allowed: %s", name)
+	}
+	cleanDir := filepath.Clean(dest)
+	target := filepath.Join(cleanDir, filepath.Clean(name))
+	relative, err := filepath.Rel(cleanDir, target)
+	if err != nil {
+		return "", fmt.Errorf("invalid archive entry path: %s", name)
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("archive entry escapes destination: %s", name)
+	}
+	return target, nil
+}
+
 // createDir creates a directory with the specified permissions.
 // If the permission is 0, it defaults to 0755.
 func createDir(dir string, perm os.FileMode) error {
@@ -194,7 +224,7 @@ func createDir(dir string, perm os.FileMode) error {
 // createFile creates a new file and ensures its parent directory exists.
 // If the parent directory doesn't exist, it will be created with default permissions.
 func createFile(name string) (*os.File, error) {
-	dir := string([]rune(name)[0:strings.LastIndex(name, "/")])
+	dir := filepath.Dir(name)
 	if !DirExist(dir) {
 		err := createDir(dir, 0)
 		if err != nil {
