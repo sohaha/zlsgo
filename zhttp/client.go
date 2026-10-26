@@ -189,6 +189,17 @@ func (e *Engine) CheckRedirect(fn ...func(req *http.Request, via []*http.Request
 	}
 }
 
+// cloneClientNoRedirect returns a shallow copy of c that refuses to follow
+// redirects. Copying keeps the engine's shared client (and its CheckRedirect
+// field) untouched, so concurrent requests on the same Engine never race.
+func cloneClientNoRedirect(c *http.Client) *http.Client {
+	clone := *c
+	clone.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return &clone
+}
+
 func (e *Engine) SetTimeout(d time.Duration) {
 	e.Client().Timeout = d
 }

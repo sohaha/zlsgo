@@ -257,6 +257,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 		progress       func(int64, int64)
 		delayedFunc    []func()
 		lastFunc       []func()
+		noRedirect     bool
 	)
 
 	req := &http.Request{
@@ -278,15 +279,7 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 	for _, v := range vs {
 		switch vv := v.(type) {
 		case NoRedirect:
-			if vv {
-				r := e.Client().CheckRedirect
-				e.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
-					return http.ErrUseLastResponse
-				}
-				defer func() {
-					e.Client().CheckRedirect = r
-				}()
-			}
+			noRedirect = bool(vv)
 		case CustomReq:
 			vv(req)
 		case Header:
@@ -438,6 +431,9 @@ func (e *Engine) Do(method, rawurl string, vs ...interface{}) (resp *Res, err er
 
 	if resp.client == nil {
 		resp.client = e.Client()
+	}
+	if noRedirect {
+		resp.client = cloneClientNoRedirect(resp.client)
 	}
 
 	var response *http.Response
@@ -845,6 +841,7 @@ func (e *Engine) DoWithArgs(method, rawurl string, args *RequestArgs) (*Res, err
 		progress       func(int64, int64)
 		delayedFunc    []func()
 		lastFunc       []func()
+		noRedirect     bool
 	)
 
 	req := &http.Request{
@@ -865,15 +862,7 @@ func (e *Engine) DoWithArgs(method, rawurl string, args *RequestArgs) (*Res, err
 	}
 
 	if args != nil {
-		if args.NoRedirect {
-			r := e.Client().CheckRedirect
-			e.Client().CheckRedirect = func(_ *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			}
-			defer func() {
-				e.Client().CheckRedirect = r
-			}()
-		}
+		noRedirect = args.NoRedirect
 
 		if args.CustomReq != nil {
 			args.CustomReq(req)
@@ -1029,6 +1018,9 @@ func (e *Engine) DoWithArgs(method, rawurl string, args *RequestArgs) (*Res, err
 
 	if resp.client == nil {
 		resp.client = e.Client()
+	}
+	if noRedirect {
+		resp.client = cloneClientNoRedirect(resp.client)
 	}
 
 	var response *http.Response
