@@ -176,6 +176,25 @@ func IsLinux() bool
 func Is32BitArch() bool
 ```
 
+`Getenv` 支持统一前缀，便于同一进程内多个组件隔离同名变量：
+
+```go
+func init() {
+	zutil.EnvPrefix = "APP_" // 之后 Getenv("PORT") 读取的是 APP_PORT
+}
+
+port := zutil.Getenv("PORT", "8080")
+```
+
+`EnvPrefix` 为空（默认）时不加前缀；设置了前缀就不会再回退到未加前缀的变量，
+变量值为空字符串时仍视为有效值，不会使用默认值。`.env` 文件里的键名需要自带前缀
+（写成 `APP_PORT=8080`），`Loadenv` 不会自动补前缀。
+
+`EnvPrefix` 与 `zfile.ProjectPath` 一样是普通全局变量，约定在初始化阶段（`init` 或
+`main` 开头）设置一次。`Getenv` 每次调用直接读取它且不加锁，因此**如果在其他
+goroutine 已经在调用 `Getenv` 后再修改它，会产生数据竞争**；请勿在运行期动态切换前缀，
+需要多套前缀时各自在启动前确定。
+
 `Loadenv` 遵循标准 dotenv 语义：进程环境中已存在的变量不会被 `.env` 文件覆盖，
 即真实环境变量的优先级高于 `.env` 文件；当传入多个文件时，后面的文件覆盖前面的文件。
 

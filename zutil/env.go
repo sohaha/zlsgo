@@ -40,10 +40,30 @@ func Is32BitArch() bool {
 	return strconv.IntSize == 32
 }
 
-// Getenv retrieves the value of an environment variable by its name.
-// If the environment variable is not set and a default value is provided,
-// the default value will be returned. An empty string is considered a valid value.
+// EnvPrefix is prepended to the name looked up by Getenv, so that several
+// components sharing one process do not collide on generic names such as
+// "NAME" or "PORT". An empty value, the default, disables prefixing.
+//
+// It is meant to be configured once during initialization, following the same
+// convention as zfile.ProjectPath:
+//
+//	func init() {
+//		zutil.EnvPrefix = "APP_"
+//	}
+//
+// Getenv reads EnvPrefix on every call and there is no locking, so writing it
+// while other goroutines are already calling Getenv is a data race. Configure
+// it at start-up, before concurrent readers exist, and do not change it later.
+var EnvPrefix string = ""
+
+// Getenv retrieves the value of an environment variable by its name, prefixed
+// with EnvPrefix when it is not empty. If the environment variable is not set
+// and a default value is provided, the default value will be returned. An empty
+// string is considered a valid value.
 func Getenv(name string, def ...string) string {
+	if EnvPrefix != "" {
+		name = EnvPrefix + name
+	}
 	val, exists := os.LookupEnv(name)
 	if !exists && len(def) > 0 {
 		return def[0]

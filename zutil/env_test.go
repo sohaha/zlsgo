@@ -40,6 +40,61 @@ func TestEnv(T *testing.T) {
 	t.Equal("actual_value", zutil.Getenv("TEST_SET_VAR", "default"))
 }
 
+func TestEnvPrefix(T *testing.T) {
+	tt := zlsgo.NewTest(T)
+	defer unsetEnv("ZLSGO_TEST_NAME", "ZLSGO_TEST_EMPTY")()
+	defer func() { zutil.EnvPrefix = "" }()
+
+	_ = os.Setenv("ZLSGO_TEST_NAME", "prefixed")
+	_ = os.Setenv("ZLSGO_TEST_EMPTY", "")
+
+	// Without a prefix Getenv reads the bare name.
+	tt.Equal("", zutil.EnvPrefix)
+	tt.Equal("prefixed", zutil.Getenv("ZLSGO_TEST_NAME"))
+	tt.Equal("fallback", zutil.Getenv("ZLSGO_MISSING", "fallback"))
+
+	zutil.EnvPrefix = "ZLSGO_TEST_"
+	tt.Equal("prefixed", zutil.Getenv("NAME"))
+	// An empty value is valid and must not fall back to the default.
+	tt.Equal("", zutil.Getenv("EMPTY", "fallback"))
+	tt.Equal("fallback", zutil.Getenv("MISSING", "fallback"))
+	// The prefixed lookup never falls back to the unprefixed variable.
+	tt.Equal("", zutil.Getenv("ZLSGO_TEST_NAME"))
+
+	// Clearing the prefix restores the unprefixed behavior.
+	zutil.EnvPrefix = ""
+	tt.Equal("", zutil.Getenv("NAME"))
+}
+
+// TestEnvPrefixConcurrentRead covers the documented usage: EnvPrefix is set once
+// during initialization and only read afterwards, so concurrent Getenv calls do
+// not race. This test needs -race to be meaningful.
+func TestEnvPrefixConcurrentRead(T *testing.T) {
+	tt := zlsgo.NewTest(T)
+	defer unsetEnv("ZLSGO_TEST_SHARED")()
+	defer func() { zutil.EnvPrefix = "" }()
+
+	_ = os.Setenv("ZLSGO_TEST_SHARED", "value")
+	zutil.EnvPrefix = "ZLSGO_TEST_"
+
+	done := make(chan struct{})
+	for i := 0; i < 16; i++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for j := 0; j < 100; j++ {
+				if zutil.Getenv("SHARED") != "value" {
+					T.Error("unexpected value from Getenv")
+					return
+				}
+			}
+		}()
+	}
+	for i := 0; i < 16; i++ {
+		<-done
+	}
+	tt.Equal("value", zutil.Getenv("SHARED"))
+}
+
 func TestGOROOT(t *testing.T) {
 	t.Log(zutil.GOROOT())
 }
@@ -155,4 +210,32 @@ func TestLoadenvOptionalFiles(t *testing.T) {
 	tt.NoError(zutil.Loadenv())
 	// Explicitly requested files are still reported as missing.
 	tt.Error(zutil.Loadenv(".env.does.not.exist"))
+}
+
+func BenchmarkGetenvNoPrefix(B *testing.B) {
+	_ = os.Setenv("ZLSGO_BENCH_NAME", "value")
+	defer os.Unsetenv("ZLSGO_BENCH_NAME")
+	defer func() { zutil.EnvPrefix = "" }()
+	zutil.EnvPrefix = ""
+	B.ReportAllocs()
+	B.ResetTimer()
+	for i := 0; i < B.N; i++ {
+		if zutil.Getenv("ZLSGO_BENCH_NAME") != "value" {
+			B.Fatal("unexpected value")
+		}
+	}
+}
+
+func BenchmarkGetenvDefaultPrefix(B *testing.B) {
+	_ = os.Setenv("ZLSGO_BENCH_PREFIXED_NAME", "value")
+	defer os.Unsetenv("ZLSGO_BENCH_PREFIXED_NAME")
+	defer func() { zutil.EnvPrefix = "" }()
+	zutil.EnvPrefix = "ZLSGO_BENCH_PREFIXED_"
+	B.ReportAllocs()
+	B.ResetTimer()
+	for i := 0; i < B.N; i++ {
+		if zutil.Getenv("NAME") != "value" {
+			B.Fatal("unexpected value")
+		}
+	}
 }
