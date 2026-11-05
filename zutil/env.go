@@ -130,7 +130,7 @@ func Loadenv(filenames ...string) (err error) {
 // the community dotenv convention file set in increasing priority order.
 // This is an internal helper function for Loadenv.
 func filenamesOrDefault(filenames []string) []string {
-	if len(filenames) > 0 {
+	if len(filenames) > 0 && filenames[0] != "" {
 		return filenames
 	}
 
