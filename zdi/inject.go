@@ -21,8 +21,8 @@ func (inj *injector) InvokeWithErrorOnly(f interface{}) (err error) {
 	}
 
 	for i := range v {
-		if err, ok := v[i].Interface().(error); ok {
-			return err
+		if e, ok := v[i].Interface().(error); ok && e != nil {
+			return e
 		}
 	}
 
@@ -32,14 +32,20 @@ func (inj *injector) InvokeWithErrorOnly(f interface{}) (err error) {
 // Invoke calls the given function, injecting its dependencies.
 // It resolves the function's arguments using the injector's known types.
 // Returns the function's return values and an error if dependency resolution or function call fails.
-func (inj *injector) Invoke(f interface{}) (values []reflect.Value, err error) {
+func (inj *injector) Invoke(f interface{}) ([]reflect.Value, error) {
+	return inj.invoke(f, nil)
+}
+
+// invoke is the internal implementation of Invoke. It carries the current
+// resolution stack so that circular dependencies can be detected.
+func (inj *injector) invoke(f interface{}, stack depStack) (values []reflect.Value, err error) {
 	catch := zerror.TryCatch(func() error {
 		t := zreflect.TypeOf(f)
 		switch v := f.(type) {
 		case PreInvoker:
-			values, err = inj.fast(v, t, t.NumIn())
+			values, err = inj.fast(v, t, t.NumIn(), stack)
 		default:
-			values, err = inj.call(f, t, t.NumIn())
+			values, err = inj.call(f, t, t.NumIn(), stack)
 		}
 		return nil
 	})
@@ -52,15 +58,17 @@ func (inj *injector) Invoke(f interface{}) (values []reflect.Value, err error) {
 }
 
 // call is an internal helper to invoke a regular function.
-// It resolves dependencies for the function's arguments and calls the function.
-func (inj *injector) call(f interface{}, t reflect.Type, numIn int) ([]reflect.Value, error) {
+// It resolves dependencies for the function's arguments and calls it.
+func (inj *injector) call(f interface{}, t reflect.Type, numIn int, stack depStack) ([]reflect.Value, error) {
 	var in []reflect.Value
 	if numIn > 0 {
 		in = make([]reflect.Value, numIn)
-		var argType reflect.Type
 		for i := 0; i < numIn; i++ {
-			argType = t.In(i)
-			val, ok := inj.Get(argType)
+			argType := t.In(i)
+			val, ok, err := inj.get(argType, stack)
+			if err != nil {
+				return nil, err
+			}
 			if !ok {
 				return nil, fmt.Errorf("value not found for type %v", argType)
 			}
@@ -72,23 +80,26 @@ func (inj *injector) call(f interface{}, t reflect.Type, numIn int) ([]reflect.V
 }
 
 // Map maps a value to its own type or to a specified interface type within the injector.
-// Options can be provided, e.g., WithInterface, to specify the mapping key.
+// Options can be provided, e.g., WithInterface or Name, to specify the mapping key.
 // Returns the type key if it overrides an existing mapping.
 func (inj *injector) Map(val interface{}, opt ...Option) (override reflect.Type) {
-	o := mapOption{}
-	for _, opt := range opt {
-		opt(&o)
+	o := resolveOption(opt)
+	inj.mu.Lock()
+	defer inj.mu.Unlock()
+
+	if o.name != "" {
+		inj.named[o.name] = zreflect.ValueOf(val)
+		return nil
 	}
+
 	if o.key == nil {
 		o.key = reflect.TypeOf(val)
 	}
-	inj.mu.Lock()
 	if _, ok := inj.values[o.key]; ok {
 		override = o.key
 	}
 
 	inj.values[o.key] = zreflect.ValueOf(val)
-	inj.mu.Unlock()
 	return
 }
 
@@ -114,62 +125,88 @@ func (inj *injector) Set(typ reflect.Type, val reflect.Value) {
 }
 
 // Get retrieves a value of the given type from the injector.
-// It first checks for directly mapped values. If not found, it checks providers.
-// If still not found and the type is an interface, it searches for compatible concrete types.
-// Finally, it consults the parent injector, if one exists.
-// Returns the reflect.Value and a boolean indicating if the value was found.
+//
+// It is the low-level compat entry, with the contract (value, ok): missing or
+// construction failure both return ok=false and never panic. To observe
+// construction errors use Resolve / Apply / Invoke / GetErr.
 func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {
-	token := inj.mu.RLock()
-	val := inj.values[t]
-	if val.IsValid() {
-		inj.mu.RUnlock(token)
-		return val, true
+	val, ok, _ := inj.get(t, nil)
+	if !ok || !val.IsValid() {
+		return reflect.Value{}, false
 	}
+	return val, true
+}
+
+// GetErr follows the same resolution path as Get but surfaces construction
+// errors and circular dependencies instead of swallowing them. It is the
+// error-aware variant aimed at framework authors.
+func (inj *injector) GetErr(t reflect.Type) (reflect.Value, bool, error) {
+	return inj.get(t, nil)
+}
+
+// GetErr is the package-level counterpart of the GetErr method, usable with any
+// Injector implementation and symmetric with GetNamedErr.
+func GetErr(inj Injector, t reflect.Type) (reflect.Value, bool, error) {
+	if i, ok := inj.(*injector); ok {
+		return i.get(t, nil)
+	}
+	v, ok := inj.Get(t)
+	return v, ok, nil
+}
+
+// get is the single value-resolution path. A construction failure returns an
+// error; the failed value is never written into the container and the provider
+// is not removed, so the next call re-runs the constructor.
+func (inj *injector) get(t reflect.Type, stack depStack) (reflect.Value, bool, error) {
+	token := inj.mu.RLock()
+	val, hasVal := inj.values[t]
 	provider, hasProvider := inj.providers[t]
 	parent := inj.parent
 	inj.mu.RUnlock(token)
 
-	if hasProvider {
-		key := providerKey(provider, t)
-		_, err, _ := inj.group.Do(key, func() (interface{}, error) {
-			token := inj.mu.RLock()
-			if current := inj.values[t]; current.IsValid() {
-				inj.mu.RUnlock(token)
-				return nil, nil
-			}
-			var ok bool
-			provider, ok = inj.providers[t]
-			inj.mu.RUnlock(token)
-			if !ok || !provider.IsValid() {
-				return nil, nil
-			}
-
-			results, err := inj.Invoke(provider.Interface())
-			if err != nil {
-				return nil, err
-			}
-
-			inj.mu.Lock()
-			for _, result := range results {
-				resultType := result.Type()
-				inj.values[resultType] = result
-				delete(inj.providers, resultType)
-			}
-			inj.mu.Unlock()
-			return nil, nil
-		})
-		if err != nil {
-			panic(err)
-		}
-		token = inj.mu.RLock()
-		val = inj.values[t]
-		inj.mu.RUnlock(token)
-		if val.IsValid() {
-			return val, true
-		}
+	if hasVal && val.IsValid() {
+		return val, true, nil
 	}
 
-	if t.Kind() == reflect.Interface {
+	if hasProvider {
+		if stack.contains(typeKey(t)) {
+			return reflect.Value{}, false, fmt.Errorf("zdi: circular dependency detected while resolving %v", t)
+		}
+
+		next := stack.push(typeKey(t))
+		key := providerKey(provider, t)
+
+		call, leader, err := inj.beginBuild(key)
+		if err != nil {
+			return reflect.Value{}, false, err
+		}
+		if leader {
+			buildErr := inj.runBuild(key, call, func() error {
+				return inj.buildProvider(t, next)
+			})
+			if buildErr != nil {
+				return reflect.Value{}, false, buildErr
+			}
+		} else {
+			<-call.done
+			if call.err != nil {
+				return reflect.Value{}, false, call.err
+			}
+		}
+
+		token = inj.mu.RLock()
+		val, hasVal = inj.values[t]
+		inj.mu.RUnlock(token)
+		if hasVal && val.IsValid() {
+			return val, true, nil
+		}
+		return reflect.Value{}, false, nil
+	}
+
+	// The error interface does not participate in concrete-type fuzzy matching,
+	// so an arbitrary error implementation in the container is never
+	// misinterpreted as an error slot.
+	if t.Kind() == reflect.Interface && t != errorType {
 		token = inj.mu.RLock()
 		for k, v := range inj.values {
 			if k.Implements(t) {
@@ -178,20 +215,62 @@ func (inj *injector) Get(t reflect.Type) (reflect.Value, bool) {
 			}
 		}
 		inj.mu.RUnlock(token)
+		if val.IsValid() {
+			return val, true, nil
+		}
 	}
 
-	if val.IsValid() {
-		return val, true
-	}
-
-	var ok bool
 	if parent != nil {
-		token = inj.mu.RLock()
-		val, ok = parent.Get(t)
-		inj.mu.RUnlock(token)
+		if p, ok := parent.(*injector); ok {
+			return p.get(t, stack)
+		}
+		v, ok := parent.Get(t)
+		return v, ok, nil
 	}
 
-	return val, ok
+	return reflect.Value{}, false, nil
+}
+
+// buildProvider runs the provider registered for t and commits its results.
+// Nothing is written unless every value is produced and the error is nil.
+func (inj *injector) buildProvider(t reflect.Type, stack depStack) error {
+	token := inj.mu.RLock()
+	if current, ok := inj.values[t]; ok && current.IsValid() {
+		inj.mu.RUnlock(token)
+		return nil
+	}
+	provider, ok := inj.providers[t]
+	errIdx := inj.providerErrIdx[t]
+	inj.mu.RUnlock(token)
+	if !ok || !provider.IsValid() {
+		return nil
+	}
+
+	results, err := inj.invoke(provider.Interface(), stack)
+	if err != nil {
+		return err
+	}
+
+	// Fully scan the error before writing anything, so partial results never
+	// become cached singletons.
+	if errIdx >= 0 && errIdx < len(results) {
+		if e, ok := results[errIdx].Interface().(error); ok && e != nil {
+			return e
+		}
+	}
+
+	inj.mu.Lock()
+	for i, result := range results {
+		if i == errIdx || !result.IsValid() {
+			continue
+		}
+		resultType := result.Type()
+		inj.values[resultType] = result
+		delete(inj.providers, resultType)
+		delete(inj.providerErrIdx, resultType)
+	}
+	inj.mu.Unlock()
+	return nil
 }
 
 func providerKey(provider reflect.Value, t reflect.Type) string {

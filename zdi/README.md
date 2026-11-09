@@ -22,6 +22,8 @@
 ```go
 // Injector 定义了依赖注入容器的接口
 type Injector interface {
+    Invoker
+    TypeMapper
     // 映射值到容器
     Map(val interface{}, opt ...Option) reflect.Type
     // 映射多个值到容器
@@ -42,6 +44,21 @@ type Injector interface {
     SetParent(parent Injector)
 }
 
+// Invoker 提供调用与解析能力
+type Invoker interface {
+    Apply(Pointer) error
+    Resolve(...Pointer) error
+    Invoke(interface{}) ([]reflect.Value, error)
+    InvokeWithErrorOnly(interface{}) error
+}
+
+// TypeMapper 提供注册能力
+type TypeMapper interface {
+    Map(interface{}, ...Option) reflect.Type
+    Maps(...interface{}) []reflect.Type
+    Provide(interface{}, ...Option) []reflect.Type
+}
+
 // 创建新的注入器
 func New(parent ...Injector) Injector
 ```
@@ -50,25 +67,26 @@ func New(parent ...Injector) Injector
 
 ```go
 type Pointer interface{}
-type Option func(o *option)
+type Option func(*mapOption)
 
 // 使用接口指针映射
 func WithInterface(ifacePtr Pointer) Option
 // 使用名称映射
-func WithName(name string) Option
+func Name(name string) Option
 ```
 
 ### 命名注入
 
 ```go
 func GetNamed(inj Injector, name string, t reflect.Type) (reflect.Value, bool)
+func GetNamedErr(inj Injector, name string, t reflect.Type) (reflect.Value, bool, error)
 ```
 
-### 延迟注入 (Lazy Injection)
+### 泛型解析
 
 ```go
-func Lazy(getter interface{}) interface{}
-func IsLazy(v interface{}) bool
+func Resolve[T any](inj Injector) (T, error)
+func ResolveNamed[T any](inj Injector, name string) (T, error)
 ```
 
 ### 预调用优化
@@ -79,6 +97,66 @@ type PreInvoker interface {
 }
 
 func IsPreInvoker(handler interface{}) bool
+```
+
+### 构造函数注入 (Provide)
+
+`Provide` 注册构造函数，构造出来的值按返回类型注册为可注入依赖：
+
+```go
+func (inj *injector) Provide(provider interface{}, opt ...Option) []reflect.Type
+```
+
+```go
+di := zdi.New()
+
+// 返回 (T, error)：error 是构造控制流，不会被注册成依赖
+di.Provide(func() (*DB, error) {
+    return openDB()
+})
+
+// 返回 (T1, T2)：同时提供两个依赖
+di.Provide(func() (*DB, *Cache) {
+    return newDB(), newCache()
+})
+
+// 命名注册：不参与按类型解析，只能用 Name 取
+di.Provide(func() (*DB, error) { return openPrimary() }, zdi.Name("primary"))
+
+var db *DB
+if err := di.Resolve(&db); err != nil {
+    // 构造函数返回的错误会原样出现在这里
+}
+```
+
+## error 语义
+
+`zdi` 把 `error` 当构造控制流，而不是可注入的值，规则如下：
+
+| 规则 | 行为 |
+|---|---|
+| `error` 永不成为依赖 key | `Provide` 时跳过最后一个 `error` 返回值，不会出现「谁的 error 覆盖谁」 |
+| 构造失败对调用方可见 | `Resolve` / `Apply` / `Invoke` 返回该错误；`Get` 返回 `ok=false` |
+| 失败不缓存、可重试 | 失败时不写入任何值、不删除 provider，下次调用重新执行构造函数 |
+| 构造恐慌不逃逸 | provider 内部 panic 被转成 error 返回 |
+| 多返回值全成功才入库 | 先完整检查 error，再一次性写入，不会留下半成品单例 |
+| 循环依赖返回错误 | 解析链上重复出现同一类型时返回 circular dependency 错误，而不是死锁或栈溢出 |
+| 重入自身不会死锁 | provider 内部再次请求自己（按类型或按名称）会立即报错，不会永久阻塞 |
+
+并发请求同一依赖时只会执行一次构造函数，其余调用者等待并共享结果（失败也共享同一个 error）。
+
+因此 `Provide` 需要满足这些约束，否则直接 panic（属于编程错误，不是运行时错误）：
+
+- 必须是函数，且至少有一个返回值
+- 若有 `error` 返回值，必须是最后一个，且只能有一个
+- `func() error` 不是合法 provider，请用 `InvokeWithErrorOnly`
+
+需要拿到构造错误又只用底层接口时，用 `GetErr` / `GetNamedErr`：
+
+```go
+func GetErr(inj Injector, t reflect.Type) (reflect.Value, bool, error)
+
+v, ok, err := zdi.GetErr(di, reflect.TypeOf((*DB)(nil)))
 ```
 
 ## 使用示例
@@ -253,7 +331,7 @@ func main() {
     // 实际应用示例
     // 配置服务
     type ConfigService struct {
-        Config map[string]interface{}:
+        Config map[string]interface{}
     }
     
     type AppService struct {
@@ -318,7 +396,8 @@ type ServiceInterface interface {
 
 ## 最佳实践
 
-1. 避免循环依赖
+1. 避免循环依赖，循环引用会在解析时返回错误
 2. 合理使用层次化注入器
-3. 正确处理错误
-4. 注意内存泄漏
+3. **始终检查 `Resolve` / `Apply` / `Invoke` 返回的 error**，构造函数的失败就是通过它暴露的
+4. 构造函数保持无副作用可重试，因为失败后会在下次解析时重新执行
+5. 需要按名称区分同一类型的多个实例时用 `zdi.Name`
