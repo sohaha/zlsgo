@@ -607,7 +607,7 @@ func (e *Engine) HandleNotFound(c *Context, applyMiddleware ...bool) {
 // handleAction executes a handler function with its middleware chain.
 // It processes middleware in order, then calls the main handler if no middleware aborts the chain.
 func handleAction(c *Context, handler handlerFn, middleware []handlerFn) {
-	c.middleware = append(middleware, handler)
+	c.middleware = append(middleware[:len(middleware):len(middleware)], handler)
 	c.Next()
 }
 

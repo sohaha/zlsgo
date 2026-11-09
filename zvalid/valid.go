@@ -100,7 +100,7 @@ func pushQueue(v *Engine, fn queueT, DisableCheckErr ...bool) Engine {
 		}
 	}
 
-	v.queue = append(v.queue, pFn)
+	v.queue = append(v.queue[:len(v.queue):len(v.queue)], pFn)
 	return *v
 }
 
