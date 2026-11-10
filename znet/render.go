@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zstring"
 	"github.com/sohaha/zlsgo/zutil"
 )
@@ -250,7 +249,7 @@ func (c *Context) SetContent(data *PrevData) {
 }
 
 func (c *Context) File(path string) {
-	path = zfile.RealPath(path)
+	path, _ = resolvePath(path)
 	f, err := os.Stat(path)
 	fileExist := err == nil
 	var code int32

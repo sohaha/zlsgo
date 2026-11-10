@@ -388,14 +388,16 @@ func MultiplePort(ports []int, change bool) (int, error)
 
 ```go
 func (e *Engine) LoadHTMLGlob(pattern string)
-func (e *Engine) LoadHTMLFiles(files ...string)
-func (e *Engine) SetFuncMap(funcMap template.FuncMap)
-func (e *Engine) HTMLRender(render Template, html ...string)
-func (e *Engine) Delims(left, right string)
-func (e *Engine) NoRoute(handlers ...Handler)
-func (e *Engine) NoMethod(handlers ...Handler)
-func (e *Engine) UseHooks(hooks ...Hook)
+func (e *Engine) SetTemplate(v Template)
+func (e *Engine) SetTemplateFuncMap(funcMap template.FuncMap)
+
+type Template interface {
+	Load() error
+	Render(w io.Writer, name string, data interface{}, layout ...string) error
+}
 ```
+
+模板目录、模板文件、静态文件和上传目标都遵循同一套相对路径解析规则：先按「可执行文件所在目录」解析（与 `zfile.RealPath` 一致），该位置不存在时再回退到进程工作目录。所以 `LoadHTMLGlob("templates")` 与 `LoadHTMLGlob("templates/*.html")` 的基准目录是同一个。
 
 ### SSE 支持
 

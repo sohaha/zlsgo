@@ -401,7 +401,7 @@ func templateParse(templateFile []string, funcMap template.FuncMap) (t *template
 	file := templateFile[0]
 	if len(file) <= 255 && zfile.FileExist(file) {
 		for i := range templateFile {
-			templateFile[i] = zfile.RealPath(templateFile[i])
+			templateFile[i], _ = resolvePath(templateFile[i])
 		}
 		t, err = template.ParseFiles(templateFile...)
 		if err == nil && funcMap != nil {

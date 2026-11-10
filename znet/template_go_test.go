@@ -21,7 +21,9 @@ func TestHTMLRender(t *testing.T) {
 `))
 	defer zfile.Rmdir("./testdata/html/")
 
-	engine := newGoTemplate(nil, "./testdata/html")
+	// zfile.WriteFile resolves relative paths against ProjectPath, so the
+	// template directory has to be resolved the same way (see SetTemplate).
+	engine := newGoTemplate(nil, zfile.RealPath("./testdata/html"))
 
 	err := engine.Load()
 	tt.NoError(err)

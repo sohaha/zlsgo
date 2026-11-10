@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/sohaha/zlsgo/zdi"
-	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zsync"
 	"github.com/sohaha/zlsgo/zutil"
@@ -320,10 +319,18 @@ func (e *Engine) SetHTMLTemplate(t *template.Template) {
 	e.template = val
 }
 
-// LoadHTMLGlob Load Glob HTML
-// LoadHTMLGlob loads HTML templates from the specified glob pattern.
-// It parses the templates and makes them available for rendering in handlers.
+// LoadHTMLGlob loads HTML templates from the specified glob pattern and makes
+// them available for rendering in handlers.
+//
+// Relative patterns are resolved against the project directory (the directory
+// of the running executable), falling back to the working directory when the
+// project relative location does not exist.
 func (e *Engine) LoadHTMLGlob(pattern string) {
+	pattern, fromCwd := resolvePath(pattern)
+	if fromCwd {
+		e.Log.Debugf("template directory %q resolved from the working directory", pattern)
+	}
+
 	if !strings.Contains(pattern, "*") {
 		h := newGoTemplate(e, pattern)
 		e.views = h
@@ -331,7 +338,6 @@ func (e *Engine) LoadHTMLGlob(pattern string) {
 	}
 
 	// compatible with the old version at present
-	pattern = zfile.RealPath(pattern)
 	t, err := template.New("").Funcs(e.templateFuncMap).ParseGlob(pattern)
 	if err != nil {
 		e.Log.Fatalf("Template loading failed: %s", err)

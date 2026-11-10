@@ -703,11 +703,12 @@ func TestTemplateLoad(t *testing.T) {
 func TestTemplateNew(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 	r := newServer()
-	path := zfile.RealPathMkdir("tmpTemplate", true)
-	defer zfile.Rmdir(path)
+	dir := zfile.RealPathMkdir("tmpTemplate")
+	defer zfile.Rmdir(dir)
 	r.SetMode(DebugMode)
-	r.LoadHTMLGlob("tmpTemplate")
-	_ = zfile.WriteFile(path+"tpl-define.html", []byte(`{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`))
+	// The template has to exist before loading: LoadHTMLGlob parses eagerly.
+	_ = zfile.WriteFile(dir+"/tpl-define.html", []byte(`{{ define "user/index.html" }}{{.title}}{{test}}{{ end }}`))
+	r.LoadHTMLGlob(dir)
 	r.SetTemplateFuncMap(map[string]interface{}{
 		"test": func() string {
 			return "-ok"

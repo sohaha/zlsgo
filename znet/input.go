@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sohaha/zlsgo/zfile"
 	"github.com/sohaha/zlsgo/zjson"
 	"github.com/sohaha/zlsgo/zstring"
 )
@@ -316,7 +315,7 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dist string) erro
 	}
 	defer src.Close()
 
-	dist = zfile.RealPath(dist)
+	dist, _ = resolvePath(dist)
 	out, err := os.Create(dist)
 	if err != nil {
 		return err

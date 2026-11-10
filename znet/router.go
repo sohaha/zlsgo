@@ -142,8 +142,11 @@ func (e *Engine) StaticFS(relativePath string, fs http.FileSystem, moreHandler .
 }
 
 // Static serves files from the given root directory at the specified path.
-// This is a convenience wrapper around StaticFS with http.Dir.
+// This is a convenience wrapper around StaticFS with http.Dir. A relative root
+// is resolved like templates: project directory first, then the working
+// directory.
 func (e *Engine) Static(relativePath, root string, moreHandler ...Handler) {
+	root, _ = resolvePath(root)
 	e.StaticFS(relativePath, http.Dir(root), moreHandler...)
 }
 
