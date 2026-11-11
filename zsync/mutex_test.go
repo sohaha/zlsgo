@@ -3,6 +3,7 @@ package zsync
 import (
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/sohaha/zlsgo"
@@ -145,6 +146,104 @@ func TestRBMutexCorrectPairing(t *testing.T) {
 	defer mu.Unlock()
 	if shared != iterations {
 		t.Errorf("Expected shared=%d, got %d", iterations, shared)
+	}
+}
+
+// TestRBMutexProtectsMap verifies read-write exclusion with a read-heavy map.
+// Without the writer re-check in the bias path, -race reports a map data race.
+func TestRBMutexProtectsMap(t *testing.T) {
+	mu := NewRBMutex()
+	shared := make(map[int]int)
+
+	const (
+		rounds  = 50
+		readers = 8
+		writers = 4
+		ops     = 500
+	)
+
+	var wg sync.WaitGroup
+	for round := 0; round < rounds; round++ {
+		for i := 0; i < readers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := 0; j < ops; j++ {
+					token := mu.RLock()
+					_ = shared[j&127]
+					mu.RUnlock(token)
+				}
+			}()
+		}
+		for i := 0; i < writers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := 0; j < ops; j++ {
+					mu.Lock()
+					shared[j&127] = j
+					mu.Unlock()
+				}
+			}()
+		}
+		wg.Wait()
+	}
+}
+
+// TestRBMutexNoOverlap asserts that no reader is ever inside the critical
+// section while a writer is inside its own. It fails loudly on a future
+// regression instead of relying on -race to notice.
+func TestRBMutexNoOverlap(t *testing.T) {
+	mu := NewRBMutex()
+	var (
+		active  atomic.Int64
+		writing atomic.Bool
+		overlap atomic.Int64
+		wg      sync.WaitGroup
+	)
+
+	const (
+		readers = 8
+		writers = 3
+		ops     = 3000
+	)
+
+	for i := 0; i < readers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < ops; j++ {
+				token := mu.RLock()
+				active.Add(1)
+				if writing.Load() {
+					overlap.Add(1)
+				}
+				active.Add(-1)
+				mu.RUnlock(token)
+			}
+		}()
+	}
+
+	for i := 0; i < writers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < ops/10; j++ {
+				mu.Lock()
+				if active.Load() != 0 {
+					overlap.Add(1)
+				}
+				writing.Store(true)
+				runtime.Gosched()
+				writing.Store(false)
+				mu.Unlock()
+			}
+		}()
+	}
+
+	wg.Wait()
+	if n := overlap.Load(); n != 0 {
+		t.Fatalf("read and write critical sections overlapped %d times", n)
 	}
 }
 

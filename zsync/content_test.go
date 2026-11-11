@@ -35,10 +35,12 @@ func TestMergeContext(t *testing.T) {
 
 	{
 		ctx1 := context.Background()
+		// Start the clock before the timeout context so the measured interval
+		// covers the whole deadline instead of the leftovers after setup.
+		now := time.Now()
 		ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second/5)
 		defer cancel2()
 		ctx := MergeContext(ctx1, ctx2)
-		now := time.Now()
 		select {
 		case <-ctx.Done():
 			tt.EqualTrue(ctx.Err() != nil)
@@ -48,12 +50,12 @@ func TestMergeContext(t *testing.T) {
 
 	{
 		ctx1 := context.Background()
+		now := time.Now()
 		ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second/5)
 		ctx3, cancel3 := context.WithTimeout(context.Background(), time.Second/10)
 		defer cancel2()
 		defer cancel3()
 		ctx := MergeContext(ctx1, ctx2, ctx3)
-		now := time.Now()
 		select {
 		case <-ctx.Done():
 			tt.EqualTrue(ctx.Err() != nil)

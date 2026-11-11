@@ -11,14 +11,15 @@ import (
 )
 
 type RBMutex struct {
-	rslots         []optRSlot
-	state          uint64
-	rw             sync.RWMutex
-	rmask          uint32
-	writerMomentum uint32
-	_              [64]byte
-	_              [56]byte
-	_              [4]byte
+	// state is read by every biased reader and written only by writers, so it
+	// gets its own cache line: sharing a line with rw would make each writer
+	// invalidate the word the read path depends on.
+	state uint64
+	_     [56]byte
+
+	rw     sync.RWMutex
+	rslots []optRSlot
+	rmask  uint32
 }
 
 type optRSlot struct {
@@ -31,13 +32,10 @@ type RBToken struct {
 }
 
 const (
-	rbiasShift           = 63
-	rbiasMask            = uint64(1) << rbiasShift
-	writerShift          = 32
-	writerMask           = uint64(0x7FFFFFFF) << writerShift
-	defaultBiasLimit     = 4
-	writerMomentumMedium = 6
-	writerMomentumHigh   = 12
+	rbiasShift  = 63
+	rbiasMask   = uint64(1) << rbiasShift
+	writerShift = 32
+	writerMask  = uint64(0x7FFFFFFF) << writerShift
 )
 
 // Use runtime's proc pin/unpin to obtain a stable per-P identifier.
@@ -62,11 +60,6 @@ func getProcID() uint32 {
 
 //go:nosplit
 func likely(b bool) bool {
-	return b
-}
-
-//go:nosplit
-func unlikely(b bool) bool {
 	return b
 }
 
@@ -100,28 +93,15 @@ func (mu *RBMutex) RLock() RBToken {
 		slot := getProcID() & mu.rmask
 		cptr := &mu.rslots[slot].counter
 		atomic.AddUint64(cptr, 1)
-		return RBToken{p: cptr}
-	}
 
-	if unlikely(state&rbiasMask != 0) {
-		momentum := atomic.LoadUint32(&mu.writerMomentum)
-		limit := biasLimit(momentum)
-
-		if (state & writerMask) < uint64(limit)<<writerShift {
-			if len(mu.rslots) == 0 {
-				mu.rw.RLock()
-				return RBToken{p: nil}
-			}
-			slot := getProcID() & mu.rmask
-			cptr := &mu.rslots[slot].counter
-			atomic.AddUint64(cptr, 1)
-
-			s2 := atomic.LoadUint64(&mu.state)
-			if likely(s2&rbiasMask != 0 && (s2&writerMask) < uint64(limit)<<writerShift) {
-				return RBToken{p: cptr}
-			}
-			atomic.AddUint64(cptr, ^uint64(0))
+		// Re-check after registering the slot. If a writer already cleared
+		// the bias bit, back off to rw.RLock. If the writer arrives later,
+		// its slot scan observes this registration and waits for RUnlock.
+		state = atomic.LoadUint64(&mu.state)
+		if likely(state&rbiasMask != 0 && (state&writerMask) == 0) {
+			return RBToken{p: cptr}
 		}
+		atomic.AddUint64(cptr, ^uint64(0))
 	}
 
 	mu.rw.RLock()
@@ -139,17 +119,25 @@ func (mu *RBMutex) RUnlock(token RBToken) {
 }
 
 func (mu *RBMutex) Lock() {
+	// If another writer has already cleared the bias bit, no biased reader can
+	// have registered since: the fast read path requires that bit to be set.
+	// That writer also drained the slots before entering its own critical
+	// section, and this writer only reaches its section after that one, so the
+	// slot scan can be skipped entirely.
+	drain := true
 	for {
 		state := atomic.LoadUint64(&mu.state)
 		newState := (state &^ rbiasMask) + (1 << writerShift)
 		if atomic.CompareAndSwapUint64(&mu.state, state, newState) {
+			drain = state&rbiasMask != 0
 			break
 		}
 	}
 
-	atomic.AddUint32(&mu.writerMomentum, 1)
-
 	mu.rw.Lock()
+	if !drain {
+		return
+	}
 
 	tries := 0
 	for {
@@ -164,17 +152,18 @@ func (mu *RBMutex) Lock() {
 			break
 		}
 		tries++
-		// Adaptive backoff to reduce potential writer starvation
+		// Bias readers hold no rw lock, so the writer must poll for them to
+		// drain. Yield instead of sleeping: time.Sleep rounds up to the timer
+		// granularity (tens of microseconds) and stalls every reader behind
+		// rw.Lock for that long. Only fall back to sleeping when a reader has
+		// held its section for an unusually long time, so a stuck reader does
+		// not burn a core.
 		switch {
-		case tries < 64:
-			if tries&7 == 0 {
-				runtime.Gosched()
-			}
-		case tries < 256:
+		case tries < 16:
+		case tries < 1024:
 			runtime.Gosched()
 		default:
-			// As contention persists, yield more aggressively
-			time.Sleep(time.Microsecond)
+			time.Sleep(50 * time.Microsecond)
 		}
 	}
 }
@@ -198,30 +187,4 @@ func (mu *RBMutex) Unlock() {
 			break
 		}
 	}
-
-	for {
-		momentum := atomic.LoadUint32(&mu.writerMomentum)
-		if momentum == 0 {
-			break
-		}
-		dec := (momentum + 1) >> 1
-		if dec == 0 {
-			dec = 1
-		}
-		if atomic.CompareAndSwapUint32(&mu.writerMomentum, momentum, momentum-dec) {
-			break
-		}
-	}
-}
-
-//go:nosplit
-//go:inline
-func biasLimit(momentum uint32) uint32 {
-	if momentum > writerMomentumHigh {
-		return 1
-	}
-	if momentum > writerMomentumMedium {
-		return 2
-	}
-	return defaultBiasLimit
 }

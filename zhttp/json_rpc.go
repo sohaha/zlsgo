@@ -24,6 +24,11 @@ type JSONRPC struct {
 	options JSONRPCOptions
 }
 
+// ErrJSONRPCNotConnected is returned when a JSON-RPC call is attempted on a
+// client whose connection could not be established (for example because
+// NewJSONRPC failed to connect).
+var ErrJSONRPCNotConnected = errors.New("zhttp: jsonrpc client is not connected")
+
 func (j *JSONRPC) Call(serviceMethod string, args interface{}, reply interface{}) error {
 	r := <-j.Go(serviceMethod, args, reply, make(chan *rpc.Call, 1)).Done
 
@@ -31,6 +36,10 @@ func (j *JSONRPC) Call(serviceMethod string, args interface{}, reply interface{}
 }
 
 func (j *JSONRPC) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+	if j == nil || j.client == nil {
+		return j.notConnected(serviceMethod, args, reply, done)
+	}
+
 	r := j.client.Go(serviceMethod, args, reply, done)
 	if r.Error != nil && r.Error == rpc.ErrShutdown && j.options.Retry {
 		if j.options.RetryDelay > 0 {
@@ -45,9 +54,32 @@ func (j *JSONRPC) Go(serviceMethod string, args interface{}, reply interface{}, 
 	return r
 }
 
+// notConnected reports a failed call the same way rpc.Client would, instead of
+// dereferencing a nil client and panicking.
+func (j *JSONRPC) notConnected(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+	call := &rpc.Call{
+		ServiceMethod: serviceMethod,
+		Args:          args,
+		Reply:         reply,
+		Error:         ErrJSONRPCNotConnected,
+	}
+	if done == nil {
+		done = make(chan *rpc.Call, 1)
+	}
+	call.Done = done
+	select {
+	case done <- call:
+	default:
+		go func() { done <- call }()
+	}
+	return call
+}
+
 func (j *JSONRPC) Close() error {
-	err := j.client.Close()
-	return err
+	if j == nil || j.client == nil {
+		return nil
+	}
+	return j.client.Close()
 }
 
 func (j *JSONRPC) connect() error {
@@ -62,11 +94,7 @@ func (j *JSONRPC) connect() error {
 	if j.options.TlsConfig == nil {
 		conn, err = d.Dial("tcp", j.address)
 	} else {
-		config := j.options.TlsConfig.Clone()
-		if config == nil {
-			config = &tls.Config{}
-		}
-		conn, err = tls.DialWithDialer(&d, "tcp", j.address, config)
+		conn, err = tls.DialWithDialer(&d, "tcp", j.address, j.options.TlsConfig.Clone())
 	}
 
 	if err != nil {
@@ -84,13 +112,19 @@ func (j *JSONRPC) connect() error {
 	}
 
 	_, _ = message.WriteString("\n\n")
-	_, _ = io.WriteString(conn, message.String())
+	if _, err = io.WriteString(conn, message.String()); err != nil {
+		_ = conn.Close()
+		return err
+	}
 	response, err := http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: "CONNECT"})
 	if err != nil {
+		_ = conn.Close()
 		return err
 	}
 
-	if response.StatusCode != http.StatusOK && response.ContentLength != -1 {
+	if response.StatusCode != http.StatusOK {
+		_ = response.Body.Close()
+		_ = conn.Close()
 		return errors.New("Prohibit connection, a status code: " + strconv.Itoa(response.StatusCode))
 	}
 	j.client = rpc.NewClientWithCodec(jsonrpc.NewClientCodec(conn))

@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +22,43 @@ import (
 )
 
 var r *znet.Engine
+
+var (
+	// testServerURL is the base URL of the in-process znet server.
+	// Using httptest keeps the suite independent of fixed ports and of
+	// processes that may already be listening on them.
+	testServerURL  string
+	testServerHost string
+	uploadDir      string
+)
+
+// testFileContent is served by the test server and reused by download/upload tests.
+const testFileContent = `{"name":"zhttp-test-file","description":"local payload used by the zhttp test suite instead of hitting a public CDN","version":"1.0.0","keywords":["zlsgo","zhttp","testing"]}`
+
+var (
+	reachableMu    sync.Mutex
+	reachableCache = map[string]bool{}
+)
+
+// skipIfUnreachable skips tests that need a public host so the suite remains
+// meaningful in offline or restricted network environments.
+func skipIfUnreachable(t *testing.T, hostPort string) {
+	t.Helper()
+	reachableMu.Lock()
+	ok, cached := reachableCache[hostPort]
+	if !cached {
+		conn, err := net.DialTimeout("tcp", hostPort, 3*time.Second)
+		ok = err == nil
+		if conn != nil {
+			_ = conn.Close()
+		}
+		reachableCache[hostPort] = ok
+	}
+	reachableMu.Unlock()
+	if !ok {
+		t.Skipf("network host %s unreachable, skipping", hostPort)
+	}
+}
 
 type Result struct {
 	Num, Ans int
@@ -34,8 +74,13 @@ func (cal *Cal) Square(num int, result *Result) error {
 
 func TestMain(m *testing.M) {
 	r = znet.New("zhttp-test")
-	r.SetAddr("3788")
 	r.Log.Discard()
+
+	var err error
+	uploadDir, err = os.MkdirTemp("", "zhttp-upload-*")
+	if err != nil {
+		panic(err)
+	}
 
 	r.GET("/get", func(c *znet.Context) {
 		c.JSON(200, map[string]interface{}{
@@ -46,12 +91,21 @@ func TestMain(m *testing.M) {
 		})
 	})
 
+	r.GET("/download/file", func(c *znet.Context) {
+		c.String(200, testFileContent)
+	})
+
 	r.POST("/upload", func(c *znet.Context) {
 		file, err := c.FormFile("file")
-		if err == nil {
-			_ = c.SaveUploadedFile(file, "./package.json")
-			c.String(200, "上传成功")
+		if err != nil {
+			c.String(http.StatusBadRequest, "获取上传文件失败: "+err.Error())
+			return
 		}
+		if err = c.SaveUploadedFile(file, filepath.Join(uploadDir, "uploaded")); err != nil {
+			c.String(http.StatusInternalServerError, "保存上传文件失败: "+err.Error())
+			return
+		}
+		c.String(200, "上传成功")
 	})
 
 	r.Any("/sse", func(c *znet.Context) {
@@ -81,12 +135,15 @@ func TestMain(m *testing.M) {
 		o.Debug = true
 	}))
 
-	go func() {
-		r.SetAddr(":18181")
-		znet.Run()
-	}()
-	time.Sleep(time.Second / 2)
-	m.Run()
+	testServer := httptest.NewServer(r)
+	testServerURL = testServer.URL
+	testServerHost = strings.TrimPrefix(testServerURL, "http://")
+
+	code := m.Run()
+
+	testServer.Close()
+	_ = os.RemoveAll(uploadDir)
+	os.Exit(code)
 }
 
 func TestHttp(T *testing.T) {
@@ -161,6 +218,7 @@ func TestJONS(tt *testing.T) {
 }
 
 func TestRetry(tt *testing.T) {
+	skipIfUnreachable(tt, "unpkg.com:443")
 	t := zls.NewTest(tt)
 	h := New()
 	i := 0
@@ -178,6 +236,7 @@ func TestRetry(tt *testing.T) {
 }
 
 func TestToHTML(tt *testing.T) {
+	skipIfUnreachable(tt, "unpkg.com:443")
 	t := zls.NewTest(tt)
 	res, err := Get("https://unpkg.com/")
 	if err != nil {
@@ -278,6 +337,7 @@ func newMethod(method string, handler func(_ http.ResponseWriter, _ *http.Reques
 }
 
 func TestRes(t *testing.T) {
+	skipIfUnreachable(t, "unpkg.com:443")
 	tt := zls.NewTest(t)
 	u := "https://unpkg.com/"
 	// res, err := Get("https://www.npmjs.com/package/zls-vue-spa/")
@@ -293,6 +353,7 @@ func TestRes(t *testing.T) {
 }
 
 func TestHttpProxy(t *testing.T) {
+	skipIfUnreachable(t, "unpkg.com:443")
 	tt := zls.NewTest(t)
 	err := SetProxy(func(r *http.Request) (*url.URL, error) {
 		if strings.Contains(r.URL.String(), "qq.com") {
@@ -353,19 +414,17 @@ func TestFile(t *testing.T) {
 	downloadPath := filepath.Join(dir, "package.json")
 	secondPath := filepath.Join(dir, "package2.json")
 
-	res, err := Get("https://unpkg.com/zls-vue-spa@1.1.29/package.json", downloadProgress)
-	if err != nil {
-		t.Skipf("network unavailable, skipping download/upload test: %v", err)
-	}
+	res, err := Get(testServerURL+"/download/file", downloadProgress)
 	tt.EqualNil(err)
+	if err != nil {
+		return
+	}
 	err = res.ToFile(downloadPath)
 	tt.EqualNil(err)
-	t.Log(len(res.String()))
+	tt.Equal(uint64(len(testFileContent)), zfile.FileSizeUint(downloadPath))
 	err = res.ToFile(secondPath)
 	tt.Log(err)
 	tt.EqualNil(err)
-
-	defer zfile.Rmdir("./package.json")
 
 	std.CheckRedirect()
 	time.Sleep(time.Second)
@@ -378,29 +437,33 @@ func TestFile(t *testing.T) {
 	h := Header{
 		"type": "upload",
 	}
-	res, err = Post("http://127.0.0.1:18181/upload", h, UploadProgress(func(current, total int64) {
+	res, err = Post(testServerURL+"/upload", h, UploadProgress(func(current, total int64) {
 		t.Log(current, total)
-	}), Host("127.0.0.1:18181"), v, q, File(downloadPath, "file"))
+	}), Host(testServerHost), v, q, File(downloadPath, "file"))
 	if err != nil {
 		tt.EqualNil(err)
 		return
 	}
 	tt.Equal("上传成功", res.String())
-	tt.EqualTrue(zfile.FileSizeUint("./package.json") > 120)
-	zfile.Rmdir("./package.json")
+	uploaded, err := os.ReadFile(filepath.Join(uploadDir, "uploaded"))
+	tt.EqualNil(err)
+	tt.Equal(testFileContent, string(uploaded))
+	tt.EqualTrue(zfile.FileSizeUint(filepath.Join(uploadDir, "uploaded")) > 120)
 
 	_ = SetTransport(func(transport *http.Transport) {
 		transport.MaxIdleConnsPerHost = 100
 	})
 
 	DisableChunked()
-	res, err = Post("http://127.0.0.1:18181/upload", h, CustomReq(func(req *http.Request) {
+	res, err = Post(testServerURL+"/upload", h, CustomReq(func(req *http.Request) {
 	}), UploadProgress(func(current, total int64) {
 		t.Log(current, total)
 	}), v, q, context.Background(), File(secondPath, "file"))
 	tt.EqualNil(err)
 	tt.Equal("上传成功", res.String())
-	zfile.Rmdir("./package2.json")
+	uploaded, err = os.ReadFile(filepath.Join(uploadDir, "uploaded"))
+	tt.EqualNil(err)
+	tt.Equal(testFileContent, string(uploaded))
 }
 
 func TestRandomUserAgent(T *testing.T) {
@@ -414,6 +477,7 @@ func TestRandomUserAgent(T *testing.T) {
 }
 
 func TestGetCode(t *testing.T) {
+	skipIfUnreachable(t, "unpkg.com:443")
 	tt := zls.NewTest(t)
 	EnableInsecureTLS(true)
 	r, _ := Get("https://xxxaaa--xxx.jsdelivr.net/")
@@ -450,6 +514,7 @@ func TestConvertCookie(tt *testing.T) {
 }
 
 func TestTlsCertificate(tt *testing.T) {
+	skipIfUnreachable(tt, "wx.qq.com:443")
 	t := zls.NewTest(tt)
 
 	key := zfile.RealPath("localhost.key")

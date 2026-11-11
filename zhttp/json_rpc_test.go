@@ -1,6 +1,7 @@
 package zhttp
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 func TestNewJSONRPC(t *testing.T) {
 	tt := zlsgo.NewTest(t)
 
-	client, err := NewJSONRPC("18181", "/__rpc", func(o *JSONRPCOptions) {
+	client, err := NewJSONRPC(testServerHost, "/__rpc", func(o *JSONRPCOptions) {
 		o.Timeout = time.Second * 10
 		o.Retry = true
 		o.RetryDelay = time.Second * 6
@@ -19,7 +20,7 @@ func TestNewJSONRPC(t *testing.T) {
 	})
 	tt.NoError(err)
 
-	res, err := Get("http://127.0.0.1:18181/__rpc")
+	res, err := Get(testServerURL + "/__rpc")
 	tt.NoError(err)
 	tt.Equal([]interface{}{"int", "*zhttp.Result"}, res.JSON("Cal\\.Square").Value())
 	zlog.Debug(res)
@@ -31,7 +32,7 @@ func TestNewJSONRPC(t *testing.T) {
 	tt.Equal(12, result.Num)
 	t.Log(result, err)
 
-	res, err = Post("http://127.0.0.1:18181/__rpc", BodyJSON(map[string]interface{}{
+	res, err = Post(testServerURL+"/__rpc", BodyJSON(map[string]interface{}{
 		"method": "Cal.Square",
 		"params": []int{12},
 		"id":     1,
@@ -40,7 +41,7 @@ func TestNewJSONRPC(t *testing.T) {
 	tt.Equal(144, res.JSON("result.Ans").Int())
 	zlog.Debug(res, err)
 
-	res, err = Put("http://127.0.0.1:18181/__rpc", BodyJSON(map[string]interface{}{
+	res, err = Put(testServerURL+"/__rpc", BodyJSON(map[string]interface{}{
 		"method": "Cal.Square",
 		"params": []int{12},
 		"id":     1,
@@ -49,4 +50,28 @@ func TestNewJSONRPC(t *testing.T) {
 	t.Log(res)
 
 	_ = client.Close()
+}
+
+func TestJSONRPCNotConnected(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	client, err := NewJSONRPC("127.0.0.1:1", "/__rpc", func(o *JSONRPCOptions) {
+		o.Timeout = time.Second
+		o.Retry = false
+	})
+	tt.EqualTrue(err != nil)
+	if client == nil {
+		t.Fatal("NewJSONRPC must return a client even when connecting fails")
+	}
+
+	var result Result
+	err = client.Call("Cal.Square", 12, &result)
+	tt.EqualTrue(errors.Is(err, ErrJSONRPCNotConnected))
+	tt.Equal(0, result.Ans)
+
+	call := client.Go("Cal.Square", 12, &result, nil)
+	tt.EqualTrue(errors.Is(call.Error, ErrJSONRPCNotConnected))
+	tt.EqualTrue(call == <-call.Done)
+
+	tt.EqualNil(client.Close())
 }

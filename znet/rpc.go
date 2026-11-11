@@ -28,7 +28,13 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 	methods := make(map[string][]string, 0)
 	for name, v := range rcvr {
 		err := s.RegisterName(name, v)
-		if err == nil && o.Debug {
+		if err != nil {
+			// A failed registration silently removes the service, which would
+			// only surface later as "rpc: can't find service" at call time.
+			Log.Errorf("JSONRPC: register service [%s] failed: %v", name, err)
+			continue
+		}
+		if o.Debug {
 			typ := zreflect.TypeOf(v)
 			for m := 0; m < typ.NumMethod(); m++ {
 				method := typ.Method(m)
@@ -59,16 +65,27 @@ func JSONRPC(rcvr map[string]interface{}, opts ...func(o *JSONRPCOption)) func(c
 			return
 		}
 
-		var codec rpc.ServerCodec
 		if method == "CONNECT" || (method == "POST" && !o.DisabledHTTP) {
 			c.stopHandle.Store(true)
 			c.write()
 
 			if method == "CONNECT" {
-				conn, _, _ := c.Writer.(http.Hijacker).Hijack()
-				codec = jsonrpc.NewServerCodec(conn)
+				hijacker, ok := c.Writer.(http.Hijacker)
+				if !ok {
+					c.Writer.WriteHeader(http.StatusInternalServerError)
+					_, _ = io.WriteString(c.Writer, "response writer does not support hijacking\n")
+					return
+				}
+				conn, _, err := hijacker.Hijack()
+				if err != nil {
+					c.Writer.WriteHeader(http.StatusInternalServerError)
+					_, _ = io.WriteString(c.Writer, "hijack failed: "+err.Error()+"\n")
+					return
+				}
+				defer conn.Close()
+
 				_, _ = io.WriteString(conn, "HTTP/1.0 200 Connected to JSON RPC\n\n")
-				s.ServeCodec(codec)
+				s.ServeCodec(jsonrpc.NewServerCodec(conn))
 				return
 			}
 
