@@ -496,6 +496,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		e.releaseContext(c)
 	}()
 
+	if host := ForwardedHost(req); host != "" {
+		req.Host = host
+	}
+
 	if e.AllowQuerySemicolons {
 		allowQuerySemicolons(c.Request)
 	}

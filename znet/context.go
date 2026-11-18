@@ -13,23 +13,16 @@ import (
 )
 
 // Host returns the current host with scheme (http/https).
+// When the request is forwarded by a trusted reverse proxy (nginx, caddy, ...)
+// the original host and scheme carried by proxy headers take precedence over
+// Request.Host, which may have been rewritten to the upstream address.
 // If full is true, it includes the request URL path.
 func (c *Context) Host(full ...bool) string {
 	builder := zstring.Buffer(4)
 
-	scheme := c.Request.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		if c.Request.TLS == nil {
-			builder.WriteString("http://")
-		} else {
-			builder.WriteString("https://")
-		}
-	} else {
-		builder.WriteString(scheme)
-		builder.WriteString("://")
-	}
-
-	builder.WriteString(c.Request.Host)
+	builder.WriteString(RequestScheme(c.Request))
+	builder.WriteString("://")
+	builder.WriteString(RequestHost(c.Request))
 
 	if len(full) > 0 && full[0] {
 		builder.WriteString(c.Request.URL.String())
