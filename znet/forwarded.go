@@ -7,17 +7,23 @@ import (
 	"strings"
 )
 
-// ForwardedHostHeaders lists request headers that may carry the client's original Host, in order of precedence.
-// By default, nginx replaces the Host header with $proxy_host (so Host becomes the upstream address).
-// Configure "proxy_set_header X-Forwarded-Host $host;" on the reverse proxy to populate this header.
+// ForwardedHostHeaders lists the request headers that may carry the original
+// client host, in priority order. nginx overwrites Host with $proxy_host by
+// default, so it only sends the original domain when configured with
+// `proxy_set_header X-Forwarded-Host $host`.
 var ForwardedHostHeaders = []string{"X-Forwarded-Host"}
 
-// ForwardedProtoHeaders lists request headers that may carry the client's original protocol (http/https).
-var ForwardedProtoHeaders = []string{"X-Forwarded-Proto"}
+// ForwardedProtoHeaders lists the request headers that may carry the original
+// client scheme (http/https), in priority order. nginx terminates TLS itself,
+// so it must name the original scheme explicitly: X-Forwarded-Proto is the
+// conventional choice, while X-Scheme and X-Forwarded-Scheme cover proxies
+// that already emit those names.
+var ForwardedProtoHeaders = []string{"X-Forwarded-Proto", "X-Forwarded-Scheme", "X-Scheme"}
 
-// ForwardedHost returns the original Host forwarded by a trusted proxy (possibly including a port).
-// To prevent Host header injection, it only returns a value when the request comes from a trusted proxy (see TrustedProxies) and the value is valid;
-// otherwise it returns an empty string and callers should fall back to r.Host.
+// ForwardedHost returns the original host (possibly with port) forwarded by a
+// trusted proxy. To prevent host-header poisoning it returns an empty string
+// unless the request comes from a trusted proxy (see TrustedProxies) and the
+// value is valid; callers should then fall back to r.Host.
 func ForwardedHost(r *http.Request) string {
 	if r == nil || !isTrustedProxyRequest(r) {
 		return ""
@@ -32,8 +38,8 @@ func ForwardedHost(r *http.Request) string {
 	return parseForwardedHeader(r.Header.Get("Forwarded")).host
 }
 
-// ForwardedProto returns the original protocol forwarded by a trusted proxy, which is always http or https.
-// It returns an empty string when no usable forwarding header is present.
+// ForwardedProto returns the original scheme (http or https) forwarded by a
+// trusted proxy. It returns an empty string when no usable header is present.
 func ForwardedProto(r *http.Request) string {
 	if r == nil || !isTrustedProxyRequest(r) {
 		return ""
@@ -48,18 +54,27 @@ func ForwardedProto(r *http.Request) string {
 	return parseForwardedHeader(r.Header.Get("Forwarded")).proto
 }
 
-// RequestHost returns the effective request Host, preferring the original host from forwarding headers in reverse-proxy scenarios.
+// RequestHost returns the effective host of the request, preferring the
+// original host carried by proxy headers when behind a reverse proxy. A
+// forwarded local/private address never replaces a public host, so a proxy
+// that forwards $proxy_host (or an upstream address) cannot downgrade a
+// correct Host header.
 func RequestHost(r *http.Request) string {
-	if host := ForwardedHost(r); host != "" {
-		return host
-	}
+	forwarded := ForwardedHost(r)
 	if r == nil {
-		return ""
+		return forwarded
 	}
-	return r.Host
+	if forwarded == "" || forwarded == r.Host {
+		return r.Host
+	}
+	if isLocalHostPort(forwarded) && !isLocalHostPort(r.Host) {
+		return r.Host
+	}
+	return forwarded
 }
 
-// RequestScheme returns the effective request scheme (http/https), preferring forwarding headers in reverse-proxy scenarios.
+// RequestScheme returns the effective scheme (http/https) of the request,
+// preferring proxy headers when behind a reverse proxy.
 func RequestScheme(r *http.Request) string {
 	if proto := ForwardedProto(r); proto != "" {
 		return proto
@@ -70,8 +85,9 @@ func RequestScheme(r *http.Request) string {
 	return "http"
 }
 
-// isTrustedProxyRequest reports whether the request comes from a trusted proxy.
-// For synthetic requests (such as unit tests) with no remote address, trust cannot be determined and the request is treated as trusted.
+// isTrustedProxyRequest reports whether the request comes from a trusted
+// proxy. Synthetic requests (for example in unit tests) have no peer address,
+// so they cannot be verified and are treated as trusted.
 func isTrustedProxyRequest(r *http.Request) bool {
 	if len(TrustedProxies) == 0 {
 		return false
@@ -83,8 +99,29 @@ func isTrustedProxyRequest(r *http.Request) bool {
 	return isProxyTrusted(net.ParseIP(ip))
 }
 
-// forwardedHeaderHost returns the first valid host from a forwarding header.
-// When multiple proxies are involved, the leftmost value is the original client-side value, consistent with frameworks such as Django.
+// isLocalHostPort reports whether host[:port] points at a local, loopback or
+// private address (including the name localhost).
+func isLocalHostPort(hostPort string) bool {
+	if hostPort == "" {
+		return false
+	}
+
+	host := hostPort
+	if h, _, err := net.SplitHostPort(hostPort); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+	return ip != nil && IsLocalIP(ip)
+}
+
+// forwardedHeaderHost returns the first valid host found in a forwarded
+// header. In a multi-proxy chain the leftmost value is the client-side
+// original, matching the behavior of frameworks such as Django.
 func forwardedHeaderHost(value string) string {
 	if value == "" {
 		return ""
@@ -99,7 +136,7 @@ func forwardedHeaderHost(value string) string {
 	return ""
 }
 
-// forwardedProtoValue returns the first valid protocol from a forwarding header.
+// forwardedProtoValue returns the first valid scheme in a forwarded header.
 func forwardedProtoValue(value string) string {
 	if value == "" {
 		return ""
@@ -119,8 +156,9 @@ type forwardedHeader struct {
 	proto string
 }
 
-// parseForwardedHeader parses an RFC 7239 Forwarded header and returns the first valid
-// host and proto from left to right (leftmost elements are added by proxies closer to the client).
+// parseForwardedHeader parses an RFC 7239 Forwarded header, taking the first
+// valid host and proto from left to right (leftmost elements are written by
+// the proxy closest to the client).
 func parseForwardedHeader(value string) forwardedHeader {
 	var f forwardedHeader
 	if value == "" {
@@ -154,7 +192,8 @@ func parseForwardedHeader(value string) forwardedHeader {
 	return f
 }
 
-// normalizeForwardedHost sanitizes and validates a forwarded host, returning an empty string if invalid.
+// normalizeForwardedHost trims and validates a host from a forwarded header,
+// returning an empty string when it is invalid.
 func normalizeForwardedHost(value string) string {
 	value = strings.Trim(strings.TrimSpace(value), `"`)
 	if !isValidForwardedHost(value) {
@@ -163,8 +202,9 @@ func normalizeForwardedHost(value string) string {
 	return value
 }
 
-// isValidForwardedHost reports whether host[:port] is valid.
-// It rejects whitespace, control characters, paths, query strings, and other characters that could be used for response splitting or URL injection.
+// isValidForwardedHost checks whether host[:port] is valid. It rejects
+// whitespace, control characters, paths, query strings and any other
+// characters that could be used for response splitting or URL pollution.
 func isValidForwardedHost(host string) bool {
 	if host == "" || len(host) > 255 {
 		return false
@@ -180,7 +220,7 @@ func isValidForwardedHost(host string) bool {
 		}
 	}
 
-	// Bare bracketed IPv6 address, e.g. [::1].
+	// Bare IPv6 address, such as [::1].
 	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
 		return net.ParseIP(host[1:len(host)-1]) != nil
 	}
@@ -190,16 +230,16 @@ func isValidForwardedHost(host string) bool {
 		return err == nil && isValidHostPort(port)
 	}
 
-	// Hostname or IPv4 with a port, e.g. example.com:8080.
+	// Hostname or IPv4 address with a port, such as example.com:8080.
 	if h, port, err := net.SplitHostPort(host); err == nil {
 		return h != "" && isValidHostPort(port)
 	}
 
-	// Bare IPv6 addresses must be bracketed; treat other values as hostnames.
+	// A bare IPv6 address must be bracketed; anything else is a hostname.
 	return !strings.ContainsRune(host, ':')
 }
 
-// isValidHostPort reports whether port is a decimal number in the range 1-65535.
+// isValidHostPort checks whether port is a decimal number in 1-65535.
 func isValidHostPort(port string) bool {
 	if port == "" {
 		return false
@@ -208,7 +248,8 @@ func isValidHostPort(port string) bool {
 	return err == nil && n > 0 && n <= 65535
 }
 
-// normalizeForwardedProto sanitizes and validates a forwarded protocol.
+// normalizeForwardedProto trims and validates a scheme from a forwarded
+// header, returning an empty string when it is not http or https.
 func normalizeForwardedProto(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "http":

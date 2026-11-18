@@ -256,3 +256,9 @@ func TestGetClientIP(tt *testing.T) {
 		t.Equal("1.2.3.4", w.Body.String(), true)
 	})
 }
+
+func TestIisProxyTrusted(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+
+	tt.True(isProxyTrusted(net.ParseIP("127.0.0.1")))
+}

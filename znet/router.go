@@ -496,7 +496,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		e.releaseContext(c)
 	}()
 
-	if host := ForwardedHost(req); host != "" {
+	// Reverse proxies such as nginx rewrite Host to the upstream address by
+	// default ($proxy_host). Normalize it from trusted forwarded headers so
+	// downstream code sees the original domain instead of 127.0.0.1:port.
+	if host := RequestHost(req); host != "" && host != req.Host {
 		req.Host = host
 	}
 

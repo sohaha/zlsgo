@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -18,17 +19,35 @@ import (
 // Request.Host, which may have been rewritten to the upstream address.
 // If full is true, it includes the request URL path.
 func (c *Context) Host(full ...bool) string {
+	scheme := RequestScheme(c.Request)
 	builder := zstring.Buffer(4)
 
-	builder.WriteString(RequestScheme(c.Request))
+	builder.WriteString(scheme)
 	builder.WriteString("://")
-	builder.WriteString(RequestHost(c.Request))
+	builder.WriteString(trimDefaultPort(RequestHost(c.Request), scheme))
 
 	if len(full) > 0 && full[0] {
 		builder.WriteString(c.Request.URL.String())
 	}
 
 	return builder.String()
+}
+
+// trimDefaultPort drops the port when it is the default for the scheme, so
+// https://example.com:443 and http://example.com:80 render as the canonical
+// form. IPv6 hosts are re-bracketed after trimming.
+func trimDefaultPort(host, scheme string) string {
+	name, port, err := net.SplitHostPort(host)
+	if err != nil {
+		return host
+	}
+	if !(scheme == "https" && port == "443") && !(scheme == "http" && port == "80") {
+		return host
+	}
+	if strings.Contains(name, ":") {
+		return "[" + name + "]"
+	}
+	return name
 }
 
 // CompletionLink ensures a URL is absolute by prepending the current host

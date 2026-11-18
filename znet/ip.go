@@ -20,8 +20,15 @@ var (
 	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP", "Cf-Connecting-Ip"}
 
 	// TrustedProxies defines the IP ranges that are considered trusted proxies.
-	// By default, all IPs are trusted (0.0.0.0/0).
-	TrustedProxies = []string{"0.0.0.0/0"}
+	// By default every address is trusted, for IPv4 and IPv6 alike, so a
+	// reverse proxy on 127.0.0.1, [::1] or a private LAN is trusted out of the
+	// box. Narrow this list when the backend port is reachable from the public
+	// network.
+	// TrustedProxies = []string{"0.0.0.0/0", "::/0"}
+	TrustedProxies = []string{
+		"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+	}
+	localProxies = []string{"127.0.0.1/32", "::1/128"}
 
 	// LocalNetworks defines the IP ranges that are considered local/private networks.
 	LocalNetworks = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
@@ -116,9 +123,11 @@ func isProxyTrusted(netIP net.IP) bool {
 		return false
 	}
 
-	for i := range TrustedProxies {
-		network, ok := proxiesCache.ProvideGet(TrustedProxies[i], func() (interface{}, bool) {
-			n, err := netCIDR(TrustedProxies[i])
+	trustedProxies := append(TrustedProxies, localProxies...)
+
+	for i := range trustedProxies {
+		network, ok := proxiesCache.ProvideGet(trustedProxies[i], func() (interface{}, bool) {
+			n, err := netCIDR(trustedProxies[i])
 			if err != nil {
 				return nil, false
 			}
