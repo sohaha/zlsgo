@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"math"
 	"mime"
 	"net/http"
@@ -124,7 +123,7 @@ func TmpPath(pattern ...string) string {
 	if len(pattern) > 0 {
 		p = pattern[0]
 	}
-	path, _ := ioutil.TempDir("", p)
+	path, _ := os.MkdirTemp("", p)
 	if p == "" {
 		path, _ = filepath.Split(path)
 	}

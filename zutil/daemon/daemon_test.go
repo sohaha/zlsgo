@@ -54,3 +54,14 @@ func TestUtil(t *testing.T) {
 	tt.Equal(IsPermissionError(ErrNotAnAdministrator), IsPermissionError(ErrNotAnRootUser))
 	_ = isSudo()
 }
+
+func TestStartDelay(t *testing.T) {
+	tt := zlsgo.NewTest(t)
+	tt.Equal(0, startDelaySeconds(&Config{}))
+	tt.Equal(0, startDelaySeconds(&Config{Options: map[string]interface{}{}}))
+	tt.Equal(30, startDelaySeconds(&Config{Options: map[string]interface{}{"StartDelay": 30}}))
+	tt.Equal(15, startDelaySeconds(&Config{Options: map[string]interface{}{"StartDelay": int64(15)}}))
+	tt.Equal(10, startDelaySeconds(&Config{Options: map[string]interface{}{"StartDelay": "10"}}))
+	tt.Equal(0, startDelaySeconds(&Config{Options: map[string]interface{}{"StartDelay": -5}}))
+	tt.Equal(0, startDelaySeconds(&Config{Options: map[string]interface{}{"StartDelay": "abc"}}))
+}

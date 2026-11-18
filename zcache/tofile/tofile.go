@@ -17,9 +17,9 @@ type (
 	// persistenceSt represents a cache item's data and metadata for serialization
 	persistenceSt struct {
 		// Data is the actual cached value
-		Data             interface{}
+		Data interface{}
 		// LifeSpan is the duration for which this item will remain in the cache
-		LifeSpan         time.Duration
+		LifeSpan time.Duration
 		// IntervalLifeSpan indicates whether the expiration timer resets on access
 		IntervalLifeSpan bool
 	}

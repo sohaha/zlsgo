@@ -3,7 +3,6 @@ package zfile
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -55,7 +54,7 @@ func CopyDir(source string, dest string, filterFn ...func(srcFilePath, destFileP
 // It returns the file contents as a byte slice and any error encountered.
 func ReadFile(path string) ([]byte, error) {
 	path = RealPath(path)
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 // ReadLineFile reads a file line by line and calls the provided handle function for each line.

@@ -97,6 +97,10 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 func GetService() (daemon.ServiceIface, error)
 ```
 
+> 默认服务模式：macOS 默认使用用户服务（LaunchAgent）；Linux 在非 root 时默认使用用户级 systemd（`systemctl --user`，无需 sudo，开机/登录自启取决于用户会话与 linger 配置），root 或显式传入 `Options{"UserService": false}` 时使用系统服务（需要管理员权限）。Windows/FreeBSD 等平台的系统服务通常仍需管理员权限。
+
+> 开机延迟启动：传入 `Options{"StartDelay": 秒数}` 可在开机后延迟启动服务。Linux 通过 `ExecStartPre=/bin/sleep N` 实现（精确延迟）；macOS 通过包裹 `sleep` 实现（`KeepAlive` 开启时重启也会延迟）；Windows 使用系统"延迟自动启动"（固定系统延迟，非精确秒数）；FreeBSD 不支持。
+
 ### 信号处理
 
 ```go

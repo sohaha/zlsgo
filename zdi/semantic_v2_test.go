@@ -61,8 +61,8 @@ func TestSemanticV2(t *testing.T) {
 		var rt *RT
 		_ = di.Resolve(&rt) // first call fails
 		canFail = false
-		_ = di.Resolve(&rt) // second call must re-run, not hit the error cache
-		tt.NotNil(rt)       // red baseline: hit the cached nil
+		_ = di.Resolve(&rt)        // second call must re-run, not hit the error cache
+		tt.NotNil(rt)              // red baseline: hit the cached nil
 		tt.EqualTrue(rtCalls == 2) // red baseline: only constructed once
 	})
 
@@ -98,16 +98,24 @@ func TestSemanticV2(t *testing.T) {
 		var rt *RT
 		panicked := false
 		func() {
-			defer func() { if r := recover(); r != nil { panicked = true } }()
+			defer func() {
+				if r := recover(); r != nil {
+					panicked = true
+				}
+			}()
 			_ = di.Resolve(&rt)
 		}()
-			tt.False(panicked) // red baseline: constructor panic escaped Resolve
-			tt.EqualNil(rt)
+		tt.False(panicked) // red baseline: constructor panic escaped Resolve
+		tt.EqualNil(rt)
 
-			canFail = false // panic is not cached; recovery should succeed
-			panicked = false
+		canFail = false // panic is not cached; recovery should succeed
+		panicked = false
 		func() {
-			defer func() { if r := recover(); r != nil { panicked = true } }()
+			defer func() {
+				if r := recover(); r != nil {
+					panicked = true
+				}
+			}()
 			_ = di.Resolve(&rt)
 		}()
 		tt.False(panicked)
@@ -120,8 +128,8 @@ func TestSemanticV2(t *testing.T) {
 			return &RT{OK: true}, errors.New("partial fail")
 		})
 		var rt *RT
-			tt.Error(di.Resolve(&rt)) // red baseline: err=nil
-			tt.EqualNil(rt)           // red baseline: value was injected, error ignored
+		tt.Error(di.Resolve(&rt)) // red baseline: err=nil
+		tt.EqualNil(rt)           // red baseline: value was injected, error ignored
 	})
 
 	t.Run("no_caching_of_failure", func(t *testing.T) {
@@ -132,6 +140,6 @@ func TestSemanticV2(t *testing.T) {
 		var rt *RT
 		_ = di.Resolve(&rt)
 		_, ok := di.Get(reflect.TypeOf((*RT)(nil)))
-			tt.False(ok) // red baseline: failure was cached
+		tt.False(ok) // red baseline: failure was cached
 	})
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
@@ -164,7 +163,7 @@ func (r *renderFile) Content(c *Context) []byte {
 	}
 	fType := mime.TypeByExtension(filepath.Ext(r.Data))
 	c.SetContentType(fType)
-	r.ContentDate, _ = ioutil.ReadFile(r.Data)
+	r.ContentDate, _ = os.ReadFile(r.Data)
 	return r.ContentDate
 }
 

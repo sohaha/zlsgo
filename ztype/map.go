@@ -384,13 +384,10 @@ func toMapStringReflect(m *map[string]interface{}, val interface{}) {
 				continue
 			case reflect.Slice:
 				if fieldInfo.Type.Elem().Kind() == reflect.Struct {
-					mc := getMapSlice()
-					for i := 0; i < v.Len(); i++ {
-						mc = append(mc, toMapString(v.Index(i).Interface()))
+					result := make([]map[string]interface{}, v.Len())
+					for i := range result {
+						result[i] = toMapString(v.Index(i).Interface())
 					}
-					result := make([]map[string]interface{}, len(mc))
-					copy(result, mc)
-					putMapSlice(mc)
 					(*m)[fieldInfo.Name] = result
 					continue
 				}

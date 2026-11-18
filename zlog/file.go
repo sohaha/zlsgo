@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,7 +164,7 @@ func (log *Logger) setLevelFile(level int, filepath string, archive bool, andStd
 func (log *Logger) Discard() {
 	log.mu.Lock()
 	err := errors.Join(log.closeFileLocked(), log.closeLevelFilesLocked())
-	log.Out = ioutil.Discard
+	log.Out = io.Discard
 	log.level.Store(LogNot)
 	log.mu.Unlock()
 	log.reportFileError(err)

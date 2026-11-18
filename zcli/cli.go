@@ -19,7 +19,7 @@ import (
 func init() {
 	Log = zlog.New()
 	Log.ResetFlags(zlog.BitLevel)
-	// flag.CommandLine.SetOutput(ioutil.Discard)
+	// flag.CommandLine.SetOutput(io.Discard)
 	flag.CommandLine.SetOutput(&errWrite{})
 	flag.Usage = func() {
 		usage()

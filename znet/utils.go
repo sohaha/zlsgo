@@ -55,7 +55,7 @@ var matchCache = zcache.NewFast(func(o *zcache.Options) {
 // URLMatchAndParse checks if the request URL matches the route pattern and returns
 // a map of the parsed path parameters. It uses a cache to improve performance for
 // frequently accessed routes.
-func (_ utils) URLMatchAndParse(requestURL string, path string) (matchParams map[string]string, ok bool) {
+func (utils) URLMatchAndParse(requestURL string, path string) (matchParams map[string]string, ok bool) {
 	var (
 		pattern   string
 		matchName []string

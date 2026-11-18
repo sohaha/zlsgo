@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -132,7 +132,7 @@ func Img2Base64(path string) (string, error) {
 	if ext != "" {
 		imgType = imgType[1:]
 	}
-	imgBuffer, err := ioutil.ReadFile(path)
+	imgBuffer, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

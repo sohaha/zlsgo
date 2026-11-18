@@ -16,14 +16,14 @@ var (
 	// ErrKeyNotFoundAndNotCallback is returned when a key is not found and no callback function is provided
 	ErrKeyNotFoundAndNotCallback = errors.New("key is not in cache and no callback is set")
 	// Internal cache registry for named cache tables
-	cache                        = make(map[string]*Table)
-	mutex                        sync.RWMutex
+	cache = make(map[string]*Table)
+	mutex sync.RWMutex
 )
 
 // New creates or retrieves a named cache table with optional access counting.
 // If a table with the specified name already exists, it is returned.
 // If accessCount is true, the cache will track the number of times each item is accessed.
-// 
+//
 // Deprecated: please use zcache.NewFast instead
 func New(table string, accessCount ...bool) *Table {
 	mutex.Lock()

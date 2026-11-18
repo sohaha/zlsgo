@@ -126,25 +126,25 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 		}
 	}
 
-	paths := getPathCache()
-	defer putPathCache(paths)
+	pathsCache := getPathCache()
+	defer putPathCache(pathsCache)
 
 	r, err := parsePath(path)
 	if err != nil {
 		return nil, err
 	}
-	paths = append(paths, r)
+	*pathsCache = append(*pathsCache, r)
 	for r.more {
 		if r, err = parsePath(r.path); err != nil {
 			return nil, err
 		}
-		paths = append(paths, r)
+		*pathsCache = append(*pathsCache, r)
 	}
 
 	b := zutil.GetBuff()
 	defer zutil.PutBuff(b)
 
-	if err := appendRawPaths(b, s, paths, raw, stringify, del); err != nil {
+	if err := appendRawPaths(b, s, *pathsCache, raw, stringify, del); err != nil {
 		return nil, err
 	}
 

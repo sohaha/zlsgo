@@ -23,6 +23,11 @@ const (
 	optionSessionCreateDefault = false
 	// optionRunWait is the configuration key for waiting for the service to complete
 	optionRunWait = "RunWait"
+	// optionStartDelay is the configuration key for delaying the service start
+	// after boot, in seconds. Platform semantics differ: systemd uses an
+	// ExecStartPre sleep, launchd wraps the command with a sleep, and Windows
+	// switches to the system delayed-auto start (fixed system delay).
+	optionStartDelay = "StartDelay"
 )
 
 type (

@@ -18,7 +18,7 @@ func KillSignal() bool {
 
 func SignalChan() (<-chan os.Signal, func()) {
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR2)
+	signal.Notify(quit, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR2)
 	return quit, func() {
 		signal.Stop(quit)
 	}

@@ -89,7 +89,7 @@ func BenchmarkGzipDoNotUse(b *testing.B) {
 		req, _ := http.NewRequest("GET", "/gzip", nil)
 		req.Header.Add("Accept-Encoding1", "not-gzip")
 		r.ServeHTTP(w, req)
-		if 200 != w.Code || size != w.Body.Len() {
+		if w.Code != 200 || size != w.Body.Len() {
 			b.Fail()
 		}
 	}
@@ -102,7 +102,7 @@ func BenchmarkGzipUse(b *testing.B) {
 		req.Header.Add("Accept-Encoding", "gzip")
 		req.Host = host
 		r.ServeHTTP(w, req)
-		if 200 != w.Code || size <= w.Body.Len() || 100 >= w.Body.Len() {
+		if w.Code != 200 || size <= w.Body.Len() || w.Body.Len() >= 100 {
 			b.Fail()
 		}
 	}

@@ -6,7 +6,6 @@ package zshell
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,7 +24,7 @@ func RunNewProcess(file string, args []string) (pid int, err error) {
 		Env:   os.Environ(),
 		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 	}
-	if tmp, _ := ioutil.TempDir("", ""); tmp != "" {
+	if tmp, _ := os.MkdirTemp("", ""); tmp != "" {
 		tmp = filepath.Dir(tmp)
 		if strings.HasPrefix(file, tmp) {
 			return 0, errors.New("temporary program does not support startup")

@@ -97,15 +97,6 @@ func TestToSliceNoConvAndTypeInput(t *testing.T) {
 	}
 }
 
-func TestPoolsLargeCapEarlyReturn(t *testing.T) {
-	s := make([]string, 0, 65)
-	putStringSlice(s)
-	is := make([]interface{}, 0, 65)
-	putInterfaceSlice(is)
-	ii := make([]int, 0, 65)
-	putIntSlice(ii)
-}
-
 func TestExecuteFieldAccessStructFallback(t *testing.T) {
 	type S struct {
 		N int `z:"n"`

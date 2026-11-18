@@ -46,10 +46,10 @@ type Context interface {
 // mergeContext is an implementation of Context that merges multiple contexts.
 // It tracks which context was canceled first and propagates values from all contexts.
 type mergeContext struct {
-	err       error            // The error from the first canceled context
-	doneCh    chan struct{}    // Channel that is closed when any context is canceled
+	err       error             // The error from the first canceled context
+	doneCh    chan struct{}     // Channel that is closed when any context is canceled
 	ctxs      []context.Context // The merged contexts
-	doneIndex int              // Index of the first context that was canceled
+	doneIndex int               // Index of the first context that was canceled
 	mu        sync.RWMutex
 }
 

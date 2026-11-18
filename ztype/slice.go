@@ -50,16 +50,13 @@ func (s SliceType) Value() []interface{} {
 		return []interface{}{}
 	}
 
-	ss := getInterfaceSlice()
-	if cap(ss) < len(s) {
-		ss = make([]interface{}, 0, len(s))
-	}
+	// Build the result directly: the caller owns the returned slice, so a
+	// pooled scratch buffer would still need a final allocation plus a copy,
+	// making the pool pure overhead (and a reference-retention hazard).
+	result := make([]interface{}, len(s))
 	for i := range s {
-		ss = append(ss, s[i].Value())
+		result[i] = s[i].Value()
 	}
-	result := make([]interface{}, len(ss))
-	copy(result, ss)
-	putInterfaceSlice(ss)
 	return result
 }
 
@@ -70,16 +67,10 @@ func (s SliceType) String() []string {
 		return []string{}
 	}
 
-	ss := getStringSlice()
-	if cap(ss) < len(s) {
-		ss = make([]string, 0, len(s))
-	}
+	result := make([]string, len(s))
 	for i := range s {
-		ss = append(ss, s[i].String())
+		result[i] = s[i].String()
 	}
-	result := make([]string, len(ss))
-	copy(result, ss)
-	putStringSlice(ss)
 	return result
 }
 
@@ -90,16 +81,10 @@ func (s SliceType) Int() []int {
 		return []int{}
 	}
 
-	ss := getIntSlice()
-	if cap(ss) < len(s) {
-		ss = make([]int, 0, len(s))
-	}
+	result := make([]int, len(s))
 	for i := range s {
-		ss = append(ss, s[i].Int())
+		result[i] = s[i].Int()
 	}
-	result := make([]int, len(ss))
-	copy(result, ss)
-	putIntSlice(ss)
 	return result
 }
 

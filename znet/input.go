@@ -3,7 +3,6 @@ package znet
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -239,7 +238,7 @@ func (c *Context) GetDataRawBytes() ([]byte, error) {
 		maxSize = 10 << 20
 	}
 
-	body, err := ioutil.ReadAll(io.LimitReader(c.Request.Body, maxSize))
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, maxSize))
 
 	if err == nil {
 		c.rawData = body
@@ -289,9 +288,7 @@ func (c *Context) FormFiles(name string) (files []*multipart.FileHeader, err err
 
 	files = make([]*multipart.FileHeader, 0, 1)
 	if fhs := multipartForm.File[name]; len(fhs) > 0 {
-		for i := range fhs {
-			files = append(files, fhs[i])
-		}
+		files = append(files, fhs...)
 	}
 
 	if len(files) == 0 {

@@ -3,7 +3,7 @@ package zhttp
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -210,7 +210,7 @@ func TestJONS(tt *testing.T) {
 	v := BodyJSON(jsonData)
 	_, _ = newMethod("POST", func(w http.ResponseWriter, r *http.Request) {
 		tt.Log(v)
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		t.EqualExit(nil, err)
 		t.EqualExit(jsonData, string(body))
 		t.EqualExit("application/json; charset=UTF-8", r.Header.Get("Content-Type"))
@@ -347,7 +347,7 @@ func TestRes(t *testing.T) {
 	t.Log(res.Body())
 	t.Log(res.String())
 	t.Log(res.Body())
-	respBody, _ := ioutil.ReadAll(res.Body())
+	respBody, _ := io.ReadAll(res.Body())
 	t.Log(string(respBody))
 	t.Log(res.Dump())
 }
@@ -355,10 +355,18 @@ func TestRes(t *testing.T) {
 func TestHttpProxy(t *testing.T) {
 	skipIfUnreachable(t, "unpkg.com:443")
 	tt := zls.NewTest(t)
-	err := SetProxy(func(r *http.Request) (*url.URL, error) {
+	// Pick a local port that is almost certainly closed so the proxied
+	// request fails no matter which services are already listening here.
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		tt.Fatal(err)
+	}
+	proxyAddr := l.Addr().String()
+	_ = l.Close()
+	err = SetProxy(func(r *http.Request) (*url.URL, error) {
 		if strings.Contains(r.URL.String(), "qq.com") {
-			tt.Log(r.URL.String(), "SetProxy get", "http://127.0.0.1:6666")
-			return url.Parse("http://127.0.0.1:6666")
+			tt.Log(r.URL.String(), "SetProxy get", "http://"+proxyAddr)
+			return url.Parse("http://" + proxyAddr)
 		} else {
 			tt.Log(r.URL.String(), "Not SetProxy")
 		}

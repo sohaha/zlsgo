@@ -47,9 +47,9 @@ func WithRunContext(handler func()) (time.Duration, int64) {
 	runtime.ReadMemStats(&mem)
 	startMem := mem.Alloc
 	start := time.Now()
-	
+
 	handler()
-	
+
 	duration := time.Since(start)
 	runtime.ReadMemStats(&mem)
 	return duration, int64(mem.Alloc - startMem)

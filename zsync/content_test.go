@@ -41,10 +41,8 @@ func TestMergeContext(t *testing.T) {
 		ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second/5)
 		defer cancel2()
 		ctx := MergeContext(ctx1, ctx2)
-		select {
-		case <-ctx.Done():
-			tt.EqualTrue(ctx.Err() != nil)
-		}
+		<-ctx.Done()
+		tt.EqualTrue(ctx.Err() != nil)
 		tt.EqualTrue(time.Since(now).Seconds() > 0.2)
 	}
 
@@ -56,10 +54,8 @@ func TestMergeContext(t *testing.T) {
 		defer cancel2()
 		defer cancel3()
 		ctx := MergeContext(ctx1, ctx2, ctx3)
-		select {
-		case <-ctx.Done():
-			tt.EqualTrue(ctx.Err() != nil)
-		}
+		<-ctx.Done()
+		tt.EqualTrue(ctx.Err() != nil)
 		tt.EqualTrue(time.Since(now).Seconds() > 0.1)
 	}
 }

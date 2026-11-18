@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -152,7 +151,7 @@ func (r *Res) dumpReqHead(dump *dumpBuffer) {
 	go func() {
 		req, err := http.ReadRequest(bufio.NewReader(pr))
 		if err == nil {
-			_, _ = io.Copy(ioutil.Discard, req.Body)
+			_, _ = io.Copy(io.Discard, req.Body)
 			_ = req.Body.Close()
 		}
 

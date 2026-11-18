@@ -7,18 +7,18 @@ import "sync"
 // RBMutex fallback implementation for non-64-bit architectures.
 // It preserves the API but uses a plain RWMutex without read-bias optimizations.
 type RBMutex struct {
-    rw sync.RWMutex
+	rw sync.RWMutex
 }
 
 type RBToken struct {
-    p *uint64
+	p *uint64
 }
 
 func NewRBMutex() *RBMutex { return &RBMutex{} }
 
 func (mu *RBMutex) RLock() RBToken {
-    mu.rw.RLock()
-    return RBToken{}
+	mu.rw.RLock()
+	return RBToken{}
 }
 
 func (mu *RBMutex) RUnlock(_ RBToken) { mu.rw.RUnlock() }

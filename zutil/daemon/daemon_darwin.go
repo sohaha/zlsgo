@@ -138,15 +138,25 @@ func (s *darwinLaunchdService) Install() error {
 	}
 
 	path := s.execPath()
+	args := s.Config.Arguments
+	if delay := startDelaySeconds(s.Config); delay > 0 {
+		// launchd has no native delayed-start key, so wrap the command with a
+		// sleep. Note that with KeepAlive enabled the delay also applies to
+		// each restart.
+		args = append([]string{"-c", fmt.Sprintf(`sleep %d; exec "$0" "$@"`, delay), path}, args...)
+		path = "/bin/sh"
+	}
 	to := &struct {
 		*Config
 		Path string
+		Args []string
 
 		KeepAlive, RunAtLoad bool
 		SessionCreate        bool
 	}{
 		Config:        s.Config,
 		Path:          path,
+		Args:          args,
 		KeepAlive:     keepAlive,
 		RunAtLoad:     load,
 		SessionCreate: sessionCreate,
@@ -250,7 +260,7 @@ var launchdConfig = `<?xml version='1.0' encoding='UTF-8'?>
 <key>ProgramArguments</key>
 <array>
         <string>{{html .Path}}</string>
-{{range .Config.Arguments}}
+{{range .Args}}
         <string>{{html .}}</string>
 {{end}}
 </array>

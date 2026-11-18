@@ -11,8 +11,6 @@ func TryCatch(fn func() error) (err error) {
 			switch e := recoverErr.(type) {
 			case error:
 				err = Reuse(e)
-			case *Error:
-				err = e
 			default:
 				err = Reuse(fmt.Errorf("%v", recoverErr))
 			}

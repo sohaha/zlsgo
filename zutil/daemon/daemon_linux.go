@@ -2,9 +2,9 @@ package daemon
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -26,8 +26,6 @@ const (
 	optionReloadSignal = "ReloadSignal"
 	optionPIDFile      = "PIDFile"
 )
-
-var errNoUserServiceSystemd = errors.New("user services are not supported on systemd")
 
 func init() {
 	chooseSystem(linuxSystemService{
@@ -55,10 +53,19 @@ func (sc linuxSystemService) Interactive() bool {
 
 func (sc linuxSystemService) New(i Iface, c *Config) (s ServiceIface, err error) {
 	s, err = sc.new(i, c)
-	if err == nil {
-		err = isSudo()
+	if err != nil {
+		return nil, err
 	}
-	return
+	userService := optionUserServiceDefault
+	if u, ok := c.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if !userService {
+		if err = isSudo(); err != nil {
+			return nil, err
+		}
+	}
+	return s, nil
 }
 
 func isInteractive() (bool, error) {
@@ -104,11 +111,18 @@ func (s *systemd) String() string {
 func (s *systemd) configPath() (cp string, err error) {
 	userService := optionUserServiceDefault
 	if u, ok := s.Options[optionUserService]; ok {
-		userService = u.(bool)
+		userService, _ = u.(bool)
 	}
 	if userService {
-		err = errNoUserServiceSystemd
-		return
+		dir := os.Getenv("XDG_CONFIG_HOME")
+		if dir == "" {
+			home, herr := os.UserHomeDir()
+			if herr != nil {
+				return "", herr
+			}
+			dir = filepath.Join(home, ".config")
+		}
+		return filepath.Join(dir, "systemd", "user", s.Config.Name+".service"), nil
 	}
 	cp = "/etc/systemd/system/" + s.Config.Name + ".service"
 	return
@@ -126,6 +140,16 @@ func (s *systemd) Install() error {
 	_, err = os.Stat(confPath)
 	if err == nil {
 		return fmt.Errorf("init already exists: %s", confPath)
+	}
+
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if userService {
+		if err = os.MkdirAll(filepath.Dir(confPath), 0700); err != nil {
+			return err
+		}
 	}
 
 	f, err := os.Create(confPath)
@@ -147,16 +171,27 @@ func (s *systemd) Install() error {
 		Path         string
 		ReloadSignal string
 		PIDFile      string
+		UserService  bool
+		StartDelay   int
 	}{
 		s.Config,
 		path,
 		reloadSignal,
 		pidFile,
+		userService,
+		startDelaySeconds(s.Config),
 	}
 
 	err = s.template().Execute(f, to)
 	if err != nil {
 		return err
+	}
+
+	if userService {
+		if err = run("systemctl", "--user", "enable", s.Name+".service"); err != nil {
+			return err
+		}
+		return run("systemctl", "--user", "daemon-reload")
 	}
 
 	err = run("systemctl", "enable", s.Name+".service")
@@ -167,10 +202,20 @@ func (s *systemd) Install() error {
 }
 
 func (s *systemd) Uninstall() error {
-	_ = run("systemctl", "stop", s.Name+".service")
-	err := run("systemctl", "disable", s.Name+".service")
-	if err != nil {
-		return err
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if userService {
+		_ = run("systemctl", "--user", "stop", s.Name+".service")
+		if err := run("systemctl", "--user", "disable", s.Name+".service"); err != nil {
+			return err
+		}
+	} else {
+		_ = run("systemctl", "stop", s.Name+".service")
+		if err := run("systemctl", "disable", s.Name+".service"); err != nil {
+			return err
+		}
 	}
 	cp, err := s.configPath()
 	if err != nil {
@@ -204,32 +249,56 @@ func (s *systemd) Run() (err error) {
 }
 
 func (s *systemd) Start() error {
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if userService {
+		return run("systemctl", "--user", "start", s.Name+".service")
+	}
 	if os.Getuid() == 0 {
 		return run("systemctl", "start", s.Name+".service")
-	} else {
-		return run("sudo", "-n", "systemctl", "start", s.Name+".service")
 	}
+	return run("sudo", "-n", "systemctl", "start", s.Name+".service")
 }
 
 func (s *systemd) Stop() error {
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if userService {
+		return run("systemctl", "--user", "stop", s.Name+".service")
+	}
 	if os.Getuid() == 0 {
 		return run("systemctl", "stop", s.Name+".service")
-	} else {
-		return run("sudo", "-n", "systemctl", "stop", s.Name+".service")
 	}
+	return run("sudo", "-n", "systemctl", "stop", s.Name+".service")
 }
 
 func (s *systemd) Restart() error {
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
+	if userService {
+		return run("systemctl", "--user", "restart", s.Name+".service")
+	}
 	if os.Getuid() == 0 {
 		return run("systemctl", "restart", s.Name+".service")
-	} else {
-		return run("sudo", "-n", "systemctl", "restart", s.Name+".service")
 	}
+	return run("sudo", "-n", "systemctl", "restart", s.Name+".service")
 }
 
 func (s *systemd) Status() string {
+	userService := optionUserServiceDefault
+	if u, ok := s.Options[optionUserService]; ok {
+		userService, _ = u.(bool)
+	}
 	var res string
-	if os.Getuid() == 0 {
+	if userService {
+		res, _ = runGrep("running", "systemctl", "--user", "status", s.Name+".service")
+	} else if os.Getuid() == 0 {
 		res, _ = runGrep("running", "systemctl", "status", s.Name+".service")
 	} else {
 		res, _ = runGrep("running", "sudo", "-n", "systemctl", "status", s.Name+".service")
@@ -245,7 +314,8 @@ Description={{.Description}}
 ConditionFileIsExecutable={{.Path|cmdEscape}}
 
 [Service]
-ExecStart={{.Path|cmdEscape}}{{range .Arguments}} {{.|cmd}}{{end}}
+{{if gt .StartDelay 0}}ExecStartPre=/bin/sleep {{.StartDelay}}
+{{end}}ExecStart={{.Path|cmdEscape}}{{range .Arguments}} {{.|cmd}}{{end}}
 {{if .RootDir}}RootDirectory={{.RootDir|cmd}}{{end}}
 {{if .WorkingDir}}WorkingDirectory={{.WorkingDir|cmdEscape}}{{end}}
 {{if .UserName}}User={{.UserName}}{{end}}
@@ -253,9 +323,9 @@ ExecStart={{.Path|cmdEscape}}{{range .Arguments}} {{.|cmd}}{{end}}
 {{if .PIDFile}}PIDFile={{.PIDFile|cmd}}{{end}}
 Restart=on-failure
 RestartSec=1
-EnvironmentFile=-/etc/sysconfig/{{.Name}}
-KillMode=process
+{{if not .UserService}}EnvironmentFile=-/etc/sysconfig/{{.Name}}
+{{end}}KillMode=process
 
 [Install]
-WantedBy=multi-user.target
+WantedBy={{if .UserService}}default.target{{else}}multi-user.target{{end}}
 `

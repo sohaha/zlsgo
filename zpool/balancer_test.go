@@ -179,10 +179,7 @@ func TestNewBalancer(t *testing.T) {
 		b.Add("n2", "n2")
 		b.WalkNodes(func(node string, available bool) (normal bool) {
 			tt.Log(node, available)
-			if node == "n2" {
-				return false
-			}
-			return true
+			return node != "n2"
 		})
 
 		tt.Equal(2, b.Len())

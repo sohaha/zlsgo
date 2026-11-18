@@ -13,7 +13,7 @@ Basic usage example:
 
 	// Create a new job table
 	crontab := cron.New()
-	
+
 	// Add a task that runs every minute
 	removeFunc, err := crontab.Add("0 * * * * *", func() {
 		// Task code goes here
@@ -22,16 +22,16 @@ Basic usage example:
 	if err != nil {
 		// Handle error
 	}
-	
+
 	// Start the cron scheduler (non-blocking mode)
 	crontab.Run()
-	
+
 	// For blocking mode
 	// crontab.Run(true)
-	
+
 	// Remove a specific task
 	removeFunc()
-	
+
 	// Stop all tasks
 	crontab.Stop()
 

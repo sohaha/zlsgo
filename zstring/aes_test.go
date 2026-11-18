@@ -123,5 +123,6 @@ func TestAesGCM(t *testing.T) {
 	tt.Equal(text, plain)
 
 	plain, err = zstring.AesGCMDecryptString("oXvYLL+PNB6/rLAuQKpBIyysS1PnGNpm4F8ahVt7aYWp4AlIzCC512WShQ==", key)
+	tt.NoError(err)
 	tt.Equal(text, plain)
 }

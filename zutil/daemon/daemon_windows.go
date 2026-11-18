@@ -133,6 +133,7 @@ func (w *windowsService) Install() error {
 		DisplayName:      w.DisplayName,
 		Description:      w.Description,
 		StartType:        mgr.StartAutomatic,
+		DelayedAutoStart: startDelaySeconds(w.Config) > 0,
 		ServiceStartName: w.UserName,
 		Password:         password,
 	}, w.Arguments...)

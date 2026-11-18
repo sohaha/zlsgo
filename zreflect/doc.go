@@ -26,7 +26,7 @@ Example usage for iterating through struct fields:
 	}
 
 	person := Person{Name: "John", Age: 30}
-	
+
 	// Iterate through all fields in the struct
 	err := zreflect.ForEachValue(reflect.ValueOf(person), func(parent []string, index int, tag string, field reflect.StructField, val reflect.Value) error {
 		fmt.Printf("Field: %s, Tag: %s, Value: %v\n", field.Name, tag, val.Interface())

@@ -25,11 +25,14 @@ type atomicPointer[T any] struct {
 }
 
 // Load atomically loads and returns the pointer value
-func (p *atomicPointer[T]) Load() *T     { return (*T)(atomic.LoadPointer(&p.ptr)) }
+func (p *atomicPointer[T]) Load() *T { return (*T)(atomic.LoadPointer(&p.ptr)) }
+
 // Store atomically stores the provided pointer value
-func (p *atomicPointer[T]) Store(v *T)   { atomic.StorePointer(&p.ptr, unsafe.Pointer(v)) }
+func (p *atomicPointer[T]) Store(v *T) { atomic.StorePointer(&p.ptr, unsafe.Pointer(v)) }
+
 // Swap atomically stores the provided pointer value and returns the previous value
 func (p *atomicPointer[T]) Swap(v *T) *T { return (*T)(atomic.SwapPointer(&p.ptr, unsafe.Pointer(v))) }
+
 // CompareAndSwap atomically swaps the pointer value if the current value matches the old value
 // Returns true if the swap was performed, false otherwise
 func (p *atomicPointer[T]) CompareAndSwap(old, new *T) bool {

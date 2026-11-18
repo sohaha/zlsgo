@@ -98,23 +98,21 @@ func parseTagOptions(opt string) []string {
 		return nil
 	}
 
-	options := getStringSlice()
 	parts := strings.Split(opt, ",")
+	// Filter in place: strings.Split already allocated the backing array, so
+	// compacting into it avoids a second allocation and a copy.
+	opts := parts[:0]
 	for _, part := range parts {
 		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			options = append(options, trimmed)
+			opts = append(opts, trimmed)
 		}
 	}
 
-	if len(options) == 0 {
-		putStringSlice(options)
+	if len(opts) == 0 {
 		return nil
 	}
-	result := make([]string, len(options))
-	copy(result, options)
-	putStringSlice(options)
 
-	return result
+	return opts
 }
 
 // hasOption check field has specific option

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -104,13 +103,13 @@ func (r *Res) ToBytes() ([]byte, error) {
 		}
 	}()
 
-	respBody, err := ioutil.ReadAll(r.resp.Body)
+	respBody, err := io.ReadAll(r.resp.Body)
 	if err != nil {
 		r.err = err
 		return nil, err
 	}
 
-	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
+	_, _ = io.Copy(io.Discard, r.resp.Body)
 
 	r.responseBody = forceUTF8(r, respBody)
 	return r.responseBody, nil
@@ -138,7 +137,7 @@ func (r *Res) Body() (body io.ReadCloser) {
 		return nil
 	}
 	if r.responseBody != nil {
-		return ioutil.NopCloser(bytes.NewReader(r.responseBody))
+		return io.NopCloser(bytes.NewReader(r.responseBody))
 	}
 
 	defer func() {
@@ -147,16 +146,16 @@ func (r *Res) Body() (body io.ReadCloser) {
 		}
 	}()
 
-	respBody, err := ioutil.ReadAll(r.resp.Body)
+	respBody, err := io.ReadAll(r.resp.Body)
 	if err != nil {
 		r.err = err
 		return nil
 	}
 
-	_, _ = io.Copy(ioutil.Discard, r.resp.Body)
+	_, _ = io.Copy(io.Discard, r.resp.Body)
 
 	r.responseBody = forceUTF8(r, respBody)
-	return ioutil.NopCloser(bytes.NewReader(r.responseBody))
+	return io.NopCloser(bytes.NewReader(r.responseBody))
 }
 
 func (r *Res) HTML() (doc QueryHTML) {

@@ -202,6 +202,10 @@ func LaunchService(name string, description string, fn func(), config ...*daemon
 		userService := false
 		if zutil.IsMac() {
 			userService = true
+		} else if zutil.IsLinux() {
+			if os.Geteuid() != 0 {
+				userService = true
+			}
 		}
 		daemonConfig := &daemon.Config{
 			Name:        name,

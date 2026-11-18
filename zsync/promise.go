@@ -16,11 +16,11 @@ type PromiseState uint8
 // It implements a Promise pattern similar to JavaScript promises but adapted for Go.
 // The type parameter T represents the type of the value that will be produced.
 type Promise[T any] struct {
-	value   T                // The resolved value
-	done    chan struct{}    // Channel that is closed when the promise is settled
-	reason  error            // The rejection reason if the promise is rejected
-	timeout *zutil.Bool      // Flag indicating if the promise has timed out
-	ctx     context.Context   // Context for cancellation
+	value   T               // The resolved value
+	done    chan struct{}   // Channel that is closed when the promise is settled
+	reason  error           // The rejection reason if the promise is rejected
+	timeout *zutil.Bool     // Flag indicating if the promise has timed out
+	ctx     context.Context // Context for cancellation
 }
 
 // Catch registers a function to be called when the Promise is rejected.

@@ -2,7 +2,7 @@ package gzip
 
 import (
 	"compress/gzip"
-	"io/ioutil"
+	"io"
 )
 
 type (
@@ -25,7 +25,7 @@ func (bp *poolCap) Get() (g *gzip.Writer, err error) {
 	select {
 	case g = <-bp.c:
 	default:
-		g, err = gzip.NewWriterLevel(ioutil.Discard, bp.l)
+		g, err = gzip.NewWriterLevel(io.Discard, bp.l)
 	}
 
 	return

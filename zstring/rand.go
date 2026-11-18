@@ -219,10 +219,6 @@ func NewWeightedRand(choices map[interface{}]uint32) (*Weighteder, error) {
 		max:     0,
 	}
 	for i := range cs {
-		if cs[i].Weight < 0 {
-			continue // ignore negative weights, can never be picked
-		}
-
 		if cs[i].Weight >= ^uint32(0) {
 			return nil, errors.New("weight overflowed")
 		}

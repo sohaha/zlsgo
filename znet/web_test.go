@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -347,7 +347,7 @@ func TestFile(tt *testing.T) {
 	r := newServer()
 	w := newRequest(r, "GET", "/TestFile", "/TestFile", func(c *Context) {
 		tt.Log("TestFile")
-		lists, err := ioutil.ReadDir(zfile.RealPath("."))
+		lists, err := os.ReadDir(zfile.RealPath("."))
 		if err != nil {
 			tt.Fatal(err)
 		}

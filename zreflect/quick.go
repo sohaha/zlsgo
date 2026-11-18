@@ -51,7 +51,7 @@ func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, f
 			return nil
 		}
 		visited[typ] = true
-		
+
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
 			fieldTag, _ := GetStructTag(field)
@@ -66,13 +66,12 @@ func ForEach(typ reflect.Type, fn func(parent []string, index int, tag string, f
 				newParent := make([]string, len(parent)+1)
 				copy(newParent, parent)
 				newParent[len(parent)] = fieldTag
-				
 
 				newVisited := make(map[reflect.Type]bool)
 				for k, v := range visited {
 					newVisited[k] = v
 				}
-				
+
 				err = forField(field.Type, newParent, newVisited)
 			}
 
@@ -106,7 +105,7 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 			return nil
 		}
 		visited[typ] = true
-		
+
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
 			fieldValue := val.Field(i)
@@ -126,13 +125,12 @@ func ForEachValue(val reflect.Value, fn func(parent []string, index int, tag str
 				newParent := make([]string, len(parent)+1)
 				copy(newParent, parent)
 				newParent[len(parent)] = fieldTag
-				
 
 				newVisited := make(map[reflect.Type]bool)
 				for k, v := range visited {
 					newVisited[k] = v
 				}
-				
+
 				err = forField(fieldValue, field.Type, newParent, newVisited)
 			}
 

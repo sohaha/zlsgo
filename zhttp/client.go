@@ -24,7 +24,6 @@ func newClient() *http.Client {
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
-			DualStack: true,
 		}).DialContext,
 		MaxIdleConns:          200,
 		MaxIdleConnsPerHost:   50,

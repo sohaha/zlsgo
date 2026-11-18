@@ -66,7 +66,7 @@ type BalancerNodeOptions struct {
 
 // BalancerNodeInfo contains complete information about a balancer node
 type BalancerNodeInfo[T any] struct {
-	Node      T    // Node data
+	Node      T      // Node data
 	Weight    uint64 // Current weight
 	MaxConns  int64  // Maximum connections
 	Cooldown  int64  // Cooldown period in milliseconds

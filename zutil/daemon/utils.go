@@ -100,3 +100,18 @@ func isServiceRestart(c *Config) bool {
 	}
 	return load
 }
+
+// startDelaySeconds parses the StartDelay option and returns the number of
+// seconds to wait before starting the service after boot. Non-positive or
+// invalid values mean no delay.
+func startDelaySeconds(c *Config) int {
+	v, ok := c.Options[optionStartDelay]
+	if !ok {
+		return 0
+	}
+	n := ztype.ToInt(v)
+	if n < 0 {
+		return 0
+	}
+	return n
+}
