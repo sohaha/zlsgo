@@ -19,19 +19,28 @@ var (
 	// when the request comes through a proxy or load balancer.
 	RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP", "Cf-Connecting-Ip"}
 
-	// TrustedProxies defines the IP ranges that are considered trusted proxies.
-	// By default every address is trusted, for IPv4 and IPv6 alike, so a
-	// reverse proxy on 127.0.0.1, [::1] or a private LAN is trusted out of the
-	// box. Narrow this list when the backend port is reachable from the public
-	// network.
-	// TrustedProxies = []string{"0.0.0.0/0", "::/0"}
+	// TrustedProxies defines the IP ranges of reverse proxies whose forwarding
+	// headers (X-Forwarded-*, Forwarded) are trusted for determining the original
+	// client host, scheme and IP.
+	//
+	// By default, RFC1918 private IPv4 ranges, IPv6 ULA (fc00::/7), and IPv6
+	// link-local (fe80::/10) ranges are trusted. Loopback addresses
+	// (127.0.0.1/32, ::1/128) are always appended at runtime via localProxies,
+	// so a reverse proxy on localhost or a local/private network works out of
+	// the box. This does not trust all addresses.
+	//
+	// If your reverse proxy or load balancer uses a public IP or another network
+	// outside these defaults, set TrustedProxies explicitly to include the
+	// appropriate CIDRs. To trust all proxy peers, set TrustedProxies to
+	// []string{"0.0.0.0/0", "::/0"} only when the backend is not directly
+	// reachable from untrusted networks.
 	TrustedProxies = []string{
-		"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+		"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7", "fe80::/10",
 	}
 	localProxies = []string{"127.0.0.1/32", "::1/128"}
 
 	// LocalNetworks defines the IP ranges that are considered local/private networks.
-	LocalNetworks = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "172.0.0.0/8", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
+	LocalNetworks = []string{"127.0.0.0/8", "10.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16", "::1/128", "fc00::/7", "fe80::/10"}
 )
 
 var (

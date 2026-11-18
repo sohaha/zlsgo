@@ -49,11 +49,6 @@ func TestHostBehindNginx(tt *testing.T) {
 	t.EqualExit("https://zlsgo.example.com|zlsgo.example.com", got)
 }
 
-func TestXxx(tt *testing.T) {
-	// {"data":{"domain":"http://im.customer-test.mixpwr.com:443","header":{"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"],"Accept-Encoding":["gzip, deflate, br, zstd"],"Accept-Language":["en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7"],"Connection":["upgrade"],"Cookie":["session_id=gDZ1sa00HArOayIWjkpqvmVapNknM93Q9gEvUPenal8"],"Priority":["u=0, i"],"Remote-Host":["14.145.78.148"],"Sec-Ch-Ua":["\"Not.A/Brand\";v=\"24\", \"Chromium\";v=\"158\""],"Sec-Ch-Ua-Mobile":["?0"],"Sec-Ch-Ua-Platform":["\"macOS\""],"Sec-Fetch-Dest":["document"],"Sec-Fetch-Mode":["navigate"],"Sec-Fetch-Site":["none"],"Sec-Fetch-User":["?1"],"Upgrade-Insecure-Requests":["1"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36"],"X-Forwarded-For":["14.145.78.148"],"X-Forwarded-Host":["im.customer-test.mixpwr.com"],"X-Host":["im.customer-test.mixpwr.com:443"],"X-Real-Ip":["14.145.78.148"],"X-Scheme":["https"]},"hello":"14.145.78.148"},"code":0}
-	tt.Log(forwardedProtoValue("https"))
-}
-
 // TestHostBehindRFC7239Proxy covers the RFC 7239 Forwarded header.
 func TestHostBehindRFC7239Proxy(tt *testing.T) {
 	t := zlsgo.NewTest(tt)
