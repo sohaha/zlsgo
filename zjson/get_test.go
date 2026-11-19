@@ -1481,3 +1481,71 @@ func TestIsOptimisticPath(t *testing.T) {
 		})
 	}
 }
+
+// TestGetSequentialCallsIndependent guards the parse context: a call that sets
+// piped/pipe state must not leak into the next call.
+func TestGetSequentialCallsIndependent(t *testing.T) {
+	const doc = `{"name":"root","users":[{"name":"a","age":30},{"name":"b","age":20}]}`
+
+	SetModifiersState(true)
+	defer SetModifiersState(false)
+
+	if got := Get(doc, "users.#.age|@reverse").String(); got != "[20,30]" {
+		t.Fatalf("seed piped call = %q, want %q", got, "[20,30]")
+	}
+	for i := 0; i < 100; i++ {
+		if got := Get(doc, "name").String(); got != "root" {
+			t.Fatalf("call %d: context leaked state, got %q want %q", i, got, "root")
+		}
+		if got := Get(doc, "users.0.name").String(); got != "a" {
+			t.Fatalf("call %d: context leaked state, got %q want %q", i, got, "a")
+		}
+	}
+}
+
+// TestResNumberAccessorConsistency pins that every numeric accessor agrees with
+// the JSON text it came from. It cannot observe from outside whether the
+// conversion ran eagerly or on demand; the concurrency contract is pinned by
+// TestGetResConcurrentRead instead.
+func TestResNumberAccessorConsistency(t *testing.T) {
+	tests := []struct {
+		name    string
+		json    string
+		path    string
+		str     string
+		float   float64
+		integer int64
+		boolean bool
+	}{
+		{"integer", `{"v":100}`, "v", "100", 100, 100, true},
+		{"zero", `{"v":0}`, "v", "0", 0, 0, false},
+		{"float", `{"v":1.5}`, "v", "1.5", 1.5, 1, true},
+		{"negative", `{"v":-42}`, "v", "-42", -42, -42, true},
+		{"exponent", `{"v":1e3}`, "v", "1000", 1000, 1000, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := Get(tt.json, tt.path)
+			if !res.Exists() {
+				t.Fatalf("missing value for path %q", tt.path)
+			}
+			if got := res.String(); got != tt.str {
+				t.Errorf("String() = %q, want %q", got, tt.str)
+			}
+			if got := res.Float64(); got != tt.float {
+				t.Errorf("Float64() = %v, want %v", got, tt.float)
+			}
+			if got := res.Int64(); got != tt.integer {
+				t.Errorf("Int64() = %d, want %d", got, tt.integer)
+			}
+			if got := res.Bool(); got != tt.boolean {
+				t.Errorf("Bool() = %v, want %v", got, tt.boolean)
+			}
+			// A second read must return the same value.
+			if got := res.Float64(); got != tt.float {
+				t.Errorf("second Float64() = %v, want %v", got, tt.float)
+			}
+		})
+	}
+}

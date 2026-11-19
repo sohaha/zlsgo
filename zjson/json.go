@@ -141,7 +141,7 @@ func set(s, path, raw string, stringify, del, optimistic, place bool) ([]byte, e
 		*pathsCache = append(*pathsCache, r)
 	}
 
-	b := zutil.GetBuff()
+	b := zutil.GetBuff(uint(len(s) + len(raw) + len(path)*2 + 64))
 	defer zutil.PutBuff(b)
 
 	if err := appendRawPaths(b, s, *pathsCache, raw, stringify, del); err != nil {

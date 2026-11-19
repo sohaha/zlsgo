@@ -22,6 +22,12 @@ var (
 	size = 10000
 )
 
+// minCompressedSize is the lower bound the compressed benchmark body must
+// exceed. The payload is 10000 characters drawn from a 3-letter alphabet, so
+// gzip still emits a few hundred bytes; anything at or below this means the
+// response was not really compressed. TestGzip asserts the same lower bound.
+const minCompressedSize = 100
+
 func init() {
 	r = znet.New()
 	r.SetMode(znet.ProdMode)
@@ -102,7 +108,7 @@ func BenchmarkGzipUse(b *testing.B) {
 		req.Header.Add("Accept-Encoding", "gzip")
 		req.Host = host
 		r.ServeHTTP(w, req)
-		if w.Code != 200 || size <= w.Body.Len() || w.Body.Len() >= 100 {
+		if w.Code != 200 || size <= w.Body.Len() || w.Body.Len() <= minCompressedSize {
 			b.Fail()
 		}
 	}

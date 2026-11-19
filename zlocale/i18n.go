@@ -349,11 +349,13 @@ func (i *I18n) formatTranslationWithTemplate(lang *Language, templateStr string,
 					}
 
 					if validNumber && index < len(args) {
-						return w.Write([]byte(fmt.Sprint(args[index])))
+						// Write the argument directly to w instead of converting it
+						// through an intermediate []byte.
+						return fmt.Fprint(w, args[index])
 					}
 				}
 
-				return w.Write([]byte(fmt.Sprintf("{%s}", tag)))
+				return fmt.Fprintf(w, "{%s}", tag)
 			})
 
 			if err == nil {

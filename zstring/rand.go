@@ -273,13 +273,36 @@ func getMask(alphabetSize int) byte {
 	return 0
 }
 
+// buildByteAlphabet returns the one-byte form of chars together with whether
+// every rune fits in a byte. A non-ASCII alphabet must leave the byte path
+// alone, so the flag decides it once for both the default and custom cases.
+func buildByteAlphabet(chars []rune) ([]byte, bool) {
+	out := make([]byte, len(chars))
+	ascii := true
+	for i, r := range chars {
+		if r > 127 {
+			ascii = false
+		}
+		out[i] = byte(r)
+	}
+	return out, ascii
+}
+
+// defaultAlphabetASCII is the precomputed byte form of letterBytes so the
+// common NewNanoID call does not rebuild it every time.
+var defaultAlphabetASCII, defaultAlphabetIsASCII = buildByteAlphabet(letterBytes)
+
 // NewNanoID generates a secure unique string ID of the specified size.
 // It's similar to UUID but more compact and customizable.
 // By default, it uses alphanumeric characters, but a custom alphabet can be provided.
 func NewNanoID(size int, alphabet ...string) (string, error) {
 	var chars []rune
+	var alphabetBytes []byte
+	var isASCII bool
 	if len(alphabet) == 0 {
 		chars = letterBytes
+		alphabetBytes = defaultAlphabetASCII
+		isASCII = defaultAlphabetIsASCII
 	} else {
 		chars = []rune(alphabet[0])
 	}
@@ -299,17 +322,8 @@ func NewNanoID(size int, alphabet ...string) (string, error) {
 	id := make([]byte, 0, size)
 	bytes := make([]byte, step)
 
-	alphabetBytes := make([]byte, alphabetSize)
-	for i, r := range chars {
-		alphabetBytes[i] = byte(r)
-	}
-
-	isASCII := true
-	for _, r := range chars {
-		if r > 127 {
-			isASCII = false
-			break
-		}
+	if alphabetBytes == nil {
+		alphabetBytes, isASCII = buildByteAlphabet(chars)
 	}
 
 	if isASCII {

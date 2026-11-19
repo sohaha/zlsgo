@@ -25,6 +25,7 @@ type (
 		str   string
 		typ   Type
 		num   float64
+		numOK bool
 		index int
 	}
 	fieldMaps struct {
@@ -69,13 +70,25 @@ func (r *Res) Bytes() []byte {
 	return zstring.String2Bytes(r.String())
 }
 
+// number returns the numeric value. Synthetic numbers (array indices and
+// computed values) carry their value in num with numOK set; raw-backed numbers
+// are parsed from raw on demand. The result is never cached, so a *Res stays
+// safe for concurrent reads.
+func (r *Res) number() float64 {
+	if r.numOK {
+		return r.num
+	}
+	n, _ := strconv.ParseFloat(r.raw, 64)
+	return n
+}
+
 func (r *Res) String(def ...string) string {
 	switch r.typ {
 	case False:
 		return "false"
 	case Number:
 		if len(r.raw) == 0 {
-			return strconv.FormatFloat(r.num, 'f', -1, 64)
+			return strconv.FormatFloat(r.number(), 'f', -1, 64)
 		}
 		var i int
 		if r.raw[0] == '-' {
@@ -83,7 +96,7 @@ func (r *Res) String(def ...string) string {
 		}
 		for ; i < len(r.raw); i++ {
 			if r.raw[i] < '0' || r.raw[i] > '9' {
-				return strconv.FormatFloat(r.num, 'f', -1, 64)
+				return strconv.FormatFloat(r.number(), 'f', -1, 64)
 			}
 		}
 		return r.raw
@@ -109,7 +122,7 @@ func (r *Res) Bool(def ...bool) bool {
 		b, _ := strconv.ParseBool(strings.ToLower(r.str))
 		return b
 	case Number:
-		return r.num != 0
+		return r.number() != 0
 	default:
 		if len(def) > 0 {
 			return def[0]
@@ -126,7 +139,7 @@ func (r *Res) Int(def ...int) int {
 		n, _ := parseInt(r.str)
 		return n
 	case Number:
-		i, ok := safeInt(r.num)
+		i, ok := safeInt(r.number())
 		if ok {
 			return i
 		}
@@ -135,7 +148,7 @@ func (r *Res) Int(def ...int) int {
 		if ok {
 			return i
 		}
-		return int(r.num)
+		return int(r.number())
 	default:
 		if len(def) > 0 {
 			return def[0]
@@ -189,7 +202,7 @@ func (r *Res) Uint(def ...uint) uint {
 		n, _ := parseUint(r.str)
 		return n
 	case Number:
-		i, ok := safeInt(r.num)
+		i, ok := safeInt(r.number())
 		if ok {
 			if i >= 0 {
 				return uint(i)
@@ -200,10 +213,10 @@ func (r *Res) Uint(def ...uint) uint {
 		if ok {
 			return u
 		}
-		if r.num < 0 {
+		if r.number() < 0 {
 			return 0
 		}
-		return uint(r.num)
+		return uint(r.number())
 	}
 }
 
@@ -252,7 +265,7 @@ func (r *Res) Float64(def ...float64) float64 {
 		n, _ := strconv.ParseFloat(r.str, 64)
 		return n
 	case Number:
-		return r.num
+		return r.number()
 	}
 }
 
@@ -351,6 +364,7 @@ func (r *Res) ForEach(fn func(key, value *Res) bool) {
 			i++
 			key.typ = Number
 			key.num = -1
+			key.numOK = true
 			break
 		}
 		if j[i] > ' ' {
@@ -513,6 +527,7 @@ func (r *Res) arrayOrMap(vc byte, valueize bool) (ar arrayOrMapResult) {
 			if (j[i] >= '0' && j[i] <= '9') || j[i] == '-' {
 				value.typ = Number
 				value.raw, value.num = tonum(j[i:])
+				value.numOK = true
 				value.str = ""
 			} else {
 				continue
@@ -583,6 +598,7 @@ func Parse(json string) *Res {
 			if (json[i] >= '0' && json[i] <= '9') || json[i] == '-' {
 				value.typ = Number
 				value.raw, value.num = tonum(json[i:])
+				value.numOK = true
 			} else {
 				return &Res{}
 			}
@@ -702,7 +718,7 @@ func (r *Res) Value() interface{} {
 	case False:
 		return false
 	case Number:
-		return r.num
+		return r.number()
 	case JSON:
 		r := r.arrayOrMap(0, true)
 		if r.vc == '{' {
@@ -1221,6 +1237,7 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 					c.value.raw = val
 					c.value.typ = Number
 					c.value.num, _ = strconv.ParseFloat(val, 64)
+					c.value.numOK = true
 					return i, true
 				}
 			case 't', 'f', 'n':
@@ -1278,19 +1295,20 @@ func queryMatches(rp *arrayPathResult, value *Res) bool {
 		}
 	case Number:
 		rpvn, _ := strconv.ParseFloat(rpv, 64)
+		vn := value.number()
 		switch rp.query.op {
 		case "=":
-			return value.num == rpvn
+			return vn == rpvn
 		case "!=":
-			return value.num != rpvn
+			return vn != rpvn
 		case "<":
-			return value.num < rpvn
+			return vn < rpvn
 		case "<=":
-			return value.num <= rpvn
+			return vn <= rpvn
 		case ">":
-			return value.num > rpvn
+			return vn > rpvn
 		case ">=":
-			return value.num >= rpvn
+			return vn >= rpvn
 		}
 	case True:
 		switch rp.query.op {
@@ -1495,7 +1513,6 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 						raw: val,
 						typ: Number,
 					}
-					qval.num, _ = strconv.ParseFloat(val, 64)
 					if procQuery(qval) {
 						return i, true
 					}
@@ -1506,6 +1523,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					c.value.raw = val
 					c.value.typ = Number
 					c.value.num, _ = strconv.ParseFloat(val, 64)
+					c.value.numOK = true
 					return i, true
 				}
 			case 't', 'f', 'n':
@@ -1578,6 +1596,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 
 					c.value.typ = Number
 					c.value.num = float64(h - 1)
+					c.value.numOK = true
 					c.value.raw = strconv.Itoa(h - 1)
 					c.calcd = true
 					return i + 1, true
@@ -2012,6 +2031,7 @@ func parseAny(json string, i int, hit bool) (int, *Res, bool) {
 				res.raw = val
 				res.typ = Number
 				res.num, _ = strconv.ParseFloat(val, 64)
+				res.numOK = true
 			}
 			return i, res, true
 		case 't', 'f', 'n':
