@@ -264,6 +264,31 @@ func (e *Engine) AddShutdown(done func()) {
 	e.shutdownMu.Unlock()
 }
 
+// RemoveShutdown deregisters a function previously added with AddShutdown.
+//
+// Functions that register per-connection cleanup (for example a long-lived SSE
+// connection) must remove it when the connection ends: the slice grows on every
+// AddShutdown and is only drained at process shutdown, so a stream that
+// registers without removing leaks one entry per connection.
+//
+// It compares by identity, so the value passed in must be the exact func value
+// that was registered. No-op when it is not registered.
+func (e *Engine) RemoveShutdown(done func()) {
+	if done == nil {
+		return
+	}
+	fingerprint := reflect.ValueOf(done).Pointer()
+	e.shutdownMu.Lock()
+	defer e.shutdownMu.Unlock()
+	for i, registered := range e.shutdowns {
+		if reflect.ValueOf(registered).Pointer() != fingerprint {
+			continue
+		}
+		e.shutdowns = append(e.shutdowns[:i], e.shutdowns[i+1:]...)
+		return
+	}
+}
+
 // SetAddr sets the address for the server to listen on.
 // Optional TLS configuration can be provided for HTTPS support.
 func (e *Engine) SetAddr(addrString string, tlsConfig ...TlsCfg) {
